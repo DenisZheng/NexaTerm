@@ -19,7 +19,7 @@
 | Split | Confirmed（静态） | WorkspaceShell 与终端面板持有 split layout/active pane；需多 tab、重连、关闭边界测试。 |
 | Sync Input | Partial | 有 split sync handler 和 source checks，但跨 tab/目标选择契约仍由 WorkspaceShell 组合，尚缺独立状态测试。 |
 | Command Sender / MultiExec | Partial | 有 history/targets/controller 与 UI；`check-command-sender-mvp-source.mjs` 报缺少 `commandSenderHistory`，SSH 激活 tab 同步检查也失败，属于契约未固化/可能漂移。 |
-| RDP | Partial / platform-dependent | `rdp.rs` 有 Windows native/embedded 路径与非 Windows external/stub 路径；IronRDP 检查仍受 Windows MSVC `link.exe` 缺失阻塞，不能宣称三平台可用。 |
+| RDP | Partial / platform-dependent | `rdp.rs` 有 Windows native/embedded 路径与非 Windows external/stub 路径；IronRDP 检查受本机 Windows Rust 链接环境不可用阻塞（MSVC C++ 工作负载半装 + 未安装 Windows SDK），不能宣称三平台可用。 |
 | VNC | Confirmed（静态 runner） | `vnc.rs` 有 noVNC websocket relay/fallback runner 和 session manager；真实 server、外部进程退出、平台窗口需验收。 |
 | Workspace persistence | Partial | `shared/tauri/windowState.ts` 仅恢复 `mxterm.windowState.v1` 窗口几何；未发现保存连接 session/tab/split 布局的 schema 或恢复链路。 |
 | Vault / Secret | Confirmed（静态） | `storage_vault.rs` 使用 Argon2id + AES-256-GCM，`secure_bundle.rs` 保护传输包，并有“不含明文”测试；需审计日志、错误和迁移。 |
@@ -30,7 +30,7 @@
 | i18n | Weak | 未发现 i18n 依赖或 catalog；features 中存在大量硬编码中文和 `toLocaleString("zh-CN")`。 |
 | Frontend tests | Weak | `package.json` 的 `test` 是 no-op，没有 Vitest/jsdom；已有脚本测试但不能替代状态/组件测试。 |
 | Lazy loading / startup | Confirmed（源码） | `main.tsx`、`App.tsx` 动态加载 WorkspaceShell/VNC 等，已有 idle prewarm；`check-startup-module-boundary-source.mjs` 通过，build 也生成了独立的 WorkspaceShell/Terminal/RemoteFileEditor/VNC chunk。 |
-| 三平台 build/run | Environment-blocked | Rust/cargo 已安装到 `D:\tmp\nexaterm-rust`；当前 Windows 缺少 MSVC `link.exe`，仍未取得 Windows/macOS/Linux 构建和运行证据。 |
+| 三平台 build/run | Environment-blocked | Rust/cargo 已安装到 `D:\tmp\nexaterm-rust`；本机 Windows 的 MSVC C++ 工作负载不完整（缺 CRT 头文件与 `lib\x64`）且未安装 Windows SDK，`link.exe` 虽存在但无法工作，仍未取得 Windows/macOS/Linux 构建和运行证据。 |
 | FTP/FTPS | P2 / not in current baseline | 需求表列为 P2，当前不是 v1 主线阻塞。 |
 
 ## 2. 已执行验证
@@ -40,7 +40,7 @@
 运行全部 `scripts/check-*.mjs`：
 
 - 60 个脚本中 50 个通过、10 个失败。
-- Rust 工具阻塞：`check-ironrdp-macos-prototype.mjs` 与 `check-rdp-release-readiness.mjs` 受 Windows MSVC `link.exe` 缺失影响退出 1。
+- Rust 工具阻塞：`check-ironrdp-macos-prototype.mjs` 与 `check-rdp-release-readiness.mjs` 受本机 Windows Rust 链接环境不可用影响退出 1（工具链复核见 `SECURITY_REVIEW.md`）。
 - 检查脚本/契约待处理：AppSelect 选中态、Command Sender 激活 tab/历史、暗色 hover、scrollbar token、iTerm2 scheme；`check-connection-quick-search-source.mjs` 的 TypeScript 输出目录假设与当前 tsc 输出不一致。
 - `check-connection-jump-source.mjs` 仍报“未来 jump 实现缺失”，但当前 `terminal/session.rs` 已实现单跳 direct-tcpip；这是检查脚本相对源码的漂移，不能当成能力缺失。
 
@@ -53,7 +53,7 @@
 ### 依赖与构建
 
 - Node v22.22.3、pnpm 11.22.0 可用。
-- cargo/rustc `1.98.1` 与 cargo-deny 已安装到 D 盘；`cargo metadata --locked --offline` 已通过（708 个 crate），`cargo check/test` 仍受 `link.exe` 环境阻塞。`cargo-audit` 未单独安装。
+- cargo/rustc `1.98.1` 与 cargo-deny 已安装到 D 盘；`cargo metadata --locked --offline` 已通过（708 个 crate），`cargo check/test` 仍不可用：本机 MSVC 缺 CRT 头文件与 `lib\x64`、且未安装 Windows SDK（`link.exe` 本身存在），属本机环境问题而非仓库缺陷。`cargo-audit` 未单独安装。
 - 默认镜像的 `pnpm audit` endpoint 不可用；切换 npm 官方 registry 后得到 0 critical、5 high、16 moderate、5 low（26 advisories）。这些结果需在锁文件和依赖升级后重新验证。
 - `pnpm run check` 通过；`pnpm run build` 在授权环境通过，Vite 仅报告若干大于 500 kB 的非阻断 chunk；受限沙箱运行 build 时曾因 esbuild `spawn EPERM` 失败。
 - `pnpm test` 仍只打印“frontend tests not configured yet”，所以前端自动化门禁依旧缺失。

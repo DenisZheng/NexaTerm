@@ -6,7 +6,7 @@
 
 ## Background
 
-基线开始时 node_modules 不完整且 Rust 工具不可用；本任务已将 cargo/rustc 安装到 D 盘。source checks 的失败仍混有真实契约、脚本漂移和 Windows MSVC 环境阻塞。
+基线开始时 node_modules 不完整且 Rust 工具不可用；本任务已将 cargo/rustc 安装到 D 盘。source checks 的失败仍混有真实契约、脚本漂移，以及本机 Windows Rust 链接环境阻塞（MSVC C++ 工作负载半装 + 未安装 Windows SDK）。
 
 ## Required Reading
 

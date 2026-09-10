@@ -27,7 +27,7 @@
 
 - `pnpm --registry=https://registry.npmjs.org audit --json`：成功取得审计结果但以漏洞 exit 1；不能把 exit 1 当命令失败。
 - 默认镜像 audit endpoint 不存在；依赖切换到官方 registry 后 `pnpm run check` 通过，授权环境 `pnpm run build` 通过；受限沙箱的 esbuild `spawn EPERM` 属环境限制。
-- `cargo-deny --offline --locked check advisories` 已执行并保存结果；许可证检查因未配置 `deny.toml` 不作为硬门禁。`cargo check/test` 因 Windows 缺少 MSVC `link.exe` 阻塞。
+- `cargo-deny --offline --locked check advisories` 已执行并保存结果；许可证检查因未配置 `deny.toml` 不作为硬门禁。`cargo check/test` 无法执行：2026-09-10 复核确认本机 `link.exe` 与 `cl.exe` 实际存在，真实原因是 VS 2022「使用 C++ 的桌面开发」工作负载半装（缺 `include\` 与 `lib\x64`）且 Windows SDK 未安装；属本机环境问题，不是仓库缺陷，在具备完整工具链的环境中这些命令可正常执行。
 - 未进行真实服务器、fuzz、渗透、代码签名或三平台权限测试。
 
 ## 后续审查顺序
