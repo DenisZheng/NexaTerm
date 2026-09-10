@@ -20,10 +20,44 @@
 ### 3.1 配置状态
 
 - `remote_enabled=false` 继续作为总开关。
-- `remote_host` 默认值固定为 `127.0.0.1`。
-- 非 loopback host 需要保存显式启用意图/确认状态，不能仅靠文本地址推断用户同意。
+- `remote_host` 默认值由 `DEFAULT_REMOTE_HOST` 固定为 `127.0.0.1`；前端 `defaultMcpSettings.remote_host` 同步由 `"0.0.0.0"` 改为 `"127.0.0.1"`。
 - token 只保存 hash/preview；新 token 只在生成动作的受控返回值中出现一次，日志和状态接口只返回 preview。
 - `allow_dangerous_commands` 默认 false，危险命令检测与 preview/confirm 语义保持在后端。
+
+### 3.1.1 存量非 loopback 配置的迁移（已确认策略：降级 + 重新确认）
+
+`McpSettings` 以 JSON blob 存于 app setting `mcp.default`，且**没有 schema 版本字段**，只依赖 serde default 做字段级兼容。`remote_host` 是用户可保存项，存量配置中可能存在 `0.0.0.0` 等非 loopback 值。
+
+新增字段（向后兼容，旧 JSON 缺字段时 serde default 为 `false`）：
+
+```rust
+#[serde(default)]
+pub remote_exposure_acknowledged: bool,
+```
+
+**生效值解析必须收敛到单一 seam**，避免 spawn 与各状态 DTO 各自判断：
+
+```rust
+/// 返回 (生效 host, 是否因未确认而降级)
+fn resolve_effective_remote_host(settings: &McpSettings) -> (String, bool)
+```
+
+规则：
+
+| 存储的 `remote_host` | `remote_exposure_acknowledged` | 生效 host | 降级标志 |
+| --- | --- | --- | --- |
+| loopback | 任意 | 存储值 | false |
+| 非 loopback | `true` | 存储值 | false |
+| 非 loopback | `false` | `127.0.0.1` | true |
+
+`resolve_effective_remote_host` 必须被以下路径共用，不得各自读取 `settings.remote_host`：
+sidecar 启动参数（`mcp.rs` 中 `.arg(&settings.remote_host)` 处）、`McpRemoteServiceStatus.host/url/sse_url`、`McpSettingsOutput.remote_host`、`McpStatus.remote_host`。
+
+**不自动回写存储。** 加载时不静默改写用户的 `remote_host`——静默改用户数据不可审计。改为在状态 DTO 中额外暴露 `remote_host_stored` 与 `remote_host_downgraded`，由设置页显示「原监听地址已因未确认暴露风险而降级为 127.0.0.1，如需恢复请重新确认」。
+
+**写入侧 fail-fast：** `save_settings` 收到非 loopback host 且 `remote_exposure_acknowledged != true` 时，直接以稳定错误码 `mcp_remote_host_not_acknowledged` 拒绝，不做静默降级；只有用户显式勾选确认后才同时持久化 host 与 ack。
+
+**loopback 判定复用：** `src/bin/mxterm_mcp.rs` 已有 `is_loopback_host`（精确匹配 `localhost` / `127.0.0.1` / `::1`）。该函数位于 sidecar 二进制 crate，应用侧无法直接引用，应提取到共享模块供两侧使用，确保「设置页认为安全」与「sidecar 认为安全」判定一致。注意现实现为精确匹配，`127.0.0.2`、`::ffff:127.0.0.1` 会被判为非 loopback；本期保持严格匹配（宁可多要求一次确认），如需放宽必须单独评估。
 
 ### 3.2 请求处理
 
@@ -50,15 +84,37 @@
 
 ## 5. AppError 与日志契约
 
-建议保持兼容字段一段迁移期，但将 `raw_message` 从默认前端语义降级为受控诊断字段：
+### 5.1 现状约束（决定实现顺序）
 
-- `code`：稳定、可测试、不可包含动态 secret。
+`AppError`（`app_error.rs`）当前是 4 字段结构体，同时充当**内部错误类型**与**IPC 线上类型**：
+
+```rust
+pub struct AppError { code, message, raw_message, recoverable }
+```
+
+两个必须先认清的事实：
+
+1. **`AppError::new` 有 585 处调用，分布在 33 个 Rust 文件。** 因此新增字段必须在 `new()` 内部生成默认值，不能要求调用点逐个补参；`raw_message` 的下线也必须走 serde 层开关，不能改 585 个位置。
+2. **`raw_message` 是前端的功能性依赖，不只是泄露面。** `ConnectionDialog.tsx` 用它做 `.toLowerCase()` 后分支判定，`WorkspaceShell.tsx` 用 `connectionErrorSummary(code, rawMessage, message)`、`connectionErrorStage(code, rawMessage)`、`connectionErrorSuggestion(code, rawMessage)` 做错误摘要、阶段归类和修复建议。
+
+结论：**直接删除 `raw_message` 会把「具体失败」降级为「通用错误」，正是 prd 禁止的假成功/吞异常。** 因此顺序必须是先补齐服务端分类能力，再下线字段，不可颠倒。
+
+### 5.2 目标契约
+
+- `code`：稳定、可测试、不可包含动态 secret；**并承担原先由 `raw_message` 内容推断出的分类职责**（错误摘要、阶段、修复建议）。
 - `message`：面向用户的安全文案，不拼接原始错误。
-- `raw_message`：仅在开发/受控诊断通道可见；生产 command response 不返回，或改为脱敏摘要。
-- `diagnostic_id`：随机关联 ID，用于查找内部日志。
+- `raw_message`：降级为受控诊断字段，生产 command response 不返回。
+- `diagnostic_id`：随机关联 ID，用于在内部日志中定位原始错误。
 - `recoverable`：只表达是否可重试/需要用户操作，不表达内部异常细节。
 
-迁移时要检查 TypeScript DTO、Rust command contract 和所有调用方，避免删除字段后出现假成功或通用错误吞掉具体失败。
+### 5.3 实施顺序（不可跳步）
+
+1. **补分类能力**：盘点 `ConnectionDialog.tsx` / `WorkspaceShell.tsx` 中依赖 `raw_message` 文本推断的判定分支，逐条落到稳定 `code` 上（必要时新增/细分 code），并同步更新 TypeScript DTO 与调用方。此步完成后前端不再需要读取 `raw_message`。
+2. **加 diagnostic ID**：`AppError` 增加 `diagnostic_id: String`，在 `new()` 内生成（如 UUID），调用点零改动；同时写入内部诊断日志，日志记录 `diagnostic_id` + 失败类别，不记录 token/密码/私钥/完整命令/敏感路径。
+3. **关闭线上字段**：对 `raw_message` 加 `#[serde(skip_serializing)]`，一次性从全部 command response 移除，且不影响 585 处调用点与断言 `error.raw_message` 的 Rust 内部测试（它们直接访问字段，不经过 serde）。
+4. **兼容窗口**：前端在过渡期必须容忍 `raw_message` 缺失（按可选字段处理），不得因字段消失而误判成功或抛异常。
+
+Rust 内部错误构造与日志仍保留完整 `raw_message`，保留诊断能力；被移除的只是它向 WebView 的暴露。
 
 ## 6. 输入验证与资源生命周期
 
@@ -80,3 +136,41 @@
 - Loopback 默认会增加远程使用配置成本，但显著降低局域网误暴露风险，符合已确认的安全默认值原则。
 - CSP 收紧可能影响 Monaco/noVNC/更新器加载；应先证据化实际需求，不能盲目加白名单。
 - raw_message 完全删除会损害诊断；分层和 diagnostic ID 能在不把敏感细节送到前端的情况下保留可追踪性。
+- 降级存量非 loopback 配置会让正在远程使用 MCP 的用户在升级后连接失败一次，需要重新确认；这是为收敛存量误暴露付出的显式代价，且失败是可见的（设置页提示），不是静默行为。
+
+## 9. 验证环境要求
+
+### 9.1 原始基线机器的工具链状况（实测记录）
+
+Task 00 记录的阻塞原因「MSVC `link.exe` 不存在」经复核为**误诊**。原始基线机器（Windows）的实测证据：
+
+| 检查项 | 实测结果 |
+| --- | --- |
+| `link.exe` / `cl.exe` | 存在：`E:\Programs\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\bin\Hostx64\x64\`（54 个文件） |
+| MSVC `include\` | **缺失**（无 `vcruntime.h` 等 CRT 头文件） |
+| MSVC `lib\` | 仅有 `onecore`，**无 `x64`**，无 `msvcprt.lib` |
+| `vcvarsall.bat` | **缺失**，`VC\Auxiliary\Build\` 下只有 `vcvars64.bat` / `vcvarsamd64_x86.bat`，故 `vcvars64.bat` 自身不可用 |
+| Windows SDK 10 | **未安装**（`Windows Kits\10\Include` 不存在） |
+| Windows Kits 8.1 | 空壳，仅 `References` 目录 |
+| 最小 crate `cargo build` | `error: linker \`link.exe\` not found` |
+| 加载 `vcvars64.bat` 后 | `'"...\vcvarsall.bat"' is not recognized` |
+
+真实原因：**VS 2022 的「使用 C++ 的桌面开发」工作负载为半装状态**——编译器二进制在，CRT 头文件、CRT 库与 Windows SDK 全部缺失。因此 Task 00 建议的「用 Developer PowerShell 重跑」无效，因为 `vcvars64.bat` 本身就是坏的。
+
+工具链其余部分可用：cargo/rustc `1.98.1`（位于 `D:\tmp\nexaterm-rust`，需显式设置 `RUSTUP_HOME` / `CARGO_HOME`），target `stable-x86_64-pc-windows-msvc`，`cargo-deny.exe` 已安装，`cargo-audit` 未安装。磁盘：C 盘 3.16 GB 可用（**不足以安装 SDK**），D 盘 663 GB，E 盘 52 GB。
+
+### 9.2 本任务的处理：验收项与平台解耦
+
+**上述阻塞是某一台 Windows 机器的环境事实，不是仓库缺陷，也不是本任务的范围裁剪依据。** Rust 编译/测试类验收项在 `prd.md` 中全部保留为必需项，规则如下：
+
+- 验收项只在**具备完整工具链的环境**中执行，不绑定具体操作系统。macOS 使用 Xcode Command Line Tools 的 clang/ld，Windows 使用完整的 MSVC C++ 工作负载 + Windows SDK，Linux 使用系统工具链。
+- 若当前执行环境不具备（例如 §9.1 的 Windows 机器），该项记 `ENVIRONMENT-BLOCKED` 并附**完整错误证据**；不得记为通过，**也不得据此从任务范围中删除**。
+- 执行环境发生迁移（例如改到 macOS）时，应重新运行基线命令，以新环境的实际结果为准；§9.1 的旧结论自动失效。
+- 不触发编译的 Rust 审计在任何环境都可执行，优先完成：`cargo metadata --locked --offline`、`cargo deny --offline --locked check advisories`。
+- `cargo audit` 若未安装记 `ENVIRONMENT-BLOCKED`；由 cargo-deny advisories 提供临时 RustSec 证据，完成报告中必须标注二者不等同。
+
+具体到本任务的验收项：`cargo check`、`cargo test`、Tauri build 及其驱动的 SSH / Jump / Proxy / SFTP / Tunnel / Host Key 运行时回归，以及 PTY / runner / tunnel / websocket / sidecar 的资源回收验证，**均属必需项**，只是必须在可用环境中执行。
+
+### 9.3 原始 Windows 机器的工具链修复参考
+
+若仍在 §9.1 那台机器上工作：由 VS Installer 补装「MSVC v143 - VS 2022 C++ x64/x86 生成工具」与「Windows 11 SDK」，安装目标盘必须选 E: 或 D:（C 盘 3.16 GB 不足）。完成后重跑基线命令取得干净证据，再继续本任务的 Rust 回归项。

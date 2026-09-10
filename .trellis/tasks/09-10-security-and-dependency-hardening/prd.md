@@ -11,7 +11,7 @@
 - `src-tauri/capabilities/default.json` 将窗口、dialog、opener、process、updater、clipboard 等权限放在同一 capability，并覆盖 `main` 与 `vnc-runner-host`。
 - `src-tauri/src/mcp.rs` 当前默认远程 host 为 `0.0.0.0`、port 为 `8765`；remote 默认关闭，危险命令默认关闭，已有 token/hash/preview 和危险命令检测基础。
 - `src-tauri/src/app_error.rs` 当前序列化 `code`、`message`、`raw_message`、`recoverable`，`raw_message` 可能携带路径、命令或连接细节。
-- Task 00 已完成依赖图和离线审计证据，但 Windows 缺少 MSVC `link.exe`，Rust 编译/测试仍是环境阻塞；C 盘空间不足以直接安装完整 Build Tools。
+- Task 00 已完成依赖图和离线审计证据。其记录的「Windows 缺少 MSVC `link.exe`」经 2026-09-10 复核为**误诊**：`link.exe` 与 `cl.exe` 均存在，真实原因是原始基线机器的 VS 2022「使用 C++ 的桌面开发」工作负载半装（缺 CRT 头文件与 `lib\x64`）且 Windows SDK 未安装。该机器上 C 盘仅 3.16 GB 可用，不足以安装 SDK（D 盘 663 GB、E 盘 52 GB）。此为单机环境问题，不是仓库缺陷，详见 `design.md` §9。
 
 ## Requirements
 
@@ -54,10 +54,12 @@
 - [ ] npm/Rust audit、advisory、来源和许可证结果均有版本、命令、lockfile 状态和未解决项；无未评估 Critical/High。
 - [ ] capability 按窗口/用途完成证据化拆分；CSP 已收紧并通过资源回归，或有经批准的明确风险接受记录。
 - [ ] MCP 的默认监听、认证、危险命令、连接暴露、速率限制、日志脱敏和生命周期均有实现设计与 negative tests；默认行为符合已确认的监听策略。
-- [ ] AppError/日志不泄露 secret、私钥、token、主机路径、完整命令或连接细节，且诊断关联 ID 可追踪。
-- [ ] remote exec、Docker、WebDAV、远程文件和 shell/path 输入边界有拒绝用例；PTY/runner/tunnel/websocket 资源在成功、失败、取消、窗口关闭后可回收。
+- [ ] 存量非 loopback 配置在升级后被降级为 loopback 且**不静默改写用户存储**，设置页有可见的重新确认入口；「非 loopback + 未确认」的保存请求被 fail-fast 拒绝。
+- [ ] AppError/日志不泄露 secret、私钥、token、主机路径、完整命令或连接细节，且诊断关联 ID 可追踪；`raw_message` 下线前，前端错误摘要/阶段/修复建议已改由稳定 `code` 驱动，未出现通用错误吞掉具体失败。
+- [ ] remote exec、Docker、WebDAV、远程文件和 shell/path 输入边界有拒绝用例。
+- [ ] PTY/runner/tunnel/websocket/sidecar 资源在成功、失败、取消、窗口关闭四类路径下完成源码级清理分支核查，并在具备完整工具链的环境中通过运行时验证；环境不具备时记 `ENVIRONMENT-BLOCKED` 并附完整证据，不得声称已通过。
 - [ ] 依赖和配置变更可逐批回滚，Vault 数据可回读，lockfile 一致；没有新增协议或数据格式破坏。
-- [ ] 所有可运行验证均有明确 PASS/FAIL/ENVIRONMENT-BLOCKED 结果，未把工具缺失或 linker 缺失记为通过。
+- [ ] 所有可运行验证均有明确 PASS/FAIL/ENVIRONMENT-BLOCKED 结果；未把工具缺失（`cargo audit`）、MSVC CRT/Windows SDK 缺失或 `link.exe` 不可用记为通过。
 
 ## Out of Scope
 
@@ -66,11 +68,36 @@
 - 完整第三方许可证清单和 MPL notice 维护（由 Task 02 负责）。
 - 大规模 WorkspaceShell/UI 重构、启动性能重构和业务功能改版。
 
-## Confirmed Product Decision
+## Confirmed Product Decisions
 
-MCP 默认采用 loopback 安全策略：默认监听 `127.0.0.1`；非 loopback 监听必须由用户显式开启并确认暴露风险。远程模式仍要求 token 认证、连接暴露审计、preview、速率限制，且危险命令默认关闭。
+### D1：MCP 默认采用 loopback 安全策略
+
+默认监听 `127.0.0.1`；非 loopback 监听必须由用户显式开启并确认暴露风险。远程模式仍要求 token 认证、连接暴露审计、preview、速率限制，且危险命令默认关闭。
 
 该方案会增加远程接入的配置步骤，但能缩小误配置导致的局域网暴露面，符合安全默认值原则。
+
+### D2：存量非 loopback 配置的迁移策略（2026-09-10 确认）
+
+升级后，存量配置中已保存的非 loopback `remote_host` 视为**未确认**：生效值降级为 `127.0.0.1`，并在设置页提示需重新确认。
+
+关键约束：
+
+- **不静默改写用户存储**——只降级生效值，不改写已保存的 `remote_host`；降级状态通过状态 DTO 暴露给 UI。
+- 重新确认后恢复用户原本保存的地址。
+- 拒绝的替代方案：仅改新默认（存量误暴露不收敛）／强制改写所有非 loopback（会让正在远程使用的用户直接断连且不可审计）。
+
+代价：存量远程用户升级后会连接失败一次，需要重新确认。这是为收敛存量误暴露付出的显式代价，且失败可见、可恢复。
+
+### D3：验证项与执行平台解耦（2026-09-10 确认）
+
+原始基线机器（Windows）的 VS 2022「使用 C++ 的桌面开发」工作负载为半装状态（缺 CRT 头文件/库与 Windows SDK），需要链接的 Rust 验证在该机器上不可用，详见 `design.md` §9.1。
+
+**这是单台机器的环境事实，不构成任务范围裁剪。** 已确认决策：
+
+- Rust 编译/测试类验收项——`cargo check`、`cargo test`、Tauri build，以及其驱动的 SSH / Jump / Proxy / SFTP / Tunnel / Host Key 运行时回归、PTY / runner / tunnel / websocket / sidecar 资源回收验证——**全部保留为必需项**，但必须在具备完整工具链的环境中执行，不绑定具体操作系统。
+- 执行环境不具备时记 `ENVIRONMENT-BLOCKED` 并附完整错误证据，不得记为通过，**也不得据此删除该验收项**。
+- 执行环境迁移（例如改到 macOS，改用 Xcode Command Line Tools 的 clang/ld）后，以新环境重新运行基线命令的结果为准，`design.md` §9.1 的旧结论自动失效。
+- 不触发编译的 Rust 审计在任何环境都应优先完成：`cargo metadata`、`cargo deny check advisories`。
 
 ## Notes
 
