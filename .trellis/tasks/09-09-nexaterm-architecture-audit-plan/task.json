@@ -19,7 +19,8 @@
   "pr_url": null,
   "subtasks": [],
   "children": [
-    "09-09-nexaterm-baseline-toolchain-evidence"
+    "09-09-nexaterm-baseline-toolchain-evidence",
+    "09-10-security-and-dependency-hardening"
   ],
   "parent": null,
   "relatedFiles": [],
