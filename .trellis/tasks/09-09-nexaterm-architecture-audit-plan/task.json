@@ -1,0 +1,28 @@
+{
+  "id": "nexaterm-architecture-audit-plan",
+  "name": "nexaterm-architecture-audit-plan",
+  "title": "NexaTerm 需求基线架构审计与开发规划",
+  "description": "依据 NEXATERM_REQUIREMENTS.md 对当前 mXterm 源码进行本地验证，产出架构说明、需求差距分析、渐进式开发计划、测试/安全/许可证计划及可执行任务拆分；本任务不实现产品功能。",
+  "status": "planning",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P0",
+  "creator": "codex",
+  "assignee": "codex",
+  "createdAt": "2026-09-09",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [
+    "09-09-nexaterm-baseline-toolchain-evidence"
+  ],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "",
+  "meta": {}
+}
