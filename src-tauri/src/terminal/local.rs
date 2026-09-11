@@ -306,22 +306,28 @@ mod tests {
         .unwrap();
 
         let session = opened.session.clone();
+        // 读线程要以「终端」身份回应 ConPTY 的光标查询，因此需持有 writer。
+        let responder = Arc::clone(&session);
 
-        // 读线程与主线程共享已读缓冲：即便超时，主线程也能看到到目前为止读到了多少字节，
-        // 从而区分「PTY 完全没有输出（真卡死，需查后端通道 / ConPTY）」与「读到了 banner
-        // 但没等到 marker（纯时序不足）」，避免用超时黑盒掩盖真实层次。
+        // 读线程与主线程共享已读缓冲：即便超时，主线程也能看到到目前为止读到了什么字节，
+        // 从而把失败定位到具体层次，而不是只得到一个无信息的超时。
         let collected = Arc::new(Mutex::new(Vec::<u8>::new()));
         let collected_reader = Arc::clone(&collected);
         let (sender, receiver) = mpsc::channel();
 
-        // CI 的 Windows runner 常在刚跑完上百秒编译、负载很高时才执行本用例，cmd.exe 冷启动
-        // 加 ConPTY 首次输出往返可能耗时数秒，固定 5s/6s 窗口过紧。此处取对 CI 现实的宽松窗口；
-        // 这不是掩盖产品缺陷——open() 仅是 portable-pty 的薄封装、不做任何输出过滤，真实终端
-        // 也走同一条通道，且下方在真卡死时仍会如实失败并报告已读字节数。
+        // ConPTY 启动时会向终端发出 DSR-CPR（ESC[6n）查询光标位置，并在收到 CPR 应答前
+        // 不推进后续输出（参见 Microsoft「Console Virtual Terminal Sequences」文档中 DECXCPR
+        // 的定义，以及 microsoft/terminal#17716 对 PSEUDOCONSOLE_INHERIT_CURSOR 启动阻塞的说明）。
+        // 产品里这一步由前端 xterm.js 自动应答，故真实终端不受影响；本用例自己充当终端，
+        // 必须履行同样的职责，否则 cmd.exe 的回显永远不会到来（实测 30s 内只读到这 4 个字节）。
+        const DSR_CPR_QUERY: &[u8] = b"\x1b[6n";
+
+        // 应答后输出通常在 1s 内到达；窗口留足余量以容忍 runner 冷启动，成功时会立即提前退出。
         let read_budget = Duration::from_secs(30);
         std::thread::spawn(move || {
             let mut reader = opened.reader;
             let mut buffer = [0_u8; 1024];
+            let mut answered_cursor_queries = 0_usize;
             let deadline = Instant::now() + read_budget;
 
             while Instant::now() < deadline {
@@ -330,9 +336,27 @@ mod tests {
                     // 因此本用例真正的成功信号是读到 marker，而非 Ok(0)；此分支仅兜底常规 EOF。
                     Ok(0) => break,
                     Ok(read) => {
-                        let mut buf = collected_reader.lock().unwrap();
-                        buf.extend_from_slice(&buffer[..read]);
-                        if String::from_utf8_lossy(&buf).contains("mxterm-local-ready") {
+                        let (seen_cursor_queries, saw_marker) = {
+                            let mut buf = collected_reader.lock().unwrap();
+                            buf.extend_from_slice(&buffer[..read]);
+                            (
+                                buf.windows(DSR_CPR_QUERY.len())
+                                    .filter(|window| *window == DSR_CPR_QUERY)
+                                    .count(),
+                                String::from_utf8_lossy(&buf).contains("mxterm-local-ready"),
+                            )
+                        };
+
+                        // 逐次应答（ConPTY 可能不止查询一次），且不在持有缓冲锁时再去锁 writer，
+                        // 避免与主线程形成交叉持锁。
+                        while answered_cursor_queries < seen_cursor_queries {
+                            answered_cursor_queries += 1;
+                            let mut writer = responder.writer.lock().unwrap();
+                            let _ = writer.write_all(b"\x1b[1;1R");
+                            let _ = writer.flush();
+                        }
+
+                        if saw_marker {
                             break;
                         }
                     }

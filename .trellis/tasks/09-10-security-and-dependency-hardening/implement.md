@@ -22,7 +22,7 @@
 ## Phase 2：低风险、可独立回滚的硬化
 
 - [x] npm 侧锁文件/override 升级（Batch A）+ 移除冗余 `package-lock.json`（Batch D）：overrides 落到 `pnpm-workspace.yaml`（pnpm 11 不再读 `package.json` 的 `pnpm` 字段），`pnpm install` 后 `pnpm run check` / `pnpm run build`（Monaco+dompurify 兼容）/ `pnpm audit` 全通过——high 5→0、moderate 全清，仅剩 1 条 dev-only esbuild low（有意推迟，见 `SECURITY_REVIEW.md`「Phase 2 执行结果」）。
-- [ ] Rust 侧锁文件升级（Batch B：`cargo update -p h2 -p chacha20 -p crypto-bigint -p der`）与编译验证：**ENVIRONMENT-BLOCKED**，待完整工具链环境（见「验证命令基线」）。
+- [ ] Rust 侧锁文件升级（Batch B：`cargo update -p h2 -p chacha20 -p crypto-bigint -p der`）与编译验证：**可验证（经 CI）**，由 `.github/workflows/ci.yml` 的 rust 矩阵跑 `cargo check` / `cargo test`（见「环境能力变更记录（2026-09-11）」）；本机 Windows 仍无法执行。
 - [ ] 删除明显未使用的 capability，按窗口拆分配置；为每项保留调用点证据。（Batch C：需 `tauri dev` 验证 runner 窗口不回归 → 待工具链环境；拆分矩阵已在 `SECURITY_REVIEW.md` §5 就绪。）
 - [ ] 增加 secret scan、audit artifact 与配置静态检查脚本，输出明确 `PASS` / `FAIL` / `ENVIRONMENT-BLOCKED`。（Batch E：断言依赖 Batch C 与 Phase 5 结果落地，随其一并完成，避免提交即失败的 check。）
 
@@ -50,8 +50,8 @@
 
 - [ ] 为 remote exec、Docker、WebDAV、remote file、tunnel、shell quoting 增加 Windows 与 POSIX 负向用例。
 - [ ] 对 PTY、runner、tunnel、websocket、MCP sidecar 和 VNC runner host 的成功、失败、取消、窗口关闭四类清理路径做源码级核查：确认每个 owner 都有对应清理分支且幂等。
-- [ ] 在具备完整工具链的环境中用 `cargo test` 驱动完成上述资源回收的运行时验证；环境不具备时记 `ENVIRONMENT-BLOCKED` 并附完整证据，不得声称已通过。
-- [ ] 对 Vault 回读、known-host changed 拒绝和连接失败语义做回归测试（同样需要可用工具链）。
+- [ ] 用 `cargo test` 驱动完成上述资源回收的运行时验证：**可验证（经 CI）**，走 `.github/workflows/ci.yml` 的 rust 三平台矩阵；仍不具备时才记 `ENVIRONMENT-BLOCKED` 并附完整证据，不得声称已通过。
+- [ ] 对 Vault 回读、known-host changed 拒绝和连接失败语义做回归测试（同样经 CI 的 rust 矩阵验证）。
 
 ## Phase 5：CSP、跨平台与发布门禁
 
@@ -87,15 +87,46 @@ $env:CARGO_TARGET_DIR='D:\tmp\nexaterm-rust\target-nexaterm'
 cargo metadata --locked --offline
 cargo deny --offline --locked check advisories
 
-# Rust 侧：需要完整工具链（Windows 需完整 MSVC C++ 工作负载 + Windows SDK；
-# macOS 用 Xcode CLT 的 clang/ld）。环境不具备时记 ENVIRONMENT-BLOCKED，
-# 不得记为通过，并附 design.md §9.1 形式的完整错误证据。
+# Rust 侧：需要完整工具链。执行路径有两条，任一可用即不得记 ENVIRONMENT-BLOCKED：
+#   (1) 本机完整工具链（Windows 需完整 MSVC C++ 工作负载 + Windows SDK；macOS 用 Xcode CLT 的 clang/ld）；
+#   (2) GitHub Actions `.github/workflows/ci.yml` 的 rust 矩阵（ubuntu-22.04 / windows-latest / macos-26），
+#       runner 自带完整工具链，跑 `cargo check --workspace --locked` 与 `cargo test --workspace --locked`。
+#       CI 为联网环境，故不加 --offline。走此路径时记录 commit SHA、job 名与结论作为证据。
+# 两条路径都不具备时才记 ENVIRONMENT-BLOCKED，不得记为通过，并附 design.md §9.1 形式的完整错误证据。
 cargo audit                                    # 未安装时报 ENVIRONMENT-BLOCKED
 cargo check --workspace --locked --offline
 cargo test --workspace --locked --offline
 ```
 
-每条命令都要记录工具版本、退出码和 `PASS`/`FAIL`/`ENVIRONMENT-BLOCKED`。
+每条命令都要记录工具版本、退出码和 `PASS`/`FAIL`/`ENVIRONMENT-BLOCKED`；经 CI 执行的记录 commit SHA 与 job 结论。
+
+### 环境能力变更记录（2026-09-11）
+
+本机 Windows 因 MSVC C++ 工作负载半装 + 缺 Windows SDK，`cargo check` / `cargo test` 始终不可执行。新增 `.github/workflows/ci.yml`
+后，Rust 编译与测试改由 GitHub runner 承担，**Rust 编译类验收不再整体阻塞**：
+
+- commit `320c892`：frontend job PASS（pnpm 对齐 11.22.0 后 `pnpm install --frozen-lockfile` 恢复）。
+- commit `608edf6` / `320c892`：Windows `cargo test` 实际跑完全量用例，**252 passed / 1 failed**——证明 Windows 侧编译与测试链路可用。
+  唯一失败项为 `terminal::local::tests::local_session_accepts_input_and_returns_output`（Windows 本地 PTY 往返用例），
+  已单独定位与处置，见下方「已知失败项」。
+- 因此：Batch B、Phase 3、Phase 4 中「需 `cargo check` / `cargo test` 验证」的条目由 ENVIRONMENT-BLOCKED 改判为**可验证（经 CI）**。
+  仍需真实 GUI 会话的项（如 Batch C 的 `tauri dev` runner 窗口回归）**不在此列**，继续保持阻塞状态。
+
+#### 已知失败项：Windows 本地 PTY 往返用例（根因已确认）
+
+- 现象：`local_session_accepts_input_and_returns_output` 在 Windows runner 上超时，三次构建（150s / 70s / 90s 负载各异）稳定复现，非偶发。
+- 定位过程（分三步，每步都用 CI 实测推翻或确认假设，不臆断）：
+  1. 初判怀疑 runner 负载导致时序不足 → 放宽窗口至 30s 并加装诊断探针（commit `c08adad`）。
+  2. 探针回报 `read 4 bytes so far: "\u{1b}[6n"`——30s 内**只有这 4 个字节**，随后完全静默。**时序假设被证伪**。
+  3. 该 4 字节即 DSR-CPR（`ESC[6n`），是 ConPTY 启动时向终端查询光标位置的握手请求。
+- **根因（层次已确认，在测试层，非产品缺陷）**：ConPTY 启动时发出 `ESC[6n` 并**在收到 `ESC[row;colR` 应答前不推进后续输出**
+  （依据：Microsoft「Console Virtual Terminal Sequences」文档 DECXCPR 定义——响应须写回 console 输入流；
+  microsoft/terminal#17716 说明 `PSEUDOCONSOLE_INHERIT_CURSOR` 启动阻塞行为）。本用例自己充当终端角色却从未应答，
+  于是 cmd.exe 的回显永远不会到来。
+- **产品不受影响（已核实）**：`LocalTerminalSession::open` 仅是 `portable-pty` 薄封装；`manager.rs` 的 `spawn_local_reader`
+  只把原始字节 `emit_terminal_output` 给前端，不做解析或过滤；DSR 由前端 xterm.js 自动应答。**不存在无头消费该 reader 的路径。**
+- 处置：读线程以终端身份逐次应答 CPR（`ESC[1;1R`）。**未使用 `#[ignore]`、未删除断言、未放宽校验**；
+  共享缓冲诊断保留，若后续再有其他握手序列阻塞，失败信息仍会直接指出卡在哪几个字节。
 
 ## 回滚点
 
