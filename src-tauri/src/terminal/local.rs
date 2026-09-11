@@ -286,7 +286,7 @@ mod tests {
     #[cfg(windows)]
     #[test]
     fn local_session_accepts_input_and_returns_output() {
-        use std::sync::mpsc;
+        use std::sync::{mpsc, Arc, Mutex};
         use std::time::{Duration, Instant};
 
         let mut profile = sample_profile();
@@ -306,19 +306,33 @@ mod tests {
         .unwrap();
 
         let session = opened.session.clone();
+
+        // 读线程与主线程共享已读缓冲：即便超时，主线程也能看到到目前为止读到了多少字节，
+        // 从而区分「PTY 完全没有输出（真卡死，需查后端通道 / ConPTY）」与「读到了 banner
+        // 但没等到 marker（纯时序不足）」，避免用超时黑盒掩盖真实层次。
+        let collected = Arc::new(Mutex::new(Vec::<u8>::new()));
+        let collected_reader = Arc::clone(&collected);
         let (sender, receiver) = mpsc::channel();
+
+        // CI 的 Windows runner 常在刚跑完上百秒编译、负载很高时才执行本用例，cmd.exe 冷启动
+        // 加 ConPTY 首次输出往返可能耗时数秒，固定 5s/6s 窗口过紧。此处取对 CI 现实的宽松窗口；
+        // 这不是掩盖产品缺陷——open() 仅是 portable-pty 的薄封装、不做任何输出过滤，真实终端
+        // 也走同一条通道，且下方在真卡死时仍会如实失败并报告已读字节数。
+        let read_budget = Duration::from_secs(30);
         std::thread::spawn(move || {
             let mut reader = opened.reader;
-            let mut output = Vec::new();
             let mut buffer = [0_u8; 1024];
-            let deadline = Instant::now() + Duration::from_secs(5);
+            let deadline = Instant::now() + read_budget;
 
             while Instant::now() < deadline {
                 match reader.read(&mut buffer) {
+                    // Windows ConPTY 在子进程退出后不会立即给读端 EOF（读端随 master 存活），
+                    // 因此本用例真正的成功信号是读到 marker，而非 Ok(0)；此分支仅兜底常规 EOF。
                     Ok(0) => break,
                     Ok(read) => {
-                        output.extend_from_slice(&buffer[..read]);
-                        if String::from_utf8_lossy(&output).contains("mxterm-local-ready") {
+                        let mut buf = collected_reader.lock().unwrap();
+                        buf.extend_from_slice(&buffer[..read]);
+                        if String::from_utf8_lossy(&buf).contains("mxterm-local-ready") {
                             break;
                         }
                     }
@@ -329,7 +343,7 @@ mod tests {
                 }
             }
 
-            let _ = sender.send(Ok(String::from_utf8_lossy(&output).to_string()));
+            let _ = sender.send(Ok(()));
         });
 
         {
@@ -340,12 +354,24 @@ mod tests {
             writer.flush().unwrap();
         }
 
-        let output = receiver
-            .recv_timeout(Duration::from_secs(6))
-            .expect("local PTY reader should return before timeout")
-            .unwrap();
-
+        // 主线程耐心严格大于读窗口，留出线程调度余量。
+        let wait = receiver.recv_timeout(read_budget + Duration::from_secs(5));
         session.child.lock().unwrap().kill().ok();
+
+        let output = {
+            let buf = collected.lock().unwrap();
+            String::from_utf8_lossy(&buf).to_string()
+        };
+        match wait {
+            Ok(Ok(())) => {}
+            Ok(Err(error)) => {
+                panic!("local PTY reader failed: {error}; read so far: {output:?}")
+            }
+            Err(_) => panic!(
+                "local PTY reader produced no marker within budget; read {} bytes so far: {output:?}",
+                output.len()
+            ),
+        }
         assert!(
             output.contains("mxterm-local-ready"),
             "local PTY output did not include echoed command output: {output:?}"
