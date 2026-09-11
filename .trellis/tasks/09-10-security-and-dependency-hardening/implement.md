@@ -22,7 +22,11 @@
 ## Phase 2：低风险、可独立回滚的硬化
 
 - [x] npm 侧锁文件/override 升级（Batch A）+ 移除冗余 `package-lock.json`（Batch D）：overrides 落到 `pnpm-workspace.yaml`（pnpm 11 不再读 `package.json` 的 `pnpm` 字段），`pnpm install` 后 `pnpm run check` / `pnpm run build`（Monaco+dompurify 兼容）/ `pnpm audit` 全通过——high 5→0、moderate 全清，仅剩 1 条 dev-only esbuild low（有意推迟，见 `SECURITY_REVIEW.md`「Phase 2 执行结果」）。
-- [ ] Rust 侧锁文件升级（Batch B：`cargo update -p h2 -p chacha20 -p crypto-bigint -p der`）与编译验证：**可验证（经 CI）**，由 `.github/workflows/ci.yml` 的 rust 矩阵跑 `cargo check` / `cargo test`（见「环境能力变更记录（2026-09-11）」）；本机 Windows 仍无法执行。
+- [ ] Rust 侧锁文件升级（Batch B：`cargo update -p h2 -p chacha20 -p crypto-bigint -p der`）与编译验证：**锁文件已升级**（chacha20 0.10.0→0.10.2、crypto-bigint 0.7.3→0.7.5、der 0.8.0→0.8.2、h2 0.4.14→0.4.19，全为 semver 兼容补丁位）；本机 `cargo metadata --locked --offline` PASS，`cargo deny check advisories` 由 10→9 条、RUSTSEC-2026-0258 与 3 个 yanked crate 全部消失，剩余 9 条均为「No safe upgrade available」的 unmaintained 传递依赖。**编译/测试验证待 CI**（`.github/workflows/ci.yml` rust 矩阵，见「环境能力变更记录（2026-09-11）」），本机 Windows 仍无法执行 `cargo check`/`cargo test`。
+  - **连带变更（需评审知悉，非人为改动）**：本次重新求解把 `rustix`/`tempfile`/`dirs-sys`/`is-terminal` 等 11 处对 `windows-sys` 的依赖边由 0.61.2 改指 0.45.0/0.52.0/0.59.0/0.60.2，`tempfile` 的 `getrandom` 由 0.4.2 改指 0.3.4。
+    这些 crate 对 windows-sys 声明的是版本区间，两侧都合法；diff 中**无任何 `[[package]]` 增删**——被改指的 windows-sys 版本在 HEAD 锁文件里本来就已存在，只是边的归属变了。
+    根因是 HEAD 锁文件由发版准备时另一版本 cargo 生成（其求解器把区间依赖统一到 0.61.2），本机 cargo 1.98.1 复现不出该统一结果；已验证 `cargo update -p X --precise` 逐个执行与批量执行产出**完全相同的锁文件哈希**，即非命令写法所致。
+    风险由 CI 三平台 `cargo check` + `cargo test` 兜底判定，不在本机臆断。
 - [ ] 删除明显未使用的 capability，按窗口拆分配置；为每项保留调用点证据。（Batch C：需 `tauri dev` 验证 runner 窗口不回归 → 待工具链环境；拆分矩阵已在 `SECURITY_REVIEW.md` §5 就绪。）
 - [ ] 增加 secret scan、audit artifact 与配置静态检查脚本，输出明确 `PASS` / `FAIL` / `ENVIRONMENT-BLOCKED`。（Batch E：断言依赖 Batch C 与 Phase 5 结果落地，随其一并完成，避免提交即失败的 check。）
 
@@ -108,13 +112,25 @@ cargo test --workspace --locked --offline
 - commit `320c892`：frontend job PASS（pnpm 对齐 11.22.0 后 `pnpm install --frozen-lockfile` 恢复）。
 - commit `608edf6` / `320c892`：Windows `cargo test` 实际跑完全量用例，**252 passed / 1 failed**——证明 Windows 侧编译与测试链路可用。
   唯一失败项为 `terminal::local::tests::local_session_accepts_input_and_returns_output`（Windows 本地 PTY 往返用例），
-  已单独定位与处置，见下方「已知失败项」。
-- 因此：Batch B、Phase 3、Phase 4 中「需 `cargo check` / `cargo test` 验证」的条目由 ENVIRONMENT-BLOCKED 改判为**可验证（经 CI）**。
-  仍需真实 GUI 会话的项（如 Batch C 的 `tauri dev` runner 窗口回归）**不在此列**，继续保持阻塞状态。
+  已单独定位并修复，见下方「已修复项」。
+- commit `58f6172`：**CI 全绿**——frontend job 与 rust 矩阵（ubuntu-22.04 / windows-latest / macos-26）`cargo check` + `cargo test` 全部 PASS。
+  Windows 侧 **253/253 通过**，其中 PTY 往返用例为其 2026-06-18 引入以来**首次真正通过**。
+- 因此：Batch B、Phase 3、Phase 4 中「需 `cargo check` / `cargo test` 验证」的条目由 ENVIRONMENT-BLOCKED 改判为**可验证（经 CI）**，
+  且该通道已由 `58f6172` 的全绿结果实证可用。仍需真实 GUI 会话的项（如 Batch C 的 `tauri dev` runner 窗口回归）**不在此列**，继续保持阻塞状态。
 
-#### 已知失败项：Windows 本地 PTY 往返用例（根因已确认）
+#### 已修复项：Windows 本地 PTY 往返用例（根因已确认并经 CI 验证）
 
 - 现象：`local_session_accepts_input_and_returns_output` 在 Windows runner 上超时，三次构建（150s / 70s / 90s 负载各异）稳定复现，非偶发。
+- **并非 CI 引入的新问题，而是既有失败被首次自动化暴露**：
+  - 该用例由 `29dd4e3 feat: 实现本地终端`（2026-06-18）引入。
+  - `.trellis/tasks/08-01-encrypted-connection-transfer/prd.md:45`（2026-08-01，**工具链完好的本机**跑全量套件）已记录：
+    「Full Rust suite remains 245/246 because the **pre-existing** `terminal::local::tests::local_session_accepts_input_and_returns_output`
+    **blocks in PTY read and times out**」——即在健康本机上同样卡死，且当时已知为既有问题，以「不在本任务范围」豁免。
+  - `.github/workflows` 历史共 7 次提交，本次之前**只有 `release.yml`**，而 `release.yml` 全程仅执行 `pnpm run package:*`（`tauri build`），
+    **不含任何 `cargo test`**。故上游多次成功发版只证明**编译/打包链路正常**，不构成该测试曾通过的证据。
+  - 结论：此用例自引入起**在任何环境下都未通过过**；它从未拦截过发版，因为发版流程根本不执行它。
+- 推论（强化根因判断）：若属 CI 环境脆弱，健康本机应当通过；而实测「哪里都卡、且都卡在 PTY read」，
+  正是「无人应答 ConPTY 光标查询」这一**与环境无关**的必然结果。先前「runner 负载导致时序不足」的假设据此彻底排除。
 - 定位过程（分三步，每步都用 CI 实测推翻或确认假设，不臆断）：
   1. 初判怀疑 runner 负载导致时序不足 → 放宽窗口至 30s 并加装诊断探针（commit `c08adad`）。
   2. 探针回报 `read 4 bytes so far: "\u{1b}[6n"`——30s 内**只有这 4 个字节**，随后完全静默。**时序假设被证伪**。
@@ -127,6 +143,8 @@ cargo test --workspace --locked --offline
   只把原始字节 `emit_terminal_output` 给前端，不做解析或过滤；DSR 由前端 xterm.js 自动应答。**不存在无头消费该 reader 的路径。**
 - 处置：读线程以终端身份逐次应答 CPR（`ESC[1;1R`）。**未使用 `#[ignore]`、未删除断言、未放宽校验**；
   共享缓冲诊断保留，若后续再有其他握手序列阻塞，失败信息仍会直接指出卡在哪几个字节。
+- **验证结果（commit `58f6172`）**：Windows rust job PASS，**253/253**，该用例首次通过；Linux / macOS 同步全绿。
+  根因判断由此获得实证，而非仅停留在推理。
 
 ## 回滚点
 
