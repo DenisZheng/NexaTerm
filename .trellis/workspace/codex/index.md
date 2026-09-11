@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 1
-- **Last Active**: 2026-09-10
+- **Total Sessions**: 2
+- **Last Active**: 2026-09-11
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~39 | Active |
+| `journal-1.md` | ~112 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 2 | 2026-09-11 | Task 01 Phase 1 审计 + Phase 2 Batch A/D 硬化 | - | `main` |
 | 1 | 2026-09-10 | 完成 NexaTerm 架构审计与 Task 00 基线 | `f94d643` | `main` |
 <!-- @@@/auto:session-history -->
 

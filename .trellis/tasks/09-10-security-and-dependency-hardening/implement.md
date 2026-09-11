@@ -6,24 +6,25 @@
 - [x] 用户确认存量非 loopback 配置的迁移策略：降级为 loopback + 设置页提示重新确认（见 `design.md` §3.1.1）。
 - [x] 用户确认验证项与执行平台解耦：Rust 编译类验收保留为必需项，须在具备完整工具链的环境中执行（见 `prd.md` D3、`design.md` §9）。
 - [x] 规划产物已提交至基线 commit `96c6d35`，工作区干净。
-- [ ] 读取并核对 `.trellis/spec/backend`、相关 frontend spec、Tauri command contracts 和当前 lockfile。
-- [ ] 记录审计工具版本、Rust 工具链阻塞与磁盘约束为执行环境，不把环境阻塞当作测试通过。
+- [x] 读取并核对 `.trellis/spec/backend`、相关 frontend spec、Tauri command contracts 和当前 lockfile。（注：`spec/backend/error-handling.md`、`logging-guidelines.md` 为空模板，威胁模型改以实际代码 `app_error.rs`/`mcp.rs` 与 `design.md` 为准。）
+- [x] 记录审计工具版本、Rust 工具链阻塞与磁盘约束为执行环境，不把环境阻塞当作测试通过。
 
 ## Phase 1：审计与威胁模型
 
-- [ ] 固定 `package.json`、pnpm lockfile、`src-tauri/Cargo.toml`、`Cargo.lock` 的基线 hash。
-- [ ] 运行/复核 `pnpm --registry=https://registry.npmjs.org audit --json`；按 Critical/High/Moderate/Low 记录**每条的修复路径与依赖链**，特别是 5 个 high 究竟来自直接依赖升级还是传递依赖 override。
-- [ ] 运行 `cargo metadata --locked --offline` 与 `cargo-deny --offline --locked check advisories`；记录 10 个 RustSec advisory 的可修复性、影响范围与许可证。
-- [ ] `cargo audit` 记 `ENVIRONMENT-BLOCKED`（工具未安装），由 cargo-deny advisories 提供临时 RustSec 证据，并明确标注二者不等同。
-- [ ] 生成依赖升级矩阵：直接依赖、传递路径、可升级版本、API/平台风险、回滚点。
-- [ ] 生成 threat model：MCP 暴露、WebView/IPC、secret/error/log、路径/命令注入、资源泄露、供应链。
-- [ ] 形成 CSP 资源盘点和 capability 使用矩阵：从前端调用点与窗口创建点反推 `main` / `vnc-runner-host` 各自真实需要的权限。
+- [x] 固定 `package.json`、pnpm lockfile、`src-tauri/Cargo.toml`、`Cargo.lock` 的基线 hash。
+- [x] 运行/复核 `pnpm --registry=https://registry.npmjs.org audit --json`；按 Critical/High/Moderate/Low 记录**每条的修复路径与依赖链**，特别是 5 个 high 究竟来自直接依赖升级还是传递依赖 override。（结论：5 个 high 全为 dev-only 构建链传递依赖，见 `SECURITY_REVIEW.md` §Phase1.1。）
+- [x] 运行 `cargo metadata --locked --offline` 与 `cargo-deny --offline --locked check advisories`；记录 10 个 RustSec advisory 的可修复性、影响范围与许可证。
+- [x] `cargo audit` 记 `ENVIRONMENT-BLOCKED`（工具未安装），由 cargo-deny advisories 提供临时 RustSec 证据，并明确标注二者不等同。
+- [x] 生成依赖升级矩阵：直接依赖、传递路径、可升级版本、API/平台风险、回滚点。
+- [x] 生成 threat model：MCP 暴露、WebView/IPC、secret/error/log、路径/命令注入、资源泄露、供应链。
+- [x] 形成 CSP 资源盘点和 capability 使用矩阵：从前端调用点与窗口创建点反推 `main` / `vnc-runner-host` 各自真实需要的权限。
 
 ## Phase 2：低风险、可独立回滚的硬化
 
-- [ ] 先处理无需产品行为变化的锁文件/补丁版本升级；每批升级后运行 `pnpm run check`、`pnpm run build`、`pnpm audit` 与现有 source checks。
-- [ ] 删除明显未使用的 capability，按窗口拆分配置；为每项保留调用点证据。
-- [ ] 增加 secret scan、audit artifact 与配置静态检查脚本，输出明确 `PASS` / `FAIL` / `ENVIRONMENT-BLOCKED`。
+- [x] npm 侧锁文件/override 升级（Batch A）+ 移除冗余 `package-lock.json`（Batch D）：overrides 落到 `pnpm-workspace.yaml`（pnpm 11 不再读 `package.json` 的 `pnpm` 字段），`pnpm install` 后 `pnpm run check` / `pnpm run build`（Monaco+dompurify 兼容）/ `pnpm audit` 全通过——high 5→0、moderate 全清，仅剩 1 条 dev-only esbuild low（有意推迟，见 `SECURITY_REVIEW.md`「Phase 2 执行结果」）。
+- [ ] Rust 侧锁文件升级（Batch B：`cargo update -p h2 -p chacha20 -p crypto-bigint -p der`）与编译验证：**ENVIRONMENT-BLOCKED**，待完整工具链环境（见「验证命令基线」）。
+- [ ] 删除明显未使用的 capability，按窗口拆分配置；为每项保留调用点证据。（Batch C：需 `tauri dev` 验证 runner 窗口不回归 → 待工具链环境；拆分矩阵已在 `SECURITY_REVIEW.md` §5 就绪。）
+- [ ] 增加 secret scan、audit artifact 与配置静态检查脚本，输出明确 `PASS` / `FAIL` / `ENVIRONMENT-BLOCKED`。（Batch E：断言依赖 Batch C 与 Phase 5 结果落地，随其一并完成，避免提交即失败的 check。）
 
 ## Phase 3：MCP 与错误边界
 
