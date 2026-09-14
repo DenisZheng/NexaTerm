@@ -1471,12 +1471,7 @@ async fn open_proxy_stream(request: &ResolvedSshConfig) -> Result<TcpStream, App
         )
         .await?
         .map_err(|error| {
-            AppError::new(
-                "terminal_tcp_connect_failed",
-                "SSH TCP 连接失败。",
-                error,
-                true,
-            )
+            app_error_from_io(error, "terminal_tcp_connect_failed", "SSH TCP 连接失败。")
         }),
         ConnectionProxyKind::HttpConnect => open_http_connect_stream(request).await,
         ConnectionProxyKind::Socks5 => open_socks5_stream(request).await,
@@ -1488,7 +1483,7 @@ async fn open_http_connect_stream(request: &ResolvedSshConfig) -> Result<TcpStre
     let proxy_port = request.proxy.port.unwrap_or(0);
     let mut stream = TcpStream::connect((proxy_host, proxy_port))
         .await
-        .map_err(|error| AppError::new("proxy_connect_failed", "代理连接失败。", error, true))?;
+        .map_err(|error| app_error_from_io(error, "proxy_connect_failed", "代理连接失败。"))?;
     let target = format!("{}:{}", request.host, request.port);
     let auth = match (
         request.proxy.username.as_deref(),
@@ -1552,7 +1547,7 @@ async fn open_socks5_stream(request: &ResolvedSshConfig) -> Result<TcpStream, Ap
     let proxy_port = request.proxy.port.unwrap_or(0);
     let mut stream = TcpStream::connect((proxy_host, proxy_port))
         .await
-        .map_err(|error| AppError::new("proxy_connect_failed", "代理连接失败。", error, true))?;
+        .map_err(|error| app_error_from_io(error, "proxy_connect_failed", "代理连接失败。"))?;
     let use_auth = request
         .proxy
         .username
@@ -1802,18 +1797,72 @@ fn to_russh_error(error: AppError) -> russh::Error {
     ))
 }
 
+/// 把网络层失败细分成稳定 code 后缀。
+///
+/// 这是 `design.md` §5.3 第 1 步的后端侧：前端原先靠 `raw_message.toLowerCase()`
+/// 匹配 "connection refused" / "unreachable" / "reset" 之类的文本来区分失败原因，
+/// 而这些文本来自操作系统且随系统语言变化（中文 Windows 给的是「连接的主机没有反应」），
+/// 本质上不可测试也不稳定。分类必须在拿得到 `io::ErrorKind` 的这一层完成。
+fn network_error_suffix(kind: std::io::ErrorKind) -> Option<&'static str> {
+    match kind {
+        std::io::ErrorKind::ConnectionRefused => Some("connect_refused"),
+        std::io::ErrorKind::HostUnreachable | std::io::ErrorKind::NetworkUnreachable => {
+            Some("connect_unreachable")
+        }
+        std::io::ErrorKind::ConnectionReset | std::io::ErrorKind::ConnectionAborted => {
+            Some("connect_reset")
+        }
+        std::io::ErrorKind::TimedOut => Some("connect_timeout"),
+        _ => None,
+    }
+}
+
+/// 按调用点的 fallback code 生成同族的细分 code。
+///
+/// 例如 `terminal_connect_failed` + ConnectionRefused → `terminal_connect_refused`；
+/// `remote_sftp_connect_failed` + TimedOut → `remote_sftp_connect_timeout`。
+/// 保留站点前缀是因为前端既要知道「哪一步失败」（阶段归类），也要知道「为什么失败」
+/// （摘要与修复建议），两者都必须从 code 读出来。
+fn refine_network_code(fallback_code: &str, kind: std::io::ErrorKind) -> Option<String> {
+    let suffix = network_error_suffix(kind)?;
+    let site = fallback_code
+        .strip_suffix("_connect_failed")
+        .or_else(|| fallback_code.strip_suffix("_failed"))?;
+    Some(format!("{site}_{suffix}"))
+}
+
+/// 由 `io::Error` 直接构造带细分 code 的连接错误；无法细分时退回 fallback。
+fn app_error_from_io(
+    error: std::io::Error,
+    fallback_code: &str,
+    fallback_message: &str,
+) -> AppError {
+    match refine_network_code(fallback_code, error.kind()) {
+        Some(code) => AppError::new(&code, fallback_message, error, true),
+        None => AppError::new(fallback_code, fallback_message, error, true),
+    }
+}
+
 fn app_error_from_russh(
     error: russh::Error,
     fallback_code: &str,
     fallback_message: &str,
 ) -> AppError {
-    if let russh::Error::IO(io_error) = &error {
+    // 先把需要的信息取出来结束对 error 的借用，后面才能把 error 整体作为 raw_message 移交。
+    let refined_code = if let russh::Error::IO(io_error) = &error {
         if let Ok(app_error) = serde_json::from_str::<AppError>(&io_error.to_string()) {
             return app_error;
         }
-    }
+        // 不是内部 JSON 通道包装的错误，说明这是真实的 io 失败，按 ErrorKind 细分。
+        refine_network_code(fallback_code, io_error.kind())
+    } else {
+        None
+    };
 
-    AppError::new(fallback_code, fallback_message, error, true)
+    match refined_code {
+        Some(code) => AppError::new(&code, fallback_message, error, true),
+        None => AppError::new(fallback_code, fallback_message, error, true),
+    }
 }
 
 fn map_tunnel_auth_error(error: AppError) -> AppError {
@@ -2152,6 +2201,121 @@ mod tests {
         assert_eq!(mapped.message, original.message);
         assert_eq!(mapped.raw_message, original.raw_message);
         assert!(mapped.recoverable);
+    }
+
+    /// 内部 JSON 通道必须连 `diagnostic_id` 一起还原：否则用户报的 ID
+    /// 与日志里的 ID 对不上，诊断链断在这一跳。
+    #[test]
+    fn russh_app_error_mapping_preserves_diagnostic_id() {
+        let original = AppError::new("host_key_unknown", "需要确认主机密钥。", "{}", true);
+
+        let mapped = app_error_from_russh(
+            to_russh_error(original.clone()),
+            "terminal_connect_failed",
+            "SSH 连接失败。",
+        );
+
+        assert!(!original.diagnostic_id.is_empty());
+        assert_eq!(mapped.diagnostic_id, original.diagnostic_id);
+    }
+
+    /// 网络失败细分必须来自 `io::ErrorKind`，不能靠匹配 OS 错误文本——
+    /// 后者随系统语言变化（中文 Windows 是「连接的主机没有反应」）。
+    #[test]
+    fn network_errors_refine_into_stable_codes() {
+        let cases = [
+            (
+                std::io::ErrorKind::ConnectionRefused,
+                "terminal_connect_failed",
+                "terminal_connect_refused",
+            ),
+            (
+                std::io::ErrorKind::HostUnreachable,
+                "terminal_tcp_connect_failed",
+                "terminal_tcp_connect_unreachable",
+            ),
+            (
+                std::io::ErrorKind::NetworkUnreachable,
+                "remote_exec_connect_failed",
+                "remote_exec_connect_unreachable",
+            ),
+            (
+                std::io::ErrorKind::ConnectionReset,
+                "tunnel_ssh_connect_failed",
+                "tunnel_ssh_connect_reset",
+            ),
+            (
+                std::io::ErrorKind::ConnectionAborted,
+                "remote_sftp_connect_failed",
+                "remote_sftp_connect_reset",
+            ),
+            (
+                std::io::ErrorKind::TimedOut,
+                "jump_connect_failed",
+                "jump_connect_timeout",
+            ),
+            (
+                std::io::ErrorKind::ConnectionRefused,
+                "proxy_connect_failed",
+                "proxy_connect_refused",
+            ),
+        ];
+
+        for (kind, fallback, expected) in cases {
+            assert_eq!(
+                refine_network_code(fallback, kind).as_deref(),
+                Some(expected),
+                "{fallback} + {kind:?} 应细分为 {expected}"
+            );
+        }
+    }
+
+    /// 无法归类的 kind 必须保持 fallback code，不得编出一个前端不认识的新 code。
+    #[test]
+    fn unclassifiable_errors_keep_fallback_code() {
+        assert_eq!(
+            refine_network_code("terminal_connect_failed", std::io::ErrorKind::Other),
+            None
+        );
+        assert_eq!(
+            refine_network_code("terminal_connect_failed", std::io::ErrorKind::PermissionDenied),
+            None
+        );
+        // code 不以 _failed 结尾时不做改写，避免拼出畸形 code。
+        assert_eq!(
+            refine_network_code("terminal_connect_timeout", std::io::ErrorKind::TimedOut),
+            None
+        );
+
+        let error = app_error_from_io(
+            std::io::Error::new(std::io::ErrorKind::Other, "unclassifiable"),
+            "terminal_tcp_connect_failed",
+            "SSH TCP 连接失败。",
+        );
+        assert_eq!(error.code, "terminal_tcp_connect_failed");
+    }
+
+    /// 真实 io 失败经 russh 包装后仍要细分；而内部 JSON 通道的包装不能被误判成网络错误。
+    #[test]
+    fn russh_io_errors_refine_but_json_channel_is_not_misread() {
+        let refined = app_error_from_russh(
+            russh::Error::IO(std::io::Error::new(
+                std::io::ErrorKind::ConnectionRefused,
+                "connection refused",
+            )),
+            "terminal_connect_failed",
+            "SSH 连接失败。",
+        );
+        assert_eq!(refined.code, "terminal_connect_refused");
+        assert_eq!(refined.message, "SSH 连接失败。");
+
+        // JSON 通道用的是 ErrorKind::Other，不会命中任何细分分支。
+        let wrapped = app_error_from_russh(
+            to_russh_error(AppError::new("host_key_changed", "主机密钥已变化。", "{}", true)),
+            "terminal_connect_failed",
+            "SSH 连接失败。",
+        );
+        assert_eq!(wrapped.code, "host_key_changed");
     }
 
     #[test]

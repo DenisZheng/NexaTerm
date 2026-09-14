@@ -587,6 +587,11 @@ button {
   font-size: 12px;
 }
 
+/* 风险提示型说明：沿用全局 --mx-warning 语义色，亮/暗主题均由 token 承担。 */
+.settings-note-warning {
+  color: var(--mx-warning);
+}
+
 .mcp-settings-panel {
   gap: 0;
 }

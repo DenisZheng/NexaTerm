@@ -22,11 +22,11 @@
 ## Phase 2：低风险、可独立回滚的硬化
 
 - [x] npm 侧锁文件/override 升级（Batch A）+ 移除冗余 `package-lock.json`（Batch D）：overrides 落到 `pnpm-workspace.yaml`（pnpm 11 不再读 `package.json` 的 `pnpm` 字段），`pnpm install` 后 `pnpm run check` / `pnpm run build`（Monaco+dompurify 兼容）/ `pnpm audit` 全通过——high 5→0、moderate 全清，仅剩 1 条 dev-only esbuild low（有意推迟，见 `SECURITY_REVIEW.md`「Phase 2 执行结果」）。
-- [ ] Rust 侧锁文件升级（Batch B：`cargo update -p h2 -p chacha20 -p crypto-bigint -p der`）与编译验证：**锁文件已升级**（chacha20 0.10.0→0.10.2、crypto-bigint 0.7.3→0.7.5、der 0.8.0→0.8.2、h2 0.4.14→0.4.19，全为 semver 兼容补丁位）；本机 `cargo metadata --locked --offline` PASS，`cargo deny check advisories` 由 10→9 条、RUSTSEC-2026-0258 与 3 个 yanked crate 全部消失，剩余 9 条均为「No safe upgrade available」的 unmaintained 传递依赖。**编译/测试验证待 CI**（`.github/workflows/ci.yml` rust 矩阵，见「环境能力变更记录（2026-09-11）」），本机 Windows 仍无法执行 `cargo check`/`cargo test`。
-  - **连带变更（需评审知悉，非人为改动）**：本次重新求解把 `rustix`/`tempfile`/`dirs-sys`/`is-terminal` 等 11 处对 `windows-sys` 的依赖边由 0.61.2 改指 0.45.0/0.52.0/0.59.0/0.60.2，`tempfile` 的 `getrandom` 由 0.4.2 改指 0.3.4。
+- [x] Rust 侧锁文件升级（Batch B：`cargo update -p h2 -p chacha20 -p crypto-bigint -p der`）与编译验证：**已完成并经 CI 验证**。锁文件升级 chacha20 0.10.0→0.10.2、crypto-bigint 0.7.3→0.7.5、der 0.8.0→0.8.2、h2 0.4.14→0.4.19，全为 semver 兼容补丁位；本机 `cargo metadata --locked --offline` PASS，`cargo deny check advisories` 由 10→9 条、RUSTSEC-2026-0258 与 3 个 yanked crate 全部消失，剩余 9 条均为「No safe upgrade available」的 unmaintained 传递依赖。**编译/测试验证：commit `1a8e95e`，`.github/workflows/ci.yml` rust 矩阵（ubuntu-22.04 / windows-latest / macos-26）`cargo check` + `cargo test` 全绿**。
+  - **连带变更（已随 CI 全绿证伪风险，非人为改动）**：本次重新求解把 `rustix`/`tempfile`/`dirs-sys`/`is-terminal` 等 11 处对 `windows-sys` 的依赖边由 0.61.2 改指 0.45.0/0.52.0/0.59.0/0.60.2，`tempfile` 的 `getrandom` 由 0.4.2 改指 0.3.4。
     这些 crate 对 windows-sys 声明的是版本区间，两侧都合法；diff 中**无任何 `[[package]]` 增删**——被改指的 windows-sys 版本在 HEAD 锁文件里本来就已存在，只是边的归属变了。
     根因是 HEAD 锁文件由发版准备时另一版本 cargo 生成（其求解器把区间依赖统一到 0.61.2），本机 cargo 1.98.1 复现不出该统一结果；已验证 `cargo update -p X --precise` 逐个执行与批量执行产出**完全相同的锁文件哈希**，即非命令写法所致。
-    风险由 CI 三平台 `cargo check` + `cargo test` 兜底判定，不在本机臆断。
+    `1a8e95e` 的 CI 三平台 `cargo check` + `cargo test` 全绿，确认该连带变更无编译或运行时副作用。
 - [ ] 删除明显未使用的 capability，按窗口拆分配置；为每项保留调用点证据。（Batch C：需 `tauri dev` 验证 runner 窗口不回归 → 待工具链环境；拆分矩阵已在 `SECURITY_REVIEW.md` §5 就绪。）
 - [ ] 增加 secret scan、audit artifact 与配置静态检查脚本，输出明确 `PASS` / `FAIL` / `ENVIRONMENT-BLOCKED`。（Batch E：断言依赖 Batch C 与 Phase 5 结果落地，随其一并完成，避免提交即失败的 check。）
 
@@ -34,21 +34,34 @@
 
 ### MCP 监听策略（按 `design.md` §3.1.1 实现）
 
-- [ ] `DEFAULT_REMOTE_HOST` 改为 `127.0.0.1`；前端 `defaultMcpSettings.remote_host` 同步改为 `"127.0.0.1"`。
-- [ ] `McpSettings` / `McpSettingsInput` 增加 `remote_exposure_acknowledged`（serde default `false`，保证旧 JSON 可解析）。
-- [ ] 提取 `is_loopback_host` 至共享模块，供应用侧与 `mxterm_mcp` sidecar 共用，消除两侧判定不一致。
-- [ ] 实现单一 seam `resolve_effective_remote_host`，并让 sidecar 启动参数、`McpRemoteServiceStatus`、`McpSettingsOutput`、`McpStatus` 全部改用它，禁止各自读取 `settings.remote_host`。
-- [ ] 状态 DTO 增加 `remote_host_stored` 与 `remote_host_downgraded`；加载时**不回写存储**。
-- [ ] `save_settings` 对「非 loopback + 未确认」以 `mcp_remote_host_not_acknowledged` fail-fast 拒绝，不做静默降级。
-- [ ] 设置页显示降级原因与重新确认入口；`remote_host_downgraded` 为真时给出明确提示文案（走 i18n）。
+- [x] `DEFAULT_REMOTE_HOST` 改为 `127.0.0.1`；前端 `defaultMcpSettings.remote_host` 同步改为 `"127.0.0.1"`。
+- [x] `McpSettings` / `McpSettingsInput` 增加 `remote_exposure_acknowledged`（serde default `false`，保证旧 JSON 可解析）。
+- [x] 提取 `is_loopback_host` 至共享模块（`mcp::is_loopback_host`），sidecar `mxterm_mcp.rs` 改为引用该函数，前端 `mcpSettingsTypes.ts` 的 `isLoopbackHost` 与之严格同义（精确匹配 `localhost` / `127.0.0.1` / `::1`）。
+- [x] 实现单一 seam `resolve_effective_remote_host`，sidecar 启动参数、`McpRemoteServiceStatus`、`McpSettingsOutput`、`McpStatus` 全部改用它。
+- [x] 状态 DTO 增加 `remote_host_stored` 与 `remote_host_downgraded`；加载时**不回写存储**（用例 `unacknowledged_non_loopback_host_downgrades_without_rewriting_storage` 断言存储值原样保留）。
+- [x] `save_settings` 对「非 loopback + 未确认」以 `mcp_remote_host_not_acknowledged` fail-fast 拒绝，不做静默降级。
+- [x] 设置页显示降级原因与重新确认入口；表单绑定 `remote_host_stored` 而非生效值，避免无关保存把用户地址静默改写。
 
 ### 测试与收敛
 
-- [ ] 增加认证、错误 token、未暴露连接、危险命令、命令 preview、body/输出上限、rate limit、并发和服务重启/停止测试。
-- [ ] 增加迁移用例：旧配置含 `0.0.0.0` 且无确认字段 → 生效 loopback + `remote_host_downgraded=true` + 存储未被改写；确认后 → 恢复存储值 + 标志为 false。
-- [ ] 按 `design.md` §5.3 的四步顺序收敛 `AppError`：**先**把前端依赖 `raw_message` 的判定分支落到稳定 `code`，**再**加 `diagnostic_id`，**最后**对 `raw_message` 加 `#[serde(skip_serializing)]`；不得跳步。
-- [ ] 更新 TypeScript DTO 与所有调用方（`ConnectionDialog.tsx`、`WorkspaceShell.tsx` 的错误摘要/阶段/建议逻辑）；过渡期前端必须容忍 `raw_message` 缺失。
-- [ ] 验证 token、password、private key、raw command、host path 不出现在响应、日志和错误 toast。
+- [x] 增加认证、错误 token、未暴露连接、危险命令、命令 preview、body/输出上限、rate limit、并发和服务停止测试。
+  - 本批新增实现（原先缺失，非仅补测试）：`mxterm_mcp.rs` 的**进程内限流**（按来源固定窗口 + 认证失败指数退避，loopback 300/min、非 loopback 60/min）与**并发连接上限**（loopback 64 / 远端 16，分池且不排队）；`mcp.rs` 的**命令长度上限**（8 KiB，超限拒绝而非截断）。
+  - `mxterm_mcp.rs` 新增 HTTP 层与限流器用例；`mcp.rs` 新增暴露白名单、危险命令双闸门、拒绝 preview 不回显命令、超时/输出上限夹取、明文凭据拒绝、token preview 不泄露、`stop` 清空 runtime 等用例。
+  - **服务重启（`restart`/`reconcile`）用例记 `ENVIRONMENT-BLOCKED`**：这两个方法签名需要 `AppHandle`，单测无法构造真实 Tauri 运行时（`stop` 不需要，已覆盖）。缺的是「可运行 Tauri 应用实例的测试环境」，解除后应以集成测试形式补做。
+- [x] 增加迁移用例：旧配置含 `0.0.0.0` 且无确认字段 → 生效 loopback + `remote_host_downgraded=true` + 存储未被改写；确认后 → 恢复存储值 + 标志为 false。
+- [ ] 按 `design.md` §5.3 的四步顺序收敛 `AppError`：**第 1、2、4 步已完成，第 3 步被阻塞**。
+  - **第 1 步（补分类能力）已完成**：网络层失败改由后端在拿得到 `io::ErrorKind` 的那一层分类，落到稳定 code `{站点}_{connect_refused|connect_unreachable|connect_reset|connect_timeout}`（`session.rs` 的 `refine_network_code` / `app_error_from_io`）。前端新增 `connectionErrorCodes.ts`，`WorkspaceShell.tsx` 的阶段/建议/摘要与 `ConnectionDialog.tsx` 的 `describeDialogError` 全部改读 code，不再匹配 `raw_message` 文本。
+    动机不只是安全：旧逻辑匹配 `"connection refused"` / `"timed out"` 等**英文** OS 文本，中文 Windows 给的是「连接的主机没有反应」，旧代码只能再硬编码 `10060` 和中文片段兜底——本质上不可测试。
+  - **第 2 步（diagnostic ID）已完成**：`AppError` 增加 `diagnostic_id`，在 `new()` 内生成 UUID，585 处调用点零改动；内部诊断日志只记 `diagnostic_id` + `code` + `recoverable`，**不记 `raw_message`**（原始文本可能嵌命令原文/主机路径）。
+  - **第 4 步（兼容窗口）已完成**：前端全部 `raw_message` 读取点改为「缺失即退回诊断 ID / message」，不再出现 `normalizeErrorText(error)` 把整个错误对象字符串化的兜底。
+  - **第 3 步（`#[serde(skip_serializing)]`）阻塞，原因是 `raw_message` 目前同时是两条结构化数据通道，直接关闭会造成功能回归**：
+    1. **前端通道**：`src/features/connections/hostKeyErrors.ts:19` 把 `raw_message` 当 JSON 解析出 `HostKeyInfo`（由 `ssh_config.rs` 的 `app_error_for_host_key_unknown` / `app_error_for_host_key_changed` 序列化写入）。关闭后主机密钥 TOFU 确认弹窗将拿不到指纹，等于**关掉 host key 校验的用户可见环节**。
+    2. **Rust 内部通道**：`session.rs` 的 `to_russh_error` / `app_error_from_russh` 把整个 `AppError` 序列化成 JSON 塞进 `io::Error` 再解析回来。本批已给 `raw_message` 加 `#[serde(default)]` 让这条通道**在字段消失后仍能解析**（否则会把 `host_key_unknown` 静默降级为 `terminal_connect_failed`，正是 §5.1 禁止的降级），并加用例 `russh_app_error_mapping_preserves_diagnostic_id` 锁住。
+    - 解除方式需先对齐数据模型归属：把 host key 载荷从 `raw_message` 迁到 `AppError` 的独立结构化字段（如 `details: Option<Value>`），或改为独立命令返回。**这是数据模型决策，按 AGENTS.MD 需先与用户对齐再动手**，故本步保持未勾选。
+- [x] 更新 TypeScript DTO 与所有调用方（`ConnectionDialog.tsx`、`WorkspaceShell.tsx` 的错误摘要/阶段/建议逻辑）；过渡期前端必须容忍 `raw_message` 缺失。
+- [x] 验证 token、password、private key、raw command、host path 不出现在响应、日志和错误 toast。
+  - 用例证据：`remote_service_status_exposes_only_token_preview`（状态 DTO 只含 `...-value` 形式 preview）、`dangerous_command_rejection_previews_reason_without_echoing_command`（拒绝原因不回显命令原文）、`plaintext_credential_args_are_rejected`（明文凭据参数入口拒绝）、`redacted_connection_serialization_excludes_secret_material`、`remote_token_hash_verifies_without_plaintext_sidecar_arg`（token 不进 sidecar 命令行）。
+  - 命令超长按字节拒绝且不回显内容（`mcp_command_too_long` 只带 `command_bytes=N`）；诊断日志只写 `diagnostic_id` + `code` + `recoverable`。
 
 ## Phase 4：输入边界与生命周期
 

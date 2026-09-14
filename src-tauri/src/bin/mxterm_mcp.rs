@@ -1,19 +1,160 @@
 use std::collections::HashMap;
 use std::env;
 use std::io::{self, BufRead, BufReader, Write};
+use std::net::IpAddr;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use m_xterm_lib::mcp;
 use serde_json::{json, Value};
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, Semaphore};
 use tokio::time::timeout;
 
 const MAX_HTTP_HEADER_BYTES: usize = 64 * 1024;
 const MAX_HTTP_BODY_BYTES: usize = 2 * 1024 * 1024;
+
+/// 速率限制策略（`design.md` §3.3）：loopback 与非 loopback 使用不同默认值，
+/// 非 loopback 更严格并要求认证失败退避。
+///
+/// loopback 额度必须显著高于应用内 supervisor 的健康检查频率（每 15 秒一次，
+/// 即 4 次/分钟），否则会把自身监控打成不健康并触发自动重启。
+const RATE_WINDOW: Duration = Duration::from_secs(60);
+const RATE_LIMIT_LOOPBACK: u32 = 300;
+const RATE_LIMIT_REMOTE: u32 = 60;
+/// 连续认证失败达到该次数后进入退避，退避期间直接拒绝，不再走到认证逻辑。
+const AUTH_FAILURE_THRESHOLD: u32 = 5;
+const AUTH_BACKOFF_INITIAL: Duration = Duration::from_secs(5);
+const AUTH_BACKOFF_MAX: Duration = Duration::from_secs(300);
+/// 窗口/退避均已结束且长时间无活动的条目会被清理，避免请求来源数量撑大内存。
+const RATE_ENTRY_IDLE_TTL: Duration = Duration::from_secs(600);
+const RATE_MAX_TRACKED_SOURCES: usize = 1024;
+
+/// 并发连接上限（`design.md` §3.2.1 / §3.3）：非 loopback 更严格，防止单个远端来源
+/// 占满全部连接槽。长连接（SSE）也占一个槽位，因此额度需高于正常交互所需。
+const MAX_CONNECTIONS_LOOPBACK: usize = 64;
+const MAX_CONNECTIONS_REMOTE: usize = 16;
+
+#[derive(Default)]
+struct RateEntry {
+    window_started: Option<Instant>,
+    window_count: u32,
+    consecutive_auth_failures: u32,
+    blocked_until: Option<Instant>,
+    last_seen: Option<Instant>,
+}
+
+struct RateDecision {
+    allowed: bool,
+    retry_after_seconds: u64,
+}
+
+/// 进程内按来源地址限流（固定窗口 + 认证失败退避）。
+///
+/// 时间由调用方传入 `now`，既保证测试可确定复现，也避免每处各取一次时钟。
+struct RateLimiter {
+    entries: HashMap<IpAddr, RateEntry>,
+}
+
+impl RateLimiter {
+    fn new() -> Self {
+        Self {
+            entries: HashMap::new(),
+        }
+    }
+
+    fn limit_for(&self, source: IpAddr) -> u32 {
+        if mcp::is_loopback_host(&source.to_string()) {
+            RATE_LIMIT_LOOPBACK
+        } else {
+            RATE_LIMIT_REMOTE
+        }
+    }
+
+    /// 记录一次请求并给出是否放行。此判断在认证**之前**执行：无 token 与错误 token
+    /// 的暴力尝试也必须有成本。
+    fn check(&mut self, source: IpAddr, now: Instant) -> RateDecision {
+        self.prune(now);
+        let limit = self.limit_for(source);
+        let entry = self.entries.entry(source).or_default();
+        entry.last_seen = Some(now);
+
+        if let Some(blocked_until) = entry.blocked_until {
+            if blocked_until > now {
+                return RateDecision {
+                    allowed: false,
+                    retry_after_seconds: blocked_until.duration_since(now).as_secs().max(1),
+                };
+            }
+            entry.blocked_until = None;
+        }
+
+        let expired = entry
+            .window_started
+            .is_none_or(|started| now.duration_since(started) >= RATE_WINDOW);
+        if expired {
+            entry.window_started = Some(now);
+            entry.window_count = 0;
+        }
+        entry.window_count = entry.window_count.saturating_add(1);
+        if entry.window_count > limit {
+            let started = entry.window_started.unwrap_or(now);
+            return RateDecision {
+                allowed: false,
+                retry_after_seconds: RATE_WINDOW
+                    .saturating_sub(now.duration_since(started))
+                    .as_secs()
+                    .max(1),
+            };
+        }
+
+        RateDecision {
+            allowed: true,
+            retry_after_seconds: 0,
+        }
+    }
+
+    /// 认证失败按来源累计并触发指数退避；退避上限有界，正常客户端不会被动锁死。
+    fn record_auth_failure(&mut self, source: IpAddr, now: Instant) {
+        let entry = self.entries.entry(source).or_default();
+        entry.last_seen = Some(now);
+        entry.consecutive_auth_failures = entry.consecutive_auth_failures.saturating_add(1);
+        if entry.consecutive_auth_failures < AUTH_FAILURE_THRESHOLD {
+            return;
+        }
+        let step = entry
+            .consecutive_auth_failures
+            .saturating_sub(AUTH_FAILURE_THRESHOLD);
+        let backoff = AUTH_BACKOFF_INITIAL
+            .saturating_mul(1_u32 << step.min(16))
+            .min(AUTH_BACKOFF_MAX);
+        entry.blocked_until = Some(now + backoff);
+    }
+
+    /// 认证成功即清零失败计数：合法客户端偶发一次错误 token 不应被逐步推向退避。
+    fn record_auth_success(&mut self, source: IpAddr, now: Instant) {
+        if let Some(entry) = self.entries.get_mut(&source) {
+            entry.consecutive_auth_failures = 0;
+            entry.blocked_until = None;
+            entry.last_seen = Some(now);
+        }
+    }
+
+    fn prune(&mut self, now: Instant) {
+        if self.entries.len() <= RATE_MAX_TRACKED_SOURCES {
+            return;
+        }
+        self.entries.retain(|_, entry| {
+            let idle_expired = entry
+                .last_seen
+                .is_none_or(|seen| now.duration_since(seen) >= RATE_ENTRY_IDLE_TTL);
+            let blocked = entry.blocked_until.is_some_and(|until| until > now);
+            !(idle_expired && !blocked)
+        });
+    }
+}
 
 fn main() {
     let config = parse_cli_config().unwrap_or_else(|error| {
@@ -262,6 +403,28 @@ struct HttpState {
     data_dir: PathBuf,
     token_hash: String,
     sse_sessions: Arc<Mutex<HashMap<String, mpsc::UnboundedSender<String>>>>,
+    rate_limiter: Arc<Mutex<RateLimiter>>,
+    /// 并发槽位按来源分池：loopback 与远端各自独立，互不挤占。
+    loopback_slots: Arc<Semaphore>,
+    remote_slots: Arc<Semaphore>,
+}
+
+impl HttpState {
+    fn slot_for(&self, source: IpAddr) -> &Arc<Semaphore> {
+        if mcp::is_loopback_host(&source.to_string()) {
+            &self.loopback_slots
+        } else {
+            &self.remote_slots
+        }
+    }
+
+    fn connection_limit_for(source: IpAddr) -> usize {
+        if mcp::is_loopback_host(&source.to_string()) {
+            MAX_CONNECTIONS_LOOPBACK
+        } else {
+            MAX_CONNECTIONS_REMOTE
+        }
+    }
 }
 
 struct HttpRequest {
@@ -277,6 +440,9 @@ fn serve_http(data_dir: &Path, config: HttpConfig) -> io::Result<()> {
         data_dir: data_dir.to_path_buf(),
         token_hash: config.token_hash,
         sse_sessions: Arc::new(Mutex::new(HashMap::new())),
+        rate_limiter: Arc::new(Mutex::new(RateLimiter::new())),
+        loopback_slots: Arc::new(Semaphore::new(MAX_CONNECTIONS_LOOPBACK)),
+        remote_slots: Arc::new(Semaphore::new(MAX_CONNECTIONS_REMOTE)),
     };
     tauri::async_runtime::block_on(serve_http_async(config.host, config.port, state))
 }
@@ -285,7 +451,7 @@ async fn serve_http_async(host: String, port: u16, state: HttpState) -> io::Resu
     let listener = TcpListener::bind((host.as_str(), port)).await?;
     eprintln!("remote MCP HTTP service listening on {host}:{port}");
     loop {
-        let (stream, peer) = match listener.accept().await {
+        let (mut stream, peer) = match listener.accept().await {
             Ok(connection) => connection,
             Err(error) => {
                 eprintln!("remote MCP HTTP accept error: {error}");
@@ -293,19 +459,63 @@ async fn serve_http_async(host: String, port: u16, state: HttpState) -> io::Resu
                 continue;
             }
         };
+        // 限流维度取真实来源地址，不能用监听地址：监听在 0.0.0.0 时所有远端请求
+        // 都必须按各自来源分别计量。
+        let source = peer.ip();
+        // 并发槽位在 spawn 之前取得，超限直接拒绝而不是排队：排队会让远端慢连接
+        // 堆积，最终把内存耗尽的代价转嫁给自己。permit 随任务存活，连接结束即释放。
+        let Ok(permit) = state.slot_for(source).clone().try_acquire_owned() else {
+            let _ = write_http_response(
+                &mut stream,
+                503,
+                "Service Unavailable",
+                "application/json",
+                json!({ "error": "too many connections" })
+                    .to_string()
+                    .into_bytes(),
+                vec![("Retry-After".to_string(), "1".to_string())],
+            )
+            .await;
+            continue;
+        };
         let connection_state = state.clone();
         tauri::async_runtime::spawn(async move {
-            if let Err(error) = handle_http_connection(stream, connection_state).await {
+            // permit 由任务持有，任务结束（含 panic）时自动归还槽位。
+            let _permit = permit;
+            if let Err(error) = handle_http_connection(stream, connection_state, source).await {
                 eprintln!("remote MCP HTTP connection error from {peer}: {error}");
             }
         });
     }
 }
 
-async fn handle_http_connection(mut stream: TcpStream, state: HttpState) -> io::Result<()> {
+async fn handle_http_connection(
+    mut stream: TcpStream,
+    state: HttpState,
+    source: IpAddr,
+) -> io::Result<()> {
     let Some(request) = read_http_request(&mut stream).await? else {
         return Ok(());
     };
+
+    // 限流放在来源与认证判断之前，且对 OPTIONS 预检同样生效：无 token / 错误 token
+    // 的暴力尝试也必须有成本，预检请求同样要计入来源额度。
+    let decision = state
+        .rate_limiter
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .check(source, Instant::now());
+    if !decision.allowed {
+        return write_http_response(
+            &mut stream,
+            429,
+            "Too Many Requests",
+            "application/json",
+            json!({ "error": "rate limited" }).to_string().into_bytes(),
+            rate_limit_headers(&request, decision.retry_after_seconds),
+        )
+        .await;
+    }
 
     if request.method == "OPTIONS" {
         return write_http_response(
@@ -334,6 +544,11 @@ async fn handle_http_connection(mut stream: TcpStream, state: HttpState) -> io::
     }
 
     if !request_authorized(&request, &state.token_hash) {
+        state
+            .rate_limiter
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .record_auth_failure(source, Instant::now());
         return write_http_response(
             &mut stream,
             401,
@@ -344,6 +559,11 @@ async fn handle_http_connection(mut stream: TcpStream, state: HttpState) -> io::
         )
         .await;
     }
+    state
+        .rate_limiter
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .record_auth_success(source, Instant::now());
 
     match (request.method.as_str(), request.path.as_str()) {
         ("GET", "/health") => {
@@ -572,7 +792,14 @@ async fn handle_legacy_message(
     .await
 }
 
-async fn read_http_request(stream: &mut TcpStream) -> io::Result<Option<HttpRequest>> {
+/// 读取并解析一条 HTTP 请求。
+///
+/// 参数对 `AsyncRead` 泛化（而不是写死 `TcpStream`）是为了让头部/请求体上限这类边界
+/// 能用内存管道直接构造验证——超限拒绝是安全边界，必须可回归。
+async fn read_http_request<S>(stream: &mut S) -> io::Result<Option<HttpRequest>>
+where
+    S: AsyncRead + Unpin,
+{
     let mut buffer = Vec::new();
     let mut chunk = [0_u8; 1024];
     let header_end = loop {
@@ -695,7 +922,7 @@ fn origin_allowed(request: &HttpRequest) -> bool {
     let Some(origin_host) = authority_host(origin_authority(origin)) else {
         return false;
     };
-    if is_loopback_host(origin_host) {
+    if mcp::is_loopback_host(origin_host) {
         return true;
     }
     let Some(host) = request.headers.get("host") else {
@@ -718,10 +945,6 @@ fn authority_host(authority: &str) -> Option<&str> {
     value.split(':').next().filter(|host| !host.is_empty())
 }
 
-fn is_loopback_host(host: &str) -> bool {
-    matches!(host, "localhost" | "127.0.0.1" | "::1")
-}
-
 fn cors_headers(request: &HttpRequest) -> Vec<(String, String)> {
     let allow_origin = request
         .headers
@@ -740,6 +963,14 @@ fn cors_headers(request: &HttpRequest) -> Vec<(String, String)> {
             "GET, POST, OPTIONS".to_string(),
         ),
     ]
+}
+
+/// 429 响应同时给出 `Retry-After` 与限流暴露头，让调用方知道何时重试，
+/// 而不是盲目重试把退避越推越长。
+fn rate_limit_headers(request: &HttpRequest, retry_after_seconds: u64) -> Vec<(String, String)> {
+    let mut headers = cors_headers(request);
+    headers.push(("Retry-After".to_string(), retry_after_seconds.to_string()));
+    headers
 }
 
 async fn write_http_response(
@@ -1060,5 +1291,337 @@ mod tests {
             body: Vec::new(),
         };
         assert!(!request_authorized(&wrong_request, &token_hash));
+    }
+
+    fn http_request(method: &str, path: &str, headers: &[(&str, &str)]) -> HttpRequest {
+        HttpRequest {
+            method: method.to_string(),
+            path: path.to_string(),
+            query: String::new(),
+            headers: headers
+                .iter()
+                .map(|(name, value)| (name.to_string(), value.to_string()))
+                .collect(),
+            body: Vec::new(),
+        }
+    }
+
+    /// 用内存管道驱动 `read_http_request`：边界用例不必占用真实端口。
+    fn parse_request(payload: &[u8]) -> io::Result<Option<HttpRequest>> {
+        let (mut client, mut server) = tokio::io::duplex(payload.len() + 4096);
+        let payload = payload.to_vec();
+        tauri::async_runtime::block_on(async move {
+            client.write_all(&payload).await.unwrap();
+            client.shutdown().await.unwrap();
+            read_http_request(&mut server).await
+        })
+    }
+
+    /// Bearer 头大小写、token 前后空白都要容错，但空 token 不能被当成有效凭据。
+    #[test]
+    fn request_token_trims_supported_header_forms() {
+        let lowercase = http_request("POST", "/mcp", &[("authorization", "bearer mx_token")]);
+        assert_eq!(request_token(&lowercase).as_deref(), Some("mx_token"));
+
+        let spaced = http_request("POST", "/mcp", &[("x-mxterm-mcp-token", "  mx_token  ")]);
+        assert_eq!(request_token(&spaced).as_deref(), Some("mx_token"));
+
+        let empty = http_request("POST", "/mcp", &[("x-mxterm-mcp-token", "   ")]);
+        assert_eq!(request_token(&empty), None);
+
+        // `Bearer` 与 token 之间没有空格时不构成凭据头，不能误判为已携带 token。
+        let malformed = http_request("POST", "/mcp", &[("authorization", "Bearermx_token")]);
+        assert_eq!(request_token(&malformed), None);
+    }
+
+    /// 浏览器侧 Origin 门：loopback 来源放行；非 loopback 来源必须与 Host 同源。
+    #[test]
+    fn http_origin_gate_allows_loopback_and_same_origin_only() {
+        // 无 Origin（CLI、原生客户端）必须放行，否则会误伤正常调用方。
+        assert!(origin_allowed(&http_request("POST", "/mcp", &[])));
+
+        // loopback 来源（本地工具、桌面 WebView）放行。
+        assert!(origin_allowed(&http_request(
+            "POST",
+            "/mcp",
+            &[("origin", "http://127.0.0.1:5173")]
+        )));
+        assert!(origin_allowed(&http_request(
+            "POST",
+            "/mcp",
+            &[("origin", "http://localhost")]
+        )));
+        assert!(origin_allowed(&http_request(
+            "POST",
+            "/mcp",
+            &[("origin", "tauri://localhost")]
+        )));
+
+        // 非 loopback 来源必须与 Host 同源才放行。
+        let same_origin = http_request(
+            "POST",
+            "/mcp",
+            &[
+                ("origin", "http://192.168.1.20:8765"),
+                ("host", "192.168.1.20:8765"),
+            ],
+        );
+        assert!(origin_allowed(&same_origin));
+
+        let cross_origin = http_request(
+            "POST",
+            "/mcp",
+            &[
+                ("origin", "https://evil.example"),
+                ("host", "192.168.1.20:8765"),
+            ],
+        );
+        assert!(!origin_allowed(&cross_origin));
+
+        // 缺少 Host 时无法证明同源，必须拒绝而不是放行。
+        let no_host = http_request("POST", "/mcp", &[("origin", "https://evil.example")]);
+        assert!(!origin_allowed(&no_host));
+
+        // 解析不出 host 的 Origin（`null`）同样拒绝。
+        let opaque = http_request(
+            "POST",
+            "/mcp",
+            &[("origin", "null"), ("host", "192.168.1.20:8765")],
+        );
+        assert!(!origin_allowed(&opaque));
+    }
+
+    /// CORS 放行头可以回显来源，但被拒绝的来源绝不能出现在 ACAO 里。
+    #[test]
+    fn cors_headers_never_echo_denied_origin() {
+        let allowed = cors_headers(&http_request(
+            "POST",
+            "/mcp",
+            &[("origin", "http://127.0.0.1:5173")],
+        ));
+        assert!(allowed
+            .iter()
+            .any(|(name, value)| name == "Access-Control-Allow-Origin"
+                && value == "http://127.0.0.1:5173"));
+
+        let denied = cors_headers(&http_request(
+            "POST",
+            "/mcp",
+            &[
+                ("origin", "https://evil.example"),
+                ("host", "192.168.1.20:8765"),
+            ],
+        ));
+        assert!(!denied
+            .iter()
+            .any(|(_, value)| value.contains("evil.example")));
+    }
+
+    #[test]
+    fn http_request_parses_method_target_headers_and_body() {
+        let payload = b"POST /mcp?session_id=abc HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Length: 2\r\n\r\n{}";
+        let Some(request) = parse_request(payload).unwrap() else {
+            panic!("完整请求必须能解析出来");
+        };
+        assert_eq!(request.method, "POST");
+        assert_eq!(request.path, "/mcp");
+        assert_eq!(request.query, "session_id=abc");
+        // 头部名统一小写存储，鉴权与来源判断只需查一种写法。
+        assert_eq!(
+            request.headers.get("host").map(String::as_str),
+            Some("127.0.0.1")
+        );
+        assert_eq!(request.body, b"{}".to_vec());
+    }
+
+    /// 请求头超限必须在解析阶段失败，不能无上限地堆积缓冲。
+    #[test]
+    fn http_header_over_limit_is_rejected() {
+        let mut payload = b"POST /mcp HTTP/1.1\r\nX-Pad: ".to_vec();
+        payload.extend(std::iter::repeat(b'a').take(MAX_HTTP_HEADER_BYTES + 1));
+
+        match parse_request(&payload) {
+            Err(error) => assert_eq!(error.kind(), io::ErrorKind::InvalidData),
+            Ok(_) => panic!("超限请求头必须被拒绝"),
+        }
+    }
+
+    /// 声明的 Content-Length 超限时要立即拒绝：不能因为对方声称 4GB 就分配缓冲。
+    #[test]
+    fn http_declared_body_over_limit_is_rejected() {
+        let payload = format!(
+            "POST /mcp HTTP/1.1\r\nContent-Length: {}\r\n\r\n",
+            MAX_HTTP_BODY_BYTES + 1
+        );
+
+        match parse_request(payload.as_bytes()) {
+            Err(error) => assert_eq!(error.kind(), io::ErrorKind::InvalidData),
+            Ok(_) => panic!("超限请求体必须被拒绝"),
+        }
+    }
+
+    /// 声明了长度但数据不足时必须报错，不能把半截请求当成完整请求处理。
+    #[test]
+    fn http_incomplete_body_is_rejected() {
+        let payload = b"POST /mcp HTTP/1.1\r\nContent-Length: 10\r\n\r\nabc";
+
+        match parse_request(payload) {
+            Err(error) => assert_eq!(error.kind(), io::ErrorKind::InvalidData),
+            Ok(_) => panic!("不完整请求体必须被拒绝"),
+        }
+    }
+
+    fn loopback() -> IpAddr {
+        IpAddr::V4(std::net::Ipv4Addr::LOCALHOST)
+    }
+
+    fn lan() -> IpAddr {
+        IpAddr::V4(std::net::Ipv4Addr::new(192, 168, 1, 20))
+    }
+
+    /// 固定窗口额度按来源地址独立计量：同源用完即拒，换源不受影响。
+    #[test]
+    fn rate_limiter_enforces_per_source_window() {
+        let mut limiter = RateLimiter::new();
+        let start = Instant::now();
+        let limit = limiter.limit_for(loopback());
+
+        for _ in 0..limit {
+            assert!(limiter.check(loopback(), start).allowed);
+        }
+        let blocked = limiter.check(loopback(), start);
+        assert!(!blocked.allowed);
+        assert!(blocked.retry_after_seconds >= 1);
+
+        // 同一 IP 换一个端口仍是同一来源，不能靠新连接绕过。
+        assert!(!limiter.check(loopback(), start).allowed);
+
+        // 其他来源各自计量，不受该 IP 的额度影响。
+        assert!(limiter.check(lan(), start).allowed);
+
+        // 窗口滚动后恢复。
+        assert!(limiter.check(loopback(), start + RATE_WINDOW).allowed);
+    }
+
+    /// 非 loopback 来源必须比 loopback 更严格，且两者都高于自身健康检查频率。
+    #[test]
+    fn rate_limiter_is_stricter_for_non_loopback_sources() {
+        let limiter = RateLimiter::new();
+        assert!(limiter.limit_for(lan()) < limiter.limit_for(loopback()));
+
+        // supervisor 每 15 秒探测一次（4 次/分钟），额度必须留出足够余量。
+        let health_checks_per_minute = 60 / 15;
+        assert!(limiter.limit_for(loopback()) > health_checks_per_minute * 10);
+    }
+
+    /// 连续认证失败进入退避：退避内即使带正确 token 也被拒（请求根本走不到认证）。
+    #[test]
+    fn auth_failures_trigger_bounded_backoff() {
+        let mut limiter = RateLimiter::new();
+        let start = Instant::now();
+
+        for _ in 0..AUTH_FAILURE_THRESHOLD {
+            limiter.record_auth_failure(lan(), start);
+        }
+        let blocked = limiter.check(lan(), start);
+        assert!(!blocked.allowed);
+        assert!(blocked.retry_after_seconds <= AUTH_BACKOFF_INITIAL.as_secs());
+
+        // 退避结束后恢复放行。
+        assert!(limiter.check(lan(), start + AUTH_BACKOFF_INITIAL).allowed);
+    }
+
+    /// 退避上限有界：持续失败不会把等待时间推到上限之外，也不会整型溢出。
+    #[test]
+    fn auth_backoff_is_capped() {
+        let mut limiter = RateLimiter::new();
+        let start = Instant::now();
+
+        for _ in 0..64 {
+            limiter.record_auth_failure(lan(), start);
+        }
+        let decision = limiter.check(lan(), start);
+        assert!(!decision.allowed);
+        assert!(decision.retry_after_seconds <= AUTH_BACKOFF_MAX.as_secs());
+    }
+
+    /// 认证成功清零失败计数：合法客户端偶发输错 token 不应被推向退避。
+    #[test]
+    fn auth_success_resets_failure_counter() {
+        let mut limiter = RateLimiter::new();
+        let start = Instant::now();
+
+        for _ in 0..AUTH_FAILURE_THRESHOLD - 1 {
+            limiter.record_auth_failure(lan(), start);
+        }
+        limiter.record_auth_success(lan(), start);
+
+        // 再失败一次不应立刻触发退避——计数已清零。
+        limiter.record_auth_failure(lan(), start);
+        assert!(limiter.check(lan(), start).allowed);
+    }
+
+    /// 来源数量超过跟踪上限时，只有长期空闲且未在退避中的条目会被清理。
+    #[test]
+    fn rate_limiter_prunes_only_idle_entries() {
+        let mut limiter = RateLimiter::new();
+        let start = Instant::now();
+        for index in 0..RATE_MAX_TRACKED_SOURCES + 16 {
+            let source = IpAddr::V4(std::net::Ipv4Addr::new(
+                10,
+                0,
+                (index / 256) as u8,
+                (index % 256) as u8,
+            ));
+            limiter.check(source, start);
+        }
+
+        // 全部条目都在窗口内，清理不得把它们误删（否则限流形同虚设）。
+        limiter.prune(start);
+        assert!(limiter.entries.len() > RATE_MAX_TRACKED_SOURCES);
+
+        // 超过空闲期后应被清理。
+        limiter.prune(start + RATE_ENTRY_IDLE_TTL + RATE_WINDOW);
+        assert!(limiter.entries.is_empty());
+    }
+
+    /// 并发槽位按来源分池，远端比 loopback 更受限，且两池互不挤占。
+    #[test]
+    fn connection_slots_are_separate_and_remote_is_stricter() {
+        assert!(
+            HttpState::connection_limit_for(lan()) < HttpState::connection_limit_for(loopback())
+        );
+
+        let loopback_slots = Arc::new(Semaphore::new(MAX_CONNECTIONS_LOOPBACK));
+        let remote_slots = Arc::new(Semaphore::new(MAX_CONNECTIONS_REMOTE));
+        let state = HttpState {
+            data_dir: PathBuf::from("."),
+            token_hash: String::new(),
+            sse_sessions: Arc::new(Mutex::new(HashMap::new())),
+            rate_limiter: Arc::new(Mutex::new(RateLimiter::new())),
+            loopback_slots,
+            remote_slots,
+        };
+
+        // 远端池占满不影响 loopback 池：本机健康检查不会因远端洪泛而失败。
+        let mut remote_permits = Vec::new();
+        for _ in 0..MAX_CONNECTIONS_REMOTE {
+            remote_permits.push(
+                state
+                    .slot_for(lan())
+                    .clone()
+                    .try_acquire_owned()
+                    .expect("远端池内的槽位必须可获取"),
+            );
+        }
+        assert!(state.slot_for(lan()).clone().try_acquire_owned().is_err());
+        assert!(state
+            .slot_for(loopback())
+            .clone()
+            .try_acquire_owned()
+            .is_ok());
+        // permit 持有到断言之后，确保上面的「占满」状态成立而不是被提前释放。
+        drop(remote_permits);
+        assert!(state.slot_for(lan()).clone().try_acquire_owned().is_ok());
     }
 }

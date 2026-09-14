@@ -135,6 +135,7 @@ import { WebDavSyncSettingsSection } from "./WebDavSyncSettingsSection";
 import { ShortcutSettingsSection } from "./ShortcutSettingsSection";
 import {
   defaultMcpSettings,
+  isLoopbackHost,
   type McpLocalNetworkInfo,
   type McpRemoteLogOutput,
   type McpSettings,
@@ -1003,6 +1004,8 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
     connectionExposureDisabled || filteredConnectionIds.length === 0;
   const remoteStatus = settings.remote_status;
   const suggestedRemoteHost = localNetworkInfo?.primary_ip || null;
+  // 当前草稿地址是否为非 loopback——决定是否展示暴露风险确认入口。
+  const remoteHostRequiresAcknowledgement = !isLoopbackHost(remoteHostDraft.trim());
   const remoteDisplayHost =
     settings.remote_host === "0.0.0.0"
       ? suggestedRemoteHost || "<本机局域网 IP>"
@@ -1100,10 +1103,11 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
   const activeConfig = configTabs.find((tab) => tab.id === activeConfigTab) ?? configTabs[0];
 
   useEffect(() => {
-    setRemoteHostDraft(settings.remote_host);
+    // 表单绑定存储值，不绑定生效值：否则会把降级结果当成用户输入回显并回写。
+    setRemoteHostDraft(settings.remote_host_stored);
     setRemotePortDraft(settings.remote_port.toString());
     setRemoteTokenDraft(remoteToken || "");
-  }, [remoteToken, settings.remote_host, settings.remote_port]);
+  }, [remoteToken, settings.remote_host_stored, settings.remote_port]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1155,7 +1159,14 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
     setSaving(true);
     setError(null);
     try {
-      const saved = await mcpSettingsSave(next);
+      // 后端返回的 remote_host 是「生效值」：未确认暴露风险时已被降级为 loopback。
+      // 除非本次确实要改监听地址，否则一律回传用户存储的原始值，否则任何一次无关保存
+      // （比如只切一个开关）都会把用户保存的 0.0.0.0 静默改写掉，且此后再也无法恢复。
+      const payload: McpSettings = {
+        ...next,
+        remote_host: update.remote_host ?? next.remote_host_stored,
+      };
+      const saved = await mcpSettingsSave(payload);
       setSettings(saved);
     } catch (error) {
       setSettings(previous);
@@ -1218,9 +1229,11 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
     }
   }
 
-  async function saveRemoteEndpoint() {
+  async function saveRemoteEndpoint(acknowledgedOverride?: boolean) {
     const remote_host = remoteHostDraft.trim();
     const remote_port = Number(remotePortDraft);
+    const remote_exposure_acknowledged =
+      acknowledgedOverride ?? settings.remote_exposure_acknowledged;
     if (!remote_host) {
       setError("请输入远程 MCP 监听地址。");
       return;
@@ -1229,10 +1242,14 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
       setError("远程 MCP 端口必须在 1 到 65535 之间。");
       return;
     }
-    if (remote_host === settings.remote_host && remote_port === settings.remote_port) {
+    if (
+      remote_host === settings.remote_host_stored &&
+      remote_port === settings.remote_port &&
+      remote_exposure_acknowledged === settings.remote_exposure_acknowledged
+    ) {
       return;
     }
-    await saveUpdate({ remote_host, remote_port });
+    await saveUpdate({ remote_host, remote_port, remote_exposure_acknowledged });
   }
 
   async function saveRemoteToken() {
@@ -1462,6 +1479,34 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
                 ? `客户端配置已使用本机 IP ${suggestedRemoteHost}；监听地址仍保持 0.0.0.0 以允许局域网访问。`
                 : "暂未检测到可用于局域网访问的本机 IP，客户端配置中仍会显示占位符。"}
             </p>
+          ) : null}
+
+          {/* 监听地址为非本机地址时必须显式确认暴露风险，否则保存会被后端拒绝。
+              降级提示与确认入口成对出现：只提示不给入口，用户无法恢复自己保存的地址。 */}
+          {remoteHostRequiresAcknowledgement && !settings.remote_exposure_acknowledged ? (
+            <p className="settings-note settings-note-warning">
+              该地址会监听非本机网卡，同网段的其它设备都能访问 MCP 服务。请先确认风险再保存。
+            </p>
+          ) : null}
+
+          {settings.remote_host_downgraded ? (
+            <p className="settings-note settings-note-warning">
+              {`已保存的监听地址 ${settings.remote_host_stored} 因未确认暴露风险而临时降级为 ${settings.remote_host}，`}
+              服务当前只监听本机。确认风险后即可恢复原地址。
+            </p>
+          ) : null}
+
+          {remoteHostRequiresAcknowledgement ||
+          settings.remote_exposure_acknowledged ||
+          settings.remote_host_downgraded ? (
+            <SettingsToggle
+              checked={settings.remote_exposure_acknowledged}
+              disabled={loading || saving || !desktopRuntime || !settings.enabled}
+              label="我了解暴露风险，允许 MCP 服务监听非本机地址"
+              onChange={(remote_exposure_acknowledged) =>
+                void saveRemoteEndpoint(remote_exposure_acknowledged)
+              }
+            />
           ) : null}
 
           <div className="mcp-remote-actions">

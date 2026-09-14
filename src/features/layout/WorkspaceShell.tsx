@@ -291,6 +291,12 @@ import {
   parseHostKeyError,
   type HostKeyDecision,
 } from "../connections/hostKeyErrors";
+import {
+  connectionNetworkKind,
+  errorDiagnosticId,
+  isConnectionStageError,
+  isConnectTimeoutCode,
+} from "../connections/connectionErrorCodes";
 import type {
   TerminalPromptDirectorySnapshotReader,
   TerminalSearchNavigationRequest,
@@ -11563,12 +11569,7 @@ function resetConnectionStepForRetry(step: ConnectionStepState): ConnectionStepS
 }
 
 function connectionStepErrorIndex(code: string) {
-  if (
-    code === "terminal_tcp_connect_failed" ||
-    code === "terminal_connect_failed" ||
-    code === "terminal_connect_timeout" ||
-    code.startsWith("proxy_")
-  ) {
+  if (isConnectionStageError(code)) {
     return 1;
   }
   if (code === "host_key_unknown" || code === "host_key_changed") {
@@ -12350,6 +12351,11 @@ function formatDetailedError(error: unknown) {
   if (rawMessage && rawMessage !== normalizeErrorText(message)) {
     return `${message}\n${rawMessage}`;
   }
+  // raw_message 缺失时用诊断 ID 兜底，保证用户报障时仍有可对上内部日志的线索。
+  const diagnosticId = errorDiagnosticId(error);
+  if (!rawMessage && diagnosticId) {
+    return `${message}\n诊断 ID：${diagnosticId}`;
+  }
   return message;
 }
 
@@ -12388,7 +12394,7 @@ function transferErrorStage(code: string): string | null {
   }
   if (
     code === "remote_sftp_connect_failed" ||
-    code === "remote_sftp_connect_timeout"
+    code.startsWith("remote_sftp_connect_")
   ) {
     return "SFTP 连接失败";
   }
@@ -12420,7 +12426,7 @@ function transferErrorSuggestion(code: string): string | null {
   }
   if (
     code === "remote_sftp_connect_failed" ||
-    code === "remote_sftp_connect_timeout"
+    code.startsWith("remote_sftp_connect_")
   ) {
     return "SFTP 连接无法建立，请检查网络连通性、防火墙规则或代理设置。";
   }
@@ -12456,22 +12462,25 @@ function describeConnectionStepError(error: unknown): ConnectionStepErrorDetail 
       ? String((error as { code: unknown }).code)
       : "unknown_error";
   const message = formatError(error);
+  // raw_message 只用于展示底层原因，不参与任何判定；字段缺失时退回 message。
   const rawMessage =
     typeof error === "object" && error !== null && "raw_message" in error
       ? normalizeErrorText((error as { raw_message: unknown }).raw_message)
-      : normalizeErrorText(error);
+      : "";
   const recoverable =
     typeof error === "object" && error !== null && "recoverable" in error
       ? Boolean((error as { recoverable: unknown }).recoverable)
       : true;
+  const diagnosticId = errorDiagnosticId(error);
 
   return {
     code,
-    message: connectionErrorSummary(code, rawMessage, message),
-    rawMessage: rawMessage || message,
+    message: connectionErrorSummary(code, message),
+    // raw_message 下线后仍要给出可追溯的线索：优先展示诊断 ID，供用户报障时对上内部日志。
+    rawMessage: rawMessage || (diagnosticId ? `诊断 ID：${diagnosticId}` : message),
     recoverable,
-    stage: connectionErrorStage(code, rawMessage),
-    suggestion: connectionErrorSuggestion(code, rawMessage),
+    stage: connectionErrorStage(code),
+    suggestion: connectionErrorSuggestion(code),
   };
 }
 
@@ -12482,22 +12491,11 @@ function normalizeErrorText(value: unknown) {
     .trim();
 }
 
-function connectionErrorStage(code: string, rawMessage: string) {
-  const raw = rawMessage.toLowerCase();
-  if (isConnectionTimeoutError(code, raw)) {
+function connectionErrorStage(code: string) {
+  if (isConnectTimeoutCode(code)) {
     return "网络连接超时";
   }
-  if (
-    code === "terminal_connect_failed" ||
-    code === "terminal_tcp_connect_failed" ||
-    code === "remote_exec_connect_failed" ||
-    code.startsWith("proxy_") ||
-    raw.includes("connection refused") ||
-    raw.includes("actively refused") ||
-    raw.includes("no route") ||
-    raw.includes("unreachable") ||
-    raw.includes("reset")
-  ) {
+  if (isConnectionStageError(code)) {
     return "网络连接阶段";
   }
   if (code === "host_key_unknown" || code === "host_key_changed") {
@@ -12522,18 +12520,18 @@ function connectionErrorStage(code: string, rawMessage: string) {
   return "连接阶段";
 }
 
-function connectionErrorSuggestion(code: string, rawMessage: string) {
-  const raw = rawMessage.toLowerCase();
-  if (isConnectionTimeoutError(code, raw)) {
+function connectionErrorSuggestion(code: string) {
+  const networkKind = connectionNetworkKind(code);
+  if (networkKind === "timeout") {
     return "检查主机 IP、端口、防火墙和网络连通性；确认目标 SSH 服务可以从本机访问。";
   }
-  if (raw.includes("connection refused") || raw.includes("actively refused")) {
+  if (networkKind === "refused") {
     return "目标主机可达但端口拒绝连接，确认 SSH 服务已启动、端口填写正确，或安全组允许访问。";
   }
-  if (raw.includes("no route") || raw.includes("unreachable")) {
+  if (networkKind === "unreachable") {
     return "本机到目标主机没有可用路由，检查 VPN、网段、网关或代理配置。";
   }
-  if (raw.includes("reset")) {
+  if (networkKind === "reset") {
     return "连接被对端重置，检查 SSH 服务策略、代理链路或中间防火墙。";
   }
   if (code.startsWith("proxy_")) {
@@ -12560,28 +12558,18 @@ function connectionErrorSuggestion(code: string, rawMessage: string) {
   return "查看底层原因后重试；如果配置有误，点击编辑连接调整主机、端口、代理或认证信息。";
 }
 
-function connectionErrorSummary(code: string, rawMessage: string, fallback: string) {
-  const raw = rawMessage.toLowerCase();
-  if (isConnectionTimeoutError(code, raw)) {
+function connectionErrorSummary(code: string, fallback: string) {
+  const networkKind = connectionNetworkKind(code);
+  if (networkKind === "timeout") {
     return "连接超时";
   }
-  if (raw.includes("connection refused") || raw.includes("actively refused")) {
+  if (networkKind === "refused") {
     return "端口无法连接";
   }
-  if (raw.includes("no route") || raw.includes("unreachable")) {
+  if (networkKind === "unreachable") {
     return "主机不可达";
   }
   return fallback;
-}
-
-function isConnectionTimeoutError(code: string, raw: string) {
-  return (
-    code.includes("connect_timeout") ||
-    code === "terminal_tcp_connect_timeout" ||
-    raw.includes("timeout") ||
-    raw.includes("timed out") ||
-    raw.includes("operation timed out")
-  );
 }
 
 function connectionToInput(connection: ConnectionProfile): ConnectionProfileInput {

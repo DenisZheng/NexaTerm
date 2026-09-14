@@ -39,12 +39,17 @@ use crate::webdav_sync::WebDavSyncService;
 use std::os::windows::process::CommandExt;
 
 pub const MCP_SETTINGS_KEY: &str = "mcp.default";
-pub const DEFAULT_REMOTE_HOST: &str = "0.0.0.0";
+/// 默认只监听本机回环地址。监听 0.0.0.0 会把 MCP 服务暴露到整个局域网，
+/// 必须由用户显式确认风险（`remote_exposure_acknowledged`）后才生效。
+pub const DEFAULT_REMOTE_HOST: &str = "127.0.0.1";
 pub const DEFAULT_REMOTE_PORT: u16 = 8765;
 const DEFAULT_TIMEOUT_SECONDS: u64 = 30;
 const MAX_TIMEOUT_SECONDS: u64 = 300;
 const DEFAULT_OUTPUT_BYTES: usize = 64 * 1024;
 const MAX_OUTPUT_BYTES: usize = 1024 * 1024;
+/// 单条命令的字节上限（`design.md` §3.2.1 要求限制命令长度）。
+/// 超限直接拒绝而不是截断——截断后的命令会变成一个用户没写过的、仍会被执行的命令。
+const MAX_COMMAND_BYTES: usize = 8 * 1024;
 const REMOTE_LOG_MAX_BYTES: u64 = 2 * 1024 * 1024;
 const REMOTE_LOG_TAIL_BYTES: usize = 128 * 1024;
 const REMOTE_HEALTH_INTERVAL_SECONDS: u64 = 15;
@@ -64,6 +69,10 @@ pub struct McpSettings {
     pub remote_enabled: bool,
     #[serde(default = "default_remote_host")]
     pub remote_host: String,
+    /// 用户是否显式确认过「监听非 loopback 地址」的暴露风险。
+    /// 旧配置没有该字段，serde default 为 false，因而被视为未确认并在生效时降级为 loopback。
+    #[serde(default)]
+    pub remote_exposure_acknowledged: bool,
     #[serde(default = "default_remote_port")]
     pub remote_port: u16,
     #[serde(default)]
@@ -87,6 +96,7 @@ impl Default for McpSettings {
             allow_dangerous_commands: false,
             remote_enabled: false,
             remote_host: DEFAULT_REMOTE_HOST.to_string(),
+            remote_exposure_acknowledged: false,
             remote_port: DEFAULT_REMOTE_PORT,
             remote_token: None,
             remote_token_hash: None,
@@ -107,6 +117,9 @@ pub struct McpSettingsInput {
     pub remote_enabled: bool,
     #[serde(default = "default_remote_host")]
     pub remote_host: String,
+    /// 前端必须在用户显式勾选「我了解暴露风险」时才置 true；缺字段按 false 处理。
+    #[serde(default)]
+    pub remote_exposure_acknowledged: bool,
     #[serde(default = "default_remote_port")]
     pub remote_port: u16,
     #[serde(default)]
@@ -132,7 +145,12 @@ pub struct McpStatus {
     pub allow_dangerous_commands: bool,
     pub stdio_only: bool,
     pub remote_enabled: bool,
+    /// 实际生效的监听地址（已过 `resolve_effective_remote_host`）。
     pub remote_host: String,
+    /// 用户保存在配置里的原始地址，可能与生效值不同。
+    pub remote_host_stored: String,
+    /// 生效值是否因未确认暴露风险而被降级为 loopback。
+    pub remote_host_downgraded: bool,
     pub remote_port: u16,
     pub tools: Vec<&'static str>,
 }
@@ -141,7 +159,12 @@ pub struct McpStatus {
 pub struct McpRemoteServiceStatus {
     pub enabled: bool,
     pub running: bool,
+    /// 实际生效并传给 sidecar 的监听地址。
     pub host: String,
+    /// 用户保存的原始地址，可能与 `host` 不同。
+    pub host_stored: String,
+    /// `host` 是否因未确认暴露风险而被降级为 loopback。
+    pub host_downgraded: bool,
     pub port: u16,
     pub url: String,
     pub sse_url: String,
@@ -178,7 +201,14 @@ pub struct McpSettingsOutput {
     pub ssh_operations_enabled: bool,
     pub allow_dangerous_commands: bool,
     pub remote_enabled: bool,
+    /// 实际生效的监听地址。
     pub remote_host: String,
+    /// 用户保存的原始地址——**设置页表单应绑定此字段**，避免把降级结果当成用户输入回写。
+    pub remote_host_stored: String,
+    /// 生效值是否因未确认暴露风险而被降级为 loopback。
+    pub remote_host_downgraded: bool,
+    /// 存储中的确认状态，供设置页回显勾选框。
+    pub remote_exposure_acknowledged: bool,
     pub remote_port: u16,
     pub remote_token: Option<String>,
     pub remote_token_saved: bool,
@@ -333,6 +363,28 @@ pub fn save_settings(
 ) -> Result<(McpSettings, Option<String>), AppError> {
     let existing = load_settings(repository).unwrap_or_default();
     let remote_host = normalize_remote_host(input.remote_host)?;
+    let remote_host_is_loopback = is_loopback_host(&remote_host);
+    // 写入侧 fail-fast：只拦「本次请求把监听地址改成非 loopback、却没有确认风险」这一个动作，
+    // 让用户填了不会生效的地址时立刻看到失败，而不是静默降级。
+    //
+    // 但不能顺手把「存量非 loopback 地址 + 未确认」也拒掉：那是 resolve_effective_remote_host
+    // 认可的已降级状态，生效地址本就是 loopback，不产生任何暴露。一并拒绝会导致存量用户改任何
+    // 一项 MCP 设置都失败，而且永远无法取消勾选确认。
+    if !remote_host_is_loopback
+        && remote_host != existing.remote_host
+        && !input.remote_exposure_acknowledged
+    {
+        return Err(AppError::new(
+            "mcp_remote_host_not_acknowledged",
+            "监听非本机地址会把 MCP 服务暴露给同网段的其他设备，请先确认该风险再保存。",
+            format!("remote_host={remote_host} without acknowledgement"),
+            true,
+        ));
+    }
+    // 监听 loopback 时没有需要确认的暴露，确认位不得粘滞留存：否则用户改回本机地址后旧勾选
+    // 仍在存储里，下次填入非 loopback 地址会跳过确认直接生效，等于绕过了整个确认机制。
+    let remote_exposure_acknowledged =
+        input.remote_exposure_acknowledged && !remote_host_is_loopback;
     let remote_port = validate_remote_port(input.remote_port)?;
     let (remote_token, remote_token_hash, remote_token_preview, generated_token) =
         next_remote_token_state(&existing, input.remote_enabled, input.remote_token)?;
@@ -343,6 +395,7 @@ pub fn save_settings(
         allow_dangerous_commands: input.allow_dangerous_commands,
         remote_enabled: input.remote_enabled,
         remote_host,
+        remote_exposure_acknowledged,
         remote_port,
         remote_token,
         remote_token_hash,
@@ -377,6 +430,30 @@ fn normalize_remote_host(host: String) -> Result<String, AppError> {
         ));
     }
     Ok(trimmed.to_string())
+}
+
+/// loopback 判定。与 sidecar（`bin/mxterm_mcp.rs` 的 Origin 校验）共用同一实现，
+/// 避免出现「设置页认为安全、sidecar 认为不安全」这类判定分叉。
+///
+/// 有意保持**精确匹配**：`127.0.0.2`、`::ffff:127.0.0.1` 会被判为非 loopback，
+/// 代价是多要求用户确认一次，好过误判为安全而静默暴露。放宽需要单独评估。
+pub fn is_loopback_host(host: &str) -> bool {
+    matches!(host, "localhost" | "127.0.0.1" | "::1")
+}
+
+/// 解析实际生效的监听地址，返回 `(生效 host, 是否因未确认而降级)`。
+///
+/// 这是生效值的**唯一** seam：sidecar 启动参数与所有状态 DTO 都必须经由它，
+/// 不允许各自去读 `settings.remote_host`——否则会出现「界面显示 loopback、实际监听 0.0.0.0」
+/// 这种最危险的不一致。
+///
+/// 该函数**不回写存储**。静默改写用户保存的地址不可审计，降级只体现在生效值与标志位上，
+/// 用户重新确认后原地址即可恢复生效。
+pub fn resolve_effective_remote_host(settings: &McpSettings) -> (String, bool) {
+    if is_loopback_host(&settings.remote_host) || settings.remote_exposure_acknowledged {
+        return (settings.remote_host.clone(), false);
+    }
+    (DEFAULT_REMOTE_HOST.to_string(), true)
 }
 
 fn validate_remote_port(port: u16) -> Result<u16, AppError> {
@@ -548,6 +625,7 @@ pub fn status(settings: &McpSettings) -> McpStatus {
             "execute_script",
         ]);
     }
+    let (remote_host, remote_host_downgraded) = resolve_effective_remote_host(settings);
     McpStatus {
         enabled: settings.enabled,
         expose_connections: settings.expose_connections,
@@ -555,7 +633,9 @@ pub fn status(settings: &McpSettings) -> McpStatus {
         allow_dangerous_commands: settings.allow_dangerous_commands,
         stdio_only: true,
         remote_enabled: settings.remote_enabled,
-        remote_host: settings.remote_host.clone(),
+        remote_host,
+        remote_host_stored: settings.remote_host.clone(),
+        remote_host_downgraded,
         remote_port: settings.remote_port,
         tools,
     }
@@ -885,6 +965,31 @@ pub fn normalize_timeout(seconds: Option<u64>) -> Duration {
     )
 }
 
+/// 危险命令策略判定：只有「设置里允许」且「本次调用显式确认」同时成立才放行。
+///
+/// 从 `execute_command` 里拆出来是为了可测——这是 MCP 最核心的安全门，埋在需要真实 SSH
+/// 连接的函数里等于没有测试覆盖。
+///
+/// 拒绝时只回命中原因，**不回显完整命令**：命令行里可能带密码、token 等参数。
+pub fn ensure_dangerous_command_allowed(
+    settings: &McpSettings,
+    command: &str,
+    confirm_dangerous: bool,
+) -> Result<(), AppError> {
+    let Some(danger) = detect_dangerous_command(command) else {
+        return Ok(());
+    };
+    if settings.allow_dangerous_commands && confirm_dangerous {
+        return Ok(());
+    }
+    Err(AppError::new(
+        "mcp_dangerous_command_rejected",
+        "命令被危险命令策略拦截。",
+        danger.reason,
+        true,
+    ))
+}
+
 pub fn normalize_output_limit(limit: Option<usize>) -> usize {
     limit
         .unwrap_or(DEFAULT_OUTPUT_BYTES)
@@ -907,16 +1012,7 @@ pub async fn execute_command(
     ensure_ssh_enabled(settings)?;
     ensure_connection_exposed(settings, connection_id)?;
     let command = require_command(command)?;
-    if let Some(danger) = detect_dangerous_command(command) {
-        if !settings.allow_dangerous_commands || !confirm_dangerous {
-            return Err(AppError::new(
-                "mcp_dangerous_command_rejected",
-                "命令被危险命令策略拦截。",
-                danger.reason,
-                true,
-            ));
-        }
-    }
+    ensure_dangerous_command_allowed(settings, command, confirm_dangerous)?;
     let started = now_millis();
     let (config, context) = resolve_ssh(root, connection_id)?;
     let timeout = normalize_timeout(timeout_seconds);
@@ -1202,15 +1298,23 @@ fn resolve_ssh(
 fn require_command(command: &str) -> Result<&str, AppError> {
     let command = command.trim();
     if command.is_empty() {
-        Err(AppError::new(
+        return Err(AppError::new(
             "mcp_command_missing",
             "请输入要执行的命令。",
             "command is empty",
             true,
-        ))
-    } else {
-        Ok(command)
+        ));
     }
+    // 超长命令按字节拒绝，且不回显命令内容：命令行可能带 token、密码等参数。
+    if command.len() > MAX_COMMAND_BYTES {
+        return Err(AppError::new(
+            "mcp_command_too_long",
+            format!("命令超过 {MAX_COMMAND_BYTES} 字节上限，请拆分后再执行。"),
+            format!("command_bytes={}", command.len()),
+            true,
+        ));
+    }
+    Ok(command)
 }
 
 fn require_remote_path(path: &str) -> Result<&str, AppError> {
@@ -1765,10 +1869,14 @@ fn remote_service_signature(app: &AppHandle, settings: &McpSettings, token_hash:
     let data_dir = app_data_dir(app)
         .map(|path| path.to_string_lossy().to_string())
         .unwrap_or_default();
-    format!(
-        "{}:{}:{}:{}",
-        settings.remote_host, settings.remote_port, token_hash, data_dir
-    )
+    remote_service_signature_for(settings, token_hash, &data_dir)
+}
+
+/// 拆出纯函数以便直接测试：签名必须基于**生效 host**，因为确认状态变化会改变生效地址，
+/// 签名不变则 supervisor 不会重启 sidecar，会出现「界面显示新地址、进程仍监听旧地址」。
+fn remote_service_signature_for(settings: &McpSettings, token_hash: &str, data_dir: &str) -> String {
+    let (host, _) = resolve_effective_remote_host(settings);
+    format!("{}:{}:{}:{}", host, settings.remote_port, token_hash, data_dir)
 }
 
 fn spawn_remote_child(
@@ -1788,10 +1896,13 @@ fn spawn_remote_child(
         )
     })?;
     let mut command = Command::new(&executable);
+    // 只有一处把 host 交给 sidecar：走 seam 取生效值，绝不能用 settings.remote_host 原值，
+    // 否则未确认的 0.0.0.0 会被真的监听出去。
+    let (effective_host, _) = resolve_effective_remote_host(settings);
     command
         .arg("serve")
         .arg("--host")
-        .arg(&settings.remote_host)
+        .arg(&effective_host)
         .arg("--port")
         .arg(settings.remote_port.to_string())
         .arg("--token-sha256")
@@ -1849,13 +1960,15 @@ fn remote_service_status(
     runtime: &McpRemoteServiceRuntime,
 ) -> McpRemoteServiceStatus {
     let running = runtime.child.is_some();
-    let host = settings.remote_host.clone();
+    let (host, host_downgraded) = resolve_effective_remote_host(settings);
     let port = settings.remote_port;
     let base = format!("http://{host}:{port}");
     McpRemoteServiceStatus {
         enabled: settings.remote_enabled,
         running,
         host,
+        host_stored: settings.remote_host.clone(),
+        host_downgraded,
         port,
         url: format!("{base}/mcp"),
         sse_url: format!("{base}/sse"),
@@ -2016,13 +2129,17 @@ pub fn mcp_settings_output(
     generated_remote_token: Option<String>,
     remote_status: McpRemoteServiceStatus,
 ) -> McpSettingsOutput {
+    let (remote_host, remote_host_downgraded) = resolve_effective_remote_host(&settings);
     McpSettingsOutput {
         enabled: settings.enabled,
         expose_connections: settings.expose_connections,
         ssh_operations_enabled: settings.ssh_operations_enabled,
         allow_dangerous_commands: settings.allow_dangerous_commands,
         remote_enabled: settings.remote_enabled,
-        remote_host: settings.remote_host,
+        remote_host,
+        remote_host_stored: settings.remote_host,
+        remote_host_downgraded,
+        remote_exposure_acknowledged: settings.remote_exposure_acknowledged,
         remote_port: settings.remote_port,
         remote_token: settings.remote_token,
         remote_token_saved: settings.remote_token_hash.is_some(),
@@ -2515,7 +2632,8 @@ mod tests {
             ssh_operations_enabled: false,
             allow_dangerous_commands: false,
             remote_enabled: true,
-            remote_host: "0.0.0.0".to_string(),
+            remote_host: "127.0.0.1".to_string(),
+            remote_exposure_acknowledged: false,
             remote_port: 8765,
             remote_token: None,
             connection_exposure_mode: McpConnectionExposureMode::All,
@@ -2553,7 +2671,8 @@ mod tests {
             ssh_operations_enabled: false,
             allow_dangerous_commands: false,
             remote_enabled: true,
-            remote_host: "0.0.0.0".to_string(),
+            remote_host: "127.0.0.1".to_string(),
+            remote_exposure_acknowledged: false,
             remote_port: 8765,
             remote_token: Some("custom-token-value".to_string()),
             connection_exposure_mode: McpConnectionExposureMode::All,
@@ -2572,6 +2691,428 @@ mod tests {
 
         drop(repository);
         let _ = fs::remove_dir_all(root);
+    }
+
+    /// 构造一条监听 `host` 的保存请求，其余字段取无关默认值。
+    fn settings_input(host: &str, acknowledged: bool) -> McpSettingsInput {
+        McpSettingsInput {
+            enabled: true,
+            expose_connections: false,
+            ssh_operations_enabled: false,
+            allow_dangerous_commands: false,
+            remote_enabled: true,
+            remote_host: host.to_string(),
+            remote_exposure_acknowledged: acknowledged,
+            remote_port: 8765,
+            remote_token: None,
+            connection_exposure_mode: McpConnectionExposureMode::All,
+            exposed_connection_ids: Vec::new(),
+        }
+    }
+
+    fn test_repository(prefix: &str) -> (std::path::PathBuf, StorageRepository) {
+        let root = std::env::temp_dir().join(format!("{prefix}-{}", uuid::Uuid::new_v4()));
+        let repository =
+            StorageRepository::open_root(&root, Arc::new(InMemorySecretStore::default())).unwrap();
+        (root, repository)
+    }
+
+    /// 存量配置：旧版本写入的 0.0.0.0，且 JSON 里根本没有确认字段。
+    fn legacy_exposed_settings() -> McpSettings {
+        serde_json::from_str(
+            r#"{
+                "enabled": true,
+                "expose_connections": false,
+                "ssh_operations_enabled": false,
+                "allow_dangerous_commands": false,
+                "remote_enabled": true,
+                "remote_host": "0.0.0.0",
+                "remote_port": 8765,
+                "connection_exposure_mode": "all",
+                "exposed_connection_ids": []
+            }"#,
+        )
+        .expect("legacy settings without the ack field must still deserialize")
+    }
+
+    #[test]
+    fn loopback_host_detection_matches_sidecar_definition() {
+        assert!(is_loopback_host("localhost"));
+        assert!(is_loopback_host("127.0.0.1"));
+        assert!(is_loopback_host("::1"));
+        // 有意保持严格匹配：不把同段其他地址或 IPv4-mapped 形式当作 loopback。
+        assert!(!is_loopback_host("127.0.0.2"));
+        assert!(!is_loopback_host("::ffff:127.0.0.1"));
+        assert!(!is_loopback_host("0.0.0.0"));
+        assert!(!is_loopback_host("192.168.1.10"));
+        assert!(!is_loopback_host(""));
+    }
+
+    #[test]
+    fn effective_host_keeps_loopback_and_acknowledged_exposure() {
+        let loopback = McpSettings {
+            remote_host: "127.0.0.1".to_string(),
+            ..Default::default()
+        };
+        assert_eq!(
+            resolve_effective_remote_host(&loopback),
+            ("127.0.0.1".to_string(), false)
+        );
+
+        // 非 loopback 但已确认：按存储值生效，不降级。
+        let acknowledged = McpSettings {
+            remote_host: "0.0.0.0".to_string(),
+            remote_exposure_acknowledged: true,
+            ..Default::default()
+        };
+        assert_eq!(
+            resolve_effective_remote_host(&acknowledged),
+            ("0.0.0.0".to_string(), false)
+        );
+    }
+
+    #[test]
+    fn unacknowledged_non_loopback_host_downgrades_without_rewriting_storage() {
+        let (root, repository) = test_repository("mxterm-mcp-migration");
+        let legacy = legacy_exposed_settings();
+        assert!(!legacy.remote_exposure_acknowledged);
+        repository
+            .app_setting_set(MCP_SETTINGS_KEY, &legacy, "1")
+            .unwrap();
+
+        let loaded = load_settings(&repository).unwrap();
+        let (effective, downgraded) = resolve_effective_remote_host(&loaded);
+        assert_eq!(effective, DEFAULT_REMOTE_HOST);
+        assert!(downgraded);
+
+        // DTO 同时暴露存储值与生效值，供设置页提示"已降级"并支持重新确认。
+        let output = mcp_settings_output(
+            loaded.clone(),
+            None,
+            remote_service_status(&loaded, &Default::default()),
+        );
+        assert_eq!(output.remote_host, DEFAULT_REMOTE_HOST);
+        assert_eq!(output.remote_host_stored, "0.0.0.0");
+        assert!(output.remote_host_downgraded);
+
+        // 加载不得回写存储：用户原值必须原样保留，否则重新确认后无法恢复。
+        let reloaded = load_settings(&repository).unwrap();
+        assert_eq!(reloaded.remote_host, "0.0.0.0");
+        assert!(!reloaded.remote_exposure_acknowledged);
+
+        drop(repository);
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn acknowledged_exposure_survives_save_and_restores_stored_host() {
+        let (root, repository) = test_repository("mxterm-mcp-ack");
+
+        let (saved, _) = save_settings(&repository, settings_input("0.0.0.0", true), "1").unwrap();
+        assert_eq!(saved.remote_host, "0.0.0.0");
+        assert!(saved.remote_exposure_acknowledged);
+
+        let loaded = load_settings(&repository).unwrap();
+        let (effective, downgraded) = resolve_effective_remote_host(&loaded);
+        assert_eq!(effective, "0.0.0.0");
+        assert!(!downgraded);
+
+        drop(repository);
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn saving_unacknowledged_non_loopback_host_fails_fast() {
+        let (root, repository) = test_repository("mxterm-mcp-reject");
+
+        // 把地址「改成」非 loopback 却没有确认：必须立刻失败，而不是静默降级成 loopback 保存。
+        let error = save_settings(&repository, settings_input("0.0.0.0", false), "1").unwrap_err();
+        assert_eq!(error.code, "mcp_remote_host_not_acknowledged");
+
+        // 拒绝必须发生在写入之前：存储中不能留下任何痕迹。
+        let stored = repository
+            .app_setting_get::<McpSettings>(MCP_SETTINGS_KEY)
+            .unwrap();
+        assert!(stored.is_none());
+
+        // loopback 无需确认即可保存。
+        let (saved, _) =
+            save_settings(&repository, settings_input("127.0.0.1", false), "2").unwrap();
+        assert_eq!(saved.remote_host, "127.0.0.1");
+
+        drop(repository);
+        let _ = fs::remove_dir_all(root);
+    }
+
+    /// 存量「非 loopback + 未确认」是合法的已降级状态，写入侧不得把它一并拒绝，
+    /// 否则这类用户改任何一项 MCP 设置都会失败。
+    #[test]
+    fn stored_unacknowledged_exposure_does_not_block_unrelated_saves() {
+        let (root, repository) = test_repository("mxterm-mcp-legacy-save");
+        repository
+            .app_setting_set(MCP_SETTINGS_KEY, &legacy_exposed_settings(), "1")
+            .unwrap();
+
+        // 只改一个无关开关，监听地址按存储值原样回传（设置页 saveUpdate 就是这么发的）。
+        let mut input = settings_input("0.0.0.0", false);
+        input.allow_dangerous_commands = true;
+        let (saved, _) = save_settings(&repository, input, "2").unwrap();
+        assert!(saved.allow_dangerous_commands);
+        assert_eq!(saved.remote_host, "0.0.0.0");
+        assert!(!saved.remote_exposure_acknowledged);
+
+        // 保存成功不等于放行暴露：生效值仍然是降级后的 loopback。
+        let (effective, downgraded) = resolve_effective_remote_host(&saved);
+        assert_eq!(effective, DEFAULT_REMOTE_HOST);
+        assert!(downgraded);
+
+        drop(repository);
+        let _ = fs::remove_dir_all(root);
+    }
+
+    /// 取消勾选确认是「降低暴露」，必须允许；被 fail-fast 挡死会让用户无法收回授权。
+    #[test]
+    fn revoking_acknowledgement_is_savable_and_downgrades_effective_host() {
+        let (root, repository) = test_repository("mxterm-mcp-revoke");
+
+        save_settings(&repository, settings_input("0.0.0.0", true), "1").unwrap();
+        let (revoked, _) =
+            save_settings(&repository, settings_input("0.0.0.0", false), "2").unwrap();
+        assert_eq!(revoked.remote_host, "0.0.0.0");
+        assert!(!revoked.remote_exposure_acknowledged);
+
+        let (effective, downgraded) = resolve_effective_remote_host(&revoked);
+        assert_eq!(effective, DEFAULT_REMOTE_HOST);
+        assert!(downgraded);
+
+        drop(repository);
+        let _ = fs::remove_dir_all(root);
+    }
+
+    /// 确认位不得粘滞：改回 loopback 后必须清零，否则下次填入暴露地址会免于确认。
+    #[test]
+    fn acknowledgement_does_not_stick_after_returning_to_loopback() {
+        let (root, repository) = test_repository("mxterm-mcp-sticky");
+
+        save_settings(&repository, settings_input("0.0.0.0", true), "1").unwrap();
+        let (loopback, _) =
+            save_settings(&repository, settings_input("127.0.0.1", true), "2").unwrap();
+        assert_eq!(loopback.remote_host, "127.0.0.1");
+        assert!(!loopback.remote_exposure_acknowledged);
+
+        let error = save_settings(&repository, settings_input("0.0.0.0", false), "3").unwrap_err();
+        assert_eq!(error.code, "mcp_remote_host_not_acknowledged");
+
+        drop(repository);
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn remote_service_signature_changes_when_acknowledgement_changes() {
+        let stored = McpSettings {
+            remote_host: "0.0.0.0".to_string(),
+            remote_port: 8765,
+            remote_exposure_acknowledged: false,
+            ..Default::default()
+        };
+        let acknowledged = McpSettings {
+            remote_exposure_acknowledged: true,
+            ..stored.clone()
+        };
+
+        // 确认状态翻转会改变生效 host，签名必须随之变化，否则 supervisor 不会重启 sidecar，
+        // 导致界面显示新地址而进程仍监听旧地址。
+        assert_ne!(
+            remote_service_signature_for(&stored, "hash", "data-dir"),
+            remote_service_signature_for(&acknowledged, "hash", "data-dir")
+        );
+    }
+
+    /// 连接暴露白名单是 MCP 的访问边界：custom 模式下未列入的连接必须以稳定 code 拒绝，
+    /// 空白名单不得退化成放行。
+    #[test]
+    fn unexposed_connection_is_rejected_with_stable_code() {
+        let all = McpSettings {
+            connection_exposure_mode: McpConnectionExposureMode::All,
+            ..Default::default()
+        };
+        assert!(ensure_connection_exposed(&all, "any-id").is_ok());
+
+        let custom = McpSettings {
+            connection_exposure_mode: McpConnectionExposureMode::Custom,
+            exposed_connection_ids: vec!["allowed".to_string()],
+            ..Default::default()
+        };
+        assert!(ensure_connection_exposed(&custom, "allowed").is_ok());
+        // 首尾空白会被 trim，不应因此漏判或误判。
+        assert!(ensure_connection_exposed(&custom, "  allowed  ").is_ok());
+        assert_eq!(
+            ensure_connection_exposed(&custom, "denied").unwrap_err().code,
+            "mcp_connection_not_exposed"
+        );
+
+        let empty = McpSettings {
+            connection_exposure_mode: McpConnectionExposureMode::Custom,
+            ..Default::default()
+        };
+        assert_eq!(
+            ensure_connection_exposed(&empty, "anything").unwrap_err().code,
+            "mcp_connection_not_exposed"
+        );
+    }
+
+    /// 危险命令必须「设置允许」与「本次确认」同时成立才放行，缺一不可。
+    #[test]
+    fn dangerous_command_policy_requires_both_setting_and_confirmation() {
+        let dangerous = "sudo rm -rf / --no-preserve-root";
+        assert!(detect_dangerous_command(dangerous).is_some());
+
+        for (allow, confirm) in [(false, false), (false, true), (true, false)] {
+            let settings = McpSettings {
+                allow_dangerous_commands: allow,
+                ..Default::default()
+            };
+            let error =
+                ensure_dangerous_command_allowed(&settings, dangerous, confirm).unwrap_err();
+            assert_eq!(
+                error.code, "mcp_dangerous_command_rejected",
+                "allow={allow} confirm={confirm} 必须被拦截"
+            );
+        }
+
+        let permissive = McpSettings {
+            allow_dangerous_commands: true,
+            ..Default::default()
+        };
+        assert!(ensure_dangerous_command_allowed(&permissive, dangerous, true).is_ok());
+
+        // 非危险命令在任何组合下都不该被这道门拦住。
+        for (allow, confirm) in [(false, false), (false, true), (true, false), (true, true)] {
+            let settings = McpSettings {
+                allow_dangerous_commands: allow,
+                ..Default::default()
+            };
+            assert!(
+                ensure_dangerous_command_allowed(&settings, "uptime && df -h", confirm).is_ok()
+            );
+        }
+    }
+
+    /// 拦截结果是给调用方看的 preview：必须说明命中了什么，但不得回显命令原文
+    /// ——命令行里可能带 token、密码。
+    #[test]
+    fn dangerous_command_rejection_previews_reason_without_echoing_command() {
+        let settings = McpSettings::default();
+        let command = "sudo rm -rf / --token=super-secret-value";
+        let error = ensure_dangerous_command_allowed(&settings, command, false).unwrap_err();
+
+        assert_eq!(error.code, "mcp_dangerous_command_rejected");
+        assert_eq!(error.raw_message, "recursive delete from root");
+        assert!(!error.raw_message.contains("super-secret-value"));
+        assert!(!error.message.contains("super-secret-value"));
+    }
+
+    /// 超时与输出上限必须夹在策略区间内，调用方传入的极端值不能穿透。
+    #[test]
+    fn timeout_and_output_limits_clamp_to_policy_bounds() {
+        assert_eq!(normalize_output_limit(None), DEFAULT_OUTPUT_BYTES);
+        assert_eq!(normalize_output_limit(Some(0)), 1024);
+        assert_eq!(normalize_output_limit(Some(usize::MAX)), MAX_OUTPUT_BYTES);
+
+        assert_eq!(normalize_timeout(None).as_secs(), DEFAULT_TIMEOUT_SECONDS);
+        assert_eq!(normalize_timeout(Some(0)).as_secs(), 1);
+        assert_eq!(normalize_timeout(Some(u64::MAX)).as_secs(), MAX_TIMEOUT_SECONDS);
+    }
+
+    #[test]
+    fn oversized_output_is_truncated_and_flagged() {
+        let payload = vec![b'a'; 2048];
+        let (text, truncated) = bytes_to_limited_string(&payload, 1024);
+        assert!(truncated);
+        assert_eq!(text.len(), 1024);
+
+        let (text, truncated) = bytes_to_limited_string(b"short", 1024);
+        assert!(!truncated);
+        assert_eq!(text, "short");
+    }
+
+    /// MCP 工具只接受已保存的 connection_id，任何明文凭据参数都必须在入口拒绝。
+    #[test]
+    fn plaintext_credential_args_are_rejected() {
+        for forbidden in [
+            "host",
+            "user",
+            "username",
+            "password",
+            "passphrase",
+            "private_key",
+            "private_key_content",
+        ] {
+            let mut args = serde_json::json!({ "connection_id": "c1" });
+            args[forbidden] = serde_json::json!("x");
+            assert_eq!(
+                reject_plaintext_credential_args(&args).unwrap_err().code,
+                "mcp_plaintext_credentials_rejected",
+                "参数 {forbidden} 必须被拒绝"
+            );
+        }
+        assert!(
+            reject_plaintext_credential_args(&serde_json::json!({ "connection_id": "c1" })).is_ok()
+        );
+    }
+
+    /// 远程服务状态接口只能带 token preview，不能把完整 token 序列化出去。
+    #[test]
+    fn remote_service_status_exposes_only_token_preview() {
+        let (root, repository) = test_repository("mxterm-mcp-token-leak");
+        let mut input = settings_input("127.0.0.1", false);
+        input.remote_token = Some("mx-super-secret-token-value".to_string());
+        let (saved, _) = save_settings(&repository, input, "1").unwrap();
+
+        let status = remote_service_status(&saved, &Default::default());
+        assert!(status.token_saved);
+        assert_eq!(status.token_preview.as_deref(), Some("...-value"));
+
+        let encoded = serde_json::to_string(&status).unwrap();
+        assert!(
+            !encoded.contains("mx-super-secret-token-value"),
+            "状态 DTO 不得包含完整 token：{encoded}"
+        );
+
+        drop(repository);
+        let _ = fs::remove_dir_all(root);
+    }
+
+    /// 停止服务必须把 runtime 清干净：残留 signature 会让 supervisor 误判
+    /// 「进程还在且配置未变」，从而不再拉起服务。
+    #[test]
+    fn stopping_remote_service_clears_runtime_state() {
+        let settings = McpSettings {
+            remote_enabled: true,
+            remote_host: DEFAULT_REMOTE_HOST.to_string(),
+            ..Default::default()
+        };
+        let manager = McpRemoteServiceManager::default();
+
+        {
+            let mut runtime = manager.lock_runtime();
+            runtime.signature = Some("stale-signature".to_string());
+            runtime.last_error = Some("上一次失败".to_string());
+            runtime.healthy = true;
+        }
+
+        let status = manager.stop(&settings);
+
+        assert!(!status.running, "停止后不得再报告运行中");
+        assert!(!status.healthy, "未运行时健康标志必须为 false");
+        assert_eq!(status.error, None, "停止是显式操作，不应保留上一次错误");
+
+        let runtime = manager.lock_runtime();
+        assert!(runtime.child.is_none());
+        assert!(
+            runtime.signature.is_none(),
+            "signature 必须清空，否则 supervisor 会认为服务仍在按当前配置运行"
+        );
     }
 
     #[test]

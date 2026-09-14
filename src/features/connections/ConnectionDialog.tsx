@@ -74,6 +74,10 @@ import {
   parseHostKeyError,
   type ParsedHostKeyError,
 } from "./hostKeyErrors";
+import {
+  connectionNetworkKind,
+  errorDiagnosticId,
+} from "./connectionErrorCodes";
 import type {
   CharacterBackspaceMode,
   SerialDataBits,
@@ -3300,10 +3304,11 @@ function describeHostKeyFeedback(error: ParsedHostKeyError): DialogFeedback {
 
 function describeDialogError(error: unknown): DialogFeedback {
   const code = errorCode(error);
-  const rawMessage = errorRawMessage(error);
-  const raw = rawMessage.toLowerCase();
+  // raw_message 仅作展示用的底层原因，不参与判定；缺失时退回诊断 ID。
+  const rawMessage = errorRawMessage(error) || diagnosticHint(error);
+  const networkKind = connectionNetworkKind(code);
 
-  if (isTimeoutError(code, raw)) {
+  if (networkKind === "timeout") {
     return {
       title: "连接超时",
       detail: "在限定时间内无法连接到目标主机，请检查 IP、端口、防火墙、代理或网络连通性。",
@@ -3311,7 +3316,7 @@ function describeDialogError(error: unknown): DialogFeedback {
     };
   }
 
-  if (raw.includes("connection refused") || raw.includes("actively refused")) {
+  if (networkKind === "refused") {
     return {
       title: "端口无法连接",
       detail: "目标主机拒绝了连接，请确认 SSH 服务已启动、端口正确，或安全组允许访问。",
@@ -3319,7 +3324,7 @@ function describeDialogError(error: unknown): DialogFeedback {
     };
   }
 
-  if (raw.includes("no route") || raw.includes("unreachable")) {
+  if (networkKind === "unreachable") {
     return {
       title: "主机不可达",
       detail: "本机到目标主机没有可用路由，请检查 VPN、网段、网关或代理配置。",
@@ -3327,7 +3332,15 @@ function describeDialogError(error: unknown): DialogFeedback {
     };
   }
 
-  if (code.includes("auth") || raw.includes("auth")) {
+  if (networkKind === "reset") {
+    return {
+      title: "连接被重置",
+      detail: "连接被对端重置，请检查 SSH 服务策略、代理链路或中间防火墙。",
+      rawMessage,
+    };
+  }
+
+  if (code.includes("auth")) {
     return {
       title: "认证失败",
       detail: "请检查账号的用户名、密码或私钥是否匹配服务器配置。",
@@ -3386,7 +3399,13 @@ function errorCode(error: unknown) {
 function errorRawMessage(error: unknown) {
   return typeof error === "object" && error !== null && "raw_message" in error
     ? normalizeErrorText((error as { raw_message: unknown }).raw_message)
-    : normalizeErrorText(error);
+    : "";
+}
+
+/** raw_message 缺失时的兜底线索：诊断 ID 能对上内部日志，比丢掉全部上下文好。 */
+function diagnosticHint(error: unknown) {
+  const diagnosticId = errorDiagnosticId(error);
+  return diagnosticId ? `诊断 ID：${diagnosticId}` : "";
 }
 
 function normalizeErrorText(value: unknown) {
@@ -3394,14 +3413,4 @@ function normalizeErrorText(value: unknown) {
     .replace(/^Error:\s*/i, "")
     .replace(/\s+/g, " ")
     .trim();
-}
-
-function isTimeoutError(code: string, raw: string) {
-  return code.includes("timeout") ||
-    raw.includes("timeout") ||
-    raw.includes("timed out") ||
-    raw.includes("operation timed out") ||
-    raw.includes("10060") ||
-    raw.includes("一段时间内没有正确答复") ||
-    raw.includes("连接的主机没有反应");
 }
