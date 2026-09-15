@@ -1,14 +1,19 @@
-# Task 01 安全与依赖硬化 · 会话交接
+# Task 01 安全与依赖硬化 · 交接给 Codex
 
-> 更新时间：2026-09-15 ｜ 分支 `main` ｜ HEAD `26a23fc`（已同步 `origin/main`，工作区干净）
+> 更新时间：2026-09-15 ｜ 分支 `main`（Phase 3 代码 @ `f59076c`，已同步 `origin/main`，工作区干净）
 >
-> 本文件是跨会话/跨机器交接说明。详尽的逐条验收状态与证据在 `implement.md`；本文件只做"当前位置 + 下一步 + 坑"的快速定位。新会话 `git pull` 后从这里接。
+> **本文件是交接给 Codex 接手下一步的说明。** 标准协作规则见仓库根 `AGENTS.MD`（Codex 原生读取），本文件不重复，只补"当前位置 + 下一步 + 本任务专属的坑"。先 `git pull`，再从本文件"下一步"开始。
+>
+> **接手第一件事**：下一步第一优先项（§5.3 第 3 步）是**阻塞项**，需要先和用户对齐一个数据模型决策才能动手——不要直接开写。详见下方"下一步 1"。
 
 ## 当前上下文
 
 - **项目**：NexaTerm（Tauri 2 + React 19 + Rust 桌面终端），Trellis 管理，规范在 `.trellis/spec/`。
 - **任务**：`.trellis/tasks/09-10-security-and-dependency-hardening`（共 5 个 Phase）。
-- **验证通道（关键约束）**：本机 Windows 无可用 Rust 工具链（MSVC C++ 工作负载半装 + 缺 Windows SDK），`cargo check`/`cargo test` 本机跑不了。**所有 Rust 编译/测试验收走 CI**——push 到 `main` 触发 `.github/workflows/ci.yml`（frontend job + Rust 三平台矩阵 linux-x64 / windows-x64 / macos-arm64，各跑 `cargo check --workspace --locked` + `cargo test --workspace --locked`）。前端 `pnpm run check` / `node scripts/check-startup-module-boundary-source.mjs` 本机可跑。
+- **验证通道（关键约束）**：这台 Windows 机器无可用 Rust 工具链（MSVC C++ 工作负载半装 + 缺 Windows SDK），`cargo check`/`cargo test` 本机跑不了。验证有两条路径，任一可用即不得记 ENVIRONMENT-BLOCKED：
+  - **(1) 本机/本环境有完整工具链**：直接按 `implement.md`"验证命令基线"跑 `cargo check --workspace --locked` + `cargo test --workspace --locked`（Codex 若在具备工具链的环境接手——如 Mac + Xcode CLT，优先走这条，更快）。
+  - **(2) 无本地工具链**：push 到 `main` 触发 `.github/workflows/ci.yml`（frontend job + Rust 三平台矩阵 linux-x64 / windows-x64 / macos-arm64，各跑 `cargo check` + `cargo test`），记录 commit SHA + job 结论作为证据。
+  - 前端 `pnpm run check` / `node scripts/check-startup-module-boundary-source.mjs` 本机可跑。
 
 ## 进度总览
 
@@ -59,16 +64,17 @@
 
 按实际资源收紧 CSP，记录必须保留的 `unsafe-inline`/`data:`/`blob:` 调用点；跨平台 capability/权限/端口 bind 验证（macOS/Linux 本机不具备则记阻塞）；发布门禁。
 
-## 给下个会话的坑与规则
+## 给 Codex 的接手说明（本任务专属技术坑）
 
-- **提交信息用英文**（项目规则显式覆盖全局的中文规则）；代码注释、文档、UI 文案仍**中文**。
-- 每次回答开头 `Model: <标识>`，不编造版本号/日期。
-- UI 改动走 `ui-ux-pro-max`，复用 `src/shared/ui/` + `src/styles/tokens.css` 的 `--mx-*` token；同时覆盖亮色 / 显式暗色 / system-dark。
-- **CI 日志本机拉不到**：下载 job 日志需 repo admin 权限，本地无 token（`api.github.com` 只读 runs/jobs 元数据可用）。定位编译错误靠"读提交 diff + 用户粘贴报错"——本轮 `mcp.rs:1312` 的 E0308 即如此定位。
-- `cargo check`（不带 `--tests`）**不编译 `#[cfg(test)]` 模块**：check 失败说明错误在生产代码；且 bin `mxterm_mcp`（`use m_xterm_lib::...`）依赖 lib，lib 编译失败时 bin 不被检查，其错误在修好 lib 后才首次暴露——检查生产代码要连 bin 一起看。
-- **`ENVIRONMENT-BLOCKED` 项不得从验收抹掉**，须单独成节写清缺哪项环境能力：目前有 `McpRemoteServiceManager::restart`/`reconcile`（签名需 `AppHandle`，单测无法构造 Tauri 运行时；`stop` 不需要、已覆盖）、Batch C 的 `tauri dev` runner 窗口回归。
-- **不自动提交/推送需人工审核**，但本任务收尾阶段用户已显式授权"结束并 Push"。
-- 08-01 的"checkbox + 脚注"反模式：用户已明确**先不管，后续复现再提**。
+标准协作规则（英文提交信息 / 中文注释文档 / 动手前先对齐 / 复用 `src/shared/ui/` + `--mx-*` token / 覆盖亮色·显式暗色·system-dark / 不自动提交推送）见 `AGENTS.MD`，此处不重复。下面只列本任务踩过的技术坑：
+
+- **提交/推送权限**：`AGENTS.MD` 要求"不自动提交或推送，先暂存等人工审核"。上一个会话的"结束并 Push"是**那次会话的一次性显式授权**，不构成常设权限——你接手后默认回到"暂存待审核"，除非用户对你的任务再次明确授权。
+- **`cargo check`（不带 `--tests`）不编译 `#[cfg(test)]` 模块**：check 失败即错误在生产代码，不在测试。上一轮 `mcp.rs:1312` 的 E0308（`format!` 的 `String` 传给 `AppError::new` 的 `&str` 形参）就是这么定位的。
+- **bin `mxterm_mcp` 依赖 lib**（`use m_xterm_lib::...`）：lib 编译失败时该 bin 不被检查，其错误要等 lib 修好后才首次暴露。核查生产代码要把 lib 和 bin 一起看。
+- **`AppError::new` 签名未变**（仍 4 参 `code:&str, message:&str, raw_message:impl ToString, recoverable:bool`）：`diagnostic_id` 在 `new()` 内部生成，585 处既有调用点无需改。新写调用时注意 `message` 是 `&str`（传 `format!` 要加 `&`），`raw_message` 是 `impl ToString`（`String` 可直接传）。
+- **CI 日志下载需 repo admin 权限**：上个会话本机无 token，只能读 `api.github.com` 的 runs/jobs 元数据、靠用户粘贴报错定位。你若走 CI 路径且能拿到日志更好。
+- **`ENVIRONMENT-BLOCKED` 项不得从验收抹掉**，须单独成节写清缺哪项环境能力：目前有 `McpRemoteServiceManager::restart`/`reconcile`（签名需 `AppHandle`，单测无法构造 Tauri 运行时；`stop` 不需要、已覆盖），以及 Batch C 的 `tauri dev` runner 窗口回归。
+- **08-01 的"checkbox + 脚注"反模式**：用户已明确**先不管，后续复现再提**。
 
 ## 证据索引
 
