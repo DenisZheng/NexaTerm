@@ -1309,7 +1309,7 @@ fn require_command(command: &str) -> Result<&str, AppError> {
     if command.len() > MAX_COMMAND_BYTES {
         return Err(AppError::new(
             "mcp_command_too_long",
-            format!("命令超过 {MAX_COMMAND_BYTES} 字节上限，请拆分后再执行。"),
+            &format!("命令超过 {MAX_COMMAND_BYTES} 字节上限，请拆分后再执行。"),
             format!("command_bytes={}", command.len()),
             true,
         ));
