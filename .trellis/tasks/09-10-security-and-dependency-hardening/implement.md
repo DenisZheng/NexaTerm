@@ -49,15 +49,22 @@
   - `mxterm_mcp.rs` 新增 HTTP 层与限流器用例；`mcp.rs` 新增暴露白名单、危险命令双闸门、拒绝 preview 不回显命令、超时/输出上限夹取、明文凭据拒绝、token preview 不泄露、`stop` 清空 runtime 等用例。
   - **服务重启（`restart`/`reconcile`）用例记 `ENVIRONMENT-BLOCKED`**：这两个方法签名需要 `AppHandle`，单测无法构造真实 Tauri 运行时（`stop` 不需要，已覆盖）。缺的是「可运行 Tauri 应用实例的测试环境」，解除后应以集成测试形式补做。
 - [x] 增加迁移用例：旧配置含 `0.0.0.0` 且无确认字段 → 生效 loopback + `remote_host_downgraded=true` + 存储未被改写；确认后 → 恢复存储值 + 标志为 false。
-- [ ] 按 `design.md` §5.3 的四步顺序收敛 `AppError`：**第 1、2、4 步已完成，第 3 步被阻塞**。
+- [x] 按 `design.md` §5.3 的四步顺序收敛 `AppError`：**四步全部完成**。
   - **第 1 步（补分类能力）已完成**：网络层失败改由后端在拿得到 `io::ErrorKind` 的那一层分类，落到稳定 code `{站点}_{connect_refused|connect_unreachable|connect_reset|connect_timeout}`（`session.rs` 的 `refine_network_code` / `app_error_from_io`）。前端新增 `connectionErrorCodes.ts`，`WorkspaceShell.tsx` 的阶段/建议/摘要与 `ConnectionDialog.tsx` 的 `describeDialogError` 全部改读 code，不再匹配 `raw_message` 文本。
     动机不只是安全：旧逻辑匹配 `"connection refused"` / `"timed out"` 等**英文** OS 文本，中文 Windows 给的是「连接的主机没有反应」，旧代码只能再硬编码 `10060` 和中文片段兜底——本质上不可测试。
   - **第 2 步（diagnostic ID）已完成**：`AppError` 增加 `diagnostic_id`，在 `new()` 内生成 UUID，585 处调用点零改动；内部诊断日志只记 `diagnostic_id` + `code` + `recoverable`，**不记 `raw_message`**（原始文本可能嵌命令原文/主机路径）。
   - **第 4 步（兼容窗口）已完成**：前端全部 `raw_message` 读取点改为「缺失即退回诊断 ID / message」，不再出现 `normalizeErrorText(error)` 把整个错误对象字符串化的兜底。
-  - **第 3 步（`#[serde(skip_serializing)]`）阻塞，原因是 `raw_message` 目前同时是两条结构化数据通道，直接关闭会造成功能回归**：
-    1. **前端通道**：`src/features/connections/hostKeyErrors.ts:19` 把 `raw_message` 当 JSON 解析出 `HostKeyInfo`（由 `ssh_config.rs` 的 `app_error_for_host_key_unknown` / `app_error_for_host_key_changed` 序列化写入）。关闭后主机密钥 TOFU 确认弹窗将拿不到指纹，等于**关掉 host key 校验的用户可见环节**。
-    2. **Rust 内部通道**：`session.rs` 的 `to_russh_error` / `app_error_from_russh` 把整个 `AppError` 序列化成 JSON 塞进 `io::Error` 再解析回来。本批已给 `raw_message` 加 `#[serde(default)]` 让这条通道**在字段消失后仍能解析**（否则会把 `host_key_unknown` 静默降级为 `terminal_connect_failed`，正是 §5.1 禁止的降级），并加用例 `russh_app_error_mapping_preserves_diagnostic_id` 锁住。
-    - 解除方式需先对齐数据模型归属：把 host key 载荷从 `raw_message` 迁到 `AppError` 的独立结构化字段（如 `details: Option<Value>`），或改为独立命令返回。**这是数据模型决策，按 AGENTS.MD 需先与用户对齐再动手**，故本步保持未勾选。
+  - **第 3 步（`#[serde(skip_serializing)]`）已完成**——前置阻塞已按用户决策解除：
+    - **阻塞根因**：`raw_message` 此前同时是两条结构化数据通道，直接关闭会造成功能回归。
+      1. **前端通道**：`hostKeyErrors.ts` 把 `raw_message` 当 JSON 解析出 `HostKeyInfo`（由 `ssh_config.rs` 的两个构造函数序列化写入）。关闭后主机密钥 TOFU 确认弹窗将拿不到指纹，等于**关掉 host key 校验的用户可见环节**。
+      2. **Rust 内部通道**：`session.rs` 的 `to_russh_error` / `app_error_from_russh` 把整个 `AppError` 序列化成 JSON 塞进 `io::Error` 再解析回来。
+    - **已对齐的数据模型决策（用户选定）**：host key 载荷迁到 `AppError` 的独立结构化字段 `details: Option<AppErrorDetails>`，`AppErrorDetails` 是按 `kind` 判别的枚举（`host_key_unknown { host_key }` / `host_key_changed { host_key, old_fingerprint_sha256 }`）。选它而非自由 `serde_json::Value`，是因为后者只是把 `raw_message` 的「什么都能往里塞」问题换个字段重演——前端仍得做形状嗅探，且新增载荷不经过任何评审。
+    - **落地**：`raw_message` 加 `#[serde(default, skip_serializing)]`；`details` 加 `skip_serializing_if = "Option::is_none"`，无载荷的错误线上表示不变。`ssh_config.rs` 两个构造函数改为 `.with_details(...)`，其 `raw_message` 降级为人类可读指纹摘要（仅供内部诊断）。
+    - **内部通道单独保通**：新增 `AppError::to_internal_json()`，序列化后把 `raw_message` 显式写回，`to_russh_error` 改用它。否则该字段会因 `skip_serializing` 在跨 russh 边界时静默丢失——这正是 §5.3 要求「Rust 内部保留完整 `raw_message`」的那一半。反向解析不变（`skip_serializing` 只影响序列化方向）。
+    - **前端**：`parseHostKeyError` 改读 `details` 判别联合，不再 `JSON.parse`。`code` 为权威判别字段，`details.kind` 必须与之一致，否则返回 `null`（不出确认卡片），避免契约被改坏时展示错误的风险等级。
+    - **用例**：`app_error.rs` 加 `ipc_serialization_drops_raw_message`（断言线上表示不含原始文本）、`internal_json_preserves_raw_message`、`details_survive_ipc_round_trip`、`details_field_is_omitted_when_absent`、`host_key_changed_details_carry_old_fingerprint`；`session.rs` 加 `russh_app_error_mapping_preserves_host_key_details`（锁住 `check_server_key` 这条唯一产生主机密钥错误的路径）。
+    - 契约文档同步：`.trellis/spec/backend/tauri-command-contracts.md`、`.trellis/spec/frontend/tauri-command-contracts.md`。
+    - **验证状态**：前端已验证通过；Rust `cargo check` / `cargo test` **待 CI**，详见下方「环境能力变更记录」末条。
 - [x] 更新 TypeScript DTO 与所有调用方（`ConnectionDialog.tsx`、`WorkspaceShell.tsx` 的错误摘要/阶段/建议逻辑）；过渡期前端必须容忍 `raw_message` 缺失。
 - [x] 验证 token、password、private key、raw command、host path 不出现在响应、日志和错误 toast。
   - 用例证据：`remote_service_status_exposes_only_token_preview`（状态 DTO 只含 `...-value` 形式 preview）、`dangerous_command_rejection_previews_reason_without_echoing_command`（拒绝原因不回显命令原文）、`plaintext_credential_args_are_rejected`（明文凭据参数入口拒绝）、`redacted_connection_serialization_excludes_secret_material`、`remote_token_hash_verifies_without_plaintext_sidecar_arg`（token 不进 sidecar 命令行）。
@@ -135,6 +142,12 @@ cargo test --workspace --locked --offline
   说明：Phase 3 的 MCP 监听策略、限流/并发、命令长度上限、`AppError` 收敛（§5.3 第 1/2/4 步）落地后编译与全量单测通过。
   过程留痕：首推 `875b3f4` 因 `mcp.rs:1312` 把 `format!` 的 `String` 传给 `AppError::new` 的 `&str` 形参（E0308）三平台一致失败，
   `f59076c` 借用为 `&str` 修复；此为 `cargo check` 首错即停、`cargo test` 被跳过的典型编译错误，非测试回归。
+- **§5.3 第 3 步（`skip_serializing` + `AppErrorDetails`）：CI 证据待补**。本机 Rust 工具链本轮复核仍不可用
+  （MSVC CRT 的 `include/vcruntime.h`、`lib/x64/msvcprt.lib` 与 Windows Kits 10 Include 均缺失，形态同 `design.md` §9.1；
+  另注意 `which -a link.exe` 命中 Git coreutils 的 `/usr/bin/link.exe`，其 `link: extra operand` 报错是**误导性表象**，非根因）。
+  前端侧已验证：`npx tsc --noEmit` 干净、`node --test scripts/*.test.mjs` 37/37、两项 source check 通过。
+  Rust 侧 `cargo check` / `cargo test` **尚未验证**，须经 CI 补齐后在此回填 run 号与三平台 job 结论；
+  在此之前不得声称该步验收通过。
 
 #### 已修复项：Windows 本地 PTY 往返用例（根因已确认并经 CI 验证）
 

@@ -236,9 +236,9 @@ reachable: bool
 - Interactive terminal output is decoded in Rust from the configured terminal encoding into UTF-8 bytes before emitting `terminal:output`. Interactive terminal input is encoded in Rust from the frontend Unicode string into the configured terminal encoding before writing to the SSH channel.
 - Remote-file exec/read/write paths do not use `advanced.terminal_encoding`; they keep their own UTF-8 or raw-byte file semantics.
 - Legacy JSON stores may contain clear-text passwords and private-key passphrases before migration. Migration must move those values into vault, write only secret references to SQLite, and keep JSON as `.migrated.bak` safety copies after success.
-- All command failures return `AppError { code, message, raw_message, recoverable }`.
+- All command failures return `AppError { code, message, recoverable, diagnostic_id, details? }`. `raw_message` is **not** serialized to the WebView (internal diagnostic text only, see `design.md` §5.3 step 3); the WebView receives `diagnostic_id` to correlate with internal logs.
 - `credential_delete` must check saved connection references and return `credential_in_use` instead of deleting a credential currently referenced by `credential_mode=saved`.
-- Host-key verification is stateful. Unknown host keys return `host_key_unknown` with serialized `HostKeyInfo` in `raw_message`; changed host keys return `host_key_changed` with the new key and old fingerprint. Only `known_host_trust` may write or update trusted host keys.
+- Host-key verification is stateful. Unknown host keys return `host_key_unknown` and changed host keys return `host_key_changed`; both carry their payload in `details` as a `kind`-tagged union: `{"kind":"host_key_unknown","host_key":HostKeyInfo}` and `{"kind":"host_key_changed","host_key":HostKeyInfo,"old_fingerprint_sha256":String}`. Only `known_host_trust` may write or update trusted host keys.
 - `connection_test`, `terminal_connect`, and remote-file commands must use the same saved-connection resolution path in `ssh_config.rs`; do not re-resolve credentials independently in UI-facing command handlers.
 - `connection_test_profile` is only for testing the current `ConnectionDialog` form before it is saved. It must validate and resolve a transient profile through `resolve_transient_connection(...)`, may read saved credentials through `StorageRepository` when `credential_mode=saved`, and must not upsert a connection, mark recent activity, or synthesize a permanent connection id.
 - `connection_probe_system` resolves the saved connection with the same runtime prompt credential shape as `connection_test`, opens a short-lived exec session, runs only the read-only `cat /etc/os-release 2>/dev/null || uname -s 2>/dev/null || true` probe, parses `ID`, `NAME`, and `VERSION_ID`, and writes only the `remote_os_*` fields through `StorageRepository`. It must not log passwords, passphrases, or full command payloads, and probe failure must be handled by the frontend as non-fatal after a successful connection.
@@ -1526,7 +1526,7 @@ Serialized fields use snake_case. `CommandHistorySource` currently serializes `c
 - Snippet `tags` are accepted as an array, trimmed, deduplicated case-insensitively, and stored as JSON text in SQLite.
 - Command text is trimmed before storage and limited by `COMMAND_TEXT_MAX_LENGTH`. Rust validation is authoritative; React may disable obvious empty saves but must still surface backend validation errors.
 - `command_snippet_mark_used` updates only snippet usage metadata and must not mutate command text, title, tags, or favorite state.
-- Command library commands return `AppError { code, message, raw_message, recoverable }` on failure and must be registered in both `commands.rs` and `lib.rs`.
+- Command library commands return `AppError { code, message, recoverable, diagnostic_id, details? }` on failure and must be registered in both `commands.rs` and `lib.rs`.
 
 ### 4. Validation & Error Matrix
 

@@ -1791,9 +1791,11 @@ fn terminal_encoding_buffer_error(terminal_encoding: &str) -> AppError {
 }
 
 fn to_russh_error(error: AppError) -> russh::Error {
+    // 必须走 `to_internal_json` 而不是 `serde_json::to_string`：后者按 IPC 契约
+    // 摘掉了 `raw_message`，会让错误在跨过这条进程内通道后丢掉内部诊断信息。
     russh::Error::IO(std::io::Error::new(
         std::io::ErrorKind::Other,
-        serde_json::to_string(&error).unwrap_or_else(|_| error.message),
+        error.to_internal_json(),
     ))
 }
 
@@ -2217,6 +2219,37 @@ mod tests {
 
         assert!(!original.diagnostic_id.is_empty());
         assert_eq!(mapped.diagnostic_id, original.diagnostic_id);
+    }
+
+    /// 主机密钥确认载荷同样要走通这条通道：`check_server_key` 是唯一产生
+    /// `host_key_unknown` / `host_key_changed` 的地方，而它只能靠 `russh::Error`
+    /// 把错误交回上层。`raw_message` 从 IPC 下线后，载荷若在此处丢失，
+    /// TOFU 确认弹窗就再也拿不到指纹。
+    #[test]
+    fn russh_app_error_mapping_preserves_host_key_details() {
+        let host_key = crate::known_hosts::HostKeyInfo {
+            host: "example.com".to_string(),
+            port: 22,
+            key_algorithm: "ssh-ed25519".to_string(),
+            fingerprint_sha256: "SHA256:new".to_string(),
+            public_key: "AAAAC3Nza".to_string(),
+        };
+        let original = crate::ssh_config::app_error_for_host_key_changed("SHA256:old", &host_key);
+
+        let mapped = app_error_from_russh(
+            to_russh_error(original.clone()),
+            "terminal_connect_failed",
+            "SSH 连接失败。",
+        );
+
+        assert_eq!(mapped.code, "host_key_changed");
+        assert_eq!(
+            mapped.details,
+            Some(crate::app_error::AppErrorDetails::HostKeyChanged {
+                host_key,
+                old_fingerprint_sha256: "SHA256:old".to_string(),
+            })
+        );
     }
 
     /// 网络失败细分必须来自 `io::ErrorKind`，不能靠匹配 OS 错误文本——

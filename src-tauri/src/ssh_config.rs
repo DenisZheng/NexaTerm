@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use tauri::AppHandle;
 
-use crate::app_error::AppError;
+use crate::app_error::{AppError, AppErrorDetails};
 use crate::connections::{
     validate_profile_input, ConnectionAdvancedConfig, ConnectionAuthKind, ConnectionJumpConfig,
     ConnectionProfile, ConnectionProfileInput, ConnectionProxyConfig,
@@ -82,24 +82,34 @@ pub fn load_connection_profile(
         })
 }
 
+/// 主机密钥确认载荷走 `AppError::details`，不再序列化进 `raw_message`。
+///
+/// 后者已按 `design.md` §5.3 第 3 步从 IPC 线上移除；前端改为读判别联合。
+/// `raw_message` 仍写入一条人类可读的指纹摘要，供 Rust 侧诊断日志与测试断言使用。
 pub fn app_error_for_host_key_unknown(host_key: &HostKeyInfo) -> AppError {
     AppError::new(
         "host_key_unknown",
         "首次连接该主机，需要确认主机密钥。",
-        serde_json::to_string(host_key).unwrap_or_else(|_| host_key.fingerprint_sha256.clone()),
+        format!("fingerprint_sha256={}", host_key.fingerprint_sha256),
         true,
     )
+    .with_details(AppErrorDetails::HostKeyUnknown {
+        host_key: host_key.clone(),
+    })
 }
 
 pub fn app_error_for_host_key_changed(current: &str, host_key: &HostKeyInfo) -> AppError {
     AppError::new(
         "host_key_changed",
         "主机密钥已变化，连接已阻断。",
-        serde_json::json!({
-            "old_fingerprint_sha256": current,
-            "host_key": host_key,
-        })
-        .to_string(),
+        format!(
+            "old_fingerprint_sha256={current} new_fingerprint_sha256={}",
+            host_key.fingerprint_sha256
+        ),
         true,
     )
+    .with_details(AppErrorDetails::HostKeyChanged {
+        host_key: host_key.clone(),
+        old_fingerprint_sha256: current.to_string(),
+    })
 }

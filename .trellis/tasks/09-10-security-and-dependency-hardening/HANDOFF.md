@@ -1,10 +1,10 @@
 # Task 01 安全与依赖硬化 · 交接给 Codex
 
-> 更新时间：2026-09-15 ｜ 分支 `main`（Phase 3 代码 @ `f59076c`，已同步 `origin/main`，工作区干净）
+> 更新时间：2026-09-15 ｜ 分支 `main`（Phase 3 代码 @ `f59076c`；§5.3 第 3 步改动在工作区待审核）
 >
-> **本文件是交接给 Codex 接手下一步的说明。** 标准协作规则见仓库根 `AGENTS.MD`（Codex 原生读取），本文件不重复，只补"当前位置 + 下一步 + 本任务专属的坑"。先 `git pull`，再从本文件"下一步"开始。
+> **本文件是交接给下一位接手人的说明。** 标准协作规则见仓库根 `AGENTS.MD`（Codex 原生读取），本文件不重复，只补"当前位置 + 下一步 + 本任务专属的坑"。先 `git pull`，再从本文件"下一步"开始。
 >
-> **接手第一件事**：下一步第一优先项（§5.3 第 3 步）是**阻塞项**，需要先和用户对齐一个数据模型决策才能动手——不要直接开写。详见下方"下一步 1"。
+> **接手第一件事**：§5.3 第 3 步的**阻塞已解除并已实现**（用户已选定数据模型：类型化 `AppErrorDetails` 枚举），但**尚未提交、尚未经 CI 验证 Rust 编译与单测**。接手后第一件事是走完这批的验证与提交，详见"下一步 0"。
 
 ## 当前上下文
 
@@ -21,7 +21,7 @@
 | --- | --- | --- |
 | 1 审计与威胁模型 | ✅ 完成 | 见 `SECURITY_REVIEW.md`、`LICENSE_AUDIT.md`。 |
 | 2 低风险硬化 | 🟡 部分 | Batch A/B/D 完成（B 经 CI 绿 @ `1a8e95e`）；**Batch C、E 未做**。 |
-| 3 MCP 与错误边界 | ✅ 完成 | **CI 全绿实证** run 34918439293 @ `f59076c`；§5.3 第 3 步**刻意留空**（见下）。 |
+| 3 MCP 与错误边界 | 🟢 代码完成，第 3 步待 CI | **CI 全绿实证** run 34918439293 @ `f59076c` 覆盖第 1/2/4 步；§5.3 第 3 步已实现但**未经 CI 验证**（见下）。 |
 | 4 输入边界与生命周期 | ❌ 未开始 | |
 | 5 CSP/跨平台/发布门禁 | ❌ 未开始 | |
 
@@ -33,34 +33,48 @@
   - 第 1 步 ✅ 网络失败在 Rust 侧按 `io::ErrorKind` 落稳定 `code`（`session.rs` 的 `refine_network_code`/`app_error_from_io`；前端新增 `connectionErrorCodes.ts`，`WorkspaceShell.tsx`/`ConnectionDialog.tsx` 改读 code，不再匹配 OS 错误文本）。
   - 第 2 步 ✅ 加 `diagnostic_id`（在 `new()` 内生成，585 处调用点零改动；诊断日志只记 code/id/recoverable，不记 `raw_message`）。
   - 第 4 步 ✅ 前端全部 `raw_message` 读取点退回诊断 ID / message。
-  - 第 3 步 ⛔ **见下方阻塞项**。
+  - 第 3 步 ✅ 已实现（阻塞已解除），**但这批改动尚未经 CI 验证、尚未提交**，见"下一步 0"。
 
 ## 下一步（按优先级）
 
-### 1. §5.3 第 3 步 —— 阻塞，需先与用户对齐数据模型后再动手
+### 0. §5.3 第 3 步 —— 已实现，待 CI 验证 + 人工审核提交
 
-目标：给 `AppError.raw_message` 加 `#[serde(skip_serializing)]`。**当前不能直接加**，因为 `raw_message` 同时是两条结构化数据通道：
+阻塞根因是 `raw_message` 同时承担两条结构化数据通道，直接加 `skip_serializing` 会造成功能回归：
 
-- **前端通道**：`src/features/connections/hostKeyErrors.ts:19` 把 `raw_message` 当 JSON 解析出 `HostKeyInfo`（由 `ssh_config.rs` 的 `app_error_for_host_key_unknown`/`app_error_for_host_key_changed` 写入）。关闭后主机密钥 TOFU 确认弹窗拿不到指纹 = 关掉 host key 校验的用户可见环节。
-- **Rust 内部通道**：`session.rs` 的 `to_russh_error`/`app_error_from_russh` 把整个 `AppError` 序列化成 JSON 塞进 `io::Error` 再解析回来。已给 `raw_message` 加 `#[serde(default)]` 兜住（字段消失后仍能解析，否则 `host_key_unknown` 会被静默降级），用例 `russh_app_error_mapping_preserves_diagnostic_id` 锁住。
+- **前端通道**：`hostKeyErrors.ts` 曾把 `raw_message` 当 JSON 解析出 `HostKeyInfo`，关闭后主机密钥 TOFU 确认弹窗拿不到指纹 = 关掉 host key 校验的用户可见环节。
+- **Rust 内部通道**：`session.rs` 的 `to_russh_error`/`app_error_from_russh` 把整个 `AppError` 序列化成 JSON 塞进 `io::Error` 再解析回来。
 
-**待对齐的决策（AGENTS.MD"动手前先对齐"）**：host key 载荷是迁到 `AppError` 独立结构化字段（如 `details: Option<serde_json::Value>`），还是改独立命令返回。定了再落第 3 步 + `hostKeyErrors.ts` 改造。
+**用户已选定的数据模型**：host key 载荷迁到 `AppError` 的独立字段 `details: Option<AppErrorDetails>`，`AppErrorDetails` 是按 `kind` 判别的枚举（`host_key_unknown { host_key }` / `host_key_changed { host_key, old_fingerprint_sha256 }`）。选它而非自由 `serde_json::Value`，是因为后者只是把"什么都能往里塞"的问题换个字段重演——前端仍要做形状嗅探，新增载荷不经任何评审。
 
-### 2. Batch C（Phase 2 遗留）
+**已落地**（工作区 7 个文件，详见 `implement.md` §5.3 条目）：
+
+- `app_error.rs`：新增 `AppErrorDetails` 枚举与 `details` 字段（`skip_serializing_if = "Option::is_none"`，无载荷错误的线上表示不变）；`raw_message` 加 `#[serde(default, skip_serializing)]`；新增 `AppError::to_internal_json()` —— 序列化后把 `raw_message` 显式写回，供内部通道使用。
+- `session.rs`：`to_russh_error` 改用 `to_internal_json`。**这是易漏的一处**：直接用 `serde_json::to_string` 会让 `raw_message` 在跨 russh 边界时被 `skip_serializing` 静默丢掉，而这条通道在进程内，本就不受"不向 WebView 暴露"的约束。反向解析不用改（`skip_serializing` 只影响序列化方向）。
+- `ssh_config.rs`：两个构造函数改 `.with_details(...)`，`raw_message` 降级为人类可读指纹摘要。
+- `hostKeyErrors.ts`：改读 `details` 判别联合，不再 `JSON.parse`；`code` 为权威判别字段，`details.kind` 与之不一致则返回 `null`（宁可不出确认卡片，也不展示错的风险等级）。
+- 契约文档同步：`.trellis/spec/{backend,frontend}/tauri-command-contracts.md`。
+
+**已验证**：`npx tsc --noEmit` 干净；`node --test scripts/*.test.mjs` 37/37 通过；`check-startup-module-boundary-source.mjs`、`check-connection-dialog-host-key-feedback.mjs` 通过。
+
+**未验证（必须补）**：Rust `cargo check --workspace --locked` + `cargo test --workspace --locked`。本机工具链仍 ENVIRONMENT-BLOCKED（本次会话复核确认：MSVC CRT 的 `include/vcruntime.h`、`lib/x64/msvcprt.lib` 与 Windows Kits 10 Include 均缺失；另注意 `which -a link.exe` 命中 Git coreutils 的 `/usr/bin/link.exe`，它报的 `link: extra operand` 是**误导性错误**，不是根因）。因此走 CI 路径：提交 + push 后记录 run 号与三平台 job 结论，并回填 `implement.md`"环境能力变更记录"（第 141 行现仍写"§5.3 第 1/2/4 步"，需随 CI 结果更新）。
+
+**新增用例**（CI 要跑的就是它们）：`app_error.rs` 的 `ipc_serialization_drops_raw_message`、`internal_json_preserves_raw_message`、`details_survive_ipc_round_trip`、`details_field_is_omitted_when_absent`、`host_key_changed_details_carry_old_fingerprint`；`session.rs` 的 `russh_app_error_mapping_preserves_host_key_details`。注意 `round_trip_preserves_diagnostic_id` 中原有的 `raw_message` 相等断言已**按设计移除**（IPC 序列化不再携带它），改由 `internal_json_preserves_raw_message` 覆盖内部通道。
+
+### 1. Batch C（Phase 2 遗留）
 
 删除未用 capability、按窗口拆分配置。拆分矩阵已在 `SECURITY_REVIEW.md §5` 就绪，但需 `tauri dev` 验证 `vnc-runner-host` runner 窗口不回归——**需 GUI 环境（Mac 上可做）**。
 
-### 3. Batch E（Phase 2 遗留）
+### 2. Batch E（Phase 2 遗留）
 
 补 secret scan / audit artifact / 配置静态检查脚本（`scripts/check-*.mjs`），输出明确 PASS/FAIL/ENVIRONMENT-BLOCKED。断言依赖 Batch C 与 Phase 5 结果，随其一并落地，避免"提交即失败"的 check。
 
-### 4. Phase 4 输入边界与生命周期
+### 3. Phase 4 输入边界与生命周期
 
 - remote exec / Docker / WebDAV / remote file / tunnel / shell quoting 的 Windows + POSIX 负向用例。
 - PTY / runner / tunnel / websocket / MCP sidecar / VNC runner host 的成功/失败/取消/窗口关闭四类清理路径源码级核查 + `cargo test`（经 CI）验证。
 - Vault 回读、known-host changed 拒绝、连接失败语义回归。
 
-### 5. Phase 5 CSP / 跨平台 / 发布门禁
+### 4. Phase 5 CSP / 跨平台 / 发布门禁
 
 按实际资源收紧 CSP，记录必须保留的 `unsafe-inline`/`data:`/`blob:` 调用点；跨平台 capability/权限/端口 bind 验证（macOS/Linux 本机不具备则记阻塞）；发布门禁。
 
@@ -71,14 +85,17 @@
 - **提交/推送权限**：`AGENTS.MD` 要求"不自动提交或推送，先暂存等人工审核"。上一个会话的"结束并 Push"是**那次会话的一次性显式授权**，不构成常设权限——你接手后默认回到"暂存待审核"，除非用户对你的任务再次明确授权。
 - **`cargo check`（不带 `--tests`）不编译 `#[cfg(test)]` 模块**：check 失败即错误在生产代码，不在测试。上一轮 `mcp.rs:1312` 的 E0308（`format!` 的 `String` 传给 `AppError::new` 的 `&str` 形参）就是这么定位的。
 - **bin `mxterm_mcp` 依赖 lib**（`use m_xterm_lib::...`）：lib 编译失败时该 bin 不被检查，其错误要等 lib 修好后才首次暴露。核查生产代码要把 lib 和 bin 一起看。
-- **`AppError::new` 签名未变**（仍 4 参 `code:&str, message:&str, raw_message:impl ToString, recoverable:bool`）：`diagnostic_id` 在 `new()` 内部生成，585 处既有调用点无需改。新写调用时注意 `message` 是 `&str`（传 `format!` 要加 `&`），`raw_message` 是 `impl ToString`（`String` 可直接传）。
+- **`AppError::new` 签名未变**（仍 4 参 `code:&str, message:&str, raw_message:impl ToString, recoverable:bool`）：`diagnostic_id` 与 `details` 都不进构造参数——前者在 `new()` 内生成，后者靠链式 `.with_details(...)` 附加，故 585 处既有调用点无需改。新写调用时注意 `message` 是 `&str`（传 `format!` 要加 `&`），`raw_message` 是 `impl ToString`（`String` 可直接传）。
+- **`AppError` 有两套序列化，别混用**：面向 WebView 的 `serde_json::to_string` 会按 `skip_serializing` 摘掉 `raw_message`；进程内通道（目前只有 `session.rs` 的 `to_russh_error`）必须用 `AppError::to_internal_json()`。以后若再新增"序列化 `AppError` 再解析回来"的内部通道，同样走后者，否则内部诊断文本会**静默**丢失——没有编译错误，只有排障时发现原始文本空了。
+- **新增需要前端消费的错误载荷时**：登记到 `app_error.rs` 的 `AppErrorDetails` 枚举新变体，不要塞回 `raw_message`，也不要改成自由 JSON。这个枚举就是那道评审闸门。
 - **CI 日志下载需 repo admin 权限**：上个会话本机无 token，只能读 `api.github.com` 的 runs/jobs 元数据、靠用户粘贴报错定位。你若走 CI 路径且能拿到日志更好。
 - **`ENVIRONMENT-BLOCKED` 项不得从验收抹掉**，须单独成节写清缺哪项环境能力：目前有 `McpRemoteServiceManager::restart`/`reconcile`（签名需 `AppHandle`，单测无法构造 Tauri 运行时；`stop` 不需要、已覆盖），以及 Batch C 的 `tauri dev` runner 窗口回归。
 - **08-01 的"checkbox + 脚注"反模式**：用户已明确**先不管，后续复现再提**。
 
 ## 证据索引
 
-- Phase 3 CI 全绿：run 34918439293 @ `f59076c`（frontend + Rust 三平台 `cargo check`+`cargo test` 全 success）。
+- Phase 3 CI 全绿：run 34918439293 @ `f59076c`（frontend + Rust 三平台 `cargo check`+`cargo test` 全 success），覆盖 §5.3 第 1/2/4 步。
+- §5.3 第 3 步：**CI 证据待补**，工作区改动尚未提交（见"下一步 0"）。
 - Phase 3 编译修复：`875b3f4`（首推，`mcp.rs:1312` E0308）→ `f59076c`（借用为 `&str`）。
 - Batch B CI 绿：`1a8e95e`；Windows PTY 用例首次真绿：`58f6172`。
 - 详尽逐条状态：`implement.md`（Phase 3 段 + "环境能力变更记录"节）。
