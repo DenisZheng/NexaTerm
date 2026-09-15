@@ -130,6 +130,11 @@ cargo test --workspace --locked --offline
   Windows 侧 **253/253 通过**，其中 PTY 往返用例为其 2026-06-18 引入以来**首次真正通过**。
 - 因此：Batch B、Phase 3、Phase 4 中「需 `cargo check` / `cargo test` 验证」的条目由 ENVIRONMENT-BLOCKED 改判为**可验证（经 CI）**，
   且该通道已由 `58f6172` 的全绿结果实证可用。仍需真实 GUI 会话的项（如 Batch C 的 `tauri dev` runner 窗口回归）**不在此列**，继续保持阻塞状态。
+- commit `f59076c`：**Phase 3 CI 全绿验收证据**——run 34918439293，frontend job 与 rust 三平台矩阵
+  （linux-x64 / windows-x64 / macos-arm64）`cargo check` + `cargo test` 全部 `success`。
+  说明：Phase 3 的 MCP 监听策略、限流/并发、命令长度上限、`AppError` 收敛（§5.3 第 1/2/4 步）落地后编译与全量单测通过。
+  过程留痕：首推 `875b3f4` 因 `mcp.rs:1312` 把 `format!` 的 `String` 传给 `AppError::new` 的 `&str` 形参（E0308）三平台一致失败，
+  `f59076c` 借用为 `&str` 修复；此为 `cargo check` 首错即停、`cargo test` 被跳过的典型编译错误，非测试回归。
 
 #### 已修复项：Windows 本地 PTY 往返用例（根因已确认并经 CI 验证）
 
