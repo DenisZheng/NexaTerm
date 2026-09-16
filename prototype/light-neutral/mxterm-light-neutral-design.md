@@ -81,4 +81,3 @@
 ## 原型文件
 
 - `prototype/light-neutral/mxterm-light-neutral.html`
-- `prototype/light-neutral/mxterm-ssh-connect.html`

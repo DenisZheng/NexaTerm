@@ -288,7 +288,6 @@ type SerialTerminalOpenRequest = {
 - Run `node scripts/check-connection-jump-source.mjs` after changing SSH jump profile fields, network path UI, connection normalization, or backend jump persistence.
 - Run `node scripts/check-connection-terminal-encoding-source.mjs` after changing terminal encoding profile fields, advanced-tab UI, connection normalization, or backend terminal encoding behavior.
 - Run `node scripts/check-connection-dialog-host-key-feedback.mjs` after changing `ConnectionDialog`, host-key error parsing, or connection-test feedback styles.
-- Run `node scripts/check-terminal-startup-output-source.mjs` after changing `TerminalPanel` startup output buffering or prompt deduplication.
 - Run `node scripts/check-terminal-interactive-pty-source.mjs` after changing `TerminalPanel` xterm options or local Windows terminal creation props.
 - Run `node scripts/check-terminal-resize-debounce-source.mjs` after changing `TerminalPanel` fit / resize observer / backend resize synchronization.
 - Run `node --test scripts/terminal-output-flow.test.mjs` after changing terminal output batching, xterm write scheduling, Docker text buffering, or their lifecycle cleanup.
