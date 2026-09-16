@@ -64,7 +64,7 @@
     - **前端**：`parseHostKeyError` 改读 `details` 判别联合，不再 `JSON.parse`。`code` 为权威判别字段，`details.kind` 必须与之一致，否则返回 `null`（不出确认卡片），避免契约被改坏时展示错误的风险等级。
     - **用例**：`app_error.rs` 加 `ipc_serialization_drops_raw_message`（断言线上表示不含原始文本）、`internal_json_preserves_raw_message`、`details_survive_ipc_round_trip`、`details_field_is_omitted_when_absent`、`host_key_changed_details_carry_old_fingerprint`；`session.rs` 加 `russh_app_error_mapping_preserves_host_key_details`（锁住 `check_server_key` 这条唯一产生主机密钥错误的路径）。
     - 契约文档同步：`.trellis/spec/backend/tauri-command-contracts.md`、`.trellis/spec/frontend/tauri-command-contracts.md`。
-    - **验证状态**：前端已验证通过；Rust `cargo check` / `cargo test` **待 CI**，详见下方「环境能力变更记录」末条。
+    - **验证状态**：前端本机通过；Rust `cargo check` / `cargo test` 经 CI 全绿（run 34953115609 @ `4caaf0d`），详见下方「环境能力变更记录」。
 - [x] 更新 TypeScript DTO 与所有调用方（`ConnectionDialog.tsx`、`WorkspaceShell.tsx` 的错误摘要/阶段/建议逻辑）；过渡期前端必须容忍 `raw_message` 缺失。
 - [x] 验证 token、password、private key、raw command、host path 不出现在响应、日志和错误 toast。
   - 用例证据：`remote_service_status_exposes_only_token_preview`（状态 DTO 只含 `...-value` 形式 preview）、`dangerous_command_rejection_previews_reason_without_echoing_command`（拒绝原因不回显命令原文）、`plaintext_credential_args_are_rejected`（明文凭据参数入口拒绝）、`redacted_connection_serialization_excludes_secret_material`、`remote_token_hash_verifies_without_plaintext_sidecar_arg`（token 不进 sidecar 命令行）。
@@ -142,12 +142,14 @@ cargo test --workspace --locked --offline
   说明：Phase 3 的 MCP 监听策略、限流/并发、命令长度上限、`AppError` 收敛（§5.3 第 1/2/4 步）落地后编译与全量单测通过。
   过程留痕：首推 `875b3f4` 因 `mcp.rs:1312` 把 `format!` 的 `String` 传给 `AppError::new` 的 `&str` 形参（E0308）三平台一致失败，
   `f59076c` 借用为 `&str` 修复；此为 `cargo check` 首错即停、`cargo test` 被跳过的典型编译错误，非测试回归。
-- **§5.3 第 3 步（`skip_serializing` + `AppErrorDetails`）：CI 证据待补**。本机 Rust 工具链本轮复核仍不可用
-  （MSVC CRT 的 `include/vcruntime.h`、`lib/x64/msvcprt.lib` 与 Windows Kits 10 Include 均缺失，形态同 `design.md` §9.1；
-  另注意 `which -a link.exe` 命中 Git coreutils 的 `/usr/bin/link.exe`，其 `link: extra operand` 报错是**误导性表象**，非根因）。
-  前端侧已验证：`npx tsc --noEmit` 干净、`node --test scripts/*.test.mjs` 37/37、两项 source check 通过。
-  Rust 侧 `cargo check` / `cargo test` **尚未验证**，须经 CI 补齐后在此回填 run 号与三平台 job 结论；
-  在此之前不得声称该步验收通过。
+- commit `4caaf0d`：**§5.3 第 3 步 CI 全绿验收证据**——run 34953115609，Frontend checks 与 Rust 三平台
+  （linux-x64 / windows-x64 / macos-arm64）`cargo check` + `cargo test` 全部 `success`（Package windows-x64 为 build-only，非 tag/dispatch 触发故 skipped，属预期）。
+  说明：`AppError.raw_message` 加 `#[serde(skip_serializing)]`、新增 `AppErrorDetails` 判别联合与 `to_internal_json` 内部通道后编译与全量单测通过；
+  新增用例 `ipc_serialization_drops_raw_message` / `internal_json_preserves_raw_message` / `details_survive_ipc_round_trip` /
+  `details_field_is_omitted_when_absent` / `host_key_changed_details_carry_old_fingerprint` / `russh_app_error_mapping_preserves_host_key_details` 均随该矩阵通过。
+  本机 Rust 工具链本轮复核仍 ENVIRONMENT-BLOCKED（MSVC CRT 的 `include/vcruntime.h`、`lib/x64/msvcprt.lib` 与 Windows Kits 10 Include 均缺失，形态同 `design.md` §9.1；
+  另注意 `which -a link.exe` 命中 Git coreutils 的 `/usr/bin/link.exe`，其 `link: extra operand` 报错是**误导性表象**、非根因），故该步 Rust 验收经 CI 通道达成；
+  前端侧另经 `npx tsc --noEmit`、`node --test scripts/*.test.mjs` 37/37、两项 source check 本机通过。
 
 #### 已修复项：Windows 本地 PTY 往返用例（根因已确认并经 CI 验证）
 

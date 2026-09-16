@@ -1,10 +1,10 @@
 # Task 01 安全与依赖硬化 · 交接给 Codex
 
-> 更新时间：2026-09-15 ｜ 分支 `main`（Phase 3 代码 @ `f59076c`；§5.3 第 3 步改动在工作区待审核）
+> 更新时间：2026-09-16 ｜ 分支 `main`（Phase 3 整体完成：第 1/2/4 步 @ `f59076c`，第 3 步 @ `4caaf0d`，均 CI 全绿）
 >
 > **本文件是交接给下一位接手人的说明。** 标准协作规则见仓库根 `AGENTS.MD`（Codex 原生读取），本文件不重复，只补"当前位置 + 下一步 + 本任务专属的坑"。先 `git pull`，再从本文件"下一步"开始。
 >
-> **接手第一件事**：§5.3 第 3 步的**阻塞已解除并已实现**（用户已选定数据模型：类型化 `AppErrorDetails` 枚举），但**尚未提交、尚未经 CI 验证 Rust 编译与单测**。接手后第一件事是走完这批的验证与提交，详见"下一步 0"。
+> **接手第一件事**：Phase 3 已整体完成（§5.3 第 3 步的阻塞已按用户选定的类型化 `AppErrorDetails` 枚举解除，commit `4caaf0d` 已 push 且 CI 全绿）。下一步从 Batch C 开始，详见"下一步 1"。
 
 ## 当前上下文
 
@@ -21,7 +21,7 @@
 | --- | --- | --- |
 | 1 审计与威胁模型 | ✅ 完成 | 见 `SECURITY_REVIEW.md`、`LICENSE_AUDIT.md`。 |
 | 2 低风险硬化 | 🟡 部分 | Batch A/B/D 完成（B 经 CI 绿 @ `1a8e95e`）；**Batch C、E 未做**。 |
-| 3 MCP 与错误边界 | 🟢 代码完成，第 3 步待 CI | **CI 全绿实证** run 34918439293 @ `f59076c` 覆盖第 1/2/4 步；§5.3 第 3 步已实现但**未经 CI 验证**（见下）。 |
+| 3 MCP 与错误边界 | ✅ 完成 | 第 1/2/4 步 CI 全绿 run 34918439293 @ `f59076c`；第 3 步 CI 全绿 run 34953115609 @ `4caaf0d`。 |
 | 4 输入边界与生命周期 | ❌ 未开始 | |
 | 5 CSP/跨平台/发布门禁 | ❌ 未开始 | |
 
@@ -33,11 +33,11 @@
   - 第 1 步 ✅ 网络失败在 Rust 侧按 `io::ErrorKind` 落稳定 `code`（`session.rs` 的 `refine_network_code`/`app_error_from_io`；前端新增 `connectionErrorCodes.ts`，`WorkspaceShell.tsx`/`ConnectionDialog.tsx` 改读 code，不再匹配 OS 错误文本）。
   - 第 2 步 ✅ 加 `diagnostic_id`（在 `new()` 内生成，585 处调用点零改动；诊断日志只记 code/id/recoverable，不记 `raw_message`）。
   - 第 4 步 ✅ 前端全部 `raw_message` 读取点退回诊断 ID / message。
-  - 第 3 步 ✅ 已实现（阻塞已解除），**但这批改动尚未经 CI 验证、尚未提交**，见"下一步 0"。
+  - 第 3 步 ✅ 已完成（阻塞已解除，commit `4caaf0d`，CI 全绿 run 34953115609），完整记录见"下一步 0"。
 
 ## 下一步（按优先级）
 
-### 0. §5.3 第 3 步 —— 已实现，待 CI 验证 + 人工审核提交
+### 0. §5.3 第 3 步 —— ✅ 已完成（commit `4caaf0d`，CI 全绿 run 34953115609）
 
 阻塞根因是 `raw_message` 同时承担两条结构化数据通道，直接加 `skip_serializing` 会造成功能回归：
 
@@ -56,9 +56,9 @@
 
 **已验证**：`npx tsc --noEmit` 干净；`node --test scripts/*.test.mjs` 37/37 通过；`check-startup-module-boundary-source.mjs`、`check-connection-dialog-host-key-feedback.mjs` 通过。
 
-**未验证（必须补）**：Rust `cargo check --workspace --locked` + `cargo test --workspace --locked`。本机工具链仍 ENVIRONMENT-BLOCKED（本次会话复核确认：MSVC CRT 的 `include/vcruntime.h`、`lib/x64/msvcprt.lib` 与 Windows Kits 10 Include 均缺失；另注意 `which -a link.exe` 命中 Git coreutils 的 `/usr/bin/link.exe`，它报的 `link: extra operand` 是**误导性错误**，不是根因）。因此走 CI 路径：提交 + push 后记录 run 号与三平台 job 结论，并回填 `implement.md`"环境能力变更记录"（第 141 行现仍写"§5.3 第 1/2/4 步"，需随 CI 结果更新）。
+**Rust 验证（已完成，经 CI）**：commit `4caaf0d` push 后触发 run 34953115609，Frontend checks 与 Rust 三平台（linux-x64 / windows-x64 / macos-arm64）`cargo check` + `cargo test` 全部 success（Package windows-x64 为 build-only，非 tag/dispatch 触发故 skipped，属预期）。本机工具链本轮复核仍 ENVIRONMENT-BLOCKED（MSVC CRT 的 `include/vcruntime.h`、`lib/x64/msvcprt.lib` 与 Windows Kits 10 Include 均缺失；另注意 `which -a link.exe` 命中 Git coreutils 的 `/usr/bin/link.exe`，其 `link: extra operand` 是**误导性表象**、非根因），故走 CI 通道达成 Rust 验收。
 
-**新增用例**（CI 要跑的就是它们）：`app_error.rs` 的 `ipc_serialization_drops_raw_message`、`internal_json_preserves_raw_message`、`details_survive_ipc_round_trip`、`details_field_is_omitted_when_absent`、`host_key_changed_details_carry_old_fingerprint`；`session.rs` 的 `russh_app_error_mapping_preserves_host_key_details`。注意 `round_trip_preserves_diagnostic_id` 中原有的 `raw_message` 相等断言已**按设计移除**（IPC 序列化不再携带它），改由 `internal_json_preserves_raw_message` 覆盖内部通道。
+**新增用例**（已随 run 34953115609 全部通过）：`app_error.rs` 的 `ipc_serialization_drops_raw_message`、`internal_json_preserves_raw_message`、`details_survive_ipc_round_trip`、`details_field_is_omitted_when_absent`、`host_key_changed_details_carry_old_fingerprint`；`session.rs` 的 `russh_app_error_mapping_preserves_host_key_details`。注意 `round_trip_preserves_diagnostic_id` 中原有的 `raw_message` 相等断言已**按设计移除**（IPC 序列化不再携带它），改由 `internal_json_preserves_raw_message` 覆盖内部通道。
 
 ### 1. Batch C（Phase 2 遗留）
 
@@ -95,7 +95,7 @@
 ## 证据索引
 
 - Phase 3 CI 全绿：run 34918439293 @ `f59076c`（frontend + Rust 三平台 `cargo check`+`cargo test` 全 success），覆盖 §5.3 第 1/2/4 步。
-- §5.3 第 3 步：**CI 证据待补**，工作区改动尚未提交（见"下一步 0"）。
+- §5.3 第 3 步 CI 全绿：run 34953115609 @ `4caaf0d`（Frontend + Rust 三平台 `cargo check`+`cargo test` 全 success）。
 - Phase 3 编译修复：`875b3f4`（首推，`mcp.rs:1312` E0308）→ `f59076c`（借用为 `&str`）。
 - Batch B CI 绿：`1a8e95e`；Windows PTY 用例首次真绿：`58f6172`。
 - 详尽逐条状态：`implement.md`（Phase 3 段 + "环境能力变更记录"节）。
