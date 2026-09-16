@@ -41,47 +41,49 @@ try {
     pathToFileURL(join(outDir, "terminalStartupOutput.js")).href
   );
 
+  // 以下均为脱敏后的示例登录 banner：IP 使用 RFC 5737 文档保留段、主机名为通用占位符，
+  // 仅用于验证 normalizeStartupOutput 的去重/折叠逻辑，不含真实环境数据。
   const aliCloudStartup = [
-    "Last login: Wed Jun 17 11:45:56 2026 from 219.139.229.36",
+    "Last login: Wed Jun 17 11:45:56 2026 from 203.0.113.36",
     "",
     "Welcome to Alibaba Cloud Elastic Compute Service !",
     "",
-    "[root@iZ6wed7x33nsqpktcf5yjZ ~]# [root@iZ6wed7x33nsqpktcf5yjZ ~]# ",
+    "[root@demo-ecs ~]# [root@demo-ecs ~]# ",
   ].join("\r\n");
 
   assert.equal(
     normalizeStartupOutput(aliCloudStartup),
     [
-      "Last login: Wed Jun 17 11:45:56 2026 from 219.139.229.36",
+      "Last login: Wed Jun 17 11:45:56 2026 from 203.0.113.36",
       "",
       "Welcome to Alibaba Cloud Elastic Compute Service !",
       "",
-      "[root@iZ6wed7x33nsqpktcf5yjZ ~]# ",
+      "[root@demo-ecs ~]# ",
     ].join("\r\n"),
   );
 
   const leadingPromptThenBanner = [
-    "[root@iZ6wed7x33nsqpktcf5yjZ ~]#",
-    "Last login: Wed Jun 17 11:45:56 2026 from 219.139.229.36",
+    "[root@demo-ecs ~]#",
+    "Last login: Wed Jun 17 11:45:56 2026 from 203.0.113.36",
     "Welcome to Alibaba Cloud Elastic Compute Service !",
-    "[root@iZ6wed7x33nsqpktcf5yjZ ~]# ",
+    "[root@demo-ecs ~]# ",
   ].join("\n");
 
   assert.equal(
     normalizeStartupOutput(leadingPromptThenBanner),
     [
-      "Last login: Wed Jun 17 11:45:56 2026 from 219.139.229.36",
+      "Last login: Wed Jun 17 11:45:56 2026 from 203.0.113.36",
       "Welcome to Alibaba Cloud Elastic Compute Service !",
-      "[root@iZ6wed7x33nsqpktcf5yjZ ~]# ",
+      "[root@demo-ecs ~]# ",
     ].join("\n"),
   );
 
   const leadingPromptJoinedToBanner = [
-    "root@lululemon-virtual-machine:~# Welcome to Ubuntu 22.04.4 LTS (GNU/Linux 6.8.0-94-generic x86_64)",
+    "root@demo-vm:~# Welcome to Ubuntu 22.04.4 LTS (GNU/Linux 6.8.0-94-generic x86_64)",
     "",
     "* Documentation:  https://help.ubuntu.com",
-    "Last login: Thu Jun 18 00:19:00 2026 from 192.168.0.225",
-    "root@lululemon-virtual-machine:~# ",
+    "Last login: Thu Jun 18 00:19:00 2026 from 198.51.100.225",
+    "root@demo-vm:~# ",
   ].join("\n");
 
   assert.equal(
@@ -90,31 +92,31 @@ try {
       "Welcome to Ubuntu 22.04.4 LTS (GNU/Linux 6.8.0-94-generic x86_64)",
       "",
       "* Documentation:  https://help.ubuntu.com",
-      "Last login: Thu Jun 18 00:19:00 2026 from 192.168.0.225",
-      "root@lululemon-virtual-machine:~# ",
+      "Last login: Thu Jun 18 00:19:00 2026 from 198.51.100.225",
+      "root@demo-vm:~# ",
     ].join("\n"),
   );
 
   const repeatedLoginBanner = [
-    "Last login: Thu Jun 18 00:51:59 2026 from 219.139.229.36",
+    "Last login: Thu Jun 18 00:51:59 2026 from 203.0.113.36",
     "",
     "Welcome to Alibaba Cloud Elastic Compute Service !",
     "",
-    "Last login: Thu Jun 18 00:51:59 2026 from 219.139.229.36",
+    "Last login: Thu Jun 18 00:51:59 2026 from 203.0.113.36",
     "",
     "Welcome to Alibaba Cloud Elastic Compute Service !",
     "",
-    "[root@iZ6wed7x33nsqpktcf5yjZ ~]# ",
+    "[root@demo-ecs ~]# ",
   ].join("\n");
 
   assert.equal(
     normalizeStartupOutput(repeatedLoginBanner),
     [
-      "Last login: Thu Jun 18 00:51:59 2026 from 219.139.229.36",
+      "Last login: Thu Jun 18 00:51:59 2026 from 203.0.113.36",
       "",
       "Welcome to Alibaba Cloud Elastic Compute Service !",
       "",
-      "[root@iZ6wed7x33nsqpktcf5yjZ ~]# ",
+      "[root@demo-ecs ~]# ",
     ].join("\n"),
   );
 
