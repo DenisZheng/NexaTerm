@@ -15,13 +15,13 @@
 
 ## P0/P1 风险
 
-1. **依赖供应链**：npm 官方 audit 为 5 high、16 moderate、5 low，含 dompurify、postcss、nanoid、browserslist 等路径；须锁定修复版本、评估 transitive 影响并重复审计。Rust 侧已用 cargo-deny 离线 advisory 检查发现 10 个 RustSec advisory；`cargo-audit` 尚未单独安装。**Phase 1 复核（2026-09-11）修正了风险画像：5 个 high 全部是 dev-only 构建链依赖、不进发布产物，唯一进生产包的是 dompurify（moderate/low）；Rust 侧 rsa 无修复版、多数 advisory 属 tauri 生态自有。详见下文「Task 01 · Phase 1 审计结果」。** **Phase 2（2026-09-11）：npm 侧已用 `pnpm-workspace.yaml` overrides 清零 high/moderate（仅剩 1 条 dev-only esbuild low），并移除冗余 `package-lock.json`；Rust 锁文件升级待完整工具链环境。详见「Task 01 · Phase 2 执行结果」。**
+1. **依赖供应链**：npm 官方 audit 为 5 high、16 moderate、5 low，含 dompurify、postcss、nanoid、browserslist 等路径；须锁定修复版本、评估 transitive 影响并重复审计。Rust 侧已用 cargo-deny 离线 advisory 检查发现 10 个 RustSec advisory；`cargo-audit` 尚未单独安装。**Phase 1 复核（2026-09-11）修正了风险画像：5 个 high 全部是 dev-only 构建链依赖、不进发布产物，唯一进生产包的是 dompurify（moderate/low）；Rust 侧 rsa 无修复版、多数 advisory 属 tauri 生态自有。详见下文「Task 01 · Phase 1 审计结果」。** **Phase 2（2026-09-11 起）：npm 侧已用 `pnpm-workspace.yaml` overrides 清零 high/moderate（仅剩 1 条 dev-only esbuild low），并移除冗余 `package-lock.json`；Rust 锁文件升级已由 GitHub Actions 三平台 `cargo check` / `cargo test` 验证。详见「Task 01 · Phase 2 执行结果」。**
 2. **WebView CSP**：`tauri.conf.json` 的 `csp: null`；需先盘点 Monaco/noVNC/inline asset 的实际要求，再收紧 CSP 或写出受控风险接受。
 3. **MCP 远程监听**：默认 `0.0.0.0:8765`，即使有 token 也存在扫描、暴力和误配置风险；应默认 loopback 或显式用户确认，并做 rate limit、来源和日志脱敏方案。
 4. **错误泄露**：`AppError` 序列化含 `raw_message`，可能把主机路径、命令、连接细节传到 UI/日志；建立安全错误码与可见消息分层，保留诊断关联 ID。
 5. **命令/路径边界**：远程 exec、MCP、Docker、WebDAV 和 remote file 路径都需验证注入、目录穿越、shell quoting 和权限；禁止用截断/过滤隐藏异常。
 6. **PTY/runner 资源**：线程、子进程、forward channel、websocket 若未在异常和窗口关闭路径清理，会造成泄露或后续会话串扰。
-7. **Capability 最小权限**：`capabilities/default.json` 包含 create webview window、窗口操作、dialog、opener/process、clipboard、updater 等宽权限；需按 command/窗口拆分并验证 origin/窗口边界。
+7. **Capability 最小权限**：主窗口的 create webview window、窗口操作、dialog、opener/process、updater、clipboard 等权限已与 `vnc-runner-host` 分离；runner 仅保留事件和必要窗口权限。仍需验证真实 runner 行为、未授权 command/window 与 origin 边界。
 
 ## 已执行命令与阻塞
 
@@ -81,7 +81,7 @@
 |---|---|---|---|
 | MCP 远程监听 | 默认 `0.0.0.0:8765`，局域网可达 | remote 开启 | Phase 3：默认 loopback + 未确认降级（design §3.1.1） |
 | WebView CSP | `csp: null`，无脚本/连接源限制 | 任意注入点（dompurify 绕过、外部导航） | Phase 5：按资源盘点收紧 |
-| IPC capability | 19 项权限对 main+runner 一刀切 | runner 窗口被利用则获得多余能力 | Phase 2：按窗口拆分（见 §5） |
+| IPC capability | main 与 `vnc-runner-host` 已拆分；runner 仅保留事件权限和必要窗口权限 | runner 被利用或配置回归 | commit `443e4a8` 完成静态拆分；仍需 GUI/负向边界验证 |
 | 错误泄露 | `AppError.raw_message` 序列化到 WebView | 任意命令失败 | Phase 3：分类落 code + diagnostic_id + skip_serializing（design §5） |
 | 命令/路径注入 | remote exec / Docker / WebDAV / remote file / tunnel 输入边界 | 远程或多目标输入 | Phase 4：结构化参数 + canonicalize + 负向用例 |
 | 资源泄露 | PTY / runner / tunnel / websocket / sidecar 异常与关闭清理 | 失败 / 取消 / 窗口关闭 | Phase 4：四类清理路径源码核查 + 运行时验证 |
@@ -108,7 +108,7 @@
 | updater:default | ✅ | ❌ | appUpdate.ts:73（check） |
 | clipboard-manager:allow-read-text / write-text | ✅ | ❌ | shared/clipboard.ts |
 
-**结论**：`vnc-runner-host` 实际只需 5 项 window 权限（close / destroy / minimize / toggle-maximize / start-dragging）；其余 14 项（含 create-webview-window、dialog、opener、process、updater、clipboard、几何类）应从 runner 移除。Phase 2 按窗口拆成两个 capability 文件。
+**结论**：`vnc-runner-host` 实际只需 5 项 window 权限（close / destroy / minimize / toggle-maximize / start-dragging）；其余 14 项（含 create-webview-window、dialog、opener、process、updater、clipboard、几何类）已从 runner 移除。commit `443e4a8` 同时加入了 capability policy 静态检查和负向单测；真实 runner 窗口、未授权 command/window 与 origin 行为仍需在 Tauri GUI 环境验证。
 
 ### 6. CSP 资源盘点（初盘；Phase 5 收紧前的清单，精确指令须在 dev/build 下验证）
 
@@ -128,9 +128,9 @@
 | rsa RUSTSEC-2023-0071 Marvin 时序侧信道 | 仅当攻击者可观测网络时序且使用 RSA 私钥操作；客户端签名暴露低于服务端解密 | 优先 Ed25519/ECDSA；绑定 russh P0 升级 | russh 升级到依赖修复版 rsa 后解除 | 提议接受，待确认 |
 | quick-xml / unic-* / proc-macro-error（tauri 生态自有 & 构建期） | 构建/配置期解析或纯构建期 proc-macro，运行时无攻击面 | 跟随 tauri 版本升级 | tauri 升级带入修复版后解除 | 提议接受，待确认 |
 
-## Task 01 · Phase 2 执行结果（2026-09-11）
+## Task 01 · Phase 2 执行结果（截至 2026-09-16）
 
-> 本节记录已在 Windows 基线机完成并验证的低风险硬化批次（Batch A/D）。Rust 锁文件升级（Batch B）、capability 按窗口拆分（Batch C）、静态检查脚本（Batch E）依赖 cargo 编译或 `tauri dev` 运行时验证，记 ENVIRONMENT-BLOCKED，待完整工具链环境执行，不在此声称通过。
+> 本节记录已完成并验证的硬化批次（Batch A/B/C/D 的配置与 CI 验证部分）。Batch C 的真实 `tauri dev` runner 回归仍依赖 GUI/完整工具链；Batch E 的 secret scan、audit artifact 与 CSP 静态检查尚未完成，均不在此声称通过。
 
 ### Batch A：npm 依赖 override 升级（已验证）
 
@@ -155,9 +155,9 @@
 
 ### 延后批次（ENVIRONMENT-BLOCKED / 后续阶段）
 
-- **Batch B（Rust 锁文件升级）**：`cargo update -p h2 -p chacha20 -p crypto-bigint -p der` 可干净修 h2（RUSTSEC-2026-0258）+ 3 个 yanked crate；需 `cargo check` / `cargo test` 验证，本机 MSVC C++ 工作负载 / Windows SDK 不完整 → ENVIRONMENT-BLOCKED。
-- **Batch C（capability 按窗口拆分）**：按 §5 矩阵拆成 main（全权限）+ vnc-runner-host（仅 close / destroy / minimize / toggle-maximize / start-dragging 5 项 window 权限）两份 capability 文件；需 `tauri dev` 验证 runner 窗口功能不回归 → 待工具链环境。
-- **Batch E（静态检查脚本）**：`scripts/check-*.mjs` 断言 capability 无冗余权限、CSP 非 `null`、白名单条目有调用点注释；其断言依赖 Batch C 与 Phase 5 的结果落地，故随 C / Phase 5 一并完成，避免提交即失败的 check。
+- **Batch B（Rust 锁文件升级）**：`cargo update -p h2 -p chacha20 -p crypto-bigint -p der` 干净修复 h2（RUSTSEC-2026-0258）+ 3 个 yanked crate；commit `1a8e95e` 已经 GitHub Actions Rust 三平台 `cargo check` / `cargo test` 全绿验证。本机仍因缺少 MSVC/Windows SDK 无法复跑，属本机 `ENVIRONMENT-BLOCKED`，不影响 CI 验收。
+- **Batch C（capability 按窗口拆分）**：已按 §5 矩阵拆成 main（主窗口权限）+ `vnc-runner-host`（事件权限及 close / destroy / minimize / toggle-maximize / start-dragging 5 项 window 权限）两份 capability 文件；`scripts/check-tauri-capabilities.mjs` 及其 5 个负向单测已通过，真实 `tauri dev` runner 窗口回归仍待完整 GUI/工具链环境。
+- **Batch E（静态检查脚本）**：capability policy 检查已落地并接入当前工作区的 CI 变更；secret scan、audit artifact、CSP 非 `null` 及资源白名单证据化仍待完成。
 
 ## 后续审查顺序
 

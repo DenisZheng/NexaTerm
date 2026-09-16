@@ -27,8 +27,8 @@
     这些 crate 对 windows-sys 声明的是版本区间，两侧都合法；diff 中**无任何 `[[package]]` 增删**——被改指的 windows-sys 版本在 HEAD 锁文件里本来就已存在，只是边的归属变了。
     根因是 HEAD 锁文件由发版准备时另一版本 cargo 生成（其求解器把区间依赖统一到 0.61.2），本机 cargo 1.98.1 复现不出该统一结果；已验证 `cargo update -p X --precise` 逐个执行与批量执行产出**完全相同的锁文件哈希**，即非命令写法所致。
     `1a8e95e` 的 CI 三平台 `cargo check` + `cargo test` 全绿，确认该连带变更无编译或运行时副作用。
-- [ ] 删除明显未使用的 capability，按窗口拆分配置；为每项保留调用点证据。（Batch C：需 `tauri dev` 验证 runner 窗口不回归 → 待工具链环境；拆分矩阵已在 `SECURITY_REVIEW.md` §5 就绪。）
-- [ ] 增加 secret scan、audit artifact 与配置静态检查脚本，输出明确 `PASS` / `FAIL` / `ENVIRONMENT-BLOCKED`。（Batch E：断言依赖 Batch C 与 Phase 5 结果落地，随其一并完成，避免提交即失败的 check。）
+- [ ] 删除明显未使用的 capability，按窗口拆分配置；配置拆分已在 commit `443e4a8` 完成，调用点矩阵见 `SECURITY_REVIEW.md` §5；真实 `tauri dev` runner 窗口回归与未授权边界验证仍待具备完整 GUI/工具链的环境。
+- [ ] 增加 secret scan、audit artifact 与配置静态检查脚本，输出明确 `PASS` / `FAIL` / `ENVIRONMENT-BLOCKED`。其中 capability 静态策略脚本与 5 个负向单测已在 `443e4a8` 落地；本轮将其接入 CI，secret scan、audit artifact 与 CSP 检查仍未完成。
 
 ## Phase 3：MCP 与错误边界
 
@@ -150,6 +150,8 @@ cargo test --workspace --locked --offline
   本机 Rust 工具链本轮复核仍 ENVIRONMENT-BLOCKED（MSVC CRT 的 `include/vcruntime.h`、`lib/x64/msvcprt.lib` 与 Windows Kits 10 Include 均缺失，形态同 `design.md` §9.1；
   另注意 `which -a link.exe` 命中 Git coreutils 的 `/usr/bin/link.exe`，其 `link: extra operand` 报错是**误导性表象**、非根因），故该步 Rust 验收经 CI 通道达成；
   前端侧另经 `npx tsc --noEmit`、`node --test scripts/*.test.mjs` 37/37、两项 source check 本机通过。
+- commit `443e4a8`：完成 main / `vnc-runner-host` capability 拆分，并新增 capability policy 静态检查与 5 个负向单测；GitHub Actions run `35065160284` 的 Frontend checks 与 Rust 三平台 `cargo check` / `cargo test` 全部 `success`，但该 run 尚未执行独立的 `check:tauri-capabilities` step。
+  本机随后执行 `pnpm run check`、`node --test scripts/*.test.mjs`（42/42）、`pnpm run check:tauri-capabilities` 和 `node scripts/check-startup-module-boundary-source.mjs`，均 PASS。真实 `tauri dev` runner GUI 回归仍为 `ENVIRONMENT-BLOCKED`；当前无 `cargo`，无法启动 Tauri 应用验证窗口与未授权 IPC 行为。
 
 #### 已修复项：Windows 本地 PTY 往返用例（根因已确认并经 CI 验证）
 

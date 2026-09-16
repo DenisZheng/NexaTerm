@@ -4,7 +4,7 @@
 >
 > **本文件是交接给下一位接手人的说明。** 标准协作规则见仓库根 `AGENTS.MD`（Codex 原生读取），本文件不重复，只补"当前位置 + 下一步 + 本任务专属的坑"。先 `git pull`，再从本文件"下一步"开始。
 >
-> **接手第一件事**：Phase 3 已整体完成（§5.3 第 3 步的阻塞已按用户选定的类型化 `AppErrorDetails` 枚举解除，commit `4caaf0d` 已 push 且 CI 全绿）。下一步从 Batch C 开始，详见"下一步 1"。
+> **当前接手点**：Phase 3 已整体完成；Batch C 的 capability 配置拆分已在 commit `443e4a8` 落地并经 CI 编译/测试验证。下一步先让 capability 静态检查进入 CI，再在具备 GUI/完整工具链的环境完成 runner 回归；详见"下一步 1"。
 
 ## 当前上下文
 
@@ -20,7 +20,7 @@
 | Phase | 状态 | 说明 |
 | --- | --- | --- |
 | 1 审计与威胁模型 | ✅ 完成 | 见 `SECURITY_REVIEW.md`、`LICENSE_AUDIT.md`。 |
-| 2 低风险硬化 | 🟡 部分 | Batch A/B/D 完成（B 经 CI 绿 @ `1a8e95e`）；**Batch C、E 未做**。 |
+| 2 低风险硬化 | 🟡 部分 | Batch A/B/D 完成；Batch C 配置拆分已完成（@ `443e4a8`），真实 runner 回归与 Batch E 其余门禁仍待做。 |
 | 3 MCP 与错误边界 | ✅ 完成 | 第 1/2/4 步 CI 全绿 run 34918439293 @ `f59076c`；第 3 步 CI 全绿 run 34953115609 @ `4caaf0d`。 |
 | 4 输入边界与生命周期 | ❌ 未开始 | |
 | 5 CSP/跨平台/发布门禁 | ❌ 未开始 | |
@@ -62,11 +62,11 @@
 
 ### 1. Batch C（Phase 2 遗留）
 
-删除未用 capability、按窗口拆分配置。拆分矩阵已在 `SECURITY_REVIEW.md §5` 就绪，但需 `tauri dev` 验证 `vnc-runner-host` runner 窗口不回归——**需 GUI 环境（Mac 上可做）**。
+按 `SECURITY_REVIEW.md §5` 完成了 main / `vnc-runner-host` capability 拆分和静态策略单测（@ `443e4a8`）。当前工作区已把 `check:tauri-capabilities` 接入 CI；仍需在 GUI/完整工具链环境用 `tauri dev` 验证 runner 窗口打开、复用、关闭及未授权边界。
 
 ### 2. Batch E（Phase 2 遗留）
 
-补 secret scan / audit artifact / 配置静态检查脚本（`scripts/check-*.mjs`），输出明确 PASS/FAIL/ENVIRONMENT-BLOCKED。断言依赖 Batch C 与 Phase 5 结果，随其一并落地，避免"提交即失败"的 check。
+补 secret scan / audit artifact / CSP 配置静态检查，输出明确 PASS/FAIL/ENVIRONMENT-BLOCKED。capability policy 已有本地 PASS 和 5/5 单测，secret scan、audit artifact 与 CSP 资源证据仍未完成。
 
 ### 3. Phase 4 输入边界与生命周期
 

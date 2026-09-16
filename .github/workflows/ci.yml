@@ -60,6 +60,9 @@ jobs:
       - name: Script unit tests
         run: node --test scripts/*.test.mjs
 
+      - name: Tauri capability policy
+        run: pnpm run check:tauri-capabilities
+
       - name: Startup module boundary
         run: node scripts/check-startup-module-boundary-source.mjs
 
