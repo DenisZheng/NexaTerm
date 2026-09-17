@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use tauri::AppHandle;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
-use tokio::task::JoinHandle;
+use tokio::task::{JoinHandle, JoinSet};
 use tokio_tungstenite::accept_hdr_async;
 use tokio_tungstenite::tungstenite::handshake::server::{ErrorResponse, Request, Response};
 use tokio_tungstenite::tungstenite::http::StatusCode;
@@ -372,17 +372,33 @@ async fn run_bridge(
     target_host: String,
     target_port: u16,
 ) {
+    let mut client_tasks = JoinSet::new();
     loop {
-        let Ok((browser_stream, _)) = listener.accept().await else {
-            break;
-        };
-        let expected_path = expected_path.clone();
-        let target_host = target_host.clone();
-        tokio::spawn(async move {
-            let _ =
-                relay_single_client(browser_stream, expected_path, target_host, target_port).await;
-        });
+        tokio::select! {
+            accepted = listener.accept() => {
+                let Ok((browser_stream, _)) = accepted else {
+                    break;
+                };
+                let expected_path = expected_path.clone();
+                let target_host = target_host.clone();
+                client_tasks.spawn(async move {
+                    let _ = relay_single_client(
+                        browser_stream,
+                        expected_path,
+                        target_host,
+                        target_port,
+                    )
+                    .await;
+                });
+            }
+            Some(_) = client_tasks.join_next(), if !client_tasks.is_empty() => {}
+        }
     }
+
+    // JoinSet owns every relay task. Dropping/aborting the bridge owner cannot leave
+    // WebSocket/TCP relay tasks detached from the VNC session.
+    client_tasks.abort_all();
+    while client_tasks.join_next().await.is_some() {}
 }
 
 async fn relay_single_client(
@@ -748,10 +764,30 @@ fn vnc_websocket_error(error: tokio_tungstenite::tungstenite::Error) -> AppError
 
 #[cfg(test)]
 mod tests {
-    use super::{split_runner_args, with_vnc_target_connect_timeout};
+    use super::{
+        close_session, split_runner_args, with_vnc_target_connect_timeout, ManagedVncSession,
+        VncSessionManager, VncSessionRequest,
+    };
     use std::future;
     use std::io;
     use std::time::Duration;
+
+    #[test]
+    fn close_session_removes_bridge_owner_once() {
+        tauri::async_runtime::block_on(async {
+            let manager = VncSessionManager::default();
+            let bridge_handle = tokio::spawn(std::future::pending::<()>());
+            manager
+                .insert("vnc-test".to_string(), ManagedVncSession { bridge_handle })
+                .expect("session should be registered");
+
+            let request = VncSessionRequest {
+                session_id: "vnc-test".to_string(),
+            };
+            assert!(close_session(&manager, request.clone()).ok);
+            assert!(!close_session(&manager, request).ok);
+        });
+    }
 
     #[test]
     fn split_runner_args_drops_blank_segments() {

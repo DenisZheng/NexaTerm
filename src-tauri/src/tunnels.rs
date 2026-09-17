@@ -9,6 +9,7 @@ use tauri::AppHandle;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::{Mutex, RwLock};
+use tokio::task::JoinSet;
 use uuid::Uuid;
 
 use crate::app_error::AppError;
@@ -587,41 +588,52 @@ async fn run_tunnel_accept_loop(
     states: Arc<RwLock<HashMap<String, TunnelRuntimeState>>>,
     running: Arc<Mutex<HashMap<String, RunningTunnel>>>,
 ) {
+    let mut client_tasks = JoinSet::new();
     loop {
-        match listener.accept().await {
-            Ok((stream, _)) => {
-                increment_active_connections(&states, &rule.id).await;
-                let session = Arc::clone(&session);
-                let states = Arc::clone(&states);
-                let rule_id = rule.id.clone();
-                let remote_host = rule.remote_host.clone();
-                let remote_port = rule.remote_port;
-                let kind = rule.kind.clone();
-                tauri::async_runtime::spawn(async move {
-                    let result = match kind {
-                        TunnelKind::Local => {
-                            session
-                                .forward_tcp_stream(stream, &remote_host, remote_port)
-                                .await
-                        }
-                        TunnelKind::Dynamic => forward_socks5_stream(session, stream).await,
-                        TunnelKind::Remote => Ok(()),
-                    };
-                    decrement_active_connections(&states, &rule_id, result.err()).await;
-                });
+        tokio::select! {
+            accepted = listener.accept() => {
+                match accepted {
+                    Ok((stream, _)) => {
+                        increment_active_connections(&states, &rule.id).await;
+                        let session = Arc::clone(&session);
+                        let states = Arc::clone(&states);
+                        let rule_id = rule.id.clone();
+                        let remote_host = rule.remote_host.clone();
+                        let remote_port = rule.remote_port;
+                        let kind = rule.kind.clone();
+                        client_tasks.spawn(async move {
+                            let result = match kind {
+                                TunnelKind::Local => {
+                                    session
+                                        .forward_tcp_stream(stream, &remote_host, remote_port)
+                                        .await
+                                }
+                                TunnelKind::Dynamic => forward_socks5_stream(session, stream).await,
+                                TunnelKind::Remote => Ok(()),
+                            };
+                            decrement_active_connections(&states, &rule_id, result.err()).await;
+                        });
+                    }
+                    Err(error) => {
+                        let app_error = AppError::new(
+                            "tunnel_accept_failed",
+                            "本地隧道连接接入失败。",
+                            error,
+                            true,
+                        );
+                        set_failed_state(&states, &rule, &app_error).await;
+                        break;
+                    }
+                }
             }
-            Err(error) => {
-                let app_error = AppError::new(
-                    "tunnel_accept_failed",
-                    "本地隧道连接接入失败。",
-                    error,
-                    true,
-                );
-                set_failed_state(&states, &rule, &app_error).await;
-                break;
-            }
+            Some(_) = client_tasks.join_next(), if !client_tasks.is_empty() => {}
         }
     }
+
+    // The accept-loop owner also owns every per-client forwarding task. An explicit
+    // stop aborts this owner; JoinSet drop then aborts clients instead of detaching them.
+    client_tasks.abort_all();
+    while client_tasks.join_next().await.is_some() {}
     running.lock().await.remove(&rule.id);
     session.close().await;
 }
