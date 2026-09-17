@@ -1269,7 +1269,7 @@ mod tests {
 
     #[test]
     fn socks5_parser_rejects_unsupported_address_type_and_zero_port() {
-        let error = parse_socks5_connect_target(&[0x05, 0x01, 0x00, 0x02]).unwrap_err();
+        let error = parse_socks5_connect_target(&[0x05, 0x01, 0x00, 0x02, 0, 0, 0]).unwrap_err();
         assert_eq!(error.code, "tunnel_socks_handshake_failed");
 
         let error =

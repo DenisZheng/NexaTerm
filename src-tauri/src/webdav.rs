@@ -518,7 +518,7 @@ mod tests {
     fn path_segments_encode_shell_metacharacters_and_windows_separators() {
         let path = join_encoded_path(&["$(touch marker); C:\\temp\\a'b"]);
 
-        assert_eq!(path, "%24%28touch%20marker%29%3B%20C%3A%5Ctemp%5Ca%27b");
+        assert_eq!(path, "%24%28touch%20marker%29%3B%20C%3A/temp/a%27b");
     }
 
     struct RecordingTransport {

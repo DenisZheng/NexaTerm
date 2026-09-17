@@ -2613,7 +2613,7 @@ mod tests {
 
     #[test]
     fn quote_posix_shell_keeps_windows_and_shell_metacharacters_inside_one_argument() {
-        let value = r"C:\Users\Public\$(touch marker); `whoami` && *.txt";
+        let value = r"C:\Users\Public\$(touch marker); `whoami` && *.txt 'quoted'";
         let quoted = quote_posix_shell(value);
 
         assert!(quoted.starts_with('\''));
