@@ -36,10 +36,10 @@
 - [x] 固定 Gitleaks/cargo-deny 版本和安装包 SHA256，增加可重复安装与命令入口。
 - [x] 实现完整历史+受跟踪工作树扫描、具体测试夹具指纹豁免、脱敏报告与失败退出码。
 - [x] 实现 npm/Rust 审计完成性检查、advisory 归档、工具版本与 lockfile hash。
-- [x] 接入独立 CI job 与仅白名单报告的 artifact（14 天），不输出命中原文；配置已做 YAML/契约检查，远端运行待提交推送后验证。
+- [x] 接入独立 CI job 与仅白名单报告的 artifact（14 天），不输出命中原文；配置已做 YAML/契约检查，并经 run `35172498650`（commit `73e90af`）远端验证。
 - [x] 运行真实工具和脚本回归，记录剩余阻塞并暂存待审核；不自动提交推送。
-- [x] 完成双轴审核并修复 3 项 P2；新增/加强回归后 55/55 通过，记录见 `review-batch-e.md`。本轮用户授权审核和本地提交，不含推送。
-- [ ] 获准推送后验证新增 `Security evidence` job 的真实执行和三个 artifact 报告。
+- [x] 完成双轴审核并修复 3 项 P2；新增/加强回归后 55/55 通过，记录见 `review-batch-e.md`；提交 `73e90af` 已推送并经远端 CI 验证。
+- [x] 验证新增 `Security evidence` job 的真实执行和三个 artifact 报告：run `35172498650` 全绿；13/13 真实工具测试无跳过；密钥报告 PASS，npm/Rust 报告分别为 `REVIEW-REQUIRED`；artifact 仅含 `secrets.json`、`npm.json`、`rust.json`。
 
 ### Batch E 本机证据（2026-09-17）
 
@@ -47,8 +47,8 @@
 - `RUN_SECURITY_INTEGRATION=1` + `node --test scripts/*.test.mjs`：审核后 55/55 PASS，真实历史删除/dirty tracked/浅克隆用例未跳过。缺工具、解析错误、退出码不一致和原文脱敏均有负向断言；补充了 npm 可选字段与逐严重度计数回归、CLI 测试摘要隔离断言。
 - `pnpm run check`、`pnpm run check:tauri-capabilities`、启动模块边界检查、JS/PowerShell 语法检查和 CI YAML/权限/artifact 契约检查均 PASS。
 - 在线 npm：1 low，`REVIEW-REQUIRED`；在线 Rust：13 条（4 vulnerability / 6 unmaintained / 3 unsound），`REVIEW-REQUIRED`。这里的 exit 0 表示采集完成，不表示安全问题已解决。Rust 本轮配置显式覆盖所有 unsound 依赖；旧“全部是 unmaintained”的表述不能当作当前风险结论。
-- 初版新文件暂存后扫描覆盖 812 个受跟踪文件；审核修复与记录纳入暂存后再次运行 `pnpm run check:secrets`，覆盖 813 个受跟踪文件、218 个历史提交，0 个未豁免命中。唯一核准夹具在历史和当前代码各出现一次，报告保留两次定位；不是两项全局豁免。
-- 本批不修改应用依赖/lockfile/CSP；新增 job 未远端运行，Task 01 不归档。
+- 初版新文件暂存后扫描覆盖 812 个受跟踪文件；审核修复与记录纳入暂存后再次运行 `pnpm run check:secrets`，覆盖 813 个受跟踪文件、218 个历史提交，0 个未豁免命中。远端 run `35172498650` 在完整 checkout 中覆盖 813 个受跟踪文件、219 个历史提交，密钥报告仍为 PASS、0 个未豁免命中。唯一核准夹具在历史和当前代码各出现一次，报告保留两次定位；不是两项全局豁免。
+- 本批不修改应用依赖/lockfile/CSP；远端 Security evidence 已验证，但 npm/Rust advisory 仍为报告状态，CSP、GUI 与后续 Phase 未完成，Task 01 不归档。
 
 ## Phase 3：MCP 与错误边界
 

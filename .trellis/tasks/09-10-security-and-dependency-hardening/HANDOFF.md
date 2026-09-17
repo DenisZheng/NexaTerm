@@ -1,10 +1,10 @@
 # Task 01 安全与依赖硬化 · 交接给 Codex
 
-> 更新时间：2026-09-17 ｜ 分支 `main`（capability 独立 CI step 已在 `55a2cb7` / run `35085375573` 通过；Batch E 包含本轮审核修复，新增安全 job 尚未远端验证）
+> 更新时间：2026-09-17 ｜ 分支 `main`（Batch E 提交 `73e90af` 已推送；CI run `35172498650` 全绿，`Security evidence` job 与三个脱敏 artifact 已核验）
 >
 > **本文件是交接给下一位接手人的说明。** 标准协作规则见仓库根 `AGENTS.MD`（Codex 原生读取），本文件不重复，只补"当前位置 + 下一步 + 本任务专属的坑"。先 `git pull`，再从本文件"下一步"开始。
 >
-> **当前接手点**：capability 配置及独立 CI step 已完成。Batch E 的密钥扫描与依赖审计归档已完成本地审核和回归，获准推送后验证新增 `Security evidence` job 的远端运行。本轮用户仅授权审核和本地提交，未授权推送；真实 runner GUI、CSP 和未解决 advisory 仍保留，不得据此归档 Task 01。审核记录见 `review-batch-e.md`。
+> **当前接手点**：capability 配置及独立 CI step 已完成。Batch E 已完成双轴审核、本地回归、提交和远端 CI 验证：`73e90af` / run `35172498650`。真实 runner GUI、CSP 和未解决 advisory 仍保留，不得据此归档 Task 01。审核记录见 `review-batch-e.md`。
 
 ## 当前上下文
 
@@ -68,7 +68,7 @@
 
 capability 独立检查已在 `55a2cb7` / run `35085375573` 实际通过。本轮实现 `check:secrets`、`audit:npm`、`audit:rust` 与独立 `Security evidence` CI job；按用户确认，密钥硬阻断，依赖先报告（`REVIEW-REQUIRED` 不是安全验收），工具或网络故障仍失败。完整 Git 历史及受跟踪的 dirty 工作树都扫描，夹具仅按具体规则/文件/源码指纹豁免。
 
-本地真实工具验证：Gitleaks 无未豁免命中；npm 为 1 low；Rust 为 4 vulnerability + 6 unmaintained + 3 unsound。没有自动风险接受或依赖升级。审核发现的 3 项 P2 均已修复：测试 CLI 污染 Actions 摘要、合法 npm 可选字段误判、npm 严重度计数与明细未逐项核对。脚本回归含真实 Gitleaks 临时 Git 仓库测试，审核后共 55/55 通过、无跳过；真实 pnpm 11.22.0 的 loopback 模拟 registry 也验证了可选字段语义。新增 CI job 尚待获准推送后验证；CSP 检查和 GUI 验收仍待完成。契约及复现命令见 `.trellis/spec/backend/security-evidence.md`。
+本地真实工具验证：Gitleaks 无未豁免命中；npm 为 1 low；Rust 为 4 vulnerability + 6 unmaintained + 3 unsound。没有自动风险接受或依赖升级。审核发现的 3 项 P2 均已修复：测试 CLI 污染 Actions 摘要、合法 npm 可选字段误判、npm 严重度计数与明细未逐项核对。脚本回归含真实 Gitleaks 临时 Git 仓库测试，审核后共 55/55 通过、无跳过；真实 pnpm 11.22.0 的 loopback 模拟 registry 也验证了可选字段语义。远端 run `35172498650`（commit `73e90af`）的 Frontend checks、Rust linux-x64 / windows-x64 / macos-arm64 和 Security evidence 全部 success；Windows package job 按 push 触发条件 skipped。Security evidence 的 13/13 真实工具测试无跳过，813 个受跟踪文件和 219 个历史提交的密钥扫描 PASS，三个 JSON artifact 已核验为白名单文件且无原始敏感字段。CSP 检查和 GUI 验收仍待完成。契约及复现命令见 `.trellis/spec/backend/security-evidence.md`。
 
 ### 3. Phase 4 输入边界与生命周期
 

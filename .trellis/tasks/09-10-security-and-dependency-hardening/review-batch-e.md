@@ -54,6 +54,13 @@
 - CI YAML 契约检查：只读权限、完整 checkout、不保留凭据、无 `continue-on-error`、仅三个 JSON artifact、保留 14 天均通过。
 - JS 语法与 `git diff --check` 检查通过。审核记录及修复纳入暂存后，`pnpm run check:secrets` 再次 PASS：813 个受跟踪文件、218 个历史提交、0 个未豁免命中；唯一已审核夹具在历史与当前代码各出现一次。
 
+## 远端 CI 验证（提交 `73e90af75c94ecf3988bfea3865ca0a3c59e1763`）
+
+- Run：`35172498650`，结论 `success`。
+- `Security evidence` job：工具安装成功；真实安全回归 13/13 PASS、0 skipped；Gitleaks 8.30.1 扫描 813 个受跟踪文件与 219 个历史提交，0 个未豁免命中；npm 1 low、Rust 13 条发现，分别保持 `REVIEW-REQUIRED`；三个报告上传成功。
+- Artifact：`security-evidence-73e90af75c94ecf3988bfea3865ca0a3c59e1763`，只含 `secrets.json`、`npm.json`、`rust.json`，已下载并核对 schema、commit、状态和脱敏字段，没有发现 raw scanner output 或敏感字段。
+- 其它 job：`Frontend checks`、`Rust linux-x64`、`Rust windows-x64`、`Rust macos-arm64` 均 success；`Package windows-x64 (build only)` 按 push 触发条件 skipped。该结果验证了本批 CI 和 Rust 矩阵，不等同于 GUI runner、CSP 或 advisory 已解决。
+
 ## Bug Analysis：防止同类回归
 
 ### 1. Root Cause Category

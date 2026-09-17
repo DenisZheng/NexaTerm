@@ -69,7 +69,7 @@ Gitleaks 用 `--exit-code 10` 区分命中与工具异常；pnpm audit exit 1 �
 - 常规脚本单测覆盖字段脱敏、精确豁免、报告结构/计数/退出码、缺工具和超时；npm 须覆盖合法可选字段缺失、严重度错位、总数错误及同一 advisory 多版本不重复计数。
 - `RUN_SECURITY_INTEGRATION=1` 使用真实固定版本 Gitleaks 和临时 Git 仓库，覆盖提交后删除的假密钥、dirty tracked 文件、未跟踪 `.env` 不读取、浅克隆和旧报告覆盖。故意命中只生成在临时仓库，不向项目提交可用 token。
 - 测试调用真实 CLI 时必须从子进程环境移除 `GITHUB_STEP_SUMMARY`，并断言预置摘要未被改写；不得把故意触发的 fixture `FAIL` 写入实际 Actions 摘要。生产 CLI 的摘要写入行为保持不变。
-- CI 的 Security evidence job 必须安装工具后执行这些集成测试，不能把默认跳过真实工具测试当作完整验收。
+- CI 的 Security evidence job 必须安装工具后执行这些集成测试，不能把默认跳过真实工具测试当作完整验收；远端验收记录需保留 commit、run、各 job 结论、真实测试计数和 artifact 白名单。
 - CI 使用完整 checkout、`contents: read`、`persist-credentials: false`；失败后用 `always()` 继续其它独立采集和上传，不使用 `continue-on-error`。
 - artifact 仅允许三个 JSON 报告，保留 14 天；不要上传整个 `logs/` 或临时扫描目录。报告状态同步到 Actions step summary。
 

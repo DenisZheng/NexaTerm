@@ -157,7 +157,7 @@
 
 - **Batch B（Rust 锁文件升级）**：`cargo update -p h2 -p chacha20 -p crypto-bigint -p der` 干净修复 h2（RUSTSEC-2026-0258）+ 3 个 yanked crate；commit `1a8e95e` 已经 GitHub Actions Rust 三平台 `cargo check` / `cargo test` 全绿验证。本机仍因缺少 MSVC/Windows SDK 无法复跑，属本机 `ENVIRONMENT-BLOCKED`，不影响 CI 验收。
 - **Batch C（capability 按窗口拆分）**：已按 §5 矩阵拆成 main（主窗口权限）+ `vnc-runner-host`（事件权限及 close / destroy / minimize / toggle-maximize / start-dragging 5 项 window 权限）两份 capability 文件；`scripts/check-tauri-capabilities.mjs` 及其 5 个负向单测已通过，真实 `tauri dev` runner 窗口回归仍待完整 GUI/工具链环境。
-- **Batch E（静态检查脚本）**：capability policy 独立 step 已由 `55a2cb7` / run `35085375573` 验证。本轮实现 secret scan 与 audit artifact，见下节；新增 CI job 尚待远端验证，CSP 非 `null` 及资源白名单证据化仍待完成。
+- **Batch E（静态检查脚本）**：capability policy 独立 step 已由 `55a2cb7` / run `35085375573` 验证。本轮实现 secret scan 与 audit artifact；新增 `Security evidence` job 已由 `73e90af` / run `35172498650` 验证通过，CSP 非 `null` 及资源白名单证据化仍待完成。
 
 ## Task 01 · Batch E 门禁与报告（2026-09-17）
 
@@ -170,7 +170,7 @@
 - 4 条 vulnerability：quick-xml 的 `RUSTSEC-2026-0194` / `RUSTSEC-2026-0195`、rsa 的 `RUSTSEC-2023-0071`、rustls 的 `RUSTSEC-2026-0285`。这些是待逐项评估项；本轮未升级依赖、未添加 ignore、未替用户接受风险。
 - Rust 工具已存在于原基线的自定义目录，显式设置 PATH 与 `CARGO_HOME` / `RUSTUP_HOME` 后能做不触发编译的审计；这不能证明 MSVC/SDK、GUI 或链接验证已恢复。
 - 本轮双轴审核发现并修复 3 项 P2：CLI 测试污染实际 Actions 摘要、合法 npm advisory 可选字段误判、严重度统计未逐项核对。审核后脚本回归 55/55 通过（真实 Gitleaks 用例无跳过），记录见 `.trellis/tasks/09-10-security-and-dependency-hardening/review-batch-e.md`。
-- 新增 CI job 的远端执行尚待本批获准推送；本地报告在 gitignored 的 `logs/security/`，本文件仅保留结果摘要。CSP、真实 runner GUI、完整许可证检查和 `cargo audit` 仍未因此验收。
+- 远端验证：run `35172498650`（commit `73e90af`）的 `Security evidence`、Frontend checks、Rust linux-x64 / windows-x64 / macos-arm64 全部 success；Windows package job 按 push 触发条件 skipped。Security job 的 Gitleaks/cargo-deny 安装、13/13 真实工具测试、完整历史及 tracked-tree 扫描、npm/Rust 审计和 artifact 上传均成功。artifact `security-evidence-73e90af75c94ecf3988bfea3865ca0a3c59e1763` 仅含三个脱敏 JSON：密钥 0 命中，npm 1 low，Rust 13 条（4 vulnerability / 6 unmaintained / 3 unsound），后两者仍为 `REVIEW-REQUIRED`，不代表风险接受。CSP、真实 runner GUI、完整许可证检查和 `cargo audit` 仍未因此验收。
 
 ## 后续审查顺序
 
