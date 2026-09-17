@@ -1,7 +1,7 @@
 {
-  "id": "security-and-dependency-hardening",
-  "name": "security-and-dependency-hardening",
-  "title": "Task 01：安全与依赖硬化",
+  "id": "phase4-input-boundaries",
+  "name": "phase4-input-boundaries",
+  "title": "Phase 4 输入边界负向验证",
   "description": "",
   "status": "in_progress",
   "dev_type": null,
@@ -10,7 +10,7 @@
   "priority": "P2",
   "creator": "codex",
   "assignee": "codex",
-  "createdAt": "2026-09-10",
+  "createdAt": "2026-09-17",
   "completedAt": null,
   "branch": null,
   "base_branch": "main",
@@ -18,10 +18,8 @@
   "commit": null,
   "pr_url": null,
   "subtasks": [],
-  "children": [
-    "09-17-phase4-input-boundaries"
-  ],
-  "parent": "09-09-nexaterm-architecture-audit-plan",
+  "children": [],
+  "parent": "09-10-security-and-dependency-hardening",
   "relatedFiles": [],
   "notes": "",
   "meta": {}

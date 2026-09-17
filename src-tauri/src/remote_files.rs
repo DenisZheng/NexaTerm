@@ -1011,17 +1011,14 @@ impl RemoteFileManager {
             ensure_remote_directory_sftp(session.sftp(), &transfer_root).await?;
             for relative_path in &plan.directories {
                 ensure_not_cancelled(&cancel)?;
-                ensure_remote_directory_sftp(
-                    session.sftp(),
-                    &join_remote_relative_path(&transfer_root, relative_path),
-                )
-                .await?;
+                let remote_directory = join_remote_relative_path(&transfer_root, relative_path)?;
+                ensure_remote_directory_sftp(session.sftp(), &remote_directory).await?;
             }
 
             let mut base_loaded = 0;
             for file in &plan.files {
                 ensure_not_cancelled(&cancel)?;
-                let remote_path = join_remote_relative_path(&transfer_root, &file.relative_path);
+                let remote_path = join_remote_relative_path(&transfer_root, &file.relative_path)?;
                 if let Some(parent) = remote_path.rsplit_once('/').map(|(parent, _)| parent) {
                     if !parent.is_empty() {
                         ensure_remote_directory_sftp(session.sftp(), parent).await?;
@@ -1336,7 +1333,8 @@ impl RemoteFileManager {
             })?;
             for relative_path in &plan.directories {
                 ensure_not_cancelled(&cancel)?;
-                tokio::fs::create_dir_all(local_relative_path(target, relative_path))
+                let local_directory = local_relative_path(target, relative_path)?;
+                tokio::fs::create_dir_all(local_directory)
                     .await
                     .map_err(|error| {
                         AppError::new(
@@ -1351,10 +1349,11 @@ impl RemoteFileManager {
             let mut base_loaded = 0;
             for file in &plan.files {
                 ensure_not_cancelled(&cancel)?;
+                let local_path = local_relative_path(target, &file.relative_path)?;
                 download_sftp_file(
                     session.sftp(),
                     &file.remote_path,
-                    &local_relative_path(target, &file.relative_path),
+                    &local_path,
                     file.size,
                     base_loaded,
                     progress.clone(),
@@ -1815,7 +1814,7 @@ async fn build_remote_transfer_plan(
         })?;
         for entry in entries {
             ensure_not_cancelled(cancel)?;
-            let relative_path = join_relative_path(&relative_directory, &entry.file_name());
+            let relative_path = join_relative_path(&relative_directory, &entry.file_name())?;
             let entry_path = entry.path();
             let entry_metadata = entry.metadata();
             if entry.file_type().is_dir() {
@@ -1894,31 +1893,102 @@ fn local_upload_relative_path(root: &Path, path: &Path) -> Result<String, AppErr
     Ok(segments.join("/"))
 }
 
-fn join_relative_path(parent: &str, name: &str) -> String {
-    if parent.is_empty() {
+fn validate_remote_relative_segment(name: &str) -> Result<(), AppError> {
+    if name.is_empty()
+        || name == "."
+        || name == ".."
+        || name.contains('/')
+        || name.contains('\\')
+        || name.contains('\0')
+    {
+        return Err(AppError::new(
+            "remote_file_download_path_invalid",
+            "远程目录包含无效路径片段。",
+            "remote directory entry contains an unsafe name",
+            true,
+        ));
+    }
+    Ok(())
+}
+
+fn join_relative_path(parent: &str, name: &str) -> Result<String, AppError> {
+    validate_remote_relative_segment(name)?;
+    Ok(if parent.is_empty() {
         name.to_string()
     } else {
         format!("{parent}/{name}")
+    })
+}
+
+pub(crate) fn sanitize_local_path_segment(value: &str) -> String {
+    let sanitized = value
+        .trim()
+        .chars()
+        .map(|ch| match ch {
+            '<' | '>' | ':' | '"' | '/' | '\\' | '|' | '?' | '*' => '_',
+            ch if ch.is_control() => '_',
+            ch => ch,
+        })
+        .collect::<String>()
+        .trim_matches(|ch| ch == ' ' || ch == '.')
+        .to_string();
+    if sanitized.is_empty() {
+        "download".to_string()
+    } else {
+        sanitized
     }
 }
 
-fn join_remote_relative_path(root: &str, relative_path: &str) -> String {
+fn sanitize_remote_relative_segment(value: &str) -> Result<String, AppError> {
+    let trimmed = value.trim();
+    if trimmed.is_empty()
+        || trimmed == "."
+        || trimmed == ".."
+        || trimmed.chars().all(|ch| ch == '.')
+    {
+        return Err(AppError::new(
+            "remote_file_download_path_invalid",
+            "远程目录包含无效路径片段。",
+            "remote relative path contains a dot segment",
+            true,
+        ));
+    }
+    Ok(sanitize_local_path_segment(trimmed))
+}
+
+fn join_remote_relative_path(root: &str, relative_path: &str) -> Result<String, AppError> {
     relative_path
         .split('/')
         .filter(|segment| !segment.is_empty())
-        .fold(
+        .try_fold(
             root.trim_end_matches('/').to_string(),
-            |current, segment| join_remote_path(&current, segment),
+            |current, segment| {
+                validate_remote_relative_segment(segment)?;
+                Ok::<_, AppError>(join_remote_path(&current, segment))
+            },
         )
 }
 
-fn local_relative_path(root: &Path, relative_path: &str) -> PathBuf {
+fn local_relative_path(root: &Path, relative_path: &str) -> Result<PathBuf, AppError> {
     relative_path
         .split('/')
         .filter(|segment| !segment.is_empty())
-        .fold(root.to_path_buf(), |mut current, segment| {
-            current.push(segment);
-            current
+        .map(sanitize_remote_relative_segment)
+        .try_fold(root.to_path_buf(), |mut current, segment| {
+            current.push(segment?);
+            Ok::<_, AppError>(current)
+        })
+        .and_then(|path| {
+            if path.starts_with(root) {
+                Ok(path)
+            } else {
+                Err(AppError::new(
+                    "remote_file_download_path_invalid",
+                    "远程目录路径超出本地下载目录。",
+                    "resolved local path escaped download root",
+                    true,
+                ))
+            }
         })
 }
 
@@ -2542,6 +2612,17 @@ mod tests {
     }
 
     #[test]
+    fn quote_posix_shell_keeps_windows_and_shell_metacharacters_inside_one_argument() {
+        let value = r"C:\Users\Public\$(touch marker); `whoami` && *.txt";
+        let quoted = quote_posix_shell(value);
+
+        assert!(quoted.starts_with('\''));
+        assert!(quoted.ends_with('\''));
+        assert!(quoted.contains("C:\\Users\\Public\\$(touch marker)"));
+        assert!(quoted.contains("'\\''"));
+    }
+
+    #[test]
     fn parse_remote_list_output_maps_types_and_sorts_directories_first() {
         let output = b"f\0/opt/app/app.log\0app.log\0d\0/opt/app/logs\0logs\0l\0/opt/app/current\0current\0o\0/opt/app/socket\0socket\0";
 
@@ -2755,14 +2836,33 @@ mod tests {
     #[test]
     fn transfer_relative_paths_join_under_roots() {
         assert_eq!(
-            join_remote_relative_path("/opt/app", "logs/app.log"),
+            join_remote_relative_path("/opt/app", "logs/app.log")
+                .expect("remote relative path should stay under root"),
             "/opt/app/logs/app.log"
         );
         assert_eq!(
             local_relative_path(Path::new(r"C:\Downloads\app"), "logs/app.log")
+                .expect("local relative path should stay under root")
                 .to_string_lossy()
                 .replace('\\', "/"),
             "C:/Downloads/app/logs/app.log"
+        );
+    }
+
+    #[test]
+    fn remote_download_rejects_parent_segments_and_sanitizes_windows_names() {
+        let remote_error = join_remote_relative_path("/opt/app", "../escape").unwrap_err();
+        assert_eq!(remote_error.code, "remote_file_download_path_invalid");
+
+        let local_error = local_relative_path(Path::new("downloads"), "../escape").unwrap_err();
+        assert_eq!(local_error.code, "remote_file_download_path_invalid");
+
+        let local_path =
+            local_relative_path(Path::new("downloads"), r"C:\Users\Public\report?.log")
+                .expect("Windows names should be sanitized under the root");
+        assert_eq!(
+            local_path.to_string_lossy().replace('\\', "/"),
+            "downloads/C__Users_Public_report_.log"
         );
     }
 

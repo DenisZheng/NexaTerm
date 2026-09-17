@@ -46,9 +46,10 @@ use crate::rdp::{
     RdpSessionRequest, RdpSessionResizeResult, RdpSessionRevealResult,
 };
 use crate::remote_files::{
-    RemoteFileArchiveUploadResult, RemoteFileEntry, RemoteFileEntryMetadata, RemoteFileManager,
-    RemoteFileMetadata, RemoteFilePathCheckResult, RemoteFileReadResult, RemoteFileUploadResult,
-    RemoteFileWriteResult, SftpProgressCallback, TransferConflictPolicy,
+    sanitize_local_path_segment, RemoteFileArchiveUploadResult, RemoteFileEntry,
+    RemoteFileEntryMetadata, RemoteFileManager, RemoteFileMetadata, RemoteFilePathCheckResult,
+    RemoteFileReadResult, RemoteFileUploadResult, RemoteFileWriteResult, SftpProgressCallback,
+    TransferConflictPolicy,
 };
 use crate::remote_monitor::{
     RemoteMonitorCollectionOptions, RemoteMonitorManager, RemoteMonitorSnapshot,
@@ -2478,25 +2479,6 @@ fn split_local_name(name: &str, file_like: bool) -> (String, String) {
     }
 }
 
-fn sanitize_local_path_segment(value: &str) -> String {
-    let sanitized = value
-        .trim()
-        .chars()
-        .map(|ch| match ch {
-            '<' | '>' | ':' | '"' | '/' | '\\' | '|' | '?' | '*' => '_',
-            ch if ch.is_control() => '_',
-            ch => ch,
-        })
-        .collect::<String>()
-        .trim_matches(|ch| ch == ' ' || ch == '.')
-        .to_string();
-    if sanitized.is_empty() {
-        "download".to_string()
-    } else {
-        sanitized
-    }
-}
-
 fn upload_temp_dir() -> Result<PathBuf, AppError> {
     Ok(std::env::temp_dir().join("mxterm-upload-temp"))
 }
@@ -2760,10 +2742,44 @@ fn remote_sftp_transfer_progress_callback(
 mod tests {
     use super::{
         detect_distribution_mode, ensure_local_download_directory_ready, local_tar_extract_args,
+        require_remote_path, require_safe_name, sanitize_local_path_segment,
     };
     use std::ffi::OsString;
     use std::fs;
     use std::path::Path;
+
+    #[test]
+    fn local_path_segments_are_sanitized_for_windows_targets() {
+        assert_eq!(
+            sanitize_local_path_segment(r"C:\Windows\report?.log"),
+            "C__Windows_report_.log"
+        );
+        assert_eq!(sanitize_local_path_segment(".."), "download");
+    }
+
+    #[test]
+    fn remote_file_names_and_paths_reject_traversal_inputs() {
+        assert_eq!(
+            require_remote_path("  /srv/app/file.txt  ").unwrap(),
+            "/srv/app/file.txt"
+        );
+        assert_eq!(
+            require_remote_path("   ").unwrap_err().code,
+            "remote_file_path_missing"
+        );
+        assert_eq!(
+            require_safe_name("../escape", "name_invalid")
+                .unwrap_err()
+                .code,
+            "name_invalid"
+        );
+        assert_eq!(
+            require_safe_name(r"C:\escape", "name_invalid")
+                .unwrap_err()
+                .code,
+            "name_invalid"
+        );
+    }
 
     #[test]
     fn remote_files_tar_extract_args_use_utf8_header_on_windows() {

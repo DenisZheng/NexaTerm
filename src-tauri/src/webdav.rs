@@ -89,8 +89,25 @@ impl WebDavClient {
     fn url_for_segments(&self, path_segments: &[String]) -> Result<Url, AppError> {
         let mut url = self.base_url.clone();
         let prefix = url.path().trim_end_matches('/');
-        let encoded_path =
-            join_encoded_path(&path_segments.iter().map(String::as_str).collect::<Vec<_>>());
+        let normalized_segments =
+            normalize_path_segments(&path_segments.iter().map(String::as_str).collect::<Vec<_>>());
+        if normalized_segments
+            .iter()
+            .any(|segment| segment == "." || segment == "..")
+        {
+            return Err(AppError::new(
+                "webdav_path_invalid",
+                "WebDAV 路径包含无效片段。",
+                "path contains a dot segment",
+                true,
+            ));
+        }
+        let encoded_path = join_encoded_path(
+            &normalized_segments
+                .iter()
+                .map(String::as_str)
+                .collect::<Vec<_>>(),
+        );
         let path = match (prefix.is_empty() || prefix == "/", encoded_path.is_empty()) {
             (true, true) => "/".to_string(),
             (true, false) => format!("/{encoded_path}"),
@@ -397,7 +414,7 @@ mod tests {
 
     use super::{
         basic_auth_header, ensure_collection, join_encoded_path, limited_body_from_chunks,
-        redact_url, WebDavStatus, WebDavTransport,
+        redact_url, WebDavClient, WebDavStatus, WebDavTransport,
     };
     use crate::app_error::AppError;
 
@@ -432,6 +449,25 @@ mod tests {
     }
 
     #[test]
+    fn client_rejects_non_http_schemes_and_drops_query_and_fragment() {
+        let error = WebDavClient::new("ftp://dav.example.com/root", None, None).unwrap_err();
+        assert_eq!(error.code, "webdav_settings_invalid");
+
+        let client = WebDavClient::new(
+            "https://dav.example.com/root?token=secret#fragment",
+            None,
+            None,
+        )
+        .expect("HTTP(S) base URL should be valid");
+        let url = client
+            .url_for_segments(&["manifest.json".to_string()])
+            .expect("path should build");
+        assert_eq!(url.path(), "/root/manifest.json");
+        assert!(url.query().is_none());
+        assert!(url.fragment().is_none());
+    }
+
+    #[test]
     fn mkcol_conflict_verifies_collection_with_propfind() {
         let transport = RecordingTransport::new(409, 207);
         let path = vec![
@@ -461,6 +497,25 @@ mod tests {
             limited_body_from_chunks(&[b"123".as_slice(), b"456".as_slice()], 5).unwrap_err();
 
         assert_eq!(error.code, "webdav_response_too_large");
+    }
+
+    #[test]
+    fn url_builder_rejects_dot_segments_before_they_can_escape_base_path() {
+        let client = WebDavClient::new("https://dav.example.com/root", None, None)
+            .expect("base URL should be valid");
+
+        let error = client
+            .url_for_segments(&["..".to_string(), "outside".to_string()])
+            .unwrap_err();
+
+        assert_eq!(error.code, "webdav_path_invalid");
+    }
+
+    #[test]
+    fn path_segments_encode_shell_metacharacters_and_windows_separators() {
+        let path = join_encoded_path(&["$(touch marker); C:\\temp\\a'b"]);
+
+        assert_eq!(path, "%24%28touch%20marker%29%3B%20C%3A%5Ctemp%5Ca%27b");
     }
 
     struct RecordingTransport {

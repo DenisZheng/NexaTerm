@@ -324,4 +324,28 @@ mod tests {
         assert_eq!(error.code, "network_diagnostic_port_invalid");
         assert!(error.recoverable);
     }
+
+    #[test]
+    fn command_builders_quote_windows_and_shell_metacharacter_targets() {
+        let target = r"C:\Users\Public\$(touch marker);'quoted'";
+        let quoted = quote_posix_shell(target);
+
+        for kind in [
+            NetworkDiagnosticKind::Ping,
+            NetworkDiagnosticKind::Dns,
+            NetworkDiagnosticKind::Trace,
+        ] {
+            let command = build_diagnostic_command(&request(kind, target, None))
+                .expect("diagnostic command should build");
+            assert!(command.command.contains(&quoted));
+        }
+    }
+
+    #[test]
+    fn diagnostic_commands_reject_blank_targets() {
+        let error = build_diagnostic_command(&request(NetworkDiagnosticKind::Ping, "  ", None))
+            .expect_err("blank target should be rejected");
+
+        assert_eq!(error.code, "network_diagnostic_target_missing");
+    }
 }

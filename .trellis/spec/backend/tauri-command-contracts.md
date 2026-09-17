@@ -1048,7 +1048,8 @@ LocalPathMetadataResult {
 - Existing `.mxpart` files are resume candidates only when their byte length is less than or equal to the source total. Oversized parts must be discarded and restarted from byte 0.
 - SFTP single-file download loops must stop when `loaded_bytes == total_bytes` from remote metadata. Do not issue an extra read only to observe EOF: some SFTP servers or client wrappers surface EOF/past-end reads as a status error, which makes a fully downloaded file fail at 100%. If a read returns zero before the expected total, return `remote_file_download_failed` and keep the `.mxpart` file for retry instead of renaming an incomplete file.
 - Local file and directory conflicts use the same overwrite / skip / rename policy as remote transfers. If the frontend sends `ask`, treat it as `rename` to keep behavior non-destructive.
-- Windows path segments for download directories must be sanitized before joining paths. Do not use remote names directly as local path components.
+- Windows path segments for download directories must be sanitized before joining paths. Do not use remote names directly as local path components. Remote SFTP directory entries named `.` / `..` or containing path separators must be rejected before building remote staging or local download paths; return `remote_file_download_path_invalid`.
+- The local path-segment sanitizer is shared by remote-file downloads and command-owned local download/temp names; it replaces Windows-invalid characters and never allows a remote name to become a parent path component.
 - `remote_file_delete` with `recursive == true` must refuse to delete `/`; non-recursive delete should not recursively remove directories.
 - All new commands must be registered in `src-tauri/src/lib.rs` through `tauri::generate_handler!`.
 
@@ -1084,6 +1085,7 @@ LocalPathMetadataResult {
 | Birth time is missing, invalid, or non-positive | no error; `birthtime` is `None` | n/a |
 | Remote target preflight command exits non-zero | `remote_file_check_path_failed` | true |
 | Remote target preflight output cannot parse | `remote_file_check_path_parse_failed` | true |
+| Remote directory entry contains `.` / `..` or a path separator | `remote_file_download_path_invalid` | true |
 | Archive upload target cannot resolve | `remote_file_archive_resolve_failed` / `remote_file_archive_resolve_parse_failed` | true |
 | Archive upload write fails | `remote_file_archive_upload_failed` | true |
 | Remote archive extraction fails | `remote_file_archive_extract_failed` | true |
@@ -2160,7 +2162,8 @@ WebDavDownloadRequest {
 | Condition | Error code | Recoverable |
 | --- | --- | --- |
 | Enabled settings with blank `base_url` | `webdav_settings_invalid` | true |
-| Invalid profile path characters | `webdav_settings_invalid` | true |
+| Invalid profile path characters or remote-root dot segments | `webdav_settings_invalid` | true |
+| WebDAV request path contains `.` / `..` segment | `webdav_path_invalid` | true |
 | Username is set but no WebDAV password is available | `webdav_password_missing` | true |
 | WebDAV request fails or returns an unexpected status | `webdav_connection_failed` / `webdav_http_status` | true |
 | Remote `manifest.json` is absent during download | `webdav_remote_empty` | true |
@@ -2178,8 +2181,9 @@ WebDavDownloadRequest {
 
 ### 6. Tests Required
 
-- Unit-test URL path encoding, URL redaction, Basic Auth header creation, MKCOL conflict verification, and oversized GET rejection in `webdav.rs`.
-- Unit-test `password_touched` preserve/delete behavior, upload PUT order, sync lock rejection, and incompatible manifest rejection in `webdav_sync.rs`.
+- Unit-test URL path encoding, URL redaction, Basic Auth header creation, MKCOL conflict verification, oversized GET rejection, and dot-segment rejection in `webdav.rs`.
+- Unit-test WebDAV settings rejection for `.` / `..` remote-root segments in `webdav_sync.rs`.
+- Unit-test `password_touched` preserve/delete behavior, remote-root path validation, upload PUT order, sync lock rejection, and incompatible manifest rejection in `webdav_sync.rs`.
 - Run `cargo test --manifest-path src-tauri/Cargo.toml webdav --lib`, `cargo test --manifest-path src-tauri/Cargo.toml webdav_sync --lib`, `cargo test --manifest-path src-tauri/Cargo.toml sync_snapshot --lib`, and `cargo check --manifest-path src-tauri/Cargo.toml` after changing this area.
 - Cross-check command registration in `src-tauri/src/lib.rs`, Rust command signatures in `src-tauri/src/commands.rs`, and typed wrappers in `src/shared/tauri/commands.ts` in the same task.
 
@@ -2744,6 +2748,7 @@ mxterm-mcp serve --host <host> --port <port> --token-sha256 <sha256> [--data-dir
 - Metadata-only MCP reads must open `StorageRepository::open_root(...)` with the in-memory secret store. Read-only MCP listing must not unlock the local vault or reveal secrets.
 - SSH-capable MCP tools must resolve saved connections through the normal vault-backed repository path and must not accept dynamic plaintext credential fields.
 - MCP exec-capable tools (`test_connection`, `execute_command`, and `server_monitor`) use a process-local `RemoteExecSessionPool` keyed by saved connection id and `ResolvedSshConfig::signature()`. A command timeout must invalidate the cached connection before returning `mcp_command_timeout`. SFTP transfer tools intentionally keep one operation-scoped `ReusableSftpSession` per transfer until a dedicated SFTP pooling contract exists.
+- `execute_script.args` remains a string for MCP compatibility, but Rust validates/reparses it before uploading the script, then quotes every resulting word with `quote_posix_shell` before building the remote command. Shell operators, command substitution text, Windows paths, and whitespace are data only; unmatched quotes or escapes return `mcp_script_args_invalid` without a remote upload. Raw args are never concatenated into the command body.
 - MCP upload/download tools write to `.mxterm-mcp-transfer-*` temporary files next to the final target and only rename after the copy and flush complete. Failed transfers must clean the temporary file when cleanup is possible; partial final files should not replace an existing target.
 - MCP transfer responses include `bytes_transferred` and `duration_ms` for files and directories. Directory values are the sum of transferred child file bytes for that operation.
 - `reject_plaintext_credential_args(...)` must reject argument keys such as `host`, `user`, `username`, `password`, `passphrase`, `private_key`, and `private_key_content` before tool dispatch.
@@ -2778,6 +2783,8 @@ mxterm-mcp serve --host <host> --port <port> --token-sha256 <sha256> [--data-dir
 | Remote port is `0` or cannot parse | `mcp_remote_port_invalid` | true |
 | Remote HTTP request has missing or invalid token | HTTP 401 | true |
 | Dangerous command without required allow/confirm state | command returns recoverable dangerous-command rejection | true |
+| Optional `execute_script.interpreter` / `args` field has a non-string type | `mcp_argument_invalid` | true |
+| `execute_script.args` has an unmatched quote or escape | `mcp_script_args_invalid` | true |
 
 ### 5. Good / Base / Bad Cases
 
@@ -2809,6 +2816,8 @@ mxterm-mcp serve --host <host> --port <port> --token-sha256 <sha256> [--data-dir
   - HTTP auth accepts bearer/custom token headers and rejects missing or wrong tokens
   - custom exposure mode filters connection list/search/get and blocks SSH actions by hidden id
   - transfer temporary paths stay beside the target and transfer result serialization includes `bytes_transferred` and `duration_ms`
+  - optional `execute_script` string fields reject non-string JSON values
+  - `execute_script.args` is reparsed and every resulting argument is quoted before remote execution; malformed quoting is rejected without echoing the input
 - When sidecar dispatch changes, run a stdio end-to-end check against a temp `--data-dir` repository that verifies disabled gating and custom exposure filtering without launching the desktop app.
 
 ### 7. Wrong vs Correct

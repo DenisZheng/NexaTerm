@@ -2280,6 +2280,85 @@ mod tests {
     }
 
     #[test]
+    fn docker_json_line_parsers_reject_nonblank_malformed_output() {
+        let error = parse_containers(
+            br#"{"ID":"ok"}
+not-json"#,
+        )
+        .unwrap_err();
+
+        assert_eq!(error.code, "docker_container_parse_failed");
+    }
+
+    fn minimal_image_run_request() -> DockerImageRunRequest {
+        DockerImageRunRequest {
+            connection_id: "conn-1".to_string(),
+            image: "alpine:latest".to_string(),
+            name: None,
+            command: None,
+            entrypoint: None,
+            network: None,
+            restart_policy: None,
+            privileged: false,
+            ports: Vec::new(),
+            env: Vec::new(),
+            volumes: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn image_run_rejects_blank_and_incomplete_values_before_building_command() {
+        let mut blank_image = minimal_image_run_request();
+        blank_image.image = "   ".to_string();
+        assert_eq!(
+            build_image_run_command(&blank_image).unwrap_err().code,
+            "docker_image_missing"
+        );
+
+        let mut blank_port = minimal_image_run_request();
+        blank_port.ports.push(DockerImageRunPort {
+            host_port: " ".to_string(),
+            container_port: "80".to_string(),
+        });
+        assert_eq!(
+            build_image_run_command(&blank_port).unwrap_err().code,
+            "docker_run_port_invalid"
+        );
+
+        let mut invalid_env = minimal_image_run_request();
+        invalid_env.env.push(DockerImageRunKeyValue {
+            key: "BAD=KEY".to_string(),
+            value: "value".to_string(),
+        });
+        assert_eq!(
+            build_image_run_command(&invalid_env).unwrap_err().code,
+            "docker_run_env_invalid"
+        );
+
+        let mut blank_volume = minimal_image_run_request();
+        blank_volume.volumes.push(DockerImageRunVolume {
+            host_path: "/tmp/data".to_string(),
+            container_path: " ".to_string(),
+        });
+        assert_eq!(
+            build_image_run_command(&blank_volume).unwrap_err().code,
+            "docker_run_volume_invalid"
+        );
+    }
+
+    #[test]
+    fn image_run_quotes_shell_metacharacters_as_single_arguments() {
+        let mut request = minimal_image_run_request();
+        request.image = "alpine; echo injected".to_string();
+        request.command = Some("printf '$(touch marker)'".to_string());
+
+        let command = build_image_run_command(&request).expect("command should build");
+
+        assert!(command.contains("'alpine; echo injected'"));
+        assert!(command.contains("'printf '\\''$(touch marker)'\\'''"));
+    }
+
+    #[test]
     fn build_image_run_command_quotes_runtime_options() {
         let request = DockerImageRunRequest {
             connection_id: "conn-1".to_string(),

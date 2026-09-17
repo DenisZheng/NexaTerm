@@ -1151,6 +1151,13 @@ mod tests {
     #[test]
     fn tunnel_rule_validation_rejects_empty_required_fields() {
         let mut input = valid_input();
+        input.connection_id = "  ".to_string();
+
+        let error = validate_tunnel_rule_input(input).unwrap_err();
+
+        assert_eq!(error.code, "tunnel_connection_missing");
+
+        let mut input = valid_input();
         input.remote_host = "  ".to_string();
 
         let error = validate_tunnel_rule_input(input).unwrap_err();
@@ -1258,6 +1265,16 @@ mod tests {
         let error = select_socks5_no_auth_method(&[0x02]).unwrap_err();
 
         assert_eq!(error.code, "tunnel_socks_handshake_failed");
+    }
+
+    #[test]
+    fn socks5_parser_rejects_unsupported_address_type_and_zero_port() {
+        let error = parse_socks5_connect_target(&[0x05, 0x01, 0x00, 0x02]).unwrap_err();
+        assert_eq!(error.code, "tunnel_socks_handshake_failed");
+
+        let error =
+            parse_socks5_connect_target(&[0x05, 0x01, 0x00, 0x01, 127, 0, 0, 1, 0, 0]).unwrap_err();
+        assert_eq!(error.code, "tunnel_socks_target_missing");
     }
 
     #[test]

@@ -23,7 +23,8 @@ use crate::connections::{
 };
 use crate::remote_exec_pool::{RemoteExecRetry, RemoteExecSessionPool};
 use crate::remote_files::{
-    download_sftp_file, upload_sftp_file, SftpProgressCallback, TransferCancelToken,
+    download_sftp_file, quote_posix_shell, upload_sftp_file, SftpProgressCallback,
+    TransferCancelToken,
 };
 use crate::ssh_config::{ResolvedSshConfig, RuntimeCredentialInput};
 use crate::storage_repository::StorageRepository;
@@ -1258,17 +1259,8 @@ pub async fn execute_script(
         .unwrap_or("script.sh")
         .replace(['/', '\\', ' ', '\'', '"'], "_");
     let remote_path = format!("/tmp/mxterm-mcp-{}-{name}", now_millis());
+    let command = build_execute_script_command(&remote_path, interpreter, args)?;
     upload_file(root, connection_id, script_path, &remote_path, settings).await?;
-    let interpreter = interpreter.unwrap_or("sh").trim();
-    let args = args.unwrap_or("").trim();
-    let command = format!(
-        "chmod +x {} && {} {} {} ; status=$?; rm -f {}; exit $status",
-        shell_quote(&remote_path),
-        shell_quote(interpreter),
-        shell_quote(&remote_path),
-        args,
-        shell_quote(&remote_path)
-    );
     execute_command(
         root,
         connection_id,
@@ -1548,14 +1540,101 @@ async fn download_directory_inner(
     Ok(bytes_transferred)
 }
 
+fn build_execute_script_command(
+    remote_path: &str,
+    interpreter: Option<&str>,
+    args: Option<&str>,
+) -> Result<String, AppError> {
+    let interpreter = interpreter.unwrap_or("sh").trim();
+    let parsed_args = parse_script_args(args.unwrap_or(""))?;
+    let quoted_args = parsed_args
+        .iter()
+        .map(|argument| quote_posix_shell(argument))
+        .collect::<Vec<_>>()
+        .join(" ");
+    Ok(format!(
+        "chmod +x {} && {} {} {} ; status=$?; rm -f {}; exit $status",
+        quote_posix_shell(remote_path),
+        quote_posix_shell(interpreter),
+        quote_posix_shell(remote_path),
+        quoted_args,
+        quote_posix_shell(remote_path)
+    ))
+}
+
+fn parse_script_args(value: &str) -> Result<Vec<String>, AppError> {
+    let mut arguments = Vec::new();
+    let mut current = String::new();
+    let mut quote = None;
+    let mut escaped = false;
+    let mut started = false;
+
+    for character in value.chars() {
+        if escaped {
+            current.push(character);
+            escaped = false;
+            started = true;
+            continue;
+        }
+
+        match quote {
+            Some('\'') => {
+                if character == '\'' {
+                    quote = None;
+                } else {
+                    current.push(character);
+                }
+            }
+            Some('"') => {
+                if character == '"' {
+                    quote = None;
+                } else if character == '\\' {
+                    escaped = true;
+                } else {
+                    current.push(character);
+                }
+            }
+            None => match character {
+                '\\' => {
+                    escaped = true;
+                    started = true;
+                }
+                '\'' | '"' => {
+                    quote = Some(character);
+                    started = true;
+                }
+                character if character.is_whitespace() => {
+                    if started {
+                        arguments.push(std::mem::take(&mut current));
+                        started = false;
+                    }
+                }
+                character => {
+                    current.push(character);
+                    started = true;
+                }
+            },
+        }
+    }
+
+    if escaped || quote.is_some() {
+        return Err(AppError::new(
+            "mcp_script_args_invalid",
+            "脚本参数格式无效。",
+            "unclosed quote or escape in script args",
+            true,
+        ));
+    }
+    if started {
+        arguments.push(current);
+    }
+    Ok(arguments)
+}
+
 fn bytes_to_limited_string(bytes: &[u8], limit: usize) -> (String, bool) {
     let truncated = bytes.len() > limit;
     let slice = if truncated { &bytes[..limit] } else { bytes };
     (String::from_utf8_lossy(slice).to_string(), truncated)
-}
-
-fn shell_quote(value: &str) -> String {
-    format!("'{}'", value.replace('\'', "'\\''"))
 }
 
 pub fn now_timestamp() -> Result<String, AppError> {
@@ -2445,6 +2524,21 @@ pub fn value_get_str<'a>(arguments: &'a Value, key: &str) -> Result<&'a str, App
         .ok_or_else(|| AppError::new("mcp_argument_missing", "MCP 参数缺失。", key, true))
 }
 
+pub fn value_get_optional_str<'a>(
+    arguments: &'a Value,
+    key: &str,
+) -> Result<Option<&'a str>, AppError> {
+    match arguments.get(key) {
+        None | Some(Value::Null) => Ok(None),
+        Some(value) => value
+            .as_str()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(Some)
+            .ok_or_else(|| AppError::new("mcp_argument_invalid", "MCP 参数类型无效。", key, true)),
+    }
+}
+
 pub fn value_get_u64(arguments: &Value, key: &str) -> Option<u64> {
     arguments.get(key).and_then(Value::as_u64)
 }
@@ -2583,6 +2677,63 @@ mod tests {
             Some("recursive delete from root")
         );
         assert!(detect_dangerous_command("uptime && df -h").is_none());
+    }
+
+    #[test]
+    fn mcp_command_and_remote_path_boundaries_reject_empty_root_and_oversized_input() {
+        assert_eq!(
+            require_command("   ").unwrap_err().code,
+            "mcp_command_missing"
+        );
+        assert_eq!(
+            require_remote_path("/").unwrap_err().code,
+            "mcp_remote_path_invalid"
+        );
+
+        let oversized = "x".repeat(MAX_COMMAND_BYTES + 1);
+        let error = require_command(&oversized).unwrap_err();
+        assert_eq!(error.code, "mcp_command_too_long");
+        assert_eq!(
+            error.raw_message,
+            format!("command_bytes={}", MAX_COMMAND_BYTES + 1)
+        );
+        assert!(!error.raw_message.contains(oversized.as_str()));
+    }
+
+    #[test]
+    fn script_args_are_reparsed_and_quoted_before_remote_execution() {
+        let command = build_execute_script_command(
+            "/tmp/script.sh",
+            Some("sh"),
+            Some("--name $(touch marker); echo injected"),
+        )
+        .expect("script command should build");
+
+        assert!(command.contains("'--name' '$(touch' 'marker);' 'echo' 'injected'"));
+        assert!(!command.contains("$(touch marker); echo"));
+    }
+
+    #[test]
+    fn script_args_reject_unclosed_quotes_without_echoing_input() {
+        let error = parse_script_args("--name 'unterminated").unwrap_err();
+
+        assert_eq!(error.code, "mcp_script_args_invalid");
+        assert!(!error.raw_message.contains("unterminated"));
+    }
+
+    #[test]
+    fn optional_mcp_strings_reject_wrong_types_without_treating_them_as_absent() {
+        assert_eq!(value_get_optional_str(&json!({}), "args").unwrap(), None);
+        assert_eq!(
+            value_get_optional_str(&json!({"args": "  --flag  "}), "args").unwrap(),
+            Some("--flag")
+        );
+        assert_eq!(
+            value_get_optional_str(&json!({"args": 42}), "args")
+                .unwrap_err()
+                .code,
+            "mcp_argument_invalid"
+        );
     }
 
     #[test]

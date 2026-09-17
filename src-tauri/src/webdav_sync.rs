@@ -551,7 +551,19 @@ fn normalize_settings_input(
             true,
         ));
     }
-    let remote_root = normalize_path_segments(&[input.remote_root.as_str()]).join("/");
+    let remote_root_segments = normalize_path_segments(&[input.remote_root.as_str()]);
+    if remote_root_segments
+        .iter()
+        .any(|segment| segment == "." || segment == "..")
+    {
+        return Err(AppError::new(
+            "webdav_settings_invalid",
+            "WebDAV 远程目录不能包含 . 或 .. 路径片段。",
+            "remote_root contains a dot segment",
+            true,
+        ));
+    }
+    let remote_root = remote_root_segments.join("/");
     let profile = input.profile.trim();
     if profile.contains('/')
         || profile.contains('\\')
@@ -732,6 +744,18 @@ mod tests {
                 .unwrap(),
             "dav-secret"
         );
+    }
+
+    #[test]
+    fn settings_rejects_remote_root_dot_segments() {
+        let (repo, _secrets) = temp_repository("webdav-dot-segment");
+        let mut input = settings_input(None, false);
+        input.remote_root = "../outside".to_string();
+
+        let error = WebDavSyncService::save_settings(&repo, input, "2026-06-21T10:00:00+08:00")
+            .unwrap_err();
+
+        assert_eq!(error.code, "webdav_settings_invalid");
     }
 
     #[test]
