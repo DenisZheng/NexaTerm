@@ -450,7 +450,10 @@ mod tests {
 
     #[test]
     fn client_rejects_non_http_schemes_and_drops_query_and_fragment() {
-        let error = WebDavClient::new("ftp://dav.example.com/root", None, None).unwrap_err();
+        let error = match WebDavClient::new("ftp://dav.example.com/root", None, None) {
+            Ok(_) => panic!("non-HTTP scheme should be rejected"),
+            Err(error) => error,
+        };
         assert_eq!(error.code, "webdav_settings_invalid");
 
         let client = WebDavClient::new(
