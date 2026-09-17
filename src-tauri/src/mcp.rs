@@ -1594,6 +1594,14 @@ fn parse_script_args(value: &str) -> Result<Vec<String>, AppError> {
                     current.push(character);
                 }
             }
+            Some(_) => {
+                return Err(AppError::new(
+                    "mcp_script_args_invalid",
+                    "脚本参数格式无效。",
+                    "unsupported quote marker in script args",
+                    true,
+                ));
+            }
             None => match character {
                 '\\' => {
                     escaped = true;
