@@ -92,7 +92,7 @@
 
 ## Phase 4：输入边界与生命周期
 
-- [ ] 为 remote exec、Docker、WebDAV、remote file、tunnel、shell quoting 增加 Windows 与 POSIX 负向用例。
+- [x] 为 remote exec、Docker、WebDAV、remote file、tunnel、shell quoting 增加 Windows 与 POSIX 契约级负向用例（子任务 `09-17-phase4-input-boundaries`，run `35179534117` 全绿）；真实 SSH/Docker/WebDAV 运行时仍记 `ENVIRONMENT-BLOCKED`。
 - [ ] 对 PTY、runner、tunnel、websocket、MCP sidecar 和 VNC runner host 的成功、失败、取消、窗口关闭四类清理路径做源码级核查：确认每个 owner 都有对应清理分支且幂等。
 - [ ] 用 `cargo test` 驱动完成上述资源回收的运行时验证：**可验证（经 CI）**，走 `.github/workflows/ci.yml` 的 rust 三平台矩阵；仍不具备时才记 `ENVIRONMENT-BLOCKED` 并附完整证据，不得声称已通过。
 - [ ] 对 Vault 回读、known-host changed 拒绝和连接失败语义做回归测试（同样经 CI 的 rust 矩阵验证）。

@@ -25,12 +25,12 @@
 
 ## Acceptance Criteria
 
-- [ ] 输入边界矩阵已写入本子任务设计/交付记录，覆盖六类入口及 Windows/POSIX 差异。
-- [ ] 每类入口至少有可重复的负向测试；测试能证明输入被拒绝、被安全引用或被编码，而不是只断言函数返回成功。
-- [ ] 若发现实现缺口，修复范围限于根因和对应回归测试；未修改 Vault、协议格式、lockfile 或无关 UI。
-- [ ] 通过 `cargo fmt --manifest-path src-tauri/Cargo.toml --check`、相关 targeted `cargo test`、`cargo check --manifest-path src-tauri/Cargo.toml`，并经 CI Linux/Windows/macOS 矩阵验证。
-- [ ] 无真实凭据、主机名、命令原文或可用 secret 进入测试 fixture、日志或报告。
-- [ ] 真实 SSH/Docker/WebDAV 集成环境若仍不可用，明确记录 `ENVIRONMENT-BLOCKED`，不得将单元测试结果表述为运行时安全验收。
+- [x] 输入边界矩阵已写入本子任务设计/交付记录，覆盖六类入口及 Windows/POSIX 差异。
+- [x] 每类入口至少有可重复的负向测试；测试能证明输入被拒绝、被安全引用或被编码，而不是只断言函数返回成功。
+- [x] 若发现实现缺口，修复范围限于根因和对应回归测试；未修改 Vault、协议格式、lockfile 或无关 UI。
+- [ ] `cargo fmt --manifest-path src-tauri/Cargo.toml --check`：本批修改 hunks 已格式化，但父分支既有区域仍使全量命令返回非零；targeted `cargo test` / `cargo check` 已经 CI Linux/Windows/macOS 验证。
+- [x] 无真实凭据、主机名、命令原文或可用 secret 进入测试 fixture、日志或报告。
+- [x] 真实 SSH/Docker/WebDAV 集成环境未提供，已明确记录为 `ENVIRONMENT-BLOCKED`，没有把单元测试结果表述为运行时安全验收。
 
 ## Out of Scope
 

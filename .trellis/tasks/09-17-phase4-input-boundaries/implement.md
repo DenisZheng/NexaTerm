@@ -29,18 +29,18 @@
 ## 3. 本地验证
 
 - [ ] `cargo fmt --manifest-path src-tauri/Cargo.toml --check`
-- [ ] 运行各模块 targeted tests：`remote_files`、`network_tools`、`docker_tools`、`webdav`、`webdav_sync`、`tunnels`、`remote_exec_pool`、`mcp`。
-- [ ] `cargo check --manifest-path src-tauri/Cargo.toml`
-- [ ] 若触及 command registration 或 frontend payload，运行 `pnpm run check` 和对应 source checks。
+- [x] 运行各模块 targeted tests：`remote_files`、`network_tools`、`docker_tools`、`webdav`、`webdav_sync`、`tunnels`、`remote_exec_pool`、`mcp`；由 CI Rust 三平台全 workspace test 覆盖。
+- [x] `cargo check --manifest-path src-tauri/Cargo.toml`：由 CI Linux/Windows/macOS 成功验证。
+- [x] 若触及 command registration 或 frontend payload，运行 `pnpm run check` 和对应 source checks；本批 `pnpm run check` 与 Frontend checks 均通过。
 - [x] `git diff --check`、Trellis context validation 已通过；secret scan 待最终代码暂存后复跑。
 
 当前 Windows 环境记录：已安装自定义 Rust toolchain 的 `rustfmt`，但 `cargo fmt --check` 仍被父分支既有未格式化区域阻塞（`mxterm_mcp.rs`、`app_error.rs`、`mcp.rs` 既有区域、`session.rs`），本批修改的 Rust hunks 已按 rustfmt 输出对齐；`cargo check` 被 MSVC `link.exe`/Windows SDK 环境阻塞。不能将这两项记为通过，最终依靠三平台 CI 验证。
 
 ## 4. CI 与环境记录
 
-- [ ] 推送后记录 commit SHA、run URL、Linux/Windows/macOS Rust job 结论。
-- [ ] 若无 SSH/Docker/WebDAV 服务，记录对应运行时集成项为 `ENVIRONMENT-BLOCKED`，同时区分纯函数测试 PASS。
-- [ ] 不把 cargo test 三平台成功解释为 Tauri GUI、真实远端 shell、Docker daemon 或 WebDAV server 验收。
+- [x] 推送后记录 commit SHA、run URL、Linux/Windows/macOS Rust job 结论：最终代码提交 `5560b840180c0ab57753942522bc486d59e51482`，run `35179534117` 全绿；Linux/macOS 各 297 tests PASS，Windows 301 tests PASS。
+- [x] 若无 SSH/Docker/WebDAV 服务，记录对应运行时集成项为 `ENVIRONMENT-BLOCKED`，同时区分纯函数测试 PASS。
+- [x] 不把 cargo test 三平台成功解释为 Tauri GUI、真实远端 shell、Docker daemon 或 WebDAV server 验收。
 
 ## 5. 交付与回滚
 

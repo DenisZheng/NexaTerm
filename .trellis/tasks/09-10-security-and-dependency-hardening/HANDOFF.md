@@ -72,9 +72,11 @@ capability 独立检查已在 `55a2cb7` / run `35085375573` 实际通过。本�
 
 ### 3. Phase 4 输入边界与生命周期
 
-- remote exec / Docker / WebDAV / remote file / tunnel / shell quoting 的 Windows + POSIX 负向用例。
-- PTY / runner / tunnel / websocket / MCP sidecar / VNC runner host 的成功/失败/取消/窗口关闭四类清理路径源码级核查 + `cargo test`（经 CI）验证。
-- Vault 回读、known-host changed 拒绝、连接失败语义回归。
+第一切片已完成并经 CI 验证：子任务 `09-17-phase4-input-boundaries`，最终提交 `5560b84`，run `35179534117` 全绿。覆盖 MCP script args quoting、SFTP remote/local path traversal、WebDAV dot segments、Docker/network/tunnel negative contracts；Rust Linux/macOS 各 297 tests、Windows 301 tests 全部通过。详细交接见子任务 `HANDOFF.md`。
+
+- [x] 输入边界第一切片：remote exec / Docker / WebDAV / remote file / tunnel / shell quoting 的 Windows + POSIX 契约级负向用例；真实 SSH/Docker/WebDAV 服务仍记 `ENVIRONMENT-BLOCKED`。
+- [ ] PTY / runner / tunnel / websocket / MCP sidecar / VNC runner host 的成功/失败/取消/窗口关闭四类清理路径源码级核查 + `cargo test`（经 CI）验证。
+- [ ] Vault 回读、known-host changed 拒绝、连接失败语义回归。
 
 ### 4. Phase 5 CSP / 跨平台 / 发布门禁
 
