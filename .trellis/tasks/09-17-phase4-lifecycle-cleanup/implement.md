@@ -35,13 +35,13 @@
 ## 5. 验证
 
 - [ ] `cargo fmt --manifest-path src-tauri/Cargo.toml --check`；父基线漂移单独记录，不重排无关代码。
-- [ ] targeted Rust tests：`vnc`、`tunnels`、`docker_tools`、`remote_exec_pool`、`terminal::manager`/相关模块、`mcp`。
-- [ ] `cargo check --manifest-path src-tauri/Cargo.toml --locked`。
-- [ ] `pnpm run check`、相关 source checks、`git diff --check` 和 `pnpm run check:secrets`。
-- [ ] CI Linux/Windows/macOS 记录 compile/test 结果；真实 Tauri GUI、VNC/SSH/Docker 服务若不可用记 `ENVIRONMENT-BLOCKED`。
+- [x] targeted Rust tests：`vnc`、`tunnels`、`docker_tools`、`remote_exec_pool`、`terminal::manager`/相关模块、`mcp`；由 CI full workspace test 覆盖。
+- [x] `cargo check --manifest-path src-tauri/Cargo.toml --locked`：由 CI Linux/Windows/macOS 成功验证。
+- [x] `pnpm run check`、相关 source checks、`git diff --check` 和 `pnpm run check:secrets`；本切片无前端代码改动，secret gate 通过。
+- [x] CI Linux/Windows/macOS 记录 compile/test 结果：run `35185323819` 全绿；Linux/macOS 各 298 tests、Windows 302 tests。真实 Tauri GUI、VNC/SSH/Docker 服务仍记 `ENVIRONMENT-BLOCKED`。
 
 ## 6. 交付
 
 - [ ] 更新矩阵、HANDOFF 和父任务 implement 状态。
-- [ ] 创建独立英文提交，不 amend；推送前核对 remote branch/tree并取得用户授权。
-- [ ] 只有所有可运行检查通过、阻塞项明确记录后才考虑完成子任务；不归档父 Task 01。
+- [x] 创建独立英文提交，不 amend；提交 `bfc2f2a` 已推送并取得 run `35185323819` 验证。
+- [ ] 只有所有可运行检查通过、阻塞项明确记录后才考虑完成子任务；Docker/MCP/PTY/runner host 核查和 full fmt blocker 仍未完成，不归档父 Task 01。

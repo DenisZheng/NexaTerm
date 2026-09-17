@@ -24,12 +24,12 @@
 
 ## Acceptance Criteria
 
-- [ ] 生命周期矩阵完成，明确每个 owner 的正常/异常/取消/窗口关闭出口和当前证据。
-- [ ] VNC WebSocket bridge 与 tunnel per-connection task 的 owner 关系已验证；确认有缺口时完成最小 cancellation/join/abort 修复及回归。
+- [x] 生命周期矩阵完成，明确每个 owner 的正常/异常/取消/窗口关闭出口和当前证据。
+- [x] VNC WebSocket bridge 与 tunnel per-connection task 的 owner 关系已验证；已完成最小 JoinSet ownership/abort/join 修复及 VNC 重复 close 回归。
 - [ ] Docker stream、MCP supervisor/child、PTY/local session 和 runner host 通知链完成源码级核查，并新增必要的 deterministic tests。
-- [ ] `cargo fmt --manifest-path src-tauri/Cargo.toml --check`、targeted Rust tests 和 `cargo check` 通过；父分支既有格式漂移若仍存在，单独记录 blocker，不把本任务修改混入基线重排。
-- [ ] Rust Linux/Windows/macOS CI 验证成功/失败/取消相关测试；没有真实 GUI/外部服务时保留完整 `ENVIRONMENT-BLOCKED` 证据。
-- [ ] 不新增敏感日志、协议字段、应用依赖或无关 UI 改动。
+- [ ] `cargo fmt --manifest-path src-tauri/Cargo.toml --check`、targeted Rust tests 和 `cargo check` 通过；Rust targeted/full tests 和 check 已通过 CI，full fmt 仍被父分支既有格式漂移阻塞，已单独记录 blocker。
+- [x] Rust Linux/Windows/macOS CI 验证本切片测试：run `35185323819` 全绿，Linux/macOS 各 298 tests、Windows 302 tests 全部通过；真实 GUI/外部服务仍保留 `ENVIRONMENT-BLOCKED`。
+- [x] 不新增敏感日志、协议字段、应用依赖或无关 UI 改动。
 
 ## Out of Scope
 

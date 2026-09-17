@@ -74,6 +74,8 @@ capability 独立检查已在 `55a2cb7` / run `35085375573` 实际通过。本�
 
 第一切片已完成并经 CI 验证：子任务 `09-17-phase4-input-boundaries`，最终提交 `5560b84`，run `35179534117` 全绿。覆盖 MCP script args quoting、SFTP remote/local path traversal、WebDAV dot segments、Docker/network/tunnel negative contracts；Rust Linux/macOS 各 297 tests、Windows 301 tests 全部通过。详细交接见子任务 `HANDOFF.md`。
 
+生命周期第一切片也已完成：子任务 `09-17-phase4-lifecycle-cleanup`，提交 `bfc2f2a`，run `35185323819` 全绿。VNC bridge 和 tunnel accept loop 已用 `JoinSet` 接管 per-client tasks，避免 owner 结束后遗留 detached relay/forward task；Linux/macOS 各 298 tests、Windows 302 tests 全部通过。真实 GUI、VNC/SSH forward server 和 app shutdown 仍待环境验证，详细交接见该子任务 `HANDOFF.md`。
+
 - [x] 输入边界第一切片：remote exec / Docker / WebDAV / remote file / tunnel / shell quoting 的 Windows + POSIX 契约级负向用例；真实 SSH/Docker/WebDAV 服务仍记 `ENVIRONMENT-BLOCKED`。
 - [ ] PTY / runner / tunnel / websocket / MCP sidecar / VNC runner host 的成功/失败/取消/窗口关闭四类清理路径源码级核查 + `cargo test`（经 CI）验证。
 - [ ] Vault 回读、known-host changed 拒绝、连接失败语义回归。
