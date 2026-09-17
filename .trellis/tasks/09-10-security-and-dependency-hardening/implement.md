@@ -28,7 +28,27 @@
     根因是 HEAD 锁文件由发版准备时另一版本 cargo 生成（其求解器把区间依赖统一到 0.61.2），本机 cargo 1.98.1 复现不出该统一结果；已验证 `cargo update -p X --precise` 逐个执行与批量执行产出**完全相同的锁文件哈希**，即非命令写法所致。
     `1a8e95e` 的 CI 三平台 `cargo check` + `cargo test` 全绿，确认该连带变更无编译或运行时副作用。
 - [ ] 删除明显未使用的 capability，按窗口拆分配置；配置拆分已在 commit `443e4a8` 完成，调用点矩阵见 `SECURITY_REVIEW.md` §5；真实 `tauri dev` runner 窗口回归与未授权边界验证仍待具备完整 GUI/工具链的环境。
-- [ ] 增加 secret scan、audit artifact 与配置静态检查脚本，输出明确 `PASS` / `FAIL` / `ENVIRONMENT-BLOCKED`。其中 capability 静态策略脚本与 5 个负向单测已在 `443e4a8` 落地；本轮将其接入 CI，secret scan、audit artifact 与 CSP 检查仍未完成。
+- [ ] 增加 secret scan、audit artifact 与配置静态检查脚本，输出明确 `PASS` / `FAIL` / `ENVIRONMENT-BLOCKED`。其中 capability 独立 step 已在 `55a2cb7` 经 CI 通过；本轮实现 secret scan 和 audit artifact 并完成本地验证，新增远端 job 待提交推送后验证，CSP 检查仍未完成。
+
+## Batch E 本轮执行清单
+
+- [x] 用户确认扫描当前代码与 Git 历史；密钥阻断，依赖发现先报告，工具/网络失败仍阻断。
+- [x] 固定 Gitleaks/cargo-deny 版本和安装包 SHA256，增加可重复安装与命令入口。
+- [x] 实现完整历史+受跟踪工作树扫描、具体测试夹具指纹豁免、脱敏报告与失败退出码。
+- [x] 实现 npm/Rust 审计完成性检查、advisory 归档、工具版本与 lockfile hash。
+- [x] 接入独立 CI job 与仅白名单报告的 artifact（14 天），不输出命中原文；配置已做 YAML/契约检查，远端运行待提交推送后验证。
+- [x] 运行真实工具和脚本回归，记录剩余阻塞并暂存待审核；不自动提交推送。
+- [x] 完成双轴审核并修复 3 项 P2；新增/加强回归后 55/55 通过，记录见 `review-batch-e.md`。本轮用户授权审核和本地提交，不含推送。
+- [ ] 获准推送后验证新增 `Security evidence` job 的真实执行和三个 artifact 报告。
+
+### Batch E 本机证据（2026-09-17）
+
+- Node `22.22.3`、pnpm `11.22.0`、Gitleaks `8.30.1`、cargo-deny `0.20.2`、cargo `1.98.1`。Gitleaks Windows 安装包 SHA256 已对官方发布资产校验。
+- `RUN_SECURITY_INTEGRATION=1` + `node --test scripts/*.test.mjs`：审核后 55/55 PASS，真实历史删除/dirty tracked/浅克隆用例未跳过。缺工具、解析错误、退出码不一致和原文脱敏均有负向断言；补充了 npm 可选字段与逐严重度计数回归、CLI 测试摘要隔离断言。
+- `pnpm run check`、`pnpm run check:tauri-capabilities`、启动模块边界检查、JS/PowerShell 语法检查和 CI YAML/权限/artifact 契约检查均 PASS。
+- 在线 npm：1 low，`REVIEW-REQUIRED`；在线 Rust：13 条（4 vulnerability / 6 unmaintained / 3 unsound），`REVIEW-REQUIRED`。这里的 exit 0 表示采集完成，不表示安全问题已解决。Rust 本轮配置显式覆盖所有 unsound 依赖；旧“全部是 unmaintained”的表述不能当作当前风险结论。
+- 初版新文件暂存后扫描覆盖 812 个受跟踪文件；审核修复与记录纳入暂存后再次运行 `pnpm run check:secrets`，覆盖 813 个受跟踪文件、218 个历史提交，0 个未豁免命中。唯一核准夹具在历史和当前代码各出现一次，报告保留两次定位；不是两项全局豁免。
+- 本批不修改应用依赖/lockfile/CSP；新增 job 未远端运行，Task 01 不归档。
 
 ## Phase 3：MCP 与错误边界
 
@@ -152,6 +172,9 @@ cargo test --workspace --locked --offline
   前端侧另经 `npx tsc --noEmit`、`node --test scripts/*.test.mjs` 37/37、两项 source check 本机通过。
 - commit `443e4a8`：完成 main / `vnc-runner-host` capability 拆分，并新增 capability policy 静态检查与 5 个负向单测；GitHub Actions run `35065160284` 的 Frontend checks 与 Rust 三平台 `cargo check` / `cargo test` 全部 `success`，但该 run 尚未执行独立的 `check:tauri-capabilities` step。
   本机随后执行 `pnpm run check`、`node --test scripts/*.test.mjs`（42/42）、`pnpm run check:tauri-capabilities` 和 `node scripts/check-startup-module-boundary-source.mjs`，均 PASS。真实 `tauri dev` runner GUI 回归仍为 `ENVIRONMENT-BLOCKED`；当前无 `cargo`，无法启动 Tauri 应用验证窗口与未授权 IPC 行为。
+
+- commit `55a2cb7`：run `35085375573` 已由 GitHub API 核实为 `completed/success`；新增 `Tauri capability policy` step 实际执行且 `success`，前端其余步骤与 Rust 三平台 check/test 均通过。Windows 打包按 push 规则 skipped，非 GUI/打包验收。
+- Batch E 环境复核：默认 PATH 未包含 Rust 工具，但 `D:\tmp\nexaterm-rust\cargo-home\bin` 实际有 cargo `1.98.1` / cargo-deny `0.20.2`；设置 `CARGO_HOME` / `RUSTUP_HOME` / PATH 后 `cargo metadata --locked --offline --no-deps` PASS。前文“当前无 cargo”只代表当时 PATH 探测，不是未安装；本机 GUI/链接工具链仍未验收。
 
 #### 已修复项：Windows 本地 PTY 往返用例（根因已确认并经 CI 验证）
 

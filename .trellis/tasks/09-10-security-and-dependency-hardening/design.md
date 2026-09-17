@@ -138,6 +138,16 @@ Rust 内部错误构造与日志仍保留完整 `raw_message`，保留诊断能�
 - raw_message 完全删除会损害诊断；分层和 diagnostic ID 能在不把敏感细节送到前端的情况下保留可追踪性。
 - 降级存量非 loopback 配置会让正在远程使用 MCP 的用户在升级后连接失败一次，需要重新确认；这是为收敛存量误暴露付出的显式代价，且失败是可见的（设置页提示），不是静默行为。
 
+## 8.1 Batch E：密钥门禁与依赖审计归档
+
+- 新增独立 `security` CI job（只读权限、完整 checkout、不需要 repository secret、不发布 Release）。Gitleaks 固定 `8.30.1`，cargo-deny 固定 `0.20.2`，官方安装包的 SHA256 固定到仓库配置；pnpm 沿用 `11.22.0`。
+- Node 脚本包装三类工具并复用原生子进程/JSON/crypto，无新增 npm 依赖。命令分开执行，CI 通过 `always()` 保留其它检查与 artifact，不用 `continue-on-error` 吞掉工具故障。
+- Secret scan：完整历史使用显式 `git --log-opts`；当前文件用 `git ls-files` 列表复制到临时目录扫描，拒绝 shallow checkout、未解决冲突和跨目录符号链接等不完整范围。Gitleaks 启用全量脱敏，原始临时报告仅供内存解析，持久化时只保留 path/line/rule/commit。已核实的测试输入以规则+文件+完整源码行 SHA256 精确豁免，记录理由并保留豁免计数；其余任何发现都 FAIL，缺工具或扫描异常也非零退出；不输出任意子进程 stderr。
+- npm 使用官方 registry 的 `pnpm audit --json`；Rust 使用 `cargo-deny --locked --format json check advisories` 的机器可读完成信息。区分“有效报告内有发现”和工具/网络错误，后者不得变成空列表或 PASS。保留 advisory ID、依赖版本、严重度/类别与依赖关系；不忽略或自动接受漏洞。npm 合法缺省 GHSA/推断修复范围时保留 registry ID 并以 null 表达未知，各严重度统计按 advisory 数逐项校验（不是依赖版本/路径数）。
+- `logs/security/` 存放三个独立 JSON 报告，含命令（无 secret）、工具版本、commit、lockfile SHA256、检查状态与发现项；CI 仅上传这些白名单报告，保留 14 天。依赖有发现写 `REVIEW-REQUIRED`（采集退出 0，安全验收未通过），工具/报告故障写 `FAIL` 或 `ENVIRONMENT-BLOCKED` 并非零退出。
+- 覆盖报告结构异常、退出码不一致、找不到工具、网络错误、脱敏、历史中提交后删除的假密钥与当前未提交文件等回归。故意命中用例只在临时 Git 仓库生成，不向本仓库写入可用 secret。
+- 回滚仅删除新增 job、脚本与命令入口，不修改 lockfile、应用配置和 Vault 数据。
+
 ## 9. 验证环境要求
 
 ### 9.1 原始基线机器的工具链状况（实测记录）

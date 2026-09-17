@@ -1,16 +1,16 @@
 # Task 01 安全与依赖硬化 · 交接给 Codex
 
-> 更新时间：2026-09-16 ｜ 分支 `main`（Phase 3 整体完成：第 1/2/4 步 @ `f59076c`，第 3 步 @ `4caaf0d`，均 CI 全绿）
+> 更新时间：2026-09-17 ｜ 分支 `main`（capability 独立 CI step 已在 `55a2cb7` / run `35085375573` 通过；Batch E 包含本轮审核修复，新增安全 job 尚未远端验证）
 >
 > **本文件是交接给下一位接手人的说明。** 标准协作规则见仓库根 `AGENTS.MD`（Codex 原生读取），本文件不重复，只补"当前位置 + 下一步 + 本任务专属的坑"。先 `git pull`，再从本文件"下一步"开始。
 >
-> **当前接手点**：Phase 3 已整体完成；Batch C 的 capability 配置拆分已在 commit `443e4a8` 落地并经 CI 编译/测试验证。下一步先让 capability 静态检查进入 CI，再在具备 GUI/完整工具链的环境完成 runner 回归；详见"下一步 1"。
+> **当前接手点**：capability 配置及独立 CI step 已完成。Batch E 的密钥扫描与依赖审计归档已完成本地审核和回归，获准推送后验证新增 `Security evidence` job 的远端运行。本轮用户仅授权审核和本地提交，未授权推送；真实 runner GUI、CSP 和未解决 advisory 仍保留，不得据此归档 Task 01。审核记录见 `review-batch-e.md`。
 
 ## 当前上下文
 
 - **项目**：NexaTerm（Tauri 2 + React 19 + Rust 桌面终端），Trellis 管理，规范在 `.trellis/spec/`。
 - **任务**：`.trellis/tasks/09-10-security-and-dependency-hardening`（共 5 个 Phase）。
-- **验证通道（关键约束）**：这台 Windows 机器无可用 Rust 工具链（MSVC C++ 工作负载半装 + 缺 Windows SDK），`cargo check`/`cargo test` 本机跑不了。验证有两条路径，任一可用即不得记 ENVIRONMENT-BLOCKED：
+- **验证通道（关键约束）**：这台 Windows 机器缺少完整编译/链接环境（MSVC C++ 工作负载半装 + 缺 Windows SDK），`cargo check`/`cargo test` 本机跑不了；Rust 与 cargo-deny 审计工具已安装在自定义目录，设置 PATH 后可用，不能笼统记为工具缺失。编译验证有两条路径，任一可用即不得记 ENVIRONMENT-BLOCKED：
   - **(1) 本机/本环境有完整工具链**：直接按 `implement.md`"验证命令基线"跑 `cargo check --workspace --locked` + `cargo test --workspace --locked`（Codex 若在具备工具链的环境接手——如 Mac + Xcode CLT，优先走这条，更快）。
   - **(2) 无本地工具链**：push 到 `main` 触发 `.github/workflows/ci.yml`（frontend job + Rust 三平台矩阵 linux-x64 / windows-x64 / macos-arm64，各跑 `cargo check` + `cargo test`），记录 commit SHA + job 结论作为证据。
   - 前端 `pnpm run check` / `node scripts/check-startup-module-boundary-source.mjs` 本机可跑。
@@ -66,7 +66,9 @@
 
 ### 2. Batch E（Phase 2 遗留）
 
-补 secret scan / audit artifact / CSP 配置静态检查，输出明确 PASS/FAIL/ENVIRONMENT-BLOCKED。capability policy 已有本地 PASS 和 5/5 单测，secret scan、audit artifact 与 CSP 资源证据仍未完成。
+capability 独立检查已在 `55a2cb7` / run `35085375573` 实际通过。本轮实现 `check:secrets`、`audit:npm`、`audit:rust` 与独立 `Security evidence` CI job；按用户确认，密钥硬阻断，依赖先报告（`REVIEW-REQUIRED` 不是安全验收），工具或网络故障仍失败。完整 Git 历史及受跟踪的 dirty 工作树都扫描，夹具仅按具体规则/文件/源码指纹豁免。
+
+本地真实工具验证：Gitleaks 无未豁免命中；npm 为 1 low；Rust 为 4 vulnerability + 6 unmaintained + 3 unsound。没有自动风险接受或依赖升级。审核发现的 3 项 P2 均已修复：测试 CLI 污染 Actions 摘要、合法 npm 可选字段误判、npm 严重度计数与明细未逐项核对。脚本回归含真实 Gitleaks 临时 Git 仓库测试，审核后共 55/55 通过、无跳过；真实 pnpm 11.22.0 的 loopback 模拟 registry 也验证了可选字段语义。新增 CI job 尚待获准推送后验证；CSP 检查和 GUI 验收仍待完成。契约及复现命令见 `.trellis/spec/backend/security-evidence.md`。
 
 ### 3. Phase 4 输入边界与生命周期
 

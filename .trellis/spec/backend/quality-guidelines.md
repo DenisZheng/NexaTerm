@@ -98,7 +98,7 @@ Questions to answer:
   run: node --test scripts/*.test.mjs
 ```
 
-This can pass the unit tests while never executing the check against the files in the checkout.
+The current unit test already reads the capability files in the checkout. This alone does not expose the CLI check as a separately identifiable CI step, and neither form proves real GUI/IPC behavior.
 
 #### Correct
 
@@ -107,7 +107,7 @@ This can pass the unit tests while never executing the check against the files i
   run: pnpm run check:tauri-capabilities
 ```
 
-The explicit step validates the checked-out capability configuration and fails the job on policy violations.
+The explicit step validates the checked-out capability configuration and makes the CLI exit status visible independently of unit-test results. Keep both; do not interpret either as GUI/IPC acceptance.
 
 ---
 

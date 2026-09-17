@@ -1,0 +1,32 @@
+{
+  "gitleaks": {
+    "version": "8.30.1",
+    "repository": "gitleaks/gitleaks",
+    "tag": "v8.30.1",
+    "assets": {
+      "linux-x64": {
+        "name": "gitleaks_8.30.1_linux_x64.tar.gz",
+        "sha256": "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
+      },
+      "windows-x64": {
+        "name": "gitleaks_8.30.1_windows_x64.zip",
+        "sha256": "d29144deff3a68aa93ced33dddf84b7fdc26070add4aa0f4513094c8332afc4e"
+      }
+    }
+  },
+  "cargo-deny": {
+    "version": "0.20.2",
+    "repository": "EmbarkStudios/cargo-deny",
+    "tag": "0.20.2",
+    "assets": {
+      "linux-x64": {
+        "name": "cargo-deny-0.20.2-x86_64-unknown-linux-musl.tar.gz",
+        "sha256": "9f12ed4c49936e09b48bf862b595cde2fe64fcbd9d74dfacac6131ca824c8d5f"
+      },
+      "windows-x64": {
+        "name": "cargo-deny-0.20.2-x86_64-pc-windows-msvc.tar.gz",
+        "sha256": "975a22143262fd27476d19ee00c7af67978426e40e1dee94eed6bbade1cf87dc"
+      }
+    }
+  }
+}

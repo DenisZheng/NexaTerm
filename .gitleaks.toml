@@ -1,0 +1,5 @@
+title = "NexaTerm secret scan"
+
+# 使用固定版本的内置规则；不得通过整目录排除或自动生成 baseline 掩盖命中。
+[extend]
+useDefault = true

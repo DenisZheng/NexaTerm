@@ -1,0 +1,8 @@
+[
+  {
+    "rule": "curl-auth-header",
+    "file": "src-tauri/src/ai_assistant.rs",
+    "sourceSha256": "b7831935da7406876c1a8a208f958b9dcc4bace12458ef3385ec94ad00d87fef",
+    "reason": "assesses_dangerous_commands 单测的固定 Authorization 输入，用于断言危险命令识别；仅豁免完全相同源码行。核查来源：e942e9bd465fb604e4367727f187131bc7b1366b。"
+  }
+]

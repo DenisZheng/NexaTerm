@@ -18,6 +18,7 @@ This directory contains guidelines for backend development. Fill in each file wi
 | [Database Guidelines](./database-guidelines.md) | ORM patterns, queries, migrations | To fill |
 | [Error Handling](./error-handling.md) | Error types, handling strategies | To fill |
 | [Quality Guidelines](./quality-guidelines.md) | Code standards, forbidden patterns, CI security gates | Active |
+| [Security Evidence](./security-evidence.md) | 密钥硬门禁、依赖审计报告、CI artifact 与工具故障契约 | Active |
 | [Logging Guidelines](./logging-guidelines.md) | Structured logging, log levels | To fill |
 | [Tauri Command Contracts](./tauri-command-contracts.md) | Command payloads, validation, storage contracts | Active |
 

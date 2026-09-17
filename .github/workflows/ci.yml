@@ -66,6 +66,66 @@ jobs:
       - name: Startup module boundary
         run: node scripts/check-startup-module-boundary-source.mjs
 
+  security:
+    name: Security evidence
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.22.0
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install verified security tools
+        shell: pwsh
+        run: |
+          ./scripts/install-security-tool.ps1 -Tool gitleaks -Destination "$env:RUNNER_TEMP/security-tools"
+          ./scripts/install-security-tool.ps1 -Tool cargo-deny -Destination "$env:RUNNER_TEMP/security-tools"
+
+      - name: Security regression tests
+        env:
+          RUN_SECURITY_INTEGRATION: '1'
+        run: node --test scripts/security-report.test.mjs
+
+      - name: Scan tracked files and Git history
+        if: always()
+        run: pnpm run check:secrets
+
+      # 独立采集：密钥失败不应阻止依赖报告产生；工具故障仍保留失败结论。
+      - name: Collect npm audit (report only)
+        if: always()
+        run: pnpm run audit:npm
+
+      - name: Collect Rust advisories (report only)
+        if: always()
+        run: pnpm run audit:rust
+
+      - name: Upload sanitized security evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-evidence-${{ github.sha }}
+          path: |
+            logs/security/secrets.json
+            logs/security/npm.json
+            logs/security/rust.json
+          retention-days: 14
+          if-no-files-found: error
+
   # Rust 侧：三平台矩阵，独立看结果（fail-fast: false）。
   # cargo check 确认编译通过；cargo test 驱动 src-tauri 内 250+ 个单元/集成测试。
   # 这是本机 Windows 一直无法执行的验收项，改由 CI 承担。

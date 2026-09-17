@@ -157,7 +157,20 @@
 
 - **Batch B（Rust 锁文件升级）**：`cargo update -p h2 -p chacha20 -p crypto-bigint -p der` 干净修复 h2（RUSTSEC-2026-0258）+ 3 个 yanked crate；commit `1a8e95e` 已经 GitHub Actions Rust 三平台 `cargo check` / `cargo test` 全绿验证。本机仍因缺少 MSVC/Windows SDK 无法复跑，属本机 `ENVIRONMENT-BLOCKED`，不影响 CI 验收。
 - **Batch C（capability 按窗口拆分）**：已按 §5 矩阵拆成 main（主窗口权限）+ `vnc-runner-host`（事件权限及 close / destroy / minimize / toggle-maximize / start-dragging 5 项 window 权限）两份 capability 文件；`scripts/check-tauri-capabilities.mjs` 及其 5 个负向单测已通过，真实 `tauri dev` runner 窗口回归仍待完整 GUI/工具链环境。
-- **Batch E（静态检查脚本）**：capability policy 检查已落地并接入当前工作区的 CI 变更；secret scan、audit artifact、CSP 非 `null` 及资源白名单证据化仍待完成。
+- **Batch E（静态检查脚本）**：capability policy 独立 step 已由 `55a2cb7` / run `35085375573` 验证。本轮实现 secret scan 与 audit artifact，见下节；新增 CI job 尚待远端验证，CSP 非 `null` 及资源白名单证据化仍待完成。
+
+## Task 01 · Batch E 门禁与报告（2026-09-17）
+
+用户已确认：密钥扫描覆盖当前受跟踪文件与 Git 历史，发现密钥阻断 CI；依赖发现先报告，不视为风险接受，工具/网络/报告故障仍阻断。具体命令和安全字段契约见 `.trellis/spec/backend/security-evidence.md`。
+
+- Gitleaks `8.30.1`：官方安装包固定 SHA256，覆盖历史与当前工作树；发现的 `ai_assistant.rs::assesses_dangerous_commands` 固定测试输入只按规则、文件和源码 SHA256 精确豁免。没有整体排除 tests 或创建忽略全部历史结果的 baseline。
+- 新增 `Security evidence` CI job：只读 token、完整 checkout、三个独立检查；仅上传脱敏后的 `secrets.json` / `npm.json` / `rust.json`，保留 14 天。不上传命中原文、任意子进程输出或整个日志目录。
+- 本机 npm 审计（pnpm `11.22.0`，官方 registry）：1 条 esbuild low，Critical/High/Moderate 为 0，状态为 `REVIEW-REQUIRED`，不等于漏洞已修复。
+- 本机 Rust 审计（cargo-deny `0.20.2`，在线 RustSec）：13 条发现 = 4 条 vulnerability、6 条 unmaintained、3 条 unsound。相比旧基线，本轮显式覆盖所有依赖的 unsound，而非只查 workspace；旧任务记录“剩余全部是 unmaintained”不准确。
+- 4 条 vulnerability：quick-xml 的 `RUSTSEC-2026-0194` / `RUSTSEC-2026-0195`、rsa 的 `RUSTSEC-2023-0071`、rustls 的 `RUSTSEC-2026-0285`。这些是待逐项评估项；本轮未升级依赖、未添加 ignore、未替用户接受风险。
+- Rust 工具已存在于原基线的自定义目录，显式设置 PATH 与 `CARGO_HOME` / `RUSTUP_HOME` 后能做不触发编译的审计；这不能证明 MSVC/SDK、GUI 或链接验证已恢复。
+- 本轮双轴审核发现并修复 3 项 P2：CLI 测试污染实际 Actions 摘要、合法 npm advisory 可选字段误判、严重度统计未逐项核对。审核后脚本回归 55/55 通过（真实 Gitleaks 用例无跳过），记录见 `.trellis/tasks/09-10-security-and-dependency-hardening/review-batch-e.md`。
+- 新增 CI job 的远端执行尚待本批获准推送；本地报告在 gitignored 的 `logs/security/`，本文件仅保留结果摘要。CSP、真实 runner GUI、完整许可证检查和 `cargo audit` 仍未因此验收。
 
 ## 后续审查顺序
 

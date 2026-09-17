@@ -1,0 +1,8 @@
+# 本文件只控制 advisory 采集；不代表 licenses/bans/sources 已验收。
+# 不配置 ignore；任何发现都保留在报告里，由包装脚本区分 REVIEW-REQUIRED 与工具故障。
+[advisories]
+db-urls = ["https://github.com/RustSec/advisory-db"]
+yanked = "warn"
+unmaintained = "all"
+unsound = "all"
+git-fetch-with-cli = true
