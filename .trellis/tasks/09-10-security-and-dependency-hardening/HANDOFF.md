@@ -1,10 +1,12 @@
 # Task 01 安全与依赖硬化 · 交接给 Codex
 
-> 更新时间：2026-09-17 ｜ 分支 `main`（Batch E 提交 `73e90af` 已推送；CI run `35172498650` 全绿，`Security evidence` job 与三个脱敏 artifact 已核验）
+> 更新时间：2026-09-19 ｜ 分支 `main`（最新提交 `8a8e02e`；CI run `35316090841` 全绿）
 >
 > **本文件是交接给下一位接手人的说明。** 标准协作规则见仓库根 `AGENTS.MD`（Codex 原生读取），本文件不重复，只补"当前位置 + 下一步 + 本任务专属的坑"。先 `git pull`，再从本文件"下一步"开始。
 >
-> **当前接手点**：capability 配置及独立 CI step 已完成。Batch E 已完成双轴审核、本地回归、提交和远端 CI 验证：`73e90af` / run `35172498650`。真实 runner GUI、CSP 和未解决 advisory 仍保留，不得据此归档 Task 01。审核记录见 `review-batch-e.md`。
+> **当前接手点**：Phase 1 / 3 / 4 已完成（Phase 4 的真实服务与 GUI 收尾记 `ENVIRONMENT-BLOCKED`）。仍待做：Batch C 的 `tauri dev` runner 窗口回归、Phase 5 的 CSP 真实启用、跨平台 capability/bind 验证、`cargo audit`、code/security review 与发布门禁——这些全部需要能启动 Tauri 应用的完整工具链环境。不得据此归档 Task 01。Batch E 审核记录见 `review-batch-e.md`。
+>
+> **环境记录（2026-09-19）**：本轮接手机为 macOS（Xcode CLT、Homebrew、Node 24、pnpm 10.30.3 就绪，`pnpm install --frozen-lockfile` 与 `pnpm run check` 本机通过），但未安装 rustup/cargo；用户决定暂不安装，Rust 验证继续走 CI 路径 (2)。安装 rustup 后即可走路径 (1) 并解除上述 GUI 阻塞项。
 
 ## 当前上下文
 
@@ -22,8 +24,8 @@
 | 1 审计与威胁模型 | ✅ 完成 | 见 `SECURITY_REVIEW.md`、`LICENSE_AUDIT.md`。 |
 | 2 低风险硬化 | 🟡 部分 | Batch A/B/D 完成；Batch C 配置拆分已完成（@ `443e4a8`），真实 runner 回归与 Batch E 其余门禁仍待做。 |
 | 3 MCP 与错误边界 | ✅ 完成 | 第 1/2/4 步 CI 全绿 run 34918439293 @ `f59076c`；第 3 步 CI 全绿 run 34953115609 @ `4caaf0d`。 |
-| 4 输入边界与生命周期 | ❌ 未开始 | |
-| 5 CSP/跨平台/发布门禁 | ❌ 未开始 | |
+| 4 输入边界与生命周期 | ✅ 完成（契约/单测级） | 输入边界 run 35179534117 @ `5560b84`；生命周期 run 35185323819 @ `bfc2f2a`、run 35295465354 @ `e6c6ca7`；Vault/known-host/连接失败回归 run 35304208695 @ `64e2b86`。真实 SSH/Docker/WebDAV/VNC 服务与 GUI 收尾记 `ENVIRONMENT-BLOCKED`。 |
+| 5 CSP/跨平台/发布门禁 | 🟡 部分 | CSP 草案 + 静态检查已接入 CI（`bf8aad1` / run 35310653687）；advisory 复核与风险接受已登记（`f3c3c77`，`SECURITY_REVIEW.md` §7）。CSP 真实启用、跨平台 capability/bind 验证、`cargo audit`、code/security review 与发布门禁待做。 |
 
 ### Phase 3 已落地内容（本轮）
 
@@ -78,7 +80,7 @@ capability 独立检查已在 `55a2cb7` / run `35085375573` 实际通过。本�
 
 - [x] 输入边界第一切片：remote exec / Docker / WebDAV / remote file / tunnel / shell quoting 的 Windows + POSIX 契约级负向用例；真实 SSH/Docker/WebDAV 服务仍记 `ENVIRONMENT-BLOCKED`。
 - [x] PTY / runner / tunnel / websocket / MCP sidecar / VNC runner host 的四类清理路径源码级核查 + `cargo test`（经 CI）验证：第二切片 `e6c6ca7` / run `35295465354` 全绿，修复 MCP sidecar 退出残留与 Local PTY 读线程泄漏，父分支 rustfmt 漂移已清除。
-- [ ] Vault 回读、known-host changed 拒绝、连接失败语义回归。
+- [x] Vault 回读、known-host changed 拒绝、连接失败语义回归：Vault 回读为 `storage_vault.rs` 既有 10 例；连接失败语义为 `session.rs` 的 `network_errors_refine_into_stable_codes` 等既有用例；known-host 仓储层三态 / host 归一化 / 重 trust / Changed→`host_key_changed` 阻断 4 例于 `64e2b86` 补齐，run `35304208695` 三平台全绿（2026-09-19 经 GitHub API 复核 Frontend checks、Rust linux-x64 / windows-x64 / macos-arm64、Security evidence 均 success）。
 
 ### 4. Phase 5 CSP / 跨平台 / 发布门禁
 

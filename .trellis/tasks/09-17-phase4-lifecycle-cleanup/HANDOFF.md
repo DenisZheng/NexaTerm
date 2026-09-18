@@ -31,6 +31,6 @@
 
 - 真实 VNC WebSocket client/target、SSH forward server、Tauri runner window close 和应用退出时的 sidecar 收尾尚未在 GUI/外部服务环境验证，记为 `ENVIRONMENT-BLOCKED`。
 - 第二切片已完成 Docker/MCP/PTY/runner host 源码核查并修复 MCP 退出残留与 Local PTY 读线程泄漏，CI run `35295465354` 全绿。
-- 子任务剩余：Vault 回读 / known-host changed / 连接失败语义回归属父任务 Phase 4 第三项，尚未开始。
+- 父任务 Phase 4 第三项（Vault 回读 / known-host changed / 连接失败语义回归）已于 `64e2b86`（run `35304208695` 三平台全绿）补齐，证据见父任务 `implement.md` Phase 4 与 `HANDOFF.md`。
 - 全量 `cargo fmt --check` 漂移已清除（见第二切片）。
 - 子任务保持 `in_progress`，不要据此归档父 Task 01。
