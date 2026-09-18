@@ -147,7 +147,7 @@
 | rsa RUSTSEC-2023-0071 Marvin 时序侧信道 | 仅当攻击者可观测网络时序且使用 RSA 私钥操作；客户端签名暴露低于服务端解密 | 优先 Ed25519/ECDSA；绑定 russh P0 升级 | russh 升级到依赖修复版 rsa 后解除 | **已接受**（项目 owner，2026-09-18；复核：rsa 0.9.10 / 0.10.0-rc.18 仍无修复版，advisory `patched = []` 为有意标注） |
 | quick-xml RUSTSEC-2026-0194 / 0195（DoS） | 仅由 plist → tauri-utils 引入，且全在 build-dependencies；运行时二进制不含该代码路径 | 无；构建输入为仓库自有 `tauri.conf.json` / Info.plist，非攻击者可控 | tauri 上游把 plist 升到依赖 quick-xml ≥0.41 后解除；2026-09-18 `cargo update --dry-run -p quick-xml` 为 0 包可动，跨 minor 版无法本地强升 | **已接受**（项目 owner，2026-09-18） |
 | unic-* ×5 / proc-macro-error（unmaintained，tauri 生态自有） | 纯构建期 proc-macro 与 Unicode 数据表，运行时无攻击面 | 跟随 tauri 版本升级 | tauri 升级带入替代 crate 后解除 | **已接受**（项目 owner，2026-09-18） |
-| rustls RUSTSEC-2026-0285（TLS 1.3 握手消息跨加密层）| **已修复**：2026-09-18 `cargo update -p rustls --precise 0.23.45`，连带 rustls-webpki 0.103.13→0.103.15、aws-lc-rs 1.17.0→1.18.1、aws-lc-sys 0.41.0→0.45.0（均 semver 兼容补丁位）；`cargo deny check advisories` 由 10 条降至 9 条 | — | 待 CI 三平台 `cargo check`/`cargo test` 验证编译 | 已修复，待 CI |
+| rustls RUSTSEC-2026-0285（TLS 1.3 握手消息跨加密层）| **已修复**：2026-09-18 `cargo update -p rustls --precise 0.23.45`，连带 rustls-webpki 0.103.13→0.103.15、aws-lc-rs 1.17.0→1.18.1、aws-lc-sys 0.41.0→0.45.0（均 semver 兼容补丁位）；`cargo deny check advisories` 由 10 条降至 9 条 | — | 提交 `f3c3c77`，CI 三平台 `cargo check`/`cargo test` 全绿（用户 2026-09-18 确认） | 已修复，CI 验证通过 |
 
 ## Task 01 · Phase 2 执行结果（截至 2026-09-16）
 
