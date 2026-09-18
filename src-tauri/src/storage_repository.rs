@@ -2886,6 +2886,185 @@ mod tests {
     use crate::terminal::serial::{SerialFlowControl, SerialParity};
     use crate::terminal::telnet::{TelnetBackspaceMode, TelnetEnterMode};
 
+    fn sample_host_key(host: &str, fingerprint: &str) -> crate::known_hosts::HostKeyInfo {
+        crate::known_hosts::HostKeyInfo {
+            host: host.to_string(),
+            port: 22,
+            key_algorithm: "ssh-ed25519".to_string(),
+            fingerprint_sha256: fingerprint.to_string(),
+            public_key: format!("ssh-ed25519 {fingerprint}"),
+        }
+    }
+
+    /// 生产路径（`session.rs` 的 `check_server_key`）只走 SQLite 仓储，不走旧 JSON store，
+    /// 因此三态转换必须在仓储层单独锁住：Unknown → Trusted → Changed。
+    #[test]
+    fn known_host_check_reports_unknown_trusted_and_changed_on_sqlite() {
+        use crate::known_hosts::KnownHostCheck;
+
+        let (repo, db_path, _secrets) = temp_repository("known-host-states");
+
+        assert!(matches!(
+            repo.known_host_check(
+                "example.com",
+                22,
+                sample_host_key("example.com", "SHA256:first")
+            )
+            .unwrap(),
+            KnownHostCheck::Unknown { .. }
+        ));
+
+        repo.known_host_trust(
+            sample_host_key("example.com", "SHA256:first"),
+            "2026-09-18T10:00:00+08:00",
+        )
+        .unwrap();
+
+        assert!(matches!(
+            repo.known_host_check(
+                "example.com",
+                22,
+                sample_host_key("example.com", "SHA256:first")
+            )
+            .unwrap(),
+            KnownHostCheck::Trusted { .. }
+        ));
+
+        // 同 host/port/算法但指纹不同：必须报 Changed 并带回当前受信条目，供拒绝连接与前端并列展示。
+        let changed = repo
+            .known_host_check(
+                "example.com",
+                22,
+                sample_host_key("example.com", "SHA256:second"),
+            )
+            .unwrap();
+        let KnownHostCheck::Changed { current, host_key } = changed else {
+            panic!("指纹变化必须报 Changed，而不是静默信任或当作 Unknown");
+        };
+        assert_eq!(current.fingerprint_sha256, "SHA256:first");
+        assert_eq!(host_key.fingerprint_sha256, "SHA256:second");
+
+        // 未经 trust 的 Changed 不得改写存储：再次用旧指纹检查仍为 Trusted。
+        assert!(matches!(
+            repo.known_host_check(
+                "example.com",
+                22,
+                sample_host_key("example.com", "SHA256:first")
+            )
+            .unwrap(),
+            KnownHostCheck::Trusted { .. }
+        ));
+
+        let _ = std::fs::remove_dir_all(db_path.parent().unwrap());
+    }
+
+    /// host 大小写/空白差异不能让攻击者绕过 Changed 判定拿到 Unknown（Unknown 会走 TOFU 确认而非阻断）。
+    #[test]
+    fn known_host_check_normalizes_host_before_matching() {
+        use crate::known_hosts::KnownHostCheck;
+
+        let (repo, db_path, _secrets) = temp_repository("known-host-normalize");
+        repo.known_host_trust(
+            sample_host_key("Example.COM", "SHA256:first"),
+            "2026-09-18T10:00:00+08:00",
+        )
+        .unwrap();
+
+        assert!(matches!(
+            repo.known_host_check(
+                "  example.com ",
+                22,
+                sample_host_key("example.com", "SHA256:second")
+            )
+            .unwrap(),
+            KnownHostCheck::Changed { .. }
+        ));
+        // 不同端口是独立条目，不应被误判为 Changed。
+        assert!(matches!(
+            repo.known_host_check(
+                "example.com",
+                2222,
+                sample_host_key("example.com", "SHA256:second")
+            )
+            .unwrap(),
+            KnownHostCheck::Unknown { .. }
+        ));
+
+        let _ = std::fs::remove_dir_all(db_path.parent().unwrap());
+    }
+
+    /// 重新 trust 同一 host 只更新指纹与 last_seen，不重置 first_trusted_at，也不产生第二条记录。
+    #[test]
+    fn known_host_trust_replaces_fingerprint_without_resetting_first_trust() {
+        let (repo, db_path, _secrets) = temp_repository("known-host-retrust");
+        let first = repo
+            .known_host_trust(
+                sample_host_key("example.com", "SHA256:first"),
+                "2026-09-18T10:00:00+08:00",
+            )
+            .unwrap();
+        let second = repo
+            .known_host_trust(
+                sample_host_key("example.com", "SHA256:second"),
+                "2026-09-18T11:00:00+08:00",
+            )
+            .unwrap();
+
+        assert_eq!(first.id, second.id);
+        assert_eq!(second.trusted_at, "2026-09-18T10:00:00+08:00");
+        assert_eq!(second.updated_at, "2026-09-18T11:00:00+08:00");
+        assert_eq!(second.fingerprint_sha256, "SHA256:second");
+        let rows = Connection::open(&db_path)
+            .unwrap()
+            .query_row("SELECT COUNT(*) FROM known_hosts", [], |row| {
+                row.get::<_, i64>(0)
+            })
+            .unwrap();
+        assert_eq!(rows, 1, "重新 trust 不得产生第二条记录");
+
+        let _ = std::fs::remove_dir_all(db_path.parent().unwrap());
+    }
+
+    /// Changed 结果映射成的错误必须是不可绕过的 `host_key_changed`，且 details 同时带新旧指纹。
+    #[test]
+    fn known_host_changed_maps_to_blocking_host_key_changed_error() {
+        use crate::app_error::AppErrorDetails;
+        use crate::known_hosts::KnownHostCheck;
+        use crate::ssh_config::app_error_for_host_key_changed;
+
+        let (repo, db_path, _secrets) = temp_repository("known-host-error");
+        repo.known_host_trust(
+            sample_host_key("example.com", "SHA256:first"),
+            "2026-09-18T10:00:00+08:00",
+        )
+        .unwrap();
+        let KnownHostCheck::Changed { current, host_key } = repo
+            .known_host_check(
+                "example.com",
+                22,
+                sample_host_key("example.com", "SHA256:second"),
+            )
+            .unwrap()
+        else {
+            panic!("expected Changed");
+        };
+
+        let error = app_error_for_host_key_changed(&current.fingerprint_sha256, &host_key);
+        assert_eq!(error.code, "host_key_changed");
+        match error.details {
+            Some(AppErrorDetails::HostKeyChanged {
+                host_key,
+                old_fingerprint_sha256,
+            }) => {
+                assert_eq!(old_fingerprint_sha256, "SHA256:first");
+                assert_eq!(host_key.fingerprint_sha256, "SHA256:second");
+            }
+            other => panic!("host_key_changed 必须携带 HostKeyChanged details，实际：{other:?}"),
+        }
+
+        let _ = std::fs::remove_dir_all(db_path.parent().unwrap());
+    }
+
     #[test]
     fn connection_upsert_stores_inline_password_in_secret_store_only() {
         let (repo, db_path, secrets) = temp_repository("inline-password");
