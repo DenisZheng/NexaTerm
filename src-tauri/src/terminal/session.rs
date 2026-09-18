@@ -2311,7 +2311,10 @@ mod tests {
             None
         );
         assert_eq!(
-            refine_network_code("terminal_connect_failed", std::io::ErrorKind::PermissionDenied),
+            refine_network_code(
+                "terminal_connect_failed",
+                std::io::ErrorKind::PermissionDenied
+            ),
             None
         );
         // code 不以 _failed 结尾时不做改写，避免拼出畸形 code。
@@ -2344,7 +2347,12 @@ mod tests {
 
         // JSON 通道用的是 ErrorKind::Other，不会命中任何细分分支。
         let wrapped = app_error_from_russh(
-            to_russh_error(AppError::new("host_key_changed", "主机密钥已变化。", "{}", true)),
+            to_russh_error(AppError::new(
+                "host_key_changed",
+                "主机密钥已变化。",
+                "{}",
+                true,
+            )),
             "terminal_connect_failed",
             "SSH 连接失败。",
         );

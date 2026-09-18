@@ -93,9 +93,9 @@
 ## Phase 4：输入边界与生命周期
 
 - [x] 为 remote exec、Docker、WebDAV、remote file、tunnel、shell quoting 增加 Windows 与 POSIX 契约级负向用例（子任务 `09-17-phase4-input-boundaries`，run `35179534117` 全绿）；真实 SSH/Docker/WebDAV 运行时仍记 `ENVIRONMENT-BLOCKED`。
-- [x] 生命周期第一切片：子任务 `09-17-phase4-lifecycle-cleanup` 已用 `JoinSet` 接管 VNC WebSocket relay 和 tunnel per-client tasks，run `35185323819` 的 Rust 三平台测试全绿；完整 owner 矩阵、PTY/MCP/runner host 和真实 GUI/runtime 仍待完成。
-- [ ] 对 PTY、runner、tunnel、websocket、MCP sidecar 和 VNC runner host 的成功、失败、取消、窗口关闭四类清理路径做源码级核查：确认每个 owner 都有对应清理分支且幂等。
-- [ ] 用 `cargo test` 驱动完成上述资源回收的运行时验证：**可验证（经 CI）**，走 `.github/workflows/ci.yml` 的 rust 三平台矩阵；仍不具备时才记 `ENVIRONMENT-BLOCKED` 并附完整证据，不得声称已通过。
+- [x] 生命周期第一切片：子任务 `09-17-phase4-lifecycle-cleanup` 已用 `JoinSet` 接管 VNC WebSocket relay 和 tunnel per-client tasks，run `35185323819` 的 Rust 三平台测试全绿。
+- [x] 对 PTY、runner、tunnel、websocket、MCP sidecar 和 VNC runner host 的成功、失败、取消、窗口关闭四类清理路径做源码级核查：第二切片 `e6c6ca7`（run `35295465354` 全绿）完成 Docker/MCP/PTY/runner host 核查，修复 MCP sidecar 应用退出残留（Tauri `App::run` 以 `process::exit` 结束，`Drop` 不执行）与 Local PTY `close()` 不释放 master 导致的 Windows 读线程泄漏；结论矩阵见子任务 `design.md` §7。
+- [x] 用 `cargo test` 驱动完成上述资源回收的运行时验证：经 CI run `35185323819` / `35295465354`；真实 GUI、VNC/SSH forward server、app 退出的 sidecar 收尾仍 `ENVIRONMENT-BLOCKED`。
 - [ ] 对 Vault 回读、known-host changed 拒绝和连接失败语义做回归测试（同样经 CI 的 rust 矩阵验证）。
 
 ## Phase 5：CSP、跨平台与发布门禁

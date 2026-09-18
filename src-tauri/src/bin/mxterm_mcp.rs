@@ -1419,7 +1419,8 @@ mod tests {
 
     #[test]
     fn http_request_parses_method_target_headers_and_body() {
-        let payload = b"POST /mcp?session_id=abc HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Length: 2\r\n\r\n{}";
+        let payload =
+            b"POST /mcp?session_id=abc HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Length: 2\r\n\r\n{}";
         let Some(request) = parse_request(payload).unwrap() else {
             panic!("完整请求必须能解析出来");
         };

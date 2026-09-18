@@ -34,11 +34,11 @@
 
 ## 5. 验证
 
-- [ ] `cargo fmt --manifest-path src-tauri/Cargo.toml --check`；父基线漂移单独记录，不重排无关代码。
+- [x] `cargo fmt --manifest-path src-tauri/Cargo.toml --check`：父基线漂移（4 文件 8 处纯格式）已在独立 style 提交中清除，本机退出码 0。
 - [x] targeted Rust tests：`vnc`、`tunnels`、`docker_tools`、`remote_exec_pool`、`terminal::manager`/相关模块、`mcp`；由 CI full workspace test 覆盖。
 - [x] `cargo check --manifest-path src-tauri/Cargo.toml --locked`：由 CI Linux/Windows/macOS 成功验证。
 - [x] `pnpm run check`、相关 source checks、`git diff --check` 和 `pnpm run check:secrets`；本切片无前端代码改动，secret gate 通过。
-- [x] CI Linux/Windows/macOS 记录 compile/test 结果：run `35185323819` 全绿；Linux/macOS 各 298 tests、Windows 302 tests。真实 Tauri GUI、VNC/SSH/Docker 服务仍记 `ENVIRONMENT-BLOCKED`。
+- [x] CI Linux/Windows/macOS 记录 compile/test 结果：run `35185323819`（第一切片）与 run `35295465354`（第二切片 `e6c6ca7`）全绿。真实 Tauri GUI、VNC/SSH/Docker 服务仍记 `ENVIRONMENT-BLOCKED`。
 
 ## 6. 交付
 

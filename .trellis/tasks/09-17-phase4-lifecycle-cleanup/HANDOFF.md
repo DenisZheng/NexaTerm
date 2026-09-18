@@ -18,17 +18,19 @@
 - Rust Windows：302 passed、0 failed、0 ignored。
 - Security evidence：success；Windows package job 按 push 条件 skipped。
 
-## 第二切片（2026-09-18，待人工审核 / 待 CI）
+## 第二切片（2026-09-18，提交 `e6c6ca7`，CI run `35295465354` 全绿）
 
 - `src-tauri/src/lib.rs`：`App::run` 改为 `build().run(callback)`，在 `RunEvent::Exit` 调用 `McpRemoteServiceManager::shutdown()`。根因：Tauri 2 的 `run` 以 `process::exit` 结束，托管状态不 Drop，sidecar 会残留。
 - `src-tauri/src/mcp.rs`：新增 `shutdown()`（幂等）与 `shutting_down` 门控；`reconcile`/supervisor 在收尾后不再 spawn。新增测试 `shutdown_is_idempotent_and_blocks_later_start`。
 - `src-tauri/src/terminal/local.rs`：`close()` 在 kill 后释放 master，修复 Windows ConPTY 读线程永久阻塞泄漏；新增 Windows 测试 `local_session_close_releases_reader`。
 - Docker log stream、SSH/Telnet/Serial reader、VNC runner host 通知链源码核查通过，未改代码，结论见 design.md §7。
-- 本机无 Rust 工具链，`cargo check/test/fmt` 未在本地运行；须以 CI 三平台结果为准。Windows 新测试依赖 CI Windows job。
+- 本机无 MSVC 链接环境，`cargo check/test` 未在本地运行；run `35295465354`（<https://github.com/DenisZheng/NexaTerm/actions/runs/35295465354>）已由 GitHub API 核实 `completed/success`，Windows job 含新增 PTY 测试。
+- 父分支 `cargo fmt --check` 漂移（4 文件 8 处，均为既有代码纯格式重排）已在随后的 style 提交中清除；本机 `cargo fmt --check` 退出码 0。Todo #9 关闭。
 
 ## 尚未完成 / 环境边界
 
 - 真实 VNC WebSocket client/target、SSH forward server、Tauri runner window close 和应用退出时的 sidecar 收尾尚未在 GUI/外部服务环境验证，记为 `ENVIRONMENT-BLOCKED`。
-- 第二切片已完成 Docker/MCP/PTY/runner host 源码核查并修复 MCP 退出残留与 Local PTY 读线程泄漏；等待 CI 验证后再记录 run 编号。
-- 全量 `cargo fmt --check` 仍受父分支既有格式漂移阻塞，已单独记录为 Todo #9；本切片修改 hunks 已按 rustfmt 对齐。
+- 第二切片已完成 Docker/MCP/PTY/runner host 源码核查并修复 MCP 退出残留与 Local PTY 读线程泄漏，CI run `35295465354` 全绿。
+- 子任务剩余：Vault 回读 / known-host changed / 连接失败语义回归属父任务 Phase 4 第三项，尚未开始。
+- 全量 `cargo fmt --check` 漂移已清除（见第二切片）。
 - 子任务保持 `in_progress`，不要据此归档父 Task 01。

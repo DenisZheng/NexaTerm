@@ -209,12 +209,11 @@ mod tests {
     /// 主机密钥变更载荷需同时带新旧指纹，前端要并列展示才能让用户判断风险。
     #[test]
     fn host_key_changed_details_carry_old_fingerprint() {
-        let error = AppError::new("host_key_changed", "主机密钥已变化。", "raw", true).with_details(
-            AppErrorDetails::HostKeyChanged {
+        let error = AppError::new("host_key_changed", "主机密钥已变化。", "raw", true)
+            .with_details(AppErrorDetails::HostKeyChanged {
                 host_key: sample_host_key(),
                 old_fingerprint_sha256: "SHA256:old".to_string(),
-            },
-        );
+            });
 
         let encoded = serde_json::to_string(&error).expect("序列化必须成功");
 

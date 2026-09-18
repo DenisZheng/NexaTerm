@@ -1981,9 +1981,16 @@ fn remote_service_signature(app: &AppHandle, settings: &McpSettings, token_hash:
 
 /// 拆出纯函数以便直接测试：签名必须基于**生效 host**，因为确认状态变化会改变生效地址，
 /// 签名不变则 supervisor 不会重启 sidecar，会出现「界面显示新地址、进程仍监听旧地址」。
-fn remote_service_signature_for(settings: &McpSettings, token_hash: &str, data_dir: &str) -> String {
+fn remote_service_signature_for(
+    settings: &McpSettings,
+    token_hash: &str,
+    data_dir: &str,
+) -> String {
     let (host, _) = resolve_effective_remote_host(settings);
-    format!("{}:{}:{}:{}", host, settings.remote_port, token_hash, data_dir)
+    format!(
+        "{}:{}:{}:{}",
+        host, settings.remote_port, token_hash, data_dir
+    )
 }
 
 fn spawn_remote_child(
@@ -3132,7 +3139,9 @@ mod tests {
         // 首尾空白会被 trim，不应因此漏判或误判。
         assert!(ensure_connection_exposed(&custom, "  allowed  ").is_ok());
         assert_eq!(
-            ensure_connection_exposed(&custom, "denied").unwrap_err().code,
+            ensure_connection_exposed(&custom, "denied")
+                .unwrap_err()
+                .code,
             "mcp_connection_not_exposed"
         );
 
@@ -3141,7 +3150,9 @@ mod tests {
             ..Default::default()
         };
         assert_eq!(
-            ensure_connection_exposed(&empty, "anything").unwrap_err().code,
+            ensure_connection_exposed(&empty, "anything")
+                .unwrap_err()
+                .code,
             "mcp_connection_not_exposed"
         );
     }
@@ -3206,7 +3217,10 @@ mod tests {
 
         assert_eq!(normalize_timeout(None).as_secs(), DEFAULT_TIMEOUT_SECONDS);
         assert_eq!(normalize_timeout(Some(0)).as_secs(), 1);
-        assert_eq!(normalize_timeout(Some(u64::MAX)).as_secs(), MAX_TIMEOUT_SECONDS);
+        assert_eq!(
+            normalize_timeout(Some(u64::MAX)).as_secs(),
+            MAX_TIMEOUT_SECONDS
+        );
     }
 
     #[test]
