@@ -85,11 +85,13 @@ capability 独立检查已在 `55a2cb7` / run `35085375573` 实际通过。本�
 **CSP 草案阶段已完成（2026-09-18，用户选定方案：盘点 + 静态检查 + 草案，不改 `tauri.conf.json`）**：
 
 - 唯一策略来源 `src-tauri/csp-policy.json`：`production` / `dev` 两个 profile，`relaxations` 逐条登记每个放宽项的 reason 与 callSites。
-- `pnpm run check:tauri-csp`（`scripts/check-tauri-csp.mjs` + `scripts/tauri-csp-policy.mjs`）：禁止 `*`/`unsafe-eval`/裸 scheme；非 `'self'`/`'none'`/Tauri IPC 的来源必须有证据且调用点文件存在；证据过期报错；与 `tauri.conf.json` 对比——`null` 时 `REVIEW-REQUIRED`（exit 0），一致 `PASS`，漂移 `FAIL`。已接入 CI Frontend checks，单测 `scripts/tauri-csp-policy.test.mjs`。
+- `pnpm run check:tauri-csp`（`scripts/check-tauri-csp.mjs` + `scripts/tauri-csp-policy.mjs`）：禁止 `*`/`unsafe-eval`/裸 scheme；非 `'self'`/`'none'`/Tauri IPC 的来源必须有证据且调用点文件存在；证据过期报错；与 `tauri.conf.json` 对比——`null` 时 `REVIEW-REQUIRED`（exit 0），一致 `PASS`，漂移 `FAIL`。已接入 CI Frontend checks（`bf8aad1` / run `35310653687` 全绿），单测 `scripts/tauri-csp-policy.test.mjs`。
 - 盘点结论见 `docs/SECURITY_REVIEW.md` §6.1。关键收窄：不需要 `blob:`（Monaco worker 是同源 `?worker` 产物），`font-src` 不需要 `data:`，updater/MCP 在 Rust 进程内不进 `connect-src`。
 - **启用 CSP 与 GUI 冒烟仍 `ENVIRONMENT-BLOCKED`**：需在具备 `tauri dev` 的环境验证 Monaco、xterm、noVNC、更新器、透明窗口后，把 `renderCsp` 输出写入 `tauri.conf.json` 的 `csp`/`devCsp`，届时检查自动转 `PASS`。
 
-剩余：跨平台 capability/权限/端口 bind 验证（macOS/Linux 本机不具备则记阻塞）；advisory 风险接受登记复核；发布门禁。
+剩余：跨平台 capability/权限/端口 bind 验证（macOS/Linux 本机不具备则记阻塞）；发布门禁。
+
+**advisory 复核（2026-09-18）**：rustls RUSTSEC-2026-0285 已通过 lockfile 升级到 0.23.45 修复（连带 aws-lc-rs/aws-lc-sys/rustls-webpki 补丁位），待 CI 验证编译。剩余 9 条全部无安全升级路径：rsa（russh 上游）、quick-xml（plist → tauri-utils，build-dependencies，`cargo update --dry-run` 0 包可动）、unic-* ×5 与 proc-macro-error（tauri 生态构建期）。三行风险接受登记已写入 `docs/SECURITY_REVIEW.md` §7，负责人栏待用户署名确认。
 
 ## 给 Codex 的接手说明（本任务专属技术坑）
 

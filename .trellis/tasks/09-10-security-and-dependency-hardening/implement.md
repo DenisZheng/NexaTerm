@@ -96,15 +96,15 @@
 - [x] 生命周期第一切片：子任务 `09-17-phase4-lifecycle-cleanup` 已用 `JoinSet` 接管 VNC WebSocket relay 和 tunnel per-client tasks，run `35185323819` 的 Rust 三平台测试全绿。
 - [x] 对 PTY、runner、tunnel、websocket、MCP sidecar 和 VNC runner host 的成功、失败、取消、窗口关闭四类清理路径做源码级核查：第二切片 `e6c6ca7`（run `35295465354` 全绿）完成 Docker/MCP/PTY/runner host 核查，修复 MCP sidecar 应用退出残留（Tauri `App::run` 以 `process::exit` 结束，`Drop` 不执行）与 Local PTY `close()` 不释放 master 导致的 Windows 读线程泄漏；结论矩阵见子任务 `design.md` §7。
 - [x] 用 `cargo test` 驱动完成上述资源回收的运行时验证：经 CI run `35185323819` / `35295465354`；真实 GUI、VNC/SSH forward server、app 退出的 sidecar 收尾仍 `ENVIRONMENT-BLOCKED`。
-- [x] 对 Vault 回读、known-host changed 拒绝和连接失败语义做回归测试：Vault 回读（`storage_vault.rs` 10 例）与连接失败语义（`session.rs` `network_errors_refine_into_stable_codes` 等）已有覆盖；known-host 仓储层三态/归一化/重 trust/Changed→`host_key_changed` 回归 4 例于 `64e2b86` 补齐，CI 全绿（用户于 2026-09-18 确认；run 编号待 API 可用时回填）。
+- [x] 对 Vault 回读、known-host changed 拒绝和连接失败语义做回归测试：Vault 回读（`storage_vault.rs` 10 例）与连接失败语义（`session.rs` `network_errors_refine_into_stable_codes` 等）已有覆盖；known-host 仓储层三态/归一化/重 trust/Changed→`host_key_changed` 回归 4 例于 `64e2b86` 补齐，run `35304208695` 全绿。
 
 ## Phase 5：CSP、跨平台与发布门禁
 
 - [ ] 按实际资源收紧 CSP；运行 dev/build、Monaco/noVNC/updater smoke test，记录必要的 data/blob/websocket 来源。**草案阶段已完成（用户选定"先盘点 + 静态检查 + 草案，不改 tauri.conf.json"）**：候选策略在 `src-tauri/csp-policy.json`，盘点结论在 `docs/SECURITY_REVIEW.md` §6.1；`tauri.conf.json` 仍 `null`，启用与 GUI 冒烟记 `ENVIRONMENT-BLOCKED`。
-- [x] 每个必须保留的 `unsafe-inline` / `data:` / `blob:` 条目记录实际调用点：`csp-policy.json` 的 `relaxations` 逐条登记 reason + callSites，`scripts/check-tauri-csp.mjs` 强制校验调用点文件存在、禁止 `*`/`unsafe-eval`、拒绝无证据放宽与过期证据；`tauri.conf.json` 为 `null` 时输出 `REVIEW-REQUIRED`（exit 0），与草案不一致时 `FAIL`。已接入 CI Frontend checks 的 `Tauri CSP policy draft` step，单测 `scripts/tauri-csp-policy.test.mjs`。最终 `blob:` 不需要（Monaco worker 为同源 `?worker` 产物），`font-src` 不需要 `data:`。
+- [x] 每个必须保留的 `unsafe-inline` / `data:` / `blob:` 条目记录实际调用点：`csp-policy.json` 的 `relaxations` 逐条登记 reason + callSites，`scripts/check-tauri-csp.mjs` 强制校验调用点文件存在、禁止 `*`/`unsafe-eval`、拒绝无证据放宽与过期证据；`tauri.conf.json` 为 `null` 时输出 `REVIEW-REQUIRED`（exit 0），与草案不一致时 `FAIL`。已接入 CI Frontend checks 的 `Tauri CSP policy draft` step（`bf8aad1` / run `35310653687` 全绿），单测 `scripts/tauri-csp-policy.test.mjs`。最终 `blob:` 不需要（Monaco worker 为同源 `?worker` 产物），`font-src` 不需要 `data:`。
 - [ ] 在 Windows/macOS/Linux 的 capability、文件权限、端口 bind、外部 runner 条件下分别验证；缺环境则记录阻塞证据（**macOS/Linux 环境本机不具备，预期全部记阻塞**）。
-- [ ] 运行 `pnpm audit`、JS 侧 secret scan、前端 build、现有 source checks 与 JS 脚本测试；Rust 侧运行 `cargo metadata` 与 `cargo deny check advisories`，并在工具链可用时补跑 `cargo audit` 与 `cargo test --workspace`。
-- [ ] 审计剩余风险必须有暴露面、利用条件、缓解、期限、负责人。
+- [ ] 运行 `pnpm audit`、JS 侧 secret scan、前端 build、现有 source checks 与 JS 脚本测试；Rust 侧运行 `cargo metadata` 与 `cargo deny check advisories`，并在工具链可用时补跑 `cargo audit` 与 `cargo test --workspace`。**2026-09-18 部分完成**：本机 `cargo deny check advisories`（在线 RustSec）10 条 → 升级 rustls 0.23.45 后 9 条；剩余 9 条全部为「No safe upgrade available」（rsa、quick-xml 受 tauri/plist 上游约束、unic-* ×5、proc-macro-error）。前端 build/source checks/脚本测试与 secret scan 由 CI Frontend checks 与 Security evidence job 持续执行（最近 run `35310653687` @ `bf8aad1` 全绿）。`cargo audit` 仍 ENVIRONMENT-BLOCKED。
+- [ ] 审计剩余风险必须有暴露面、利用条件、缓解、期限、负责人。**登记已完成，待你确认**：`docs/SECURITY_REVIEW.md` §7 已按 rsa / quick-xml / unic-*+proc-macro-error 三行写明暴露面、利用条件、缓解与解除条件，负责人栏为「项目 owner」，需你在表中把「提议接受，待确认」改为「已接受」并署名日期。
 - [ ] 由 code review / security review 检查后，才允许提交与归档。
 
 ## capability/CSP 验证方式（已对齐）
