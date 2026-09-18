@@ -63,6 +63,9 @@ jobs:
       - name: Tauri capability policy
         run: pnpm run check:tauri-capabilities
 
+      - name: Tauri CSP policy draft
+        run: pnpm run check:tauri-csp
+
       - name: Startup module boundary
         run: node scripts/check-startup-module-boundary-source.mjs
 

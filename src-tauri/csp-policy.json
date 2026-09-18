@@ -1,0 +1,88 @@
+{
+  "$comment": "WebView CSP 候选策略（Phase 5）。这是唯一的策略来源：scripts/check-tauri-csp.mjs 会校验本文件结构、每个放宽项的调用点证据，并与 src-tauri/tauri.conf.json 的 app.security.csp / devCsp 对比。tauri.conf.json 仍为 null 时输出 REVIEW-REQUIRED（草案已就绪、尚未启用），不是 PASS。启用前必须在具备 GUI 工具链的环境用 tauri dev / tauri build 冒烟 Monaco、xterm、noVNC、更新器。Tauri 会在编译期为打包脚本/样式自动追加 hash/nonce，本文件只列应用自身需要的来源。",
+  "production": {
+    "default-src": ["'self'"],
+    "script-src": ["'self'"],
+    "worker-src": ["'self'"],
+    "style-src": ["'self'", "'unsafe-inline'"],
+    "img-src": ["'self'", "data:"],
+    "font-src": ["'self'"],
+    "connect-src": ["'self'", "ipc:", "http://ipc.localhost", "ws://127.0.0.1:*"],
+    "frame-src": ["'none'"],
+    "object-src": ["'none'"],
+    "base-uri": ["'self'"],
+    "form-action": ["'self'"]
+  },
+  "dev": {
+    "$comment": "仅 tauri dev：Vite 开发服务器 (devUrl http://localhost:5520) 会注入 react-refresh 内联预热脚本并通过 WebSocket 做 HMR，见 vite.config.ts。",
+    "default-src": ["'self'"],
+    "script-src": ["'self'", "'unsafe-inline'"],
+    "worker-src": ["'self'"],
+    "style-src": ["'self'", "'unsafe-inline'"],
+    "img-src": ["'self'", "data:"],
+    "font-src": ["'self'"],
+    "connect-src": [
+      "'self'",
+      "ipc:",
+      "http://ipc.localhost",
+      "ws://127.0.0.1:*",
+      "ws://localhost:5520",
+      "ws://localhost:5521"
+    ],
+    "frame-src": ["'none'"],
+    "object-src": ["'none'"],
+    "base-uri": ["'self'"],
+    "form-action": ["'self'"]
+  },
+  "relaxations": [
+    {
+      "profile": "production",
+      "directive": "style-src",
+      "source": "'unsafe-inline'",
+      "reason": "xterm.js 与 Monaco 在运行时通过 document.createElement('style') 注入样式表；React 组件另有 style={{}} 内联属性。Tauri 的编译期 nonce 只覆盖打包进 index.html 的样式，不覆盖运行时注入，因此无法用 nonce 替代。",
+      "callSites": [
+        "src/features/terminal/TerminalPanel.tsx",
+        "src/features/editor/RemoteFileEditor.tsx",
+        "src/features/layout/WorkspaceShell.tsx"
+      ]
+    },
+    {
+      "profile": "production",
+      "directive": "img-src",
+      "source": "data:",
+      "reason": "Monaco 编辑器自带 CSS 使用 url(data:image/...) 绘制图标（构建产物 RemoteFileEditor-*.css 中 4 处）。",
+      "callSites": ["src/features/editor/RemoteFileEditor.tsx"]
+    },
+    {
+      "profile": "production",
+      "directive": "connect-src",
+      "source": "ws://127.0.0.1:*",
+      "reason": "noVNC 嵌入模式：Rust 侧在 127.0.0.1 随机端口起 WebSocket bridge，前端 RFB 连接 ws://127.0.0.1:<port>/vnc/<session>/<token>。端口按会话动态分配，无法固定。",
+      "callSites": ["src/features/layout/VncViewerSurface.tsx", "src-tauri/src/vnc.rs"]
+    },
+    {
+      "profile": "dev",
+      "directive": "script-src",
+      "source": "'unsafe-inline'",
+      "reason": "Vite 开发服务器为 @vitejs/plugin-react 注入内联 react-refresh 预热脚本；生产构建不存在该脚本。",
+      "callSites": ["vite.config.ts"]
+    },
+    {
+      "profile": "dev",
+      "directive": "connect-src",
+      "source": "ws://localhost:5520",
+      "reason": "Vite HMR 默认复用 devUrl 端口的 WebSocket。",
+      "callSites": ["vite.config.ts"]
+    },
+    {
+      "profile": "dev",
+      "directive": "connect-src",
+      "source": "ws://localhost:5521",
+      "reason": "设置 TAURI_DEV_HOST 时 vite.config.ts 把 HMR 固定到 5521 端口。",
+      "callSites": ["vite.config.ts"]
+    }
+  ],
+  "notLimitedByCsp": {
+    "$comment": "以下网络访问全部发生在 Rust 进程内，不经过 WebView，故不进入 connect-src：updater endpoint（tauri-plugin-updater）、MCP sidecar 健康检查与 HTTP 服务、WebDAV 同步、AI provider 请求、SSH/Telnet/串口/Docker。外链通过 tauri-plugin-opener 交给系统浏览器。"
+  }
+}

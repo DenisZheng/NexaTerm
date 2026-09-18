@@ -12,6 +12,7 @@
     "check:duplicate-connection": "node scripts/check-duplicate-connection-source.mjs",
     "check:middle-click-tabs": "node scripts/check-middle-click-close-tabs-source.mjs",
     "check:tauri-capabilities": "node scripts/check-tauri-capabilities.mjs",
+    "check:tauri-csp": "node scripts/check-tauri-csp.mjs",
     "check:secrets": "node scripts/security-check.mjs secrets",
     "audit:npm": "node scripts/security-check.mjs npm",
     "audit:rust": "node scripts/security-check.mjs rust",

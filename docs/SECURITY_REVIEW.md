@@ -121,6 +121,25 @@
 - `font-src`：终端字体（`'self'` + `data:`）。
 - `default-src`：收敛为 `'self'`，其余按上表白名单；每个必须保留的 `unsafe-inline` / `data:` / `blob:` 项须在 Phase 5 记录实际调用点。
 
+#### 6.1 Phase 5 精确盘点结果（2026-09-18，基于源码 + `dist/` 构建产物）
+
+策略草案落在 `src-tauri/csp-policy.json`（唯一来源），由 `pnpm run check:tauri-csp` 静态校验并与 `tauri.conf.json` 对比。**`tauri.conf.json` 仍为 `null`，检查输出 `REVIEW-REQUIRED`**：草案已就绪但未启用；启用前必须在具备 GUI 工具链的环境用 `tauri dev` / `tauri build` 冒烟 Monaco、xterm、noVNC、更新器。
+
+初盘中的几项经核实**收窄**：
+
+| 初盘假设 | 核实结果 | 草案取值 |
+|---|---|---|
+| Monaco worker 需要 `blob:` | 通过 Vite `?worker` 导入，产物是同源 `*.worker-*.js`，`new Worker(new URL(...))`；`ts.worker` 内的 `createObjectURL` 是 TypeScript 服务自身的 source-map 处理，不用于加载脚本 | `worker-src 'self'`，不放 `blob:` |
+| `font-src` 需要 `data:` | codicon 以独立 `codicon-*.ttf` 打包；CSS 中无 `url(data:font` | `font-src 'self'` |
+| `connect-src` 需要 MCP sidecar、updater | 两者都在 Rust 进程内发起，不经 WebView | 不进 `connect-src` |
+| `img-src` 需要 `data:` | Monaco 自带 CSS 有 4 处 `url(data:image/...)` | `img-src 'self' data:`，已登记调用点 |
+| `style-src 'unsafe-inline'` 待证据 | xterm.js、Monaco 在运行时 `createElement("style")` 注入；React `style={{}}` 内联属性 33 处；Tauri 编译期 nonce 不覆盖运行时注入 | 保留，已登记调用点 |
+| noVNC websocket | Rust 在 `127.0.0.1:0` 随机端口起 bridge | `ws://127.0.0.1:*` |
+
+`DockerToolPanel.tsx` 的 `URL.createObjectURL` 只用于 `<a download>` 保存日志，属导航而非资源加载，不需要 `blob:` 来源。`frame-src`/`object-src` 收为 `'none'`。dev profile 额外放开 `script-src 'unsafe-inline'`（Vite react-refresh 预热脚本）和 HMR WebSocket 端口。
+
+**尚未证实、启用后可能踩到的点**（记录为启用前冒烟清单，不是已接受的风险）：xterm WebLinksAddon 与 Monaco 是否有未被扫到的动态 `<link>` 注入；Windows WebView2 对 `ipc:` scheme 的处理是否需要额外的 `http://ipc.localhost` 之外来源；透明窗口/亚克力材质是否依赖 inline style 属性以外的机制。
+
 ### 7. 风险接受登记（待 Phase 5 release gate 复核）
 
 | 风险 | 暴露面 | 缓解 | 期限 / 触发解除 | 状态 |
