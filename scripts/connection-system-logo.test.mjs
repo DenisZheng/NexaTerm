@@ -19,10 +19,16 @@ const transpiled = ts.transpileModule(sourceCode, {
 }).outputText;
 
 const tempDir = await mkdtemp(path.join(process.cwd(), ".tmp-connection-system-logo-"));
-const tempFile = path.join(tempDir, "ConnectionSystemLogo.mjs");
-await writeFile(tempFile, transpiled, "utf8");
-
-const logoModule = await import(pathToFileURL(tempFile).href);
+let logoModule;
+try {
+  const tempFile = path.join(tempDir, "ConnectionSystemLogo.mjs");
+  await writeFile(tempFile, transpiled, "utf8");
+  logoModule = await import(pathToFileURL(tempFile).href);
+} finally {
+  // 模块一旦导入即常驻内存，临时目录可立即删除；
+  // 放在 finally 里是为了导入失败（如依赖未安装）时也不在仓库根目录残留。
+  await rm(tempDir, { recursive: true, force: true });
+}
 const { inferConnectionSystemKind } = logoModule;
 
 test("RDP connections keep protocol icon instead of falling back to linux", () => {
@@ -48,5 +54,3 @@ test("VNC connections keep protocol icon instead of falling back to linux", () =
 
   assert.equal(kind, "vnc");
 });
-
-await rm(tempDir, { recursive: true, force: true });
