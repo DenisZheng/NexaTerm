@@ -91,7 +91,9 @@ capability 独立检查已在 `55a2cb7` / run `35085375573` 实际通过。本�
 
 剩余：跨平台 capability/权限/端口 bind 验证（macOS/Linux 本机不具备则记阻塞）；发布门禁。
 
-**advisory 复核（2026-09-18）**：rustls RUSTSEC-2026-0285 已通过 lockfile 升级到 0.23.45 修复（连带 aws-lc-rs/aws-lc-sys/rustls-webpki 补丁位），待 CI 验证编译。剩余 9 条全部无安全升级路径：rsa（russh 上游）、quick-xml（plist → tauri-utils，build-dependencies，`cargo update --dry-run` 0 包可动）、unic-* ×5 与 proc-macro-error（tauri 生态构建期）。三行风险接受登记已写入 `docs/SECURITY_REVIEW.md` §7，负责人栏待用户署名确认。
+**advisory 复核（2026-09-18）**：rustls RUSTSEC-2026-0285 已通过 lockfile 升级到 0.23.45 修复（`f3c3c77`，连带 aws-lc-rs/aws-lc-sys/rustls-webpki 补丁位），待 CI 验证编译。剩余 9 条全部无安全升级路径：rsa（russh 上游）、quick-xml（plist → tauri-utils，build-dependencies，`cargo update --dry-run` 0 包可动）、unic-* ×5 与 proc-macro-error（tauri 生态构建期）。三行风险接受登记在 `docs/SECURITY_REVIEW.md` §7，**项目 owner 已于 2026-09-18 确认接受**。
+
+**CSP 真实启用**：用户 2026-09-18 确认暂无 GUI 环境，记 `ENVIRONMENT-BLOCKED` 先欠着；解除条件与操作步骤见父任务 `implement.md` Phase 5 第一条。
 
 ## 给 Codex 的接手说明（本任务专属技术坑）
 
