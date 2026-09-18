@@ -10,7 +10,7 @@
 
 - [x] 逐个 owner 列出 success/failure/cancel/window-close 的资源、trigger、completion signal 和 map/state 更新。
 - [x] 通过源码核查确认 VNC relay task 和 tunnel per-client task 脱离 owner；区分“session close 会最终让 IO 返回”与“task 已被取消/等待”。
-- [ ] 核查 Docker log stop/natural-finish race、MCP child/supervisor、PTY reader/session、VNC runner host close notification。
+- [x] 核查 Docker log stop/natural-finish race、MCP child/supervisor、PTY reader/session、VNC runner host close notification（第二切片，结论见 design.md §7）。
 
 ## 2. VNC bridge 第一切片
 
@@ -27,10 +27,10 @@
 
 ## 4. 后续 owner 核查
 
-- [ ] Docker log stream：stop/natural finish/error race 和 idempotent map cleanup。
-- [ ] MCP sidecar：Child kill/wait 与 health supervisor shutdown/update preparation；若需要 app lifecycle，拆出纯 seam并记录 runtime block。
-- [ ] PTY/local/telnet/serial：reader 自然结束、explicit close、app close 的 session removal 与 child/socket cleanup。
-- [ ] VNC runner host / RDP native host：window close → workspace → backend close 单向通知和重复事件防护。
+- [x] Docker log stream：源码核查通过，未改代码。stop 先置 `stopped` 再关 session 再 abort；task 侧 finished/error 事件受 `stopped` 门控且只发一次；`finish_stream` 用 `Arc::ptr_eq` 防止移除同 id 的新流。
+- [x] MCP sidecar：修复。Tauri `App::run` 以 `process::exit` 结束、托管状态不 Drop，原 `Drop` 收尾从不执行 → sidecar 在应用退出后残留。`lib.rs` 改为 `build().run(callback)`，在 `RunEvent::Exit` 调用新增 `McpRemoteServiceManager::shutdown()`（kill+wait、置 `shutting_down`）；`reconcile` 与 supervisor loop 在 `shutting_down` 后拒绝再 spawn。新增幂等回归测试。
+- [x] PTY/local/telnet/serial：SSH/Telnet/Serial 的 explicit close 与自然 EOF 都走同一条 reader 收尾（remove + closed 事件一次），未改。Local PTY 修复：`close()` 只 kill 子进程而不释放 master，Windows ConPTY 读端随 master 存活、读线程永不返回 → 每次关闭本地终端泄漏一条阻塞线程与 PTY 句柄。改为 `master: Option`，`close()` kill 后 `take()` 释放；`resize` 在关闭后返回不可恢复错误。新增 Windows 回归测试验证读线程在 close 后退出。
+- [x] VNC runner host / RDP native host：源码核查通过，未改代码。main→runner 用 `notifyRunnerWindow`，runner→main 用 `notifyMain:false` + `reportedClosedRef` 去重，两向都不回声；error 路径先 `vncCloseSession` 再置 error，后续用户关闭时 backend 返回 `ok:false` 幂等。RDP 外部进程按既有契约由用户管理。
 
 ## 5. 验证
 

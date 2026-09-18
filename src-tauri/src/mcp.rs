@@ -1823,12 +1823,18 @@ struct McpRemoteServiceRuntime {
     supervisor_started: bool,
     log_path: Option<String>,
     update_preparing: bool,
+    /// 应用退出收尾已开始：之后 reconcile/restart/supervisor 都不得再拉起 sidecar。
+    shutting_down: bool,
 }
 
 impl McpRemoteServiceManager {
     pub fn reconcile(&self, app: &AppHandle, settings: &McpSettings) -> McpRemoteServiceStatus {
         let mut runtime = self.lock_runtime();
         refresh_remote_child(settings, &mut runtime);
+        if runtime.shutting_down {
+            stop_remote_child(&mut runtime);
+            return remote_service_status(settings, &runtime);
+        }
         if !settings.remote_enabled {
             stop_remote_child(&mut runtime);
             runtime.last_error = None;
@@ -1923,6 +1929,20 @@ impl McpRemoteServiceManager {
 
     fn is_update_preparing(&self) -> bool {
         self.lock_runtime().update_preparing
+    }
+
+    /// 应用退出时的显式收尾：kill + wait sidecar，并锁死后续任何自动拉起。
+    /// 不能依赖 `Drop`：Tauri 的 `App::run` 以 `process::exit` 结束，托管状态不会析构。
+    /// 重复调用幂等。health supervisor task 随进程退出一起结束，无需单独取消。
+    pub fn shutdown(&self) {
+        let mut runtime = self.lock_runtime();
+        runtime.shutting_down = true;
+        stop_remote_child(&mut runtime);
+        runtime.healthy = false;
+    }
+
+    fn is_shutting_down(&self) -> bool {
+        self.lock_runtime().shutting_down
     }
 
     fn prepare_for_update(&self) {
@@ -2177,6 +2197,9 @@ pub fn start_remote_service_supervisor(app: AppHandle) {
                 continue;
             };
             let manager = app.state::<McpRemoteServiceManager>();
+            if manager.is_shutting_down() {
+                return;
+            }
             if manager.is_update_preparing() {
                 continue;
             }
@@ -2187,6 +2210,9 @@ pub fn start_remote_service_supervisor(app: AppHandle) {
 
             let status = manager.status(&settings);
             let healthy = status.running && remote_service_health_check(settings.remote_port).await;
+            if manager.is_shutting_down() {
+                return;
+            }
             if manager.is_update_preparing() {
                 continue;
             }
@@ -3271,6 +3297,31 @@ mod tests {
         assert!(
             runtime.signature.is_none(),
             "signature 必须清空，否则 supervisor 会认为服务仍在按当前配置运行"
+        );
+    }
+
+    /// 应用退出收尾必须幂等，并且之后的 supervisor / 命令路径不得再拉起 sidecar：
+    /// `App::run` 结束于 `process::exit`，这是子进程不残留的唯一保障。
+    #[test]
+    fn shutdown_is_idempotent_and_blocks_later_start() {
+        let manager = McpRemoteServiceManager::default();
+        {
+            let mut runtime = manager.lock_runtime();
+            runtime.signature = Some("live-signature".to_string());
+            runtime.healthy = true;
+        }
+
+        manager.shutdown();
+        manager.shutdown();
+
+        assert!(manager.is_shutting_down());
+        let runtime = manager.lock_runtime();
+        assert!(runtime.child.is_none());
+        assert!(runtime.signature.is_none(), "收尾后不得保留旧 signature");
+        assert!(!runtime.healthy);
+        assert!(
+            runtime.shutting_down,
+            "shutting_down 是 reconcile/supervisor 拒绝再次 spawn 的唯一依据"
         );
     }
 

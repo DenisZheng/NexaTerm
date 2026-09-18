@@ -78,3 +78,15 @@ Owner registry/state → Resource handles → Cancellation trigger → Completio
 - Keep `vncCloseSession`, `tunnel_stop`, `docker_container_logs_stop`, and MCP stop idempotent at the command boundary.
 - Keep task/resource cleanup in the owning module; do not introduce a global task supervisor abstraction for one-off needs.
 - Revert the lifecycle slice as one commit if CI reveals platform-specific task behavior; do not revert the already verified input-boundary slice.
+
+## 7. 第二切片核查结论（Docker / MCP / PTY / runner host）
+
+| Owner | 结论 | 处理 |
+|---|---|---|
+| Docker log stream | stop 与自然结束不会重复发事件、不会误删新流 | 不改 |
+| MCP sidecar | `App::run` 以 `process::exit` 结束（Tauri 2.11.2 `app.rs` 文档与源码确认），`Drop` 从不执行，sidecar 残留 | `RunEvent::Exit` → `shutdown()`，并锁死后续 spawn |
+| Local PTY | `close()` 未释放 master，Windows ConPTY 读线程永久阻塞 | master 改 `Option`，close 时 take/drop |
+| SSH / Telnet / Serial | explicit close 与 EOF 共用一条收尾路径 | 不改 |
+| VNC runner host | 双向通知各自单向、去重 | 不改 |
+
+已知未收敛项：Docker stop 只 abort 不 join task（task 收尾只剩已关闭 session 的 `close()` 与幂等 map 清理，风险低）；MCP health supervisor loop 随进程退出结束，未单独取消（退出路径下无需要）。

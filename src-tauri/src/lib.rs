@@ -214,6 +214,13 @@ pub fn run() {
             ai_assistant::ai_chat_stream_stop,
             ai_assistant::ai_command_assess,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app, event| {
+            // Tauri 2 的 `App::run` 在事件循环结束后直接 `process::exit`，托管状态不会被 Drop，
+            // 因此 MCP sidecar 子进程必须在 `RunEvent::Exit` 回调里显式收尾，否则会在应用退出后残留。
+            if let tauri::RunEvent::Exit = event {
+                app.state::<mcp::McpRemoteServiceManager>().shutdown();
+            }
+        });
 }

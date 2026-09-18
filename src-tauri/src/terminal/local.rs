@@ -13,7 +13,9 @@ use crate::terminal::local_profiles::{
 pub struct LocalTerminalSession {
     pub id: String,
     writer: Mutex<Box<dyn Write + Send>>,
-    master: Mutex<Box<dyn MasterPty + Send>>,
+    /// `close()` 后置为 `None`：释放 master 才能让读线程拿到 EOF（Windows ConPTY 在子进程退出后
+    /// 不会主动给读端 EOF，读端随 master 存活），否则每个关闭的本地终端都会泄漏一条阻塞的读线程。
+    master: Mutex<Option<Box<dyn MasterPty + Send>>>,
     child: Mutex<Box<dyn Child + Send>>,
 }
 
@@ -70,7 +72,7 @@ impl LocalTerminalSession {
             session: std::sync::Arc::new(LocalTerminalSession {
                 id: Uuid::new_v4().to_string(),
                 writer: Mutex::new(writer),
-                master: Mutex::new(pair.master),
+                master: Mutex::new(Some(pair.master)),
                 child: Mutex::new(child),
             }),
         })
@@ -104,6 +106,14 @@ impl LocalTerminalSession {
             .master
             .lock()
             .map_err(|_| poisoned_lock_error("local_terminal_resize_failed"))?;
+        let Some(master) = master.as_ref() else {
+            return Err(AppError::new(
+                "local_terminal_resize_failed",
+                "本地终端已关闭。",
+                "master pty already released",
+                false,
+            ));
+        };
         master.resize(build_pty_size(cols, rows)).map_err(|error| {
             AppError::new(
                 "local_terminal_resize_failed",
@@ -114,12 +124,23 @@ impl LocalTerminalSession {
         })
     }
 
+    /// 关闭顺序：先 kill 子进程，再释放 master。释放 master 是读线程退出的唯一可靠信号，
+    /// 读线程随后在 `wait_exit_status` 回收子进程并从 session 表移除自己。重复调用幂等。
     pub async fn close(&self) -> Result<(), AppError> {
-        let mut child = self
-            .child
+        let kill_result = {
+            let mut child = self
+                .child
+                .lock()
+                .map_err(|_| poisoned_lock_error("local_terminal_close_failed"))?;
+            child.kill()
+        };
+        let released = self
+            .master
             .lock()
-            .map_err(|_| poisoned_lock_error("local_terminal_close_failed"))?;
-        child.kill().map_err(|error| {
+            .map_err(|_| poisoned_lock_error("local_terminal_close_failed"))?
+            .take();
+        drop(released);
+        kill_result.map_err(|error| {
             AppError::new(
                 "local_terminal_close_failed",
                 "本地终端关闭失败。",
@@ -281,6 +302,59 @@ mod tests {
         let error = validate_profile_input(&profile).unwrap_err();
 
         assert_eq!(error.code, "local_terminal_profile_command_missing");
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn local_session_close_releases_reader() {
+        use std::sync::mpsc;
+        use std::time::Duration;
+
+        let mut profile = sample_profile();
+        profile.id = Some("cmd".to_string());
+        profile.name = "Command Prompt".to_string();
+        profile.kind = "cmd".to_string();
+        profile.command = "cmd.exe".to_string();
+        profile.args = vec!["/Q".to_string()];
+
+        let opened = LocalTerminalSession::open(LocalTerminalOpenRequest {
+            request_id: Some("local-close-test".to_string()),
+            profile: Some(profile),
+            cols: 80,
+            rows: 24,
+            cwd: None,
+        })
+        .unwrap();
+        let session = opened.session.clone();
+
+        // 读线程持有 session Arc，模拟 manager 中 spawn_local_reader 的持有关系：
+        // 若 close() 不释放 master，ConPTY 读端会一直阻塞，线程永不结束。
+        let (sender, receiver) = mpsc::channel();
+        let reader_session = std::sync::Arc::clone(&session);
+        std::thread::spawn(move || {
+            let mut reader = opened.reader;
+            let mut buffer = [0_u8; 1024];
+            loop {
+                match reader.read(&mut buffer) {
+                    Ok(0) | Err(_) => break,
+                    Ok(_) => {}
+                }
+            }
+            let _ = reader_session.wait_exit_status();
+            let _ = sender.send(());
+        });
+
+        tauri::async_runtime::block_on(session.close()).unwrap();
+        // 幂等：第二次 close 不得 panic，也不得阻塞。
+        let _ = tauri::async_runtime::block_on(session.close());
+        assert!(
+            tauri::async_runtime::block_on(session.resize(100, 30)).is_err(),
+            "resize after close must fail instead of touching a released master"
+        );
+
+        receiver
+            .recv_timeout(Duration::from_secs(20))
+            .expect("reader thread must observe EOF and exit after close()");
     }
 
     #[cfg(windows)]
