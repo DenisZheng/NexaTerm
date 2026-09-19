@@ -27,7 +27,7 @@
     这些 crate 对 windows-sys 声明的是版本区间，两侧都合法；diff 中**无任何 `[[package]]` 增删**——被改指的 windows-sys 版本在 HEAD 锁文件里本来就已存在，只是边的归属变了。
     根因是 HEAD 锁文件由发版准备时另一版本 cargo 生成（其求解器把区间依赖统一到 0.61.2），本机 cargo 1.98.1 复现不出该统一结果；已验证 `cargo update -p X --precise` 逐个执行与批量执行产出**完全相同的锁文件哈希**，即非命令写法所致。
     `1a8e95e` 的 CI 三平台 `cargo check` + `cargo test` 全绿，确认该连带变更无编译或运行时副作用。
-- [ ] 删除明显未使用的 capability，按窗口拆分配置；配置拆分已在 commit `443e4a8` 完成，调用点矩阵见 `SECURITY_REVIEW.md` §5；真实 `tauri dev` runner 窗口回归与未授权边界验证仍待具备完整 GUI/工具链的环境。 **2026-09-19**：本机已具备 GUI 工具链且 `tauri dev` 可运行，但用户无可用 VNC 目标，runner 窗口无法打开，回归与越权边界（runner 窗口内 `invoke("secret_vault_status")` 应被 capability 拒绝）仍记 `ENVIRONMENT-BLOCKED`；缺的是一个可连的 VNC server（本机起 `vncserver`/Docker 镜像即可解除）。
+- [ ] 删除明显未使用的 capability，按窗口拆分配置；配置拆分已在 commit `443e4a8` 完成，调用点矩阵见 `SECURITY_REVIEW.md` §5；真实 `tauri dev` runner 窗口回归与未授权边界验证仍待具备完整 GUI/工具链的环境。 **2026-09-19**：本机已具备 GUI 工具链且 `tauri dev` 可运行，但用户无可用 VNC 目标，runner 窗口无法打开，回归仍记 `ENVIRONMENT-BLOCKED`；缺的是一个可连的 VNC server（本机起 `vncserver`/Docker 镜像即可解除）。注意：安全评审（`review-security-final.md` 观察 2）确认 `build.rs` 未声明 app manifest，应用命令不按窗口 ACL，runner 窗口内 `invoke` 应用命令**不会**被拒绝；该预期已撤回，是否补 app manifest 另立任务。
 - [x] 增加 secret scan、audit artifact 与配置静态检查脚本，输出明确 `PASS` / `FAIL` / `ENVIRONMENT-BLOCKED`。capability step 已在 `55a2cb7` 经 CI 通过；secret scan 与 audit artifact 经 `73e90af` / run `35172498650` 验证；CSP 静态检查 `check:tauri-csp` 于 2026-09-18 完成（见 Phase 5）。
 
 ## Batch E 本轮执行清单
@@ -105,7 +105,7 @@
 - [ ] 在 Windows/macOS/Linux 的 capability、文件权限、端口 bind、外部 runner 条件下分别验证；缺环境则记录阻塞证据（**macOS/Linux 环境本机不具备，预期全部记阻塞**）。
 - [x] 运行 `pnpm audit`、JS 侧 secret scan、前端 build、现有 source checks 与 JS 脚本测试；Rust 侧运行 `cargo metadata` 与 `cargo deny check advisories`，并在工具链可用时补跑 `cargo audit` 与 `cargo test --workspace`。**2026-09-18 部分完成**：本机 `cargo deny check advisories`（在线 RustSec）10 条 → 升级 rustls 0.23.45 后 9 条；剩余 9 条全部为「No safe upgrade available」（rsa、quick-xml 受 tauri/plist 上游约束、unic-* ×5、proc-macro-error）。前端 build/source checks/脚本测试与 secret scan 由 CI Frontend checks 与 Security evidence job 持续执行（最近 run `35310653687` @ `bf8aad1` 全绿）。`cargo audit` 仍 ENVIRONMENT-BLOCKED。 **2026-09-19 完成**：本机安装 cargo-audit 0.22.2 / cargo-deny 0.20.2；`cargo update`（`e962596`）后 `cargo audit`：1 vulnerability（rsa RUSTSEC-2023-0071，已接受）+ 7 warnings（unic-*×5、proc-macro-error 已接受；glib RUSTSEC-2024-0429 仅 Linux 目标，新登记待接受）；quick-xml 两条已随更新解除。`cargo test --workspace --locked` 本机 303 + 18 通过。
 - [x] 审计剩余风险必须有暴露面、利用条件、缓解、期限、负责人。`docs/SECURITY_REVIEW.md` §7 三行（rsa / quick-xml / unic-*+proc-macro-error）已由项目 owner 于 2026-09-18 确认**已接受**；解除条件均绑定 russh / tauri 上游升级。
-- [ ] 由 code review / security review 检查后，才允许提交与归档。
+- [x] 由 code review / security review 检查后，才允许提交与归档。**2026-09-19 安全评审完成**：范围 `1ead18f..3e26b48`，无高置信度漏洞；3 条低于阈值观察记录于 `review-security-final.md`。
 
 ## capability/CSP 验证方式（已对齐）
 
