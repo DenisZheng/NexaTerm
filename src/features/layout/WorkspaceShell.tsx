@@ -407,21 +407,22 @@ import {
 import {
   closeTerminalSplitPane as closeTerminalSplitLayoutPane,
   collectTerminalSplitPanes,
-  createTerminalFourPaneLayout,
   createTerminalSplitLayout,
   equalizeTerminalSplitLayout,
   findTerminalSplitPaneByBinding,
   moveTerminalSplitBinding,
-  removeTerminalSplitBindings,
   splitTerminalPane,
   terminalPaneBindingKey,
   terminalPaneBindingsEqual,
   terminalSplitMaxPanes,
   type TerminalPaneBinding,
   type TerminalSplitBranch,
-  type TerminalSplitNode,
   updateTerminalSplitRatio as updateTerminalSplitLayoutRatio,
 } from "../terminal/terminalSplitLayout";
+import {
+  useTerminalSplitController,
+  type TerminalSplitHost,
+} from "../workspace/split/useTerminalSplitController";
 import type {
   LocalTerminalProfile,
   LocalTerminalProfileInput,
@@ -476,10 +477,6 @@ interface TerminalTab {
   type: "connecting" | "terminal";
   warmupOutput: number[];
 }
-
-type TerminalSplitHost =
-  | { connectionId: string; kind: "ssh" }
-  | { kind: "local" };
 
 interface TerminalClearRequest {
   id: number;
@@ -1001,26 +998,8 @@ export function WorkspaceShell() {
   const [localTerminalProfilesError, setLocalTerminalProfilesError] = useState<string | null>(null);
   const [activeWorkspaceMode, setActiveWorkspaceMode] = useState<WorkspaceMode>("home");
   const [activeLocalTerminalTabId, setActiveLocalTerminalTabId] = useState<string | null>(null);
-  const [terminalSplitLayout, setTerminalSplitLayout] = useState<TerminalSplitNode | null>(null);
-  const [terminalSplitHost, setTerminalSplitHost] = useState<TerminalSplitHost | null>(null);
-  const [terminalSplitAnchorIndex, setTerminalSplitAnchorIndex] = useState(0);
-  const [terminalSplitTabActive, setTerminalSplitTabActive] = useState(false);
-  const [focusedTerminalPaneId, setFocusedTerminalPaneId] = useState<string | null>(null);
-  const [terminalSplitLayoutRevision, setTerminalSplitLayoutRevision] = useState(0);
-  const [terminalSplitAutoCreateSameSession, setTerminalSplitAutoCreateSameSession] =
-    useState(true);
-  const [terminalSplitPickerOpenRequest, setTerminalSplitPickerOpenRequest] =
-    useState<{ key: number; paneId: string } | null>(null);
-  const terminalSplitPickerPendingPaneRef = useRef<string | null>(null);
-  const terminalSplitPickerRequestRef = useRef(0);
-  const [terminalSplitSyncEnabled, setTerminalSplitSyncEnabled] = useState(false);
-  const [terminalSplitSyncParticipantKeys, setTerminalSplitSyncParticipantKeys] =
-    useState<Set<string>>(() => new Set());
-  const [terminalSplitSyncError, setTerminalSplitSyncError] = useState<string | null>(null);
-  const [terminalSplitCloseConfirmOpen, setTerminalSplitCloseConfirmOpen] = useState(false);
   const [terminalClearRequest, setTerminalClearRequest] = useState<TerminalClearRequest | null>(null);
   const terminalClearRequestRef = useRef(0);
-  const terminalSplitIdRef = useRef(0);
   const [terminalDirectories, setTerminalDirectories] = useState<Record<string, string>>({});
   const terminalDirectoriesRef = useRef<Record<string, string>>({});
   const terminalPromptDirectorySnapshotReadersRef = useRef(
@@ -1219,50 +1198,6 @@ export function WorkspaceShell() {
   }, [localTerminalTabs]);
 
   useEffect(() => {
-    if (!terminalSplitLayout) {
-      return;
-    }
-    const availableBindings = new Set([
-      ...terminalTabs.map((tab) => terminalPaneBindingKey({ kind: "ssh", tabId: tab.id })),
-      ...localTerminalTabs.map((tab) => terminalPaneBindingKey({ kind: "local", tabId: tab.id })),
-    ]);
-    const currentPanes = collectTerminalSplitPanes(terminalSplitLayout);
-    const unavailableBindingKeys = new Set(
-      currentPanes.flatMap((pane) =>
-        pane.binding && !availableBindings.has(terminalPaneBindingKey(pane.binding))
-          ? [terminalPaneBindingKey(pane.binding)]
-          : [],
-      ),
-    );
-    const nextLayout = removeTerminalSplitBindings(terminalSplitLayout, unavailableBindingKeys);
-    if (!nextLayout) {
-      setTerminalSplitLayout(null);
-      setTerminalSplitHost(null);
-      setTerminalSplitTabActive(false);
-      setFocusedTerminalPaneId(null);
-      setTerminalSplitSyncEnabled(false);
-      setTerminalSplitSyncParticipantKeys(new Set());
-      setTerminalSplitSyncError(null);
-      return;
-    }
-    const nextPanes = collectTerminalSplitPanes(nextLayout);
-    const focusedPaneExists = focusedTerminalPaneId
-      ? nextPanes.some((pane) => pane.id === focusedTerminalPaneId)
-      : false;
-    if (nextLayout !== terminalSplitLayout) {
-      setTerminalSplitLayout(nextLayout);
-    }
-    if (!focusedPaneExists) {
-      setFocusedTerminalPaneId(nextPanes[0]?.id || null);
-    }
-  }, [
-    focusedTerminalPaneId,
-    localTerminalTabs,
-    terminalSplitLayout,
-    terminalTabs,
-  ]);
-
-  useEffect(() => {
     localTerminalProfilesRef.current = localTerminalProfiles;
   }, [localTerminalProfiles]);
 
@@ -1426,106 +1361,52 @@ export function WorkspaceShell() {
       : activeWorkspaceMode === "ssh" && activeTerminalTab
         ? { kind: "ssh", tabId: activeTerminalTab.id }
         : null;
-  const terminalSplitPanes = useMemo(
-    () => (terminalSplitLayout ? collectTerminalSplitPanes(terminalSplitLayout) : []),
-    [terminalSplitLayout],
-  );
-  const terminalSplitPaneByBinding = useMemo(() => {
-    const panes = new Map<string, (typeof terminalSplitPanes)[number]>();
-    terminalSplitPanes.forEach((pane) => {
-      if (pane.binding) {
-        panes.set(terminalPaneBindingKey(pane.binding), pane);
-      }
-    });
-    return panes;
-  }, [terminalSplitPanes]);
-  const terminalSplitMemberKeys = useMemo(
-    () =>
-      new Set(
-        terminalSplitPanes.flatMap((pane) =>
-          pane.binding ? [terminalPaneBindingKey(pane.binding)] : [],
-        ),
-      ),
-    [terminalSplitPanes],
-  );
-  const focusedTerminalSplitPane = focusedTerminalPaneId
-    ? terminalSplitPanes.find((pane) => pane.id === focusedTerminalPaneId) || null
-    : null;
-  const focusedTerminalSplitBinding = focusedTerminalSplitPane?.binding || null;
-  const terminalSplitExists = Boolean(terminalSplitLayout && terminalSplitPanes.length > 1);
-  const terminalSplitActive = terminalSplitExists && terminalSplitTabActive;
-  const terminalSplitCanAddPane = terminalSplitPanes.length < terminalSplitMaxPanes;
-
-  useEffect(() => {
-    if (!terminalSplitLayout || terminalSplitPanes.length <= terminalSplitMaxPanes) {
-      return;
-    }
-    const binding =
-      focusedTerminalSplitBinding ||
-      terminalSplitPanes.find((pane) => pane.binding)?.binding ||
-      fallbackTerminalSplitBinding();
-    if (!binding) {
-      return;
-    }
-    const bindings = [
-      binding,
-      ...terminalSplitPanes.flatMap((pane) =>
-        pane.binding && !terminalPaneBindingsEqual(pane.binding, binding) ? [pane.binding] : [],
-      ),
-    ].slice(0, terminalSplitMaxPanes);
-    const nextLayout = createTerminalFourPane(bindings);
-    setTerminalSplitLayout(nextLayout.layout);
-    setFocusedTerminalPaneId(nextLayout.focusedPaneId);
-  }, [focusedTerminalSplitBinding, terminalSplitLayout, terminalSplitPanes]);
-
-  useEffect(() => {
-    if (!terminalSplitLayout || terminalSplitPanes.length !== 1) {
-      return;
-    }
-    const remainingBinding = terminalSplitPanes[0]?.binding || null;
-    setTerminalSplitLayout(null);
-    setTerminalSplitHost(null);
-    setTerminalSplitTabActive(false);
-    setFocusedTerminalPaneId(null);
-    setTerminalSplitPickerOpenRequest(null);
-    terminalSplitPickerPendingPaneRef.current = null;
-    setTerminalSplitSyncEnabled(false);
-    setTerminalSplitSyncParticipantKeys(new Set());
-    setTerminalSplitSyncError(null);
-    if (remainingBinding) {
-      activateTerminalBindingAsStandalone(remainingBinding);
-    }
-  }, [terminalSplitLayout, terminalSplitPanes]);
-
-  useEffect(() => {
-    const availableKeys = new Set(
-      terminalSplitPanes.flatMap((pane) =>
-        pane.binding && terminalSessionIdForBinding(pane.binding)
-          ? [terminalPaneBindingKey(pane.binding)]
-          : [],
-      ),
-    );
-    setTerminalSplitSyncParticipantKeys((current) => {
-      const next = new Set(Array.from(current).filter((key) => availableKeys.has(key)));
-      if (terminalSplitSyncEnabled && focusedTerminalSplitBinding) {
-        const focusedKey = terminalPaneBindingKey(focusedTerminalSplitBinding);
-        if (availableKeys.has(focusedKey)) {
-          next.add(focusedKey);
-        }
-      }
-      return setsEqual(current, next) ? current : next;
-    });
-    if (!terminalSplitActive || availableKeys.size < 2) {
-      setTerminalSplitSyncEnabled(false);
-    }
-  }, [
+  // Task 04 第一刀 1a：分屏状态与归一 effect 已原样迁入 useTerminalSplitController，
+  // 这里只做解构接线；行为与迁出前一致。
+  const {
+    createTerminalFourPane,
+    fallbackTerminalSplitBinding,
+    focusedTerminalPaneId,
     focusedTerminalSplitBinding,
-    localTerminalTabs,
+    focusedTerminalSplitPane,
+    nextTerminalSplitId,
+    setFocusedTerminalPaneId,
+    setTerminalSplitAnchorIndex,
+    setTerminalSplitAutoCreateSameSession,
+    setTerminalSplitCloseConfirmOpen,
+    setTerminalSplitHost,
+    setTerminalSplitLayout,
+    setTerminalSplitLayoutRevision,
+    setTerminalSplitPickerOpenRequest,
+    setTerminalSplitSyncEnabled,
+    setTerminalSplitSyncError,
+    setTerminalSplitSyncParticipantKeys,
+    setTerminalSplitTabActive,
+    terminalSessionIdForBinding,
     terminalSplitActive,
+    terminalSplitAnchorIndex,
+    terminalSplitAutoCreateSameSession,
+    terminalSplitCanAddPane,
+    terminalSplitCloseConfirmOpen,
+    terminalSplitExists,
+    terminalSplitHost,
+    terminalSplitLayout,
+    terminalSplitLayoutRevision,
+    terminalSplitMemberKeys,
+    terminalSplitPaneByBinding,
     terminalSplitPanes,
+    terminalSplitPickerOpenRequest,
+    terminalSplitPickerPendingPaneRef,
+    terminalSplitPickerRequestRef,
     terminalSplitSyncEnabled,
+    terminalSplitSyncError,
+    terminalSplitSyncParticipantKeys,
+  } = useTerminalSplitController({
+    activeTerminalSplitBinding,
+    localTerminalTabs,
+    onCollapseToStandalone: activateTerminalBindingAsStandalone,
     terminalTabs,
-  ]);
+  });
   const defaultCommandHistoryScopeKey = useMemo(
     () =>
       commandHistoryDefaultScopeKey({
@@ -4608,11 +4489,6 @@ export function WorkspaceShell() {
     return tabs.find((tab) => tab.connectionId === connectionId && tab.type === "connecting") || null;
   }
 
-  function nextTerminalSplitId(prefix: string) {
-    terminalSplitIdRef.current += 1;
-    return `${prefix}-${terminalSplitIdRef.current.toString()}`;
-  }
-
   function terminalSplitHostForBinding(binding: TerminalPaneBinding): TerminalSplitHost | null {
     if (binding.kind === "local") {
       return { kind: "local" };
@@ -4635,17 +4511,6 @@ export function WorkspaceShell() {
         .filter((item) => item.connectionId === tab.connectionId)
         .findIndex((item) => item.id === binding.tabId),
     );
-  }
-
-  function terminalSessionIdForBinding(binding: TerminalPaneBinding) {
-    const tab =
-      binding.kind === "ssh"
-        ? terminalTabs.find((item) => item.id === binding.tabId)
-        : localTerminalTabs.find((item) => item.id === binding.tabId);
-    if (!tab?.sessionId || (tab.status !== "已连接" && tab.status !== "预览")) {
-      return null;
-    }
-    return tab.sessionId;
   }
 
   function createSameSessionTerminalBinding(
@@ -4721,18 +4586,6 @@ export function WorkspaceShell() {
       key: terminalSplitPickerRequestRef.current,
       paneId,
     });
-  }
-
-  function fallbackTerminalSplitBinding(): TerminalPaneBinding | null {
-    if (activeTerminalSplitBinding) {
-      return activeTerminalSplitBinding;
-    }
-    const sshTab = terminalTabs[0];
-    if (sshTab) {
-      return { kind: "ssh", tabId: sshTab.id };
-    }
-    const localTab = localTerminalTabs[0];
-    return localTab ? { kind: "local", tabId: localTab.id } : null;
   }
 
   function focusTerminalSplitPane(paneId: string) {
@@ -4893,31 +4746,6 @@ export function WorkspaceShell() {
     if (nextLayout.emptyPaneId) {
       requestTerminalSplitPicker(nextLayout.emptyPaneId, false);
     }
-  }
-
-  function createTerminalFourPane(bindings: readonly TerminalPaneBinding[]) {
-    const ids = {
-      bottomLeft: nextTerminalSplitId("terminal-pane"),
-      bottomRight: nextTerminalSplitId("terminal-pane"),
-      leftSplit: nextTerminalSplitId("terminal-split"),
-      rightSplit: nextTerminalSplitId("terminal-split"),
-      root: nextTerminalSplitId("terminal-split"),
-      topLeft: nextTerminalSplitId("terminal-pane"),
-      topRight: nextTerminalSplitId("terminal-pane"),
-    };
-    const layout = createTerminalFourPaneLayout(bindings, ids);
-    const panes = collectTerminalSplitPanes(layout);
-    const emptyPane = panes.find((pane) => !pane.binding) || null;
-    const focusedPane =
-      emptyPane ||
-      panes.find((pane) => pane.binding && terminalPaneBindingsEqual(pane.binding, bindings[0])) ||
-      panes[0] ||
-      null;
-    return {
-      emptyPaneId: emptyPane?.id || null,
-      focusedPaneId: focusedPane?.id || ids.topLeft,
-      layout,
-    };
   }
 
   function closeTerminalSplitPane(paneId: string) {
@@ -14221,13 +14049,6 @@ function concatenateUint8Arrays(chunks: Uint8Array[], totalBytes: number) {
 
 function yieldToBrowser() {
   return new Promise<void>((resolve) => window.setTimeout(resolve, 0));
-}
-
-function setsEqual<T>(left: ReadonlySet<T>, right: ReadonlySet<T>) {
-  if (left.size !== right.size) {
-    return false;
-  }
-  return Array.from(left).every((value) => right.has(value));
 }
 
 function scheduleIdleTask(callback: () => void, timeoutMs: number): () => void {

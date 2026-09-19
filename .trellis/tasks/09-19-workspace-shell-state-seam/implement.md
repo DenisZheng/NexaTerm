@@ -10,8 +10,8 @@
 ## 1. 第一刀：Split（两个提交）
 
 ### 1a. 机械抽 hook + characterization（提交 `refactor(workspace): extract split controller hook`）
-- [ ] 新建 `src/features/workspace/split/useTerminalSplitController.ts`：把 1004-1023 行 12 个 useState、3 个 ref、4 个归一 effect（1221 / 1459 / 1481 / 1500）原样移入，不改逻辑；外部依赖以 inputs/回调传入。
-- [ ] `useTerminalSplitController.test.tsx`（jsdom + renderHook）：约 20 个行为用例，先在旧实现上全绿。
+- [x] 新建 `src/features/workspace/split/useTerminalSplitController.ts`：把 1004-1023 行 12 个 useState、3 个 ref、4 个归一 effect（1221 / 1459 / 1481 / 1500）原样移入，不改逻辑；外部依赖以 inputs/回调传入。
+- [x] `useTerminalSplitController.test.tsx`（jsdom + renderHook）：19 个行为用例，在旧实现上全绿（2026-09-19，本机 Vitest 122 passed）。
 - [ ] WorkspaceShell 改为调用 hook；行为零变化。验证 + 冒烟 + 提交 + CI。
 
 ### 1b. 换内脏（提交 `refactor(workspace): replace split controller internals with reducer`）
@@ -51,4 +51,8 @@
 
 ## 结果记录
 
-（执行时填写）
+### 2026-09-19 第一刀 1a
+- 迁出：12 useState、3 ref、4 归一 effect、4 个辅助函数（`nextTerminalSplitId`、`terminalSessionIdForBinding`、`fallbackTerminalSplitBinding`、`createTerminalFourPane`）、`setsEqual`、`TerminalSplitHost` 类型；WorkspaceShell 由 14,370 行降到 14,190 行，`useState` 文本命中 108→96。
+- 跨 seam 回调 `activateTerminalBindingAsStandalone` 经 ref 传入，effect 依赖数组与原版完全一致。
+- 本机：tsc 0 错、Vitest 122 passed / 1 todo、build 通过、startup boundary PASS、hook 落在 WorkspaceShell chunk 内。
+- 待用户 GUI 冒烟后推送。
