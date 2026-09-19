@@ -3,31 +3,38 @@
 ## 0. 启动前门禁
 
 - Task 03 Vitest 门禁已在 CI（`35411114576` 全绿）。
-- 基线数字（2026-09-19，`2b56749`）：`WorkspaceShell.tsx` 14,370 行；`useState` 108（组件内 77）、`useEffect` 40、`useReducer` 0。
+- 基线数字（2026-09-19，`2b56749`）：`WorkspaceShell.tsx` 14,370 行；`useState` 声明 78（组件内 77）、`useEffect` 39 + `useLayoutEffect` 4、`useReducer` 0。
+- 评审：`review-plan.md`（2026-09-19）结论"需先修改"，design.md 已按其修订；实施以修订版为准。
 - 本机：Node 24 / pnpm 11.22.0 / rustup 1.98.1，`tauri dev` 可运行，可做手动冒烟。
 
-## 1. 第一刀：Split reducer
+## 1. 第一刀：Split（两个提交）
 
-- [ ] 新建 `src/features/workspace/split/{actions,reducer,selectors}.ts`，状态与 action 按 design §2。
-- [ ] `reducer.test.ts`：design §2 的 characterization 用例 + 每个 action 的最小用例；未知 action 返回原引用；`revision` 语义。
-- [ ] WorkspaceShell：12 个 `useState` 换 `useReducer`；按 setter 调用点逐个改 dispatch（总计约 80 处），多 setter 连改处合并为一个 action；effect 位置不动。
-- [ ] 若 `TerminalSplitSurface` / `TerminalSplitMenu` 的 props 只是透传 state 字段，保持 props 契约不变，只改来源。
-- [ ] 验证：`pnpm run check`、`pnpm test`、`pnpm run build`、`node scripts/check-startup-module-boundary-source.mjs`；手动冒烟：开两 pane、移动、同步输入、关闭一个、关闭全部。
-- [ ] 记录前后行数与计数；提交 `refactor(workspace): extract split reducer`；push，记录 CI run。
+### 1a. 机械抽 hook + characterization（提交 `refactor(workspace): extract split controller hook`）
+- [ ] 新建 `src/features/workspace/split/useTerminalSplitController.ts`：把 1004-1023 行 12 个 useState、3 个 ref、4 个归一 effect（1221 / 1459 / 1481 / 1500）原样移入，不改逻辑；外部依赖以 inputs/回调传入。
+- [ ] `useTerminalSplitController.test.tsx`（jsdom + renderHook）：约 20 个行为用例，先在旧实现上全绿。
+- [ ] WorkspaceShell 改为调用 hook；行为零变化。验证 + 冒烟 + 提交 + CI。
 
-## 2. 第二刀：SessionTabs reducer
+### 1b. 换内脏（提交 `refactor(workspace): replace split controller internals with reducer`）
+- [ ] 新建 `split/{actions,reducer,selectors}.ts` 与 `multiExec/{actions,reducer,selectors}.ts`（仅 mode/targets/error），按 design §2.2 / §2.3；`reducer.test.ts` 覆盖每个 action、`availableBindingsChanged` 的三种归一、未知 action 返回原引用。
+- [ ] hook 内部改 `useReducer`，4 个归一 effect 收敛为一个 `availableBindingsChanged` dispatch + 一个 `collapsedTo` 回调 effect；1a 的 renderHook 用例不动仍绿。
+- [ ] 记录接受的行为变化：closePane 关到空时 picker/sync 同帧清理。
+- [ ] 验证：`pnpm run check`、`pnpm test`、`pnpm run build`、`node scripts/check-startup-module-boundary-source.mjs`；冒烟：开两 pane、四宫格、移动、同步输入、关一个、关全部、关闭宿主 tab。
+- [ ] 记录前后行数与计数；提交；push，记录 CI run。
 
-- [ ] 先写 characterization：现有关闭活动 tab 的相邻激活规则、connecting→terminal 迁移、重连 sessionId 替换、RDP/VNC 失败留存，全部以现状为准。
-- [ ] 新建 `sessionTabs/` 三件套；`WorkbenchTab` 判别联合按 design §3。
-- [ ] 合并五个集合与六个 active 指针；派生值进 `selectors.ts` 并在 WorkspaceShell 用 `useMemo`。
-- [ ] 逐个审 13 个 tab/active 相关 effect：纯指针对齐的删除，带副作用的改读 selector；每删一个 effect 在 implement.md 记一行"删除原因"。
-- [ ] 验证同第一刀，冒烟加：SSH/本地/RDP 各开关一次、断线重连、关闭活动 tab。
+## 2. 第二刀：SessionTabs reducer（按 design §3 修订版）
+
+- [ ] 机械抽 `useSessionTabsController`（五个集合、七个指针含 `activeRemoteFileTabId`、`activeWorkspaceMode`、`homeActive`、三个 byConnection 记忆、4 个 ref 镜像 effect），renderHook characterization 先绿：关闭活动 tab 相邻激活、connecting→terminal、重连 sessionId 替换、RDP/VNC 失败留存、回退 file tab 规则。
+- [ ] `sessionTabs/` 三件套；`WorkbenchTab` 联合，`index` 保留为 `ordinal`；`UnifiedWorkbenchTab.kind` 映射函数。
+- [ ] 把 46 个多 setter 函数逐个收成原子 action（`tabs/activate`、`tabs/close` 等）；不删 effect。
+- [ ] `terminalSplitAnchorIndex` 语义改为按 owner tab id 锚定（design §2.2 备注）。
+- [ ] 静态脚本：`check-session-subtab-memory.mjs`、`check-local-terminal-warmup-source.mjs`、`check-remote-file-editor-source.mjs` 改断言 selector/action 名，提交信息说明。
+- [ ] 验证同第一刀，冒烟加 SSH/本地/RDP 各开关一次、断线重连、关闭活动 tab、回首页。
 - [ ] 提交 `refactor(workspace): extract session tabs reducer`；push，记录 CI run。
 
 ## 3. 第三刀：MultiExec reducer
 
 - [ ] 新建 `multiExec/` 三件套；`buildCommandSenderTargets` 迁入 `selectors.ts` 并改为消费 SessionTabs state。
-- [ ] 从 Split reducer 移交 `sync.*`；Split reducer 去掉 sync 字段，其测试同步调整。
+- [ ] 扩展第一刀已建的 `multiExec/`：`mode` 加 `"send"`，吸收 command sender 状态与 `commandSenderTargetTabByConnectionId`。
 - [ ] 吸收 command sender 11 个 useState 与 `selectedCommandTargetKeys`。
 - [ ] 验证同前，加 `node scripts/check-command-sender-active-tab-source.mjs` 与 `check-command-sender-mvp-source.mjs`（两脚本此前已知漂移，若失败先核对是否为脚本假设过期，不为迁就脚本改行为）。
 - [ ] 提交 `refactor(workspace): extract multi-exec reducer`；push，记录 CI run。
