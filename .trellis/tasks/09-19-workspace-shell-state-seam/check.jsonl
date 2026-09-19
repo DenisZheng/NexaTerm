@@ -1,0 +1,2 @@
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "核对 reducer 测试是否满足 Testing Requirements"}
+{"file": "docs/tasks/04-workspace-shell-state-seam.md", "reason": "对照原始验收标准"}

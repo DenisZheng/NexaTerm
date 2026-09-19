@@ -1,0 +1,3 @@
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "测试约定：reducer 测试位置、命名、禁 snapshot"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "现有组件 props 契约，seam 提取不得改变"}
+{"file": "docs/ARCHITECTURE.md", "reason": "WorkspaceShell 当前职责与 lazy 边界"}
