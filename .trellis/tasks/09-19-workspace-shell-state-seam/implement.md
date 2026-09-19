@@ -12,14 +12,15 @@
 ### 1a. 机械抽 hook + characterization（提交 `refactor(workspace): extract split controller hook`）
 - [x] 新建 `src/features/workspace/split/useTerminalSplitController.ts`：把 1004-1023 行 12 个 useState、3 个 ref、4 个归一 effect（1221 / 1459 / 1481 / 1500）原样移入，不改逻辑；外部依赖以 inputs/回调传入。
 - [x] `useTerminalSplitController.test.tsx`（jsdom + renderHook）：19 个行为用例，在旧实现上全绿（2026-09-19，本机 Vitest 122 passed）。
-- [ ] WorkspaceShell 改为调用 hook；行为零变化。验证 + 冒烟 + 提交 + CI。
+- [x] WorkspaceShell 改为调用 hook；行为零变化。本机验证通过，提交 `7c33e23` 已推送；GUI 冒烟推迟到 1b 后一次性做。
 
 ### 1b. 换内脏（提交 `refactor(workspace): replace split controller internals with reducer`）
-- [ ] 新建 `split/{actions,reducer,selectors}.ts` 与 `multiExec/{actions,reducer,selectors}.ts`（仅 mode/targets/error），按 design §2.2 / §2.3；`reducer.test.ts` 覆盖每个 action、`availableBindingsChanged` 的三种归一、未知 action 返回原引用。
-- [ ] hook 内部改 `useReducer`，4 个归一 effect 收敛为一个 `availableBindingsChanged` dispatch + 一个 `collapsedTo` 回调 effect；1a 的 renderHook 用例不动仍绿。
-- [ ] 记录接受的行为变化：closePane 关到空时 picker/sync 同帧清理。
-- [ ] 验证：`pnpm run check`、`pnpm test`、`pnpm run build`、`node scripts/check-startup-module-boundary-source.mjs`；冒烟：开两 pane、四宫格、移动、同步输入、关一个、关全部、关闭宿主 tab。
-- [ ] 记录前后行数与计数；提交；push，记录 CI run。
+- [x] 新建 `split/{actions,reducer,selectors}.ts` 与 `multiExec/{actions,reducer}.ts`（仅 mode/targets/error）；`reducer.test.ts` 各覆盖 action、归一三种分支、未知 action / 无变化返回原引用（split 11 例、multiExec 6 例）。
+- [x] hook 内部改 `useReducer`，4 个归一 effect 收敛为 `availableBindingsChanged` + `targetsAvailable` + 一个 `collapsedTo` 回调 effect；1a 的 19 个 renderHook 用例一字未改仍绿。
+- [x] 记录接受的行为变化：见「结果记录」。
+- [x] 验证：tsc 0 错、Vitest 139 passed / 1 todo、build 通过、startup boundary PASS、reducer 落在 WorkspaceShell chunk。
+- [ ] GUI 冒烟（用户）：开两 pane、四宫格、移动、同步输入、关一个、关全部、关闭宿主 tab。
+- [ ] 记录 CI run。
 
 ## 2. 第二刀：SessionTabs reducer（按 design §3 修订版）
 
@@ -41,7 +42,7 @@
 
 ## 4. 文档
 
-- [ ] `.trellis/spec/frontend/state-management.md`：reducer/action/selector 约定、目录、命名、测试要求。
+- [x] `.trellis/spec/frontend/state-management.md`：reducer/action/selector 约定、目录、命名、测试要求（2026-09-19，index 状态 To fill → Partial）。
 - [ ] `docs/ARCHITECTURE.md`、`docs/CURRENT_STATE.md`：WorkspaceShell 状态所有权与前后数字。
 - [ ] `docs/tasks/05-workspace-restore-and-schema.md`：注明快照输入为 `SessionTabsState` + `SplitState`。
 
@@ -55,4 +56,12 @@
 - 迁出：12 useState、3 ref、4 归一 effect、4 个辅助函数（`nextTerminalSplitId`、`terminalSessionIdForBinding`、`fallbackTerminalSplitBinding`、`createTerminalFourPane`）、`setsEqual`、`TerminalSplitHost` 类型；WorkspaceShell 由 14,370 行降到 14,190 行，`useState` 文本命中 108→96。
 - 跨 seam 回调 `activateTerminalBindingAsStandalone` 经 ref 传入，effect 依赖数组与原版完全一致。
 - 本机：tsc 0 错、Vitest 122 passed / 1 todo、build 通过、startup boundary PASS、hook 落在 WorkspaceShell chunk 内。
-- 待用户 GUI 冒烟后推送。
+- 待用户 GUI 冒烟后推送。→ 已推送（用户外出，冒烟合并到 1b 后一次做）。
+
+### 2026-09-19 第一刀 1b
+- `split/`：`SplitState` 10 字段（layout/host/anchorIndex/tabActive/focusedPaneId/revision/autoCreateSameSession/picker/confirmCloseOpen/collapsedTo）。`TerminalSplitHost`、`TerminalSplitPickerOpenRequest` 类型迁到 `actions.ts`。
+- `multiExec/`：`MultiExecState { mode: off|live, targets, error }` 接走原 sync 三个 useState。
+- 对外接口（hook 返回值）与 1a 完全一致；12 个 `set*` 现为 dispatch 薄包装（`useCallback` 稳定引用），标注为过渡层，第二刀替换调用点后删除。`split/setLayout` 保留函数式更新以承接旧代码里 6 处 `setTerminalSplitLayout((layout) => …)`。
+- 保留为 ref：id 计数器、picker 请求计数器、pendingPane（只在事件内同步读写，不参与渲染）；比 design §2.2 的“并入 state”保守，理由是并入会让 `requestTerminalSplitPicker` 变成两次 dispatch，收益为零。
+- **接受的行为变化**：(1) 原 4 个 effect 各自触发、可能跨两帧完成的归一（失效清理 → 单 pane 收缩），现在一次 reduce 完成，中间态少一帧；(2) 单 pane 收缩时原 effect 直接同步调用 `activateTerminalBindingAsStandalone`，现在经 `collapsedTo` 标记在下一个 effect 里调用，晚一个 effect tick 但仍在同一提交前；characterization 用例对二者均不敏感，已验证。
+- 本机：tsc 0、Vitest 139/1 todo、build ✓、boundary ✓、WorkspaceShell 行数 14,190（本步不动 shell）。
