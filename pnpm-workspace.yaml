@@ -10,3 +10,6 @@ overrides:
   postcss: "^8.5.23"
   browserslist: "^4.28.7"
   baseline-browser-mapping: "^2.11.0"
+  # jsdom 传递依赖；4.0.1 发布于 2026-09-18，被 CI pnpm 11 的 minimumReleaseAge 策略拒绝。
+  # 待其发布满策略窗口后可移除本行并重新解析。
+  "@csstools/css-tokenizer": "4.0.0"
