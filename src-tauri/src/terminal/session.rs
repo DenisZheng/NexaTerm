@@ -5,7 +5,7 @@ use std::time::Duration;
 
 use encoding_rs::{CoderResult, Decoder, Encoding};
 use russh::client;
-use russh::keys::{load_secret_key, PrivateKeyWithHashAlg};
+use russh::keys::PrivateKeyWithHashAlg;
 use russh::{Channel, ChannelMsg, ChannelReadHalf, ChannelStream, ChannelWriteHalf, Disconnect};
 use russh_sftp::client::{Config as SftpConfig, SftpSession};
 use std::future::Future;
@@ -1960,14 +1960,7 @@ async fn authenticate(
                 AppError::new("terminal_auth_failed", "SSH 认证失败。", error, true)
             })?,
         AuthMethod::PrivateKey { path, passphrase } => {
-            let key = load_secret_key(path, passphrase.as_deref()).map_err(|error| {
-                AppError::new(
-                    "terminal_private_key_invalid",
-                    "私钥读取失败。",
-                    error,
-                    true,
-                )
-            })?;
+            let key = super::private_key::load_private_key(path, passphrase.as_deref())?;
             let hash_alg = client
                 .best_supported_rsa_hash()
                 .await

@@ -11314,6 +11314,8 @@ function connectionStepErrorIndex(code: string) {
     code === "terminal_auth_timeout" ||
     code === "terminal_auth_missing" ||
     code === "terminal_private_key_invalid" ||
+    code === "terminal_private_key_passphrase" ||
+    code === "terminal_private_key_not_found" ||
     code.startsWith("credential_") ||
     code.startsWith("connection_credential_")
   ) {
@@ -12239,6 +12241,8 @@ function connectionErrorStage(code: string) {
     code === "terminal_auth_rejected" ||
     code === "terminal_auth_timeout" ||
     code === "terminal_private_key_invalid" ||
+    code === "terminal_private_key_passphrase" ||
+    code === "terminal_private_key_not_found" ||
     code.startsWith("credential_")
   ) {
     return "用户认证阶段";
@@ -12274,7 +12278,13 @@ function connectionErrorSuggestion(code: string) {
     return "主机已响应但认证被拒绝，检查用户名、密码或私钥是否匹配。";
   }
   if (code === "terminal_private_key_invalid") {
-    return "检查私钥路径、文件格式和私钥口令。";
+    return "检查私钥文件格式：支持 OpenSSH、PEM 与 PuTTY PPK（v2/v3）；确认文件未损坏且算法受支持。";
+  }
+  if (code === "terminal_private_key_passphrase") {
+    return "该私钥已加密，请填写正确的私钥口令。";
+  }
+  if (code === "terminal_private_key_not_found") {
+    return "私钥文件不存在或无法读取，检查路径与文件权限。";
   }
   if (code === "terminal_auth_failed" || code === "terminal_auth_timeout") {
     return "检查认证方式、用户名、密码或私钥；如果服务器禁用该方式，需要换用允许的认证方式。";

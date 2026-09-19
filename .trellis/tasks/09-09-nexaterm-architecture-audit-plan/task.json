@@ -22,7 +22,8 @@
     "09-09-nexaterm-baseline-toolchain-evidence",
     "09-10-security-and-dependency-hardening",
     "09-19-frontend-test-baseline",
-    "09-19-workspace-shell-state-seam"
+    "09-19-workspace-shell-state-seam",
+    "09-19-ssh-ppk-private-key"
   ],
   "parent": null,
   "relatedFiles": [],
