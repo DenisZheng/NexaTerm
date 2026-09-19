@@ -123,7 +123,7 @@
 
 #### 6.1 Phase 5 精确盘点结果（2026-09-18，基于源码 + `dist/` 构建产物）
 
-策略草案落在 `src-tauri/csp-policy.json`（唯一来源），由 `pnpm run check:tauri-csp` 静态校验并与 `tauri.conf.json` 对比。**`tauri.conf.json` 仍为 `null`，检查输出 `REVIEW-REQUIRED`**：草案已就绪但未启用；启用前必须在具备 GUI 工具链的环境用 `tauri dev` / `tauri build` 冒烟 Monaco、xterm、noVNC、更新器。
+策略草案落在 `src-tauri/csp-policy.json`（唯一来源），由 `pnpm run check:tauri-csp` 静态校验并与 `tauri.conf.json` 对比。**2026-09-19 已启用**：`tauri.conf.json` 的 `csp` / `devCsp` 写入检查脚本渲染的字符串，检查输出 `PASS`。macOS 本机 `tauri dev`（dev CSP 生效）GUI 冒烟：首页、透明窗口/磨砂材质、本地终端 xterm、SSH + 远程文件 Monaco 编辑、VNC 连接均正常，WebView 控制台无 CSP 拒绝记录，Rust 日志无相关报错；"检查更新"在 dev 模式按 `appUpdate.ts` 设计直接返回"开发模式不会检查应用更新"，且更新器网络请求在 Rust 进程内不受 WebView CSP 约束。生产 `csp`（无 `script-src 'unsafe-inline'`、无 HMR ws 源）尚未经 `tauri build` 产物冒烟，待打包链路验收时补做。
 
 初盘中的几项经核实**收窄**：
 
