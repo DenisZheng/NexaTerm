@@ -19,4 +19,4 @@
 ## 待用户验收
 
 - [ ] 用真实 PPK 直接连接成功（GUI，与 Task 04 分屏冒烟同一次）。
-- [ ] CI run 记录。
+- [x] CI run `35434062517` @ `fd07c65` 全绿；Security evidence job 通过，PPK 夹具未触发 secret 扫描，无需豁免。
