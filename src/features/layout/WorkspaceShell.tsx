@@ -67,7 +67,6 @@ import type {
   HostKeyInfo,
   RdpCertificatePolicy,
   RdpLaunchPreview,
-  RdpLaunchResult,
   RdpRunnerKind,
   VncLaunchPreview,
   VncLaunchResult,
@@ -423,6 +422,24 @@ import {
   useTerminalSplitController,
   type TerminalSplitHost,
 } from "../workspace/split/useTerminalSplitController";
+import {
+  groupByConnection,
+  selectActiveConnectedTerminalTab,
+  selectActiveSession,
+  selectActiveTerminalSplitBinding,
+  selectActiveTerminalTab,
+  selectConnectionSessions,
+} from "../workspace/sessionTabs/selectors";
+import type {
+  RdpSessionStatus,
+  RdpSessionTab,
+  TerminalTab as SessionTerminalTab,
+  UnifiedWorkbenchTab,
+  VncSessionStatus,
+  VncSessionTab,
+  WorkbenchTabKind,
+  WorkspaceMode,
+} from "../workspace/sessionTabs/types";
 import type {
   LocalTerminalProfile,
   LocalTerminalProfileInput,
@@ -440,13 +457,7 @@ type SshConnectionProfile = ConnectionProfile & {
 
 const VNC_RUNNER_HOST_WINDOW_LABEL = "vnc-runner-host";
 
-type WorkbenchTabKind = "terminal" | "file";
 type WorkbenchTabDropZone = WorkbenchTabKind | "split-file" | "split-terminal";
-
-interface UnifiedWorkbenchTab {
-  id: string;
-  kind: WorkbenchTabKind;
-}
 
 interface WorkbenchTabDragPayload extends UnifiedWorkbenchTab {
   connectionId: string;
@@ -464,57 +475,9 @@ interface WorkbenchTabMouseDrag {
   startY: number;
 }
 
-interface TerminalTab {
-  connectionStep?: ConnectionStepState | null;
-  error?: string | null;
-  id: string;
-  connectionId: string;
-  index: number;
-  requestId?: string;
-  sessionId?: string;
-  status: string;
-  title: string;
-  type: "connecting" | "terminal";
-  warmupOutput: number[];
-}
-
 interface TerminalClearRequest {
   id: number;
   tabId: string;
-}
-
-type RdpSessionStatus = "launching" | "external" | "embedded" | "native" | "error";
-
-interface RdpSessionTab {
-  connectionId: string;
-  createdAt: number;
-  error?: string | null;
-  id: string;
-  message?: string | null;
-  preview?: RdpLaunchPreview | null;
-  result?: RdpLaunchResult | null;
-  status: RdpSessionStatus;
-  title: string;
-}
-
-type VncSessionStatus = "launching" | "embedded" | "windowed" | "external" | "error";
-
-interface VncSessionTab {
-  connectionId: string;
-  createdAt: number;
-  error?: string | null;
-  id: string;
-  message?: string | null;
-  preview?: VncLaunchPreview | null;
-  result?: VncLaunchResult | null;
-  status: VncSessionStatus;
-  title: string;
-  windowLabel?: string | null;
-}
-
-interface ConnectionSessionSummary {
-  connectionId: string;
-  tabs: Array<{ id: string }>;
 }
 
 type CommandSenderDeliveryStatus = "idle" | "sent" | "failed";
@@ -569,6 +532,8 @@ type ConnectedTerminalTab = TerminalTab & { sessionId: string; type: "terminal" 
 
 type ConnectionStepMode = "test" | "terminal";
 type ConnectionStepStatus = "idle" | "running" | "waiting_host_key" | "prompt" | "success" | "error";
+
+type TerminalTab = SessionTerminalTab<ConnectionStepState>;
 
 interface ConnectionStepState {
   activeStepIndex?: number | null;
@@ -640,7 +605,6 @@ type LatencyProbeState =
   | { status: "failed" };
 type ResizablePaneSide = "left" | "right";
 type ResizingPane = ResizablePaneSide | "editor-terminal";
-type WorkspaceMode = "home" | "ssh" | "local" | "rdp" | "vnc";
 
 interface RemoteFilePropertiesState {
   entry: RemoteFileEntry;
@@ -1260,107 +1224,48 @@ export function WorkspaceShell() {
   const activeConnection = activeConnectionId
     ? connectionById.get(activeConnectionId) || null
     : null;
-  const terminalTabsByConnection = useMemo(() => {
-    const groups = new Map<string, TerminalTab[]>();
-
-    terminalTabs.forEach((tab) => {
-      const group = groups.get(tab.connectionId) || [];
-      group.push(tab);
-      groups.set(tab.connectionId, group);
-    });
-
-    return groups;
-  }, [terminalTabs]);
-  const rdpSessionsByConnection = useMemo(() => {
-    const groups = new Map<string, RdpSessionTab[]>();
-
-    rdpSessions.forEach((session) => {
-      const group = groups.get(session.connectionId) || [];
-      group.push(session);
-      groups.set(session.connectionId, group);
-    });
-
-    return groups;
-  }, [rdpSessions]);
-  const vncSessionsByConnection = useMemo(() => {
-    const groups = new Map<string, VncSessionTab[]>();
-
-    vncSessions.forEach((session) => {
-      const group = groups.get(session.connectionId) || [];
-      group.push(session);
-      groups.set(session.connectionId, group);
-    });
-
-    return groups;
-  }, [vncSessions]);
-  const connectionSessions = useMemo<ConnectionSessionSummary[]>(() => {
-    const sessions = new Map<string, ConnectionSessionSummary>();
-
-    terminalTabsByConnection.forEach((tabs, connectionId) => {
-      sessions.set(connectionId, { connectionId, tabs });
-    });
-    rdpSessionsByConnection.forEach((tabs, connectionId) => {
-      const existing = sessions.get(connectionId);
-      sessions.set(connectionId, {
-        connectionId,
-        tabs: existing ? [...existing.tabs, ...tabs] : tabs,
-      });
-    });
-    vncSessionsByConnection.forEach((tabs, connectionId) => {
-      const existing = sessions.get(connectionId);
-      sessions.set(connectionId, {
-        connectionId,
-        tabs: existing ? [...existing.tabs, ...tabs] : tabs,
-      });
-    });
-
-    return Array.from(sessions.values());
-  }, [rdpSessionsByConnection, terminalTabsByConnection, vncSessionsByConnection]);
+  // Task 04 第二刀 2a：会话派生值改走 sessionTabs/selectors 纯函数；分组结果需 useMemo 保持引用稳定。
+  const terminalTabsByConnection = useMemo(() => groupByConnection(terminalTabs), [terminalTabs]);
+  const rdpSessionsByConnection = useMemo(() => groupByConnection(rdpSessions), [rdpSessions]);
+  const vncSessionsByConnection = useMemo(() => groupByConnection(vncSessions), [vncSessions]);
+  const connectionSessions = useMemo(
+    () =>
+      selectConnectionSessions(
+        terminalTabsByConnection,
+        rdpSessionsByConnection,
+        vncSessionsByConnection,
+      ),
+    [rdpSessionsByConnection, terminalTabsByConnection, vncSessionsByConnection],
+  );
   const activeConnectionTabs = activeConnectionId
     ? terminalTabsByConnection.get(activeConnectionId) || []
     : [];
   const activeRdpSessions = activeConnectionId
     ? rdpSessionsByConnection.get(activeConnectionId) || []
     : [];
-  const activeRdpSession =
-    (activeRdpSessionId
-      ? rdpSessions.find(
-          (session) =>
-            session.id === activeRdpSessionId &&
-            (!activeConnectionId || session.connectionId === activeConnectionId),
-        ) || null
-      : null) ||
-    activeRdpSessions[0] ||
-    null;
+  const activeRdpSession = selectActiveSession(
+    rdpSessions,
+    rdpSessionsByConnection,
+    activeRdpSessionId,
+    activeConnectionId,
+  );
   const activeVncSessions = activeConnectionId
     ? vncSessionsByConnection.get(activeConnectionId) || []
     : [];
-  const activeVncSession =
-    (activeVncSessionId
-      ? vncSessions.find(
-          (session) =>
-            session.id === activeVncSessionId &&
-            (!activeConnectionId || session.connectionId === activeConnectionId),
-        ) || null
-      : null) ||
-    activeVncSessions[0] ||
-    null;
-  const activeTerminalTab = activeTabId
-    ? terminalTabs.find((tab) => tab.id === activeTabId) || null
-    : null;
-  const activeConnectedTerminalTab =
-    activeTerminalTab?.type === "terminal" && activeTerminalTab.sessionId
-      ? activeTerminalTab
-      : null;
-  const activeLocalTerminalTab = activeLocalTerminalTabId
-    ? localTerminalTabs.find((tab) => tab.id === activeLocalTerminalTabId) || null
-    : null;
-  const activeTerminalSplitBinding: TerminalPaneBinding | null =
-    activeWorkspaceMode === "local" && activeLocalTerminalTab
-      ? { kind: "local", tabId: activeLocalTerminalTab.id }
-      : activeWorkspaceMode === "ssh" && activeTerminalTab
-        ? { kind: "ssh", tabId: activeTerminalTab.id }
-        : null;
+  const activeVncSession = selectActiveSession(
+    vncSessions,
+    vncSessionsByConnection,
+    activeVncSessionId,
+    activeConnectionId,
+  );
+  const activeTerminalTab = selectActiveTerminalTab(terminalTabs, activeTabId);
+  const activeConnectedTerminalTab = selectActiveConnectedTerminalTab(activeTerminalTab);
+  const activeLocalTerminalTab = selectActiveTerminalTab(localTerminalTabs, activeLocalTerminalTabId);
+  const activeTerminalSplitBinding = selectActiveTerminalSplitBinding(
+    activeWorkspaceMode,
+    activeTerminalTab,
+    activeLocalTerminalTab,
+  );
   // Task 04 第一刀 1a：分屏状态与归一 effect 已原样迁入 useTerminalSplitController，
   // 这里只做解构接线；行为与迁出前一致。
   const {

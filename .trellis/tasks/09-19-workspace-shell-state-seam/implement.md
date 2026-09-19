@@ -20,12 +20,21 @@
 - [x] 记录接受的行为变化：见「结果记录」。
 - [x] 验证：tsc 0 错、Vitest 139 passed / 1 todo、build 通过、startup boundary PASS、reducer 落在 WorkspaceShell chunk。
 - [ ] GUI 冒烟（用户）：开两 pane、四宫格、移动、同步输入、关一个、关全部、关闭宿主 tab。
-- [ ] 记录 CI run。
+- [x] 记录 CI run：`35427555427` @ `9edbab8` 全绿（Frontend checks / Rust 三平台 / Security evidence）。
 
 ## 2. 第二刀：SessionTabs reducer（按 design §3 修订版）
 
-- [ ] 机械抽 `useSessionTabsController`（五个集合、七个指针含 `activeRemoteFileTabId`、`activeWorkspaceMode`、`homeActive`、三个 byConnection 记忆、4 个 ref 镜像 effect），renderHook characterization 先绿：关闭活动 tab 相邻激活、connecting→terminal、重连 sessionId 替换、RDP/VNC 失败留存、回退 file tab 规则。
-- [ ] `sessionTabs/` 三件套；`WorkbenchTab` 联合，`index` 保留为 `ordinal`；`UnifiedWorkbenchTab.kind` 映射函数。
+### 2a. 类型与 selector 先行（提交 `refactor(workspace): extract session tab types and selectors`）
+- [x] `sessionTabs/types.ts`：`TerminalTab<TStep>`（泛型留位，连接向导类型链仍归 WorkspaceShell）、`RdpSessionTab`、`VncSessionTab`、状态枚举、`WorkspaceMode`、`UnifiedWorkbenchTab`、`ConnectionSessionSummary` 原样迁出。
+- [x] `sessionTabs/selectors.ts`：`groupByConnection`、`selectConnectionSessions`、`selectActiveSession`、`selectActiveTerminalTab`、`selectActiveConnectedTerminalTab`、`selectActiveTerminalSplitBinding`；11 个 Vitest 用例。
+- [x] WorkspaceShell 只换 import 与调用，状态与 effect 一行未动；14,190 → 14,096 行。
+- [x] 本机：tsc 0、Vitest 150/1 todo、build ✓、boundary ✓。**不需要 GUI 冒烟**（纯派生替换，无状态时序变化）。
+
+### 2b. 机械抽 `useSessionTabsController`（等用户完成第一刀分屏冒烟后再开）
+- [ ] 抽五个集合、七个指针含 `activeRemoteFileTabId`、`activeWorkspaceMode`、`homeActive`、三个 byConnection 记忆、4 个 ref 镜像 effect；renderHook characterization 先绿：关闭活动 tab 相邻激活、connecting→terminal、重连 sessionId 替换、RDP/VNC 失败留存、回退 file tab 规则。
+
+### 2c. 换 reducer
+- [ ] `sessionTabs/{actions,reducer}.ts`；`WorkbenchTab` 联合，`index` 保留为 `ordinal`；`UnifiedWorkbenchTab.kind` 映射函数。
 - [ ] 把 46 个多 setter 函数逐个收成原子 action（`tabs/activate`、`tabs/close` 等）；不删 effect。
 - [ ] `terminalSplitAnchorIndex` 语义改为按 owner tab id 锚定（design §2.2 备注）。
 - [ ] 静态脚本：`check-session-subtab-memory.mjs`、`check-local-terminal-warmup-source.mjs`、`check-remote-file-editor-source.mjs` 改断言 selector/action 名，提交信息说明。
