@@ -20,6 +20,7 @@ package-lock v3 共约 192 个包。按 lock metadata 统计：MIT 159、MPL-2.0
 | dompurify | lock 中双许可证 MPL-2.0 OR Apache-2.0 | 记录选用条款和版本，结合安全升级复核 |
 | React、Radix、Tauri JS、xterm、Monaco、zustand、lucide | 主要 MIT/Apache-2.0/ISC | 归档版权/许可证文本 |
 | simple-icons | CC0-1.0 | 记录公共领域声明及图标来源 |
+| vitest、jsdom、@testing-library/react、@testing-library/dom | devDependencies（2026-09-19 新增）：^4.1.11 / ^29.1.1 / ^16.3.3 / ^10.4.2，均为 MIT | 仅开发与 CI 使用，不进入发布产物；归档许可证文本 |
 | 其它 transitive | 见 package-lock | 生成完整清单，不只列 direct deps |
 
 package-lock 与 pnpm lock 同时存在，需决定唯一发布安装来源，避免两套解析结果产生 license/SBOM 漂移。

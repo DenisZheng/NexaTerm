@@ -2,7 +2,7 @@
 
 ## 当前基线
 
-- `package.json` 的 `test` 是 no-op；需要以 Vitest/jsdom 或同等方案建立前端门禁。
+- `pnpm test` 运行 Vitest（`vitest.config.ts`，`src/**/*.test.{ts,tsx}`，默认 node 环境，组件测试按文件声明 jsdom）；`passWithNoTests` 关闭，无测试即失败。第一波覆盖 host key 判别、连接失败错误码、MCP loopback 契约、split 布局、设置归一化与 `ConfirmDialog` 组件，已接入 CI `Frontend checks`（2026-09-19，Task 03）。
 - Rust 模块已有连接、known-host、storage、migration、Vault 等单元测试，应保留并扩展。
 - source checks 适合检查静态契约和启动边界，不能替代运行时互操作。
 - 7 个 Node 脚本测试文件逐文件运行和授权环境 `node --test` 均通过（37/37）；受限 Windows sandbox 的 child-process `spawn EPERM` 仍是环境限制。

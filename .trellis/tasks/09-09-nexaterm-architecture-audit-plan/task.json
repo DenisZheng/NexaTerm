@@ -20,7 +20,8 @@
   "subtasks": [],
   "children": [
     "09-09-nexaterm-baseline-toolchain-evidence",
-    "09-10-security-and-dependency-hardening"
+    "09-10-security-and-dependency-hardening",
+    "09-19-frontend-test-baseline"
   ],
   "parent": null,
   "relatedFiles": [],

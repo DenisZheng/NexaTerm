@@ -1,0 +1,2 @@
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "检查新增测试是否遵守 Testing Requirements：无 snapshot、无真实秘密、DOM 依赖显式声明、既有失败不降低断言"}
+{"file": "docs/TEST_STRATEGY.md", "reason": "核对 source checks / 脚本测试 / 单元测试三类报告是否分离，CI step 是否对应"}

@@ -28,7 +28,7 @@
 | Monitoring | Confirmed（静态） | `remote_monitor`、事件和面板存在；CPU topology source check 受缺少 TypeScript 阻塞，采集性能尚未验收。 |
 | X11 | Missing | 未发现对应 Rust module/command/runner 的完整实现；需求 v1 仍列为验收项，应单独决策交付范围。 |
 | i18n | Weak | 未发现 i18n 依赖或 catalog；features 中存在大量硬编码中文和 `toLocaleString("zh-CN")`。 |
-| Frontend tests | Weak | `package.json` 的 `test` 是 no-op，没有 Vitest/jsdom；已有脚本测试但不能替代状态/组件测试。 |
+| Frontend tests | Partial | `pnpm test` 已是真实 Vitest 门禁（2026-09-19）：纯逻辑模块与 `ConfirmDialog` 组件测试接入 CI；WorkspaceShell 内嵌的 session/tab、command sender、restore 逻辑仍无独立 reducer，待 Task 04/05 提取后补 characterization。 |
 | Lazy loading / startup | Confirmed（源码） | `main.tsx`、`App.tsx` 动态加载 WorkspaceShell/VNC 等，已有 idle prewarm；`check-startup-module-boundary-source.mjs` 通过，build 也生成了独立的 WorkspaceShell/Terminal/RemoteFileEditor/VNC chunk。 |
 | 三平台 build/run | Environment-blocked | Rust/cargo 已安装到 `D:\tmp\nexaterm-rust`；本机 Windows 的 MSVC C++ 工作负载不完整（缺 CRT 头文件与 `lib\x64`）且未安装 Windows SDK，`link.exe` 虽存在但无法工作，仍未取得 Windows/macOS/Linux 构建和运行证据。 |
 | FTP/FTPS | P2 / not in current baseline | 需求表列为 P2，当前不是 v1 主线阻塞。 |
