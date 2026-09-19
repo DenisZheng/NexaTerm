@@ -58,7 +58,11 @@ jobs:
         run: pnpm run build
 
       - name: Script unit tests
-        run: node --test scripts/*.test.mjs
+        run: pnpm run test:scripts
+
+      # src/ 内的 Vitest 单元/组件测试；passWithNoTests=false，测试文件被误删时同样失败。
+      - name: Frontend unit tests
+        run: pnpm test
 
       - name: Tauri capability policy
         run: pnpm run check:tauri-capabilities
