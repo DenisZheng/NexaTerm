@@ -33,4 +33,4 @@
 - 第二切片已完成 Docker/MCP/PTY/runner host 源码核查并修复 MCP 退出残留与 Local PTY 读线程泄漏，CI run `35295465354` 全绿。
 - 父任务 Phase 4 第三项（Vault 回读 / known-host changed / 连接失败语义回归）已于 `64e2b86`（run `35304208695` 三平台全绿）补齐，证据见父任务 `implement.md` Phase 4 与 `HANDOFF.md`。
 - 全量 `cargo fmt --check` 漂移已清除（见第二切片）。
-- 子任务保持 `in_progress`，不要据此归档父 Task 01。
+- 2026-09-19：父任务 Task 01 已经 owner 同意归档（`254e830`），本子任务随之归档；未解除的环境阻塞项已并入父任务归档说明。

@@ -64,6 +64,8 @@
 - 单连接导出、勾选后批量导出及分享链接。
 - 私钥文件打包、托管、复制、重命名或自动清理。
 
+> 2026-09-19：三个子任务（encrypted-connection-transfer、add-mit-license、reconcile-trellis-state）均已归档，验收项证据见各子任务；父任务随之归档（项目 owner 同意）。
+
 ## Notes
 
 - 本任务包含三个可独立验证的子任务：`08-01-encrypted-connection-transfer`、`08-01-add-mit-license`、`08-01-reconcile-trellis-state`。

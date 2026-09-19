@@ -29,4 +29,4 @@
 - 全量 `cargo fmt --check` 仍被父分支既有格式漂移阻塞；本批修改 hunk 已按 rustfmt 输出对齐，未借机重排无关文件。
 - 没有真实 SSH server、Docker daemon 或 WebDAV server；运行时端到端行为保留为 `ENVIRONMENT-BLOCKED`，纯契约测试不等于远端运行时验收。
 - 父任务后续仍需处理 PTY/runner/tunnel/websocket/MCP sidecar 生命周期、真实 Tauri GUI runner、CSP、IPC/origin 负向验证和 dependency advisory 评估。
-- 不要据此归档父任务；本子任务仍因全量 fmt 门禁和真实服务环境边界保持 `in_progress`，待后续决定是否单独处理基线格式漂移。
+- 2026-09-19：全量 rustfmt 漂移已于 `eacca4d` 清除；父任务 Task 01 已经 owner 同意归档（`254e830`），本子任务随之归档，真实服务环境阻塞项并入父任务归档说明。
