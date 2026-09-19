@@ -6,46 +6,57 @@
 
 ## Overview
 
-<!--
-Document your project's state management conventions here.
-
-Questions to answer:
-- What state management solution do you use?
-- How is local vs global state decided?
-- How do you handle server state?
-- What are the patterns for derived state?
--->
-
-(To be filled by the team)
+- No global store library. `zustand` is a declared dependency but is not used in `src/`; do not introduce it without a spec change.
+- Workspace-level state lives in `src/features/workspace/<seam>/` as **pure reducers** consumed by WorkspaceShell through `useReducer`. Seams: `split` (terminal split layout), `multiExec` (synchronised input / multi-target commands), `sessionTabs` (planned, Task 04 slice 2).
+- Feature-local UI state (dialog open flags, form drafts) stays as `useState` inside the feature component.
+- Server / backend state (connections, sessions, settings) is fetched through `src/shared/tauri/commands.ts` wrappers and cached in component state; there is no query cache layer.
 
 ---
 
 ## State Categories
 
-<!-- Local state, global state, server state, URL state -->
+| Category | Where | Example |
+| --- | --- | --- |
+| Workspace state (single owner, cross-feature) | `features/workspace/<seam>/reducer.ts` + `useReducer` in WorkspaceShell | split layout, sync targets |
+| Feature-local UI state | `useState` in the owning component | connection dialog draft |
+| Backend-owned data | Tauri commands via `shared/tauri/commands.ts` | connection list, settings |
+| Window geometry | `shared/tauri/windowState.ts` | `mxterm.windowState.v1` |
 
-(To be filled by the team)
+`features/workspace/` holds ownership (reducer, actions, selectors, controller hook). `features/layout/` holds view components and orchestration. A file in `workspace/` never imports React components, Tauri APIs or the DOM (the controller hook may import React hooks only).
+
+---
+
+## Reducer conventions (`features/workspace/<seam>/`)
+
+- `actions.ts`: `type <Seam>Action` discriminated union named `seam/verb` (`split/focusPane`, `multiExec/setLive`). Actions carry **intent** (ids, bindings, available key sets); the reducer computes the result from state. Do not compute a `nextLayout` in a closure and pass it in – that preserves stale-closure reads. A `set*` pass-through action is a transitional shim only and must be listed as such in its doc comment.
+- `reducer.ts`: `<seam>Reducer(state, action)` and `initial<Seam>State`. Immutable updates; return the **same reference** when nothing changed; unknown actions return the input state.
+- `selectors.ts`: pure derivations. A selector that returns a new object/array/Set is wrapped in `useMemo` at the call site; xterm panes re-render on identity changes.
+- `use<Seam>Controller.ts`: the only place that owns `useReducer` for the seam and the residual effects that turn external inputs (tab lists, connection status) into normalisation actions. Cross-seam side effects are passed in as callbacks and read through a ref so effect dependency arrays stay stable.
+- Tests: `reducer.test.ts` (pure, node environment) for every action plus "unknown action returns input" and "no-op returns same reference"; `use<Seam>Controller.test.tsx` (`// @vitest-environment jsdom`, `renderHook`) as characterization of observable behaviour. Characterization suites are written **before** internals change and must pass unchanged afterwards.
 
 ---
 
 ## When to Use Global State
 
-<!-- Criteria for promoting state to global -->
+Promote state into a `features/workspace/` seam when at least one holds:
 
-(To be filled by the team)
+- two or more features read or write it (split layout is read by the terminal panel, the tab bar and the command sender);
+- it must be serialisable for workspace restore (Task 05);
+- its transitions require multiple `useState` setters to be called together to stay consistent.
+
+Otherwise keep it local.
 
 ---
 
 ## Server State
 
-<!-- How server data is cached and synchronized -->
-
-(To be filled by the team)
+Backend data is authoritative. Components call the typed wrappers in `shared/tauri/commands.ts`, keep the response in local state, and re-fetch on the relevant Tauri event. No optimistic writes; a failed command surfaces its `AppError.code` to the user and leaves local state untouched.
 
 ---
 
 ## Common Mistakes
 
-<!-- State management mistakes your team has made -->
-
-(To be filled by the team)
+- Mirroring the same fact in two `useState` hooks and syncing them in an effect (the pre-Task-04 WorkspaceShell had six "active" pointers). Derive with a selector instead.
+- Calling a setter inside another setter's updater function (impure updater). Express the combined transition as one reducer action.
+- Passing an unmemoised selector result (new `Set`/array each render) as a prop to `TerminalPanel` / `TerminalSplitLayout`.
+- Hiding duplicate events or bad data with list de-duplication in the reducer. Fix the producer.
