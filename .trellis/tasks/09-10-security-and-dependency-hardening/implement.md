@@ -27,7 +27,7 @@
     这些 crate 对 windows-sys 声明的是版本区间，两侧都合法；diff 中**无任何 `[[package]]` 增删**——被改指的 windows-sys 版本在 HEAD 锁文件里本来就已存在，只是边的归属变了。
     根因是 HEAD 锁文件由发版准备时另一版本 cargo 生成（其求解器把区间依赖统一到 0.61.2），本机 cargo 1.98.1 复现不出该统一结果；已验证 `cargo update -p X --precise` 逐个执行与批量执行产出**完全相同的锁文件哈希**，即非命令写法所致。
     `1a8e95e` 的 CI 三平台 `cargo check` + `cargo test` 全绿，确认该连带变更无编译或运行时副作用。
-- [ ] 删除明显未使用的 capability，按窗口拆分配置；配置拆分已在 commit `443e4a8` 完成，调用点矩阵见 `SECURITY_REVIEW.md` §5；真实 `tauri dev` runner 窗口回归与未授权边界验证仍待具备完整 GUI/工具链的环境。
+- [ ] 删除明显未使用的 capability，按窗口拆分配置；配置拆分已在 commit `443e4a8` 完成，调用点矩阵见 `SECURITY_REVIEW.md` §5；真实 `tauri dev` runner 窗口回归与未授权边界验证仍待具备完整 GUI/工具链的环境。 **2026-09-19**：本机已具备 GUI 工具链且 `tauri dev` 可运行，但用户无可用 VNC 目标，runner 窗口无法打开，回归与越权边界（runner 窗口内 `invoke("secret_vault_status")` 应被 capability 拒绝）仍记 `ENVIRONMENT-BLOCKED`；缺的是一个可连的 VNC server（本机起 `vncserver`/Docker 镜像即可解除）。
 - [x] 增加 secret scan、audit artifact 与配置静态检查脚本，输出明确 `PASS` / `FAIL` / `ENVIRONMENT-BLOCKED`。capability step 已在 `55a2cb7` 经 CI 通过；secret scan 与 audit artifact 经 `73e90af` / run `35172498650` 验证；CSP 静态检查 `check:tauri-csp` 于 2026-09-18 完成（见 Phase 5）。
 
 ## Batch E 本轮执行清单
