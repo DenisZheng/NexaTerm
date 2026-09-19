@@ -6,7 +6,7 @@
 >
 > **当前接手点**：Phase 1 / 3 / 4 已完成（Phase 4 的真实服务与 GUI 收尾记 `ENVIRONMENT-BLOCKED`）。仍待做：Batch C 的 `tauri dev` runner 窗口回归、Phase 5 的 CSP 真实启用、跨平台 capability/bind 验证、`cargo audit`、code/security review 与发布门禁——这些全部需要能启动 Tauri 应用的完整工具链环境。不得据此归档 Task 01。Batch E 审核记录见 `review-batch-e.md`。
 >
-> **环境记录（2026-09-19）**：本轮接手机为 macOS（Xcode CLT、Homebrew、Node 24、pnpm 10.30.3 就绪，`pnpm install --frozen-lockfile` 与 `pnpm run check` 本机通过），但未安装 rustup/cargo；用户决定暂不安装，Rust 验证继续走 CI 路径 (2)。安装 rustup 后即可走路径 (1) 并解除上述 GUI 阻塞项。
+> **环境记录（2026-09-19）**：本轮接手机为 macOS（Xcode CLT、Homebrew、Node 24、pnpm 10.30.3 就绪，`pnpm install --frozen-lockfile` 与 `pnpm run check` 本机通过）。同日用户授权安装了 rustup stable 1.98.1（含 rustfmt/clippy），`cargo check` / `cargo test --workspace --locked` 本机通过（303 + 18 tests）；验证路径 (1) 已可用，`tauri dev` GUI 阻塞项（Batch C runner 窗口回归、Phase 5 CSP 真实启用）现在可以在本机推进。
 
 ## 当前上下文
 

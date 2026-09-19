@@ -66,4 +66,6 @@ pnpm run check:tauri-csp
 - `pnpm run build`：exit 0；`dist/assets` 无测试 chunk。
 - `check-startup-module-boundary-source.mjs`、`check:tauri-capabilities`、`check:tauri-csp`：均 PASS（CSP 仍 REVIEW-REQUIRED，属 Task 01）。
 - `git diff --check`：干净。
-- 提交与 CI run 记录见 HANDOFF.md。
+- 提交：`b9520bf`（代码/配置/CI）、`b23bef3`（文档）、`e16d553`（锁文件修复）。
+- CI：run `35410207511` @ `b23bef3` 在 `Install dependencies` 失败（pnpm 11 minimumReleaseAge 拒绝 `@csstools/css-tokenizer@4.0.1`）；run `35411114576` @ `e16d553` 全绿，`Frontend unit tests` step 首次在 CI 真实执行并 success。
+- 本机 Rust（同日安装 rustup stable 1.98.1）：`cargo check --workspace --locked` exit 0；`cargo test --workspace --locked` 303 + 18 passed，0 failed。
