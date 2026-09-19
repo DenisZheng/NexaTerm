@@ -1,12 +1,15 @@
-# Task 01 安全与依赖硬化 · 交接给 Codex
+# Task 01 安全与依赖硬化 · 归档说明
 
-> 更新时间：2026-09-19 ｜ 分支 `main`（最新提交 `8a8e02e`；CI run `35316090841` 全绿）
+> 归档时间：2026-09-19 ｜ 最终提交见 git log（安全评审 `2d694ea`）｜ 项目 owner 同意带以下阻塞项归档。
 >
-> **本文件是交接给下一位接手人的说明。** 标准协作规则见仓库根 `AGENTS.MD`（Codex 原生读取），本文件不重复，只补"当前位置 + 下一步 + 本任务专属的坑"。先 `git pull`，再从本文件"下一步"开始。
+> **完成状态**：Phase 1 / 2 / 3 / 4 / 5 全部条目有证据或有明确阻塞记录；最终安全评审无高置信度漏洞（`review-security-final.md`）；advisory 风险接受表见 `docs/SECURITY_REVIEW.md` §7（rsa、unic-*/proc-macro-error、glib 已接受；quick-xml、rustls 已解除）。
 >
-> **当前接手点**：Phase 1 / 3 / 4 已完成（Phase 4 的真实服务与 GUI 收尾记 `ENVIRONMENT-BLOCKED`）。仍待做：Batch C 的 `tauri dev` runner 窗口回归、Phase 5 的 CSP 真实启用、跨平台 capability/bind 验证、`cargo audit`、code/security review 与发布门禁——这些全部需要能启动 Tauri 应用的完整工具链环境。不得据此归档 Task 01。Batch E 审核记录见 `review-batch-e.md`。
+> **归档时仍阻塞的项（不从验收抹掉）**：
+> - Batch C：VNC runner 窗口打开/复用/关闭回归——缺可连的 VNC server。
+> - Phase 5：Windows / Linux 上的 capability、文件权限、端口 bind、外部 runner 验证——本机仅 macOS。
+> - Phase 5：生产 `csp` 的 `tauri build` 产物冒烟——留待打包/发布验收（Task 09）。
 >
-> **环境记录（2026-09-19）**：本轮接手机为 macOS（Xcode CLT、Homebrew、Node 24、pnpm 10.30.3 就绪，`pnpm install --frozen-lockfile` 与 `pnpm run check` 本机通过）。同日用户授权安装了 rustup stable 1.98.1（含 rustfmt/clippy），`cargo check` / `cargo test --workspace --locked` 本机通过（303 + 18 tests）；验证路径 (1) 已可用，`tauri dev` GUI 阻塞项（Batch C runner 窗口回归、Phase 5 CSP 真实启用）现在可以在本机推进。
+> **归档后候选小任务**（来自安全评审观察）：`execute_script` 扫描脚本体；`build.rs` 声明 app manifest 让应用命令按窗口 ACL。
 
 ## 当前上下文
 

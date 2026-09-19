@@ -146,7 +146,7 @@
 |---|---|---|---|---|
 | rsa RUSTSEC-2023-0071 Marvin 时序侧信道 | 仅当攻击者可观测网络时序且使用 RSA 私钥操作；客户端签名暴露低于服务端解密 | 优先 Ed25519/ECDSA；绑定 russh P0 升级 | russh 升级到依赖修复版 rsa 后解除 | **已接受**（项目 owner，2026-09-18；复核：rsa 0.9.10 / 0.10.0-rc.18 仍无修复版，advisory `patched = []` 为有意标注） |
 | quick-xml RUSTSEC-2026-0194 / 0195（DoS） | 仅由 plist → tauri-utils 引入，且全在 build-dependencies；运行时二进制不含该代码路径 | 无；构建输入为仓库自有 `tauri.conf.json` / Info.plist，非攻击者可控 | tauri 上游把 plist 升到依赖 quick-xml ≥0.41 后解除；2026-09-18 `cargo update --dry-run -p quick-xml` 为 0 包可动，跨 minor 版无法本地强升 | **已解除**：2026-09-19 `cargo update`（`e962596`）后锁文件为 quick-xml 0.41.0 / 0.42.0，`cargo audit` 与 `cargo deny` 均不再报告 |
-| glib RUSTSEC-2024-0429（`VariantStrIter` unsound） | 仅 Linux 目标：gtk → muda → tauri；macOS/Windows 目标不含该 crate | 无运行时可控输入触发该迭代器 | 跟随 tauri 上游升 gtk-rs 0.19+ 解除 | 2026-09-19 `cargo audit` 首次报告（本机安装 cargo-audit 0.22.2 后）；属 tauri 生态自有，同 unic-* 处理，**待项目 owner 确认接受** |
+| glib RUSTSEC-2024-0429（`VariantStrIter` unsound） | 仅 Linux 目标：gtk → muda → tauri；macOS/Windows 目标不含该 crate | 无运行时可控输入触发该迭代器 | 跟随 tauri 上游升 gtk-rs 0.19+ 解除 | 2026-09-19 `cargo audit` 首次报告（本机安装 cargo-audit 0.22.2 后）；属 tauri 生态自有，同 unic-* 处理；**已接受**（项目 owner，2026-09-19） |
 | unic-* ×5 / proc-macro-error（unmaintained，tauri 生态自有） | 纯构建期 proc-macro 与 Unicode 数据表，运行时无攻击面 | 跟随 tauri 版本升级 | tauri 升级带入替代 crate 后解除 | **已接受**（项目 owner，2026-09-18） |
 | rustls RUSTSEC-2026-0285（TLS 1.3 握手消息跨加密层）| **已修复**：2026-09-18 `cargo update -p rustls --precise 0.23.45`，连带 rustls-webpki 0.103.13→0.103.15、aws-lc-rs 1.17.0→1.18.1、aws-lc-sys 0.41.0→0.45.0（均 semver 兼容补丁位）；`cargo deny check advisories` 由 10 条降至 9 条 | — | 提交 `f3c3c77`，CI 三平台 `cargo check`/`cargo test` 全绿（用户 2026-09-18 确认） | 已修复，CI 验证通过 |
 
