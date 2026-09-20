@@ -18,5 +18,11 @@
 
 ## 待用户验收
 
-- [ ] 用真实 PPK 直接连接成功（GUI，与 Task 04 分屏冒烟同一次）。
+- [x] 用真实 PPK 直接连接成功（2026-09-19 用户用 `tpv-si-cms.ppk`，v3 无口令 RSA，绝对路径连接成功）。
 - [x] CI run `35434062517` @ `fd07c65` 全绿；Security evidence job 通过，PPK 夹具未触发 secret 扫描，无需豁免。
+
+## 验收中发现并补做（2026-09-20）
+
+- 用户用 `~/...` 路径报 `terminal_private_key_not_found`：loader 加 `~` / `~/` 展开（`expand_home`，只处理当前用户前缀，`~user/` 原样返回）；2 个单测。
+- 连接弹窗私钥字段没有"选择文件"按钮，用户只能手填：复用 Settings 凭据表单已有的 `settings-path-picker` 结构与 `selectLocalPrivateKeyFile`，加 `choosePrivateKeyPath`；不新增样式。
+- [ ] 待用户点一次"选择"按钮验收；CI run 待记录。

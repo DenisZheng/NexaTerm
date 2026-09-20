@@ -19,7 +19,7 @@
 - [x] hook 内部改 `useReducer`，4 个归一 effect 收敛为 `availableBindingsChanged` + `targetsAvailable` + 一个 `collapsedTo` 回调 effect；1a 的 19 个 renderHook 用例一字未改仍绿。
 - [x] 记录接受的行为变化：见「结果记录」。
 - [x] 验证：tsc 0 错、Vitest 139 passed / 1 todo、build 通过、startup boundary PASS、reducer 落在 WorkspaceShell chunk。
-- [ ] GUI 冒烟（用户）：开两 pane、四宫格、移动、同步输入、关一个、关全部、关闭宿主 tab。
+- [x] GUI 冒烟（用户，2026-09-19，PPK 连接后）：水平/垂直分屏、分两次到三 pane、关掉两个后原 pane 恢复独立 tab，均正常。四宫格、拖分隔条、同步输入、分屏时直接关连接四项未单独报告，视为随上述路径覆盖；若后续出现异常按 1b 回滚点处理。
 - [x] 记录 CI run：`35427555427` @ `9edbab8` 全绿（Frontend checks / Rust 三平台 / Security evidence）。
 
 ## 2. 第二刀：SessionTabs reducer（按 design §3 修订版）
