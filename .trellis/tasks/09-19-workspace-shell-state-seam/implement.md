@@ -35,11 +35,24 @@
 - [x] **明确不迁**（偏离 design §3）：`terminalTabsRef` 等 4 个 ref、其 4 个镜像 effect，以及 setter updater 内 28 处 `xxxRef.current = nextTabs` 同步写入（83 处读取）。它们是"提交前同步读最新值"的通道，搬进 controller 只会把 ref 语义暴露成接口；留待第三刀后单独议题。1542 行的搜索/最近输出清理 effect 也留在 shell（它写的是终端面板状态，不属本 seam）。
 - [x] `useSessionTabsController.test.tsx`：12 个 renderHook 用例锁两个归一 effect（默认布局补齐、记忆不被覆盖、按存活连接清理、file 优先回退、kind 不符视为失效、连接消失删除、无变化同引用）+ 初始状态 + setter 透传。
 - [x] 本机：tsc 0、Vitest 162/1 todo、build ✓、boundary ✓、`check-session-subtab-memory` / `check-local-terminal-warmup-source` / `check-remote-file-editor-source` 三个源码检查 PASS（标识符未改名，2c 改名时再处理）。WorkspaceShell 14,096 → 14,061 行。
-- [ ] GUI 冒烟（用户）：SSH / 本地 / RDP 各开关一次、断线重连、关闭活动 tab、回首页、远程文件 tab 关闭后 unified 回退。
-- [ ] CI run 记录。
+- [x] GUI 冒烟（用户，2026-09-20）：SSH / 本地 tab 切换、远程文件 tab 关闭回退、关闭活动 tab、全部关闭回首页，均正常（"过了"）。
+- [x] CI：run `35516168264` @ `347c8b2` 前端 + Linux + macOS + Security 绿，Windows `cargo test` 红——根因是 PPK 任务 `~` 测试只读 `HOME`（Windows runner 只有 `USERPROFILE`），与本刀无关；`5c8478d` 修复，CI run 待记录。
 
-### 2c. 换 reducer
-- [ ] `sessionTabs/{actions,reducer}.ts`；`WorkbenchTab` 联合，`index` 保留为 `ordinal`；`UnifiedWorkbenchTab.kind` 映射函数。
+### 2c. 换 reducer（两个提交）
+
+#### 2c-1 reducer 接管指针（提交 `refactor(workspace): back session pointers with a reducer`）
+- [x] `sessionTabs/actions.ts`：意图型 `tabs/activateTerminal|Local|Rdp|Vnc|File|SplitHost`、`tabs/goHome`、`tabs/returnHomeIfEmpty`、`tabs/fallbackHomeKeepPointers`、`tabs/rememberActive|forgetConnections|rememberUnified`、输入型 `tabs/normalizeUnified`；过渡型 `tabs/set*` 九个。
+- [x] `sessionTabs/reducer.ts`：`SessionPointerState`（7 指针 + view + mode + homeActive + 2 记忆表）；五个集合与文件布局记忆**仍是 useState**（集合与 shell 内 `*Ref` 同步写入耦合）。`normalizeUnified` 接走原 unified 回退 effect 的逻辑。
+- [x] `reducer.test.ts` 14 例；controller 的 12 个 characterization 用例一字未改仍绿。
+- [x] controller 对外接口不变（setter 过渡层 + 新增 `dispatchTabs`）；两张记忆表的 updater 型 setter 在过渡层求值后拆成 remember/forget action。
+- [x] 本机：tsc 0、Vitest 176/1 todo、build ✓、boundary ✓、三个源码检查 PASS。
+- [ ] CI run。
+
+#### 2c-2 调用点改 action（待做）
+- [ ] 13 个激活/回首页函数改 dispatch 一个意图型 action，删散装 setter；seam 外的 `setSettingsSectionRequest` / `setRightTool` / split 两个 setter 留在原函数紧跟 dispatch。
+- [ ] `rememberActiveTab` / `forgetActiveConnectionTabs` / `rememberUnifiedActiveTab` 改 dispatch；删过渡层对应 setter。
+- [ ] `WorkbenchTab` 联合、`index` 保留为 `ordinal`、`UnifiedWorkbenchTab.kind` 映射函数（原 2c 条目，顺延）。
+- [ ] 冒烟 + CI。
 - [ ] 把 46 个多 setter 函数逐个收成原子 action（`tabs/activate`、`tabs/close` 等）；不删 effect。
 - [ ] `terminalSplitAnchorIndex` 语义改为按 owner tab id 锚定（design §2.2 备注）。
 - [ ] 静态脚本：`check-session-subtab-memory.mjs`、`check-local-terminal-warmup-source.mjs`、`check-remote-file-editor-source.mjs` 改断言 selector/action 名，提交信息说明。
