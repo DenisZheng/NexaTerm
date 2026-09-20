@@ -205,13 +205,23 @@ mod tests {
 
     #[test]
     fn tilde_path_loads_key_from_home() {
-        let home = std::env::var_os("HOME").expect("test needs HOME");
+        // Windows runner 只有 USERPROFILE，与 expand_home 的回退顺序保持一致。
+        let home = std::env::var_os("HOME")
+            .or_else(|| std::env::var_os("USERPROFILE"))
+            .expect("test needs a home directory");
         // 不引入 tempfile：在主目录下建一个带进程号的临时目录，测试结束后删除。
         let dir = PathBuf::from(&home).join(format!(".nexaterm-test-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let file = dir.join("tilde-test.ppk");
         std::fs::write(&file, PPK_ED25519).unwrap();
-        let relative = file.strip_prefix(&home).unwrap().to_string_lossy().into_owned();
+        // 用正斜杠拼相对路径，expand_home 对 `~/` 前缀在各平台一致；PathBuf::push 会按平台归一分隔符。
+        let relative = file
+            .strip_prefix(&home)
+            .unwrap()
+            .components()
+            .map(|component| component.as_os_str().to_string_lossy().into_owned())
+            .collect::<Vec<_>>()
+            .join("/");
         let result = load_private_key(format!("~/{relative}"), None);
         let _ = std::fs::remove_dir_all(&dir);
         assert_eq!(result.unwrap().algorithm(), ssh_key::Algorithm::Ed25519);
