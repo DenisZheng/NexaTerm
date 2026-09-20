@@ -3,7 +3,7 @@
 //! 只在这里构造私钥相关的 `AppError`，调用方（终端 / SFTP / jump / tunnel 共用的认证路径）
 //! 直接 `?` 即可。`raw_message` 只放底层错误文本，不放文件内容或路径。
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use russh::keys::{decode_secret_key, PrivateKey};
 use ssh_key::Error as SshKeyError;
@@ -15,11 +15,14 @@ const PPK_HEADER_PREFIX: &str = "PuTTY-User-Key-File-";
 
 /// 读取并解析私钥。
 ///
+/// 路径支持 `~` / `~/` 前缀（展开为当前用户主目录），与 OpenSSH 客户端和 MobaXterm 迁移用户的习惯一致。
+///
 /// - 文件读不到 → `terminal_private_key_not_found`
 /// - 需要口令 / 口令错误（PPK 与 OpenSSH 均适用）→ `terminal_private_key_passphrase`
 /// - 其它格式 / 算法问题 → `terminal_private_key_invalid`
 pub fn load_private_key(path: impl AsRef<Path>, passphrase: Option<&str>) -> Result<PrivateKey, AppError> {
-    let text = std::fs::read_to_string(path.as_ref()).map_err(|error| {
+    let resolved = expand_home(path.as_ref());
+    let text = std::fs::read_to_string(&resolved).map_err(|error| {
         AppError::new(
             "terminal_private_key_not_found",
             "无法读取私钥文件。",
@@ -28,6 +31,26 @@ pub fn load_private_key(path: impl AsRef<Path>, passphrase: Option<&str>) -> Res
         )
     })?;
     parse_private_key(&text, passphrase)
+}
+
+/// 只展开开头的 `~` 或 `~/`；`~user/` 形式不处理，原样返回。
+fn expand_home(path: &Path) -> PathBuf {
+    let raw = path.to_string_lossy();
+    let rest = if raw == "~" {
+        Some("")
+    } else {
+        raw.strip_prefix("~/").or_else(|| raw.strip_prefix("~\\"))
+    };
+    match (rest, std::env::var_os("HOME").or_else(|| std::env::var_os("USERPROFILE"))) {
+        (Some(rest), Some(home)) => {
+            let mut expanded = PathBuf::from(home);
+            if !rest.is_empty() {
+                expanded.push(rest);
+            }
+            expanded
+        }
+        _ => path.to_path_buf(),
+    }
 }
 
 /// 纯解析（便于单测，不碰文件系统）。
@@ -165,5 +188,32 @@ mod tests {
     fn bom_and_leading_whitespace_do_not_break_ppk_detection() {
         let text = format!("\u{feff}\n{PPK_ED25519}");
         assert!(is_ppk(&text));
+    }
+
+    #[test]
+    fn tilde_prefix_expands_to_home_directory() {
+        let home = std::env::var_os("HOME")
+            .or_else(|| std::env::var_os("USERPROFILE"))
+            .expect("test needs a home directory");
+        let expected = PathBuf::from(&home).join(".ssh").join("id_test");
+        assert_eq!(expand_home(Path::new("~/.ssh/id_test")), expected);
+        assert_eq!(expand_home(Path::new("~")), PathBuf::from(&home));
+        // 非 ~ 前缀与 ~user 形式原样返回
+        assert_eq!(expand_home(Path::new("/abs/key")), PathBuf::from("/abs/key"));
+        assert_eq!(expand_home(Path::new("~other/key")), PathBuf::from("~other/key"));
+    }
+
+    #[test]
+    fn tilde_path_loads_key_from_home() {
+        let home = std::env::var_os("HOME").expect("test needs HOME");
+        // 不引入 tempfile：在主目录下建一个带进程号的临时目录，测试结束后删除。
+        let dir = PathBuf::from(&home).join(format!(".nexaterm-test-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let file = dir.join("tilde-test.ppk");
+        std::fs::write(&file, PPK_ED25519).unwrap();
+        let relative = file.strip_prefix(&home).unwrap().to_string_lossy().into_owned();
+        let result = load_private_key(format!("~/{relative}"), None);
+        let _ = std::fs::remove_dir_all(&dir);
+        assert_eq!(result.unwrap().algorithm(), ssh_key::Algorithm::Ed25519);
     }
 }

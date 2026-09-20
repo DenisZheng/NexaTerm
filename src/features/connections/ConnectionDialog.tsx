@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   Eye,
   EyeOff,
+  FolderOpen,
   Loader2,
   Monitor,
   MonitorPlay,
@@ -29,6 +30,7 @@ import {
   resolveDesktopPlatform,
 } from "../../shared/tauri/platformCapabilities";
 import { hasTauriRuntime } from "../../shared/tauri/runtime";
+import { selectLocalPrivateKeyFile } from "../../shared/tauri/dialog";
 import type {
   ConnectionAuthKind,
   ConnectionCredentialMode,
@@ -329,6 +331,17 @@ export function ConnectionDialog({
   const [testState, setTestState] = useState<ConnectionTestState>("idle");
   const [showPassword, setShowPassword] = useState(false);
   const [showPassphrase, setShowPassphrase] = useState(false);
+
+  async function choosePrivateKeyPath() {
+    if (!hasTauriRuntime()) {
+      return;
+    }
+    // 用户取消选择或对话框失败时保持原值；选择器错误由系统弹窗承担，这里不额外提示。
+    const selectedPath = await selectLocalPrivateKeyFile().catch(() => null);
+    if (selectedPath) {
+      setForm((current) => ({ ...current, inline_private_key_path: selectedPath }));
+    }
+  }
   const [showProxyPassword, setShowProxyPassword] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [revealBusy, setRevealBusy] = useState(false);
@@ -1575,13 +1588,25 @@ export function ConnectionDialog({
               <>
                 <label>
                   <span>私钥路径</span>
-                  <input
-                    value={form.inline_private_key_path || ""}
-                    onChange={(event) =>
-                      setForm({ ...form, inline_private_key_path: event.target.value })
-                    }
-                    placeholder="~/.ssh/id_ed25519"
-                  />
+                  <div className="settings-path-picker credential-private-key-picker">
+                    <input
+                      className="settings-path-input"
+                      value={form.inline_private_key_path || ""}
+                      onChange={(event) =>
+                        setForm({ ...form, inline_private_key_path: event.target.value })
+                      }
+                      placeholder="~/.ssh/id_ed25519 或 PuTTY .ppk"
+                    />
+                    <button
+                      className="settings-action-button settings-path-button"
+                      type="button"
+                      aria-label="选择私钥文件"
+                      onClick={choosePrivateKeyPath}
+                    >
+                      <FolderOpen className="ui-icon" aria-hidden="true" />
+                      <span>选择</span>
+                    </button>
+                  </div>
                 </label>
                 <label>
                   <span>私钥口令</span>
