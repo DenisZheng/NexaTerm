@@ -440,6 +440,7 @@ import type {
   WorkbenchTabKind,
   WorkspaceMode,
 } from "../workspace/sessionTabs/types";
+import { useSessionTabsController } from "../workspace/sessionTabs/useSessionTabsController";
 import type {
   LocalTerminalProfile,
   LocalTerminalProfileInput,
@@ -844,10 +845,46 @@ export function WorkspaceShell() {
     remove: removeCredential,
     upsert: upsertCredential,
   } = useCredentials({ enabled: storageReady });
-  const [activeConnectionId, setActiveConnectionId] = useState<string | null>(null);
-  const [activeTabId, setActiveTabId] = useState<string | null>(null);
-  const [activeTabByConnectionId, setActiveTabByConnectionId] = useState<Record<string, string>>({});
-  const [activeView, setActiveView] = useState<"workspace" | "settings">("workspace");
+  // Task 04 第二刀 2b：会话集合、当前项指针、模式与按连接记忆已原样迁入 useSessionTabsController；
+  // 四个 *Ref 及其在 updater 内的同步写入仍留在本组件（见 controller 文档）。
+  const {
+    activeConnectionId,
+    activeLocalTerminalTabId,
+    activeRdpSessionId,
+    activeRemoteFileTabId,
+    activeTabByConnectionId,
+    activeTabId,
+    activeUnifiedTabByConnectionId,
+    activeView,
+    activeVncSessionId,
+    activeWorkspaceMode,
+    homeActive,
+    localTerminalTabs,
+    rdpSessions,
+    remoteFileTabs,
+    setActiveConnectionId,
+    setActiveLocalTerminalTabId,
+    setActiveRdpSessionId,
+    setActiveRemoteFileTabId,
+    setActiveTabByConnectionId,
+    setActiveTabId,
+    setActiveUnifiedTabByConnectionId,
+    setActiveView,
+    setActiveVncSessionId,
+    setActiveWorkspaceMode,
+    setHomeActive,
+    setLocalTerminalTabs,
+    setRdpSessions,
+    setRemoteFileTabs,
+    setTerminalFileLayoutByConnectionId,
+    setTerminalTabs,
+    setVncSessions,
+    terminalFileLayoutByConnectionId,
+    terminalTabs,
+    vncSessions,
+  } = useSessionTabsController<TerminalTab>({
+    defaultRemoteFileOpenMode: settings.basic.remoteFileOpenMode,
+  });
   const [settingsSectionRequest, setSettingsSectionRequest] =
     useState<SettingsSectionId | undefined>();
   const [settingsSectionRequestKey, setSettingsSectionRequestKey] = useState(0);
@@ -861,17 +898,12 @@ export function WorkspaceShell() {
   const [editingConnection, setEditingConnection] = useState<ConnectionProfile | null>(null);
   const [duplicatingConnection, setDuplicatingConnection] = useState(false);
   const [selectedConnectionId, setSelectedConnectionId] = useState<string | null>(null);
-  const [terminalTabs, setTerminalTabs] = useState<TerminalTab[]>([]);
   const terminalTabsRef = useRef<TerminalTab[]>([]);
-  const [rdpSessions, setRdpSessions] = useState<RdpSessionTab[]>([]);
   const rdpSessionsRef = useRef<RdpSessionTab[]>([]);
-  const [vncSessions, setVncSessions] = useState<VncSessionTab[]>([]);
   const vncSessionsRef = useRef<VncSessionTab[]>([]);
   const pendingVncRunnerWindowPayloadsRef = useRef(new Map<string, VncRunnerWindowPayload>());
   const vncRunnerWindowReadyRef = useRef(false);
   const rdpEmbeddedViewportRefs = useRef(new Map<string, HTMLDivElement>());
-  const [activeRdpSessionId, setActiveRdpSessionId] = useState<string | null>(null);
-  const [activeVncSessionId, setActiveVncSessionId] = useState<string | null>(null);
   const rdpEmbeddedHostSuppressedRef = useRef(false);
   const setRdpEmbeddedViewportRef = useCallback(
     (sessionId: string, node: HTMLDivElement | null) => {
@@ -954,14 +986,11 @@ export function WorkspaceShell() {
     useState<Record<string, string>>({});
   const [aiContextRequestKey, setAiContextRequestKey] = useState(0);
   const [aiInitialContexts, setAiInitialContexts] = useState<AiContextBlock[]>([]);
-  const [localTerminalTabs, setLocalTerminalTabs] = useState<LocalTerminalTab[]>([]);
   const localTerminalTabsRef = useRef<LocalTerminalTab[]>([]);
   const [localTerminalProfiles, setLocalTerminalProfiles] = useState<LocalTerminalProfile[]>([]);
   const localTerminalProfilesRef = useRef<LocalTerminalProfile[]>([]);
   const [localTerminalProfilesLoading, setLocalTerminalProfilesLoading] = useState(false);
   const [localTerminalProfilesError, setLocalTerminalProfilesError] = useState<string | null>(null);
-  const [activeWorkspaceMode, setActiveWorkspaceMode] = useState<WorkspaceMode>("home");
-  const [activeLocalTerminalTabId, setActiveLocalTerminalTabId] = useState<string | null>(null);
   const [terminalClearRequest, setTerminalClearRequest] = useState<TerminalClearRequest | null>(null);
   const terminalClearRequestRef = useRef(0);
   const [terminalDirectories, setTerminalDirectories] = useState<Record<string, string>>({});
@@ -969,12 +998,6 @@ export function WorkspaceShell() {
   const terminalPromptDirectorySnapshotReadersRef = useRef(
     new Map<string, TerminalPromptDirectorySnapshotReader>(),
   );
-  const [remoteFileTabs, setRemoteFileTabs] = useState<RemoteFileEditorTab[]>([]);
-  const [activeRemoteFileTabId, setActiveRemoteFileTabId] = useState<string | null>(null);
-  const [terminalFileLayoutByConnectionId, setTerminalFileLayoutByConnectionId] =
-    useState<Record<string, RemoteFileOpenMode>>({});
-  const [activeUnifiedTabByConnectionId, setActiveUnifiedTabByConnectionId] =
-    useState<Record<string, UnifiedWorkbenchTab>>({});
   const [workbenchTabMouseDrag, setWorkbenchTabMouseDrag] =
     useState<WorkbenchTabMouseDrag | null>(null);
   const [workbenchTabDropZone, setWorkbenchTabDropZone] = useState<WorkbenchTabDropZone | null>(null);
@@ -1014,7 +1037,6 @@ export function WorkspaceShell() {
   });
   const [transferConflictPrompt, setTransferConflictPrompt] =
     useState<TransferConflictPromptState | null>(null);
-  const [homeActive, setHomeActive] = useState(true);
   const [leftPaneCollapsed, setLeftPaneCollapsed] = useState(false);
   const [rightPaneCollapsed, setRightPaneCollapsed] = useState(false);
   const [leftPaneWidth, setLeftPaneWidth] = useState(defaultLeftPaneWidth);
@@ -1554,70 +1576,6 @@ export function WorkspaceShell() {
       return entries.length === Object.keys(outputs).length ? outputs : Object.fromEntries(entries);
     });
   }, [localTerminalTabs, terminalTabs]);
-
-  useEffect(() => {
-    setTerminalFileLayoutByConnectionId((layouts) => {
-      const liveConnectionIds = new Set([
-        ...terminalTabs.map((tab) => tab.connectionId),
-        ...remoteFileTabs.map((tab) => tab.connectionId),
-      ]);
-      const fileConnectionIds = new Set(remoteFileTabs.map((tab) => tab.connectionId));
-      let changed = false;
-      const nextLayouts: Record<string, RemoteFileOpenMode> = {};
-
-      Object.entries(layouts).forEach(([connectionId, mode]) => {
-        if (!liveConnectionIds.has(connectionId)) {
-          changed = true;
-          return;
-        }
-        nextLayouts[connectionId] = mode;
-      });
-
-      fileConnectionIds.forEach((connectionId) => {
-        if (!nextLayouts[connectionId]) {
-          nextLayouts[connectionId] = settings.basic.remoteFileOpenMode;
-          changed = true;
-        }
-      });
-
-      return changed ? nextLayouts : layouts;
-    });
-  }, [remoteFileTabs, settings.basic.remoteFileOpenMode, terminalTabs]);
-
-  useEffect(() => {
-    setActiveUnifiedTabByConnectionId((activeTabs) => {
-      let changed = false;
-      const nextActiveTabs: Record<string, UnifiedWorkbenchTab> = {};
-
-      Object.entries(activeTabs).forEach(([connectionId, activeTab]) => {
-        const terminalTab = terminalTabs.find(
-          (tab) => tab.connectionId === connectionId && tab.id === activeTab.id,
-        );
-        const fileTab = remoteFileTabs.find(
-          (tab) => tab.connectionId === connectionId && tab.id === activeTab.id,
-        );
-
-        if (
-          (activeTab.kind === "terminal" && terminalTab) ||
-          (activeTab.kind === "file" && fileTab)
-        ) {
-          nextActiveTabs[connectionId] = activeTab;
-          return;
-        }
-
-        const fallbackFileTab = remoteFileTabs.find((tab) => tab.connectionId === connectionId);
-        const fallbackTerminalTab = terminalTabs.find((tab) => tab.connectionId === connectionId);
-        if (fallbackFileTab) {
-          nextActiveTabs[connectionId] = { kind: "file", id: fallbackFileTab.id };
-        } else if (fallbackTerminalTab) {
-          nextActiveTabs[connectionId] = { kind: "terminal", id: fallbackTerminalTab.id };
-        }
-        changed = true;
-      });
-
-      return changed ? nextActiveTabs : activeTabs;
-    });
-  }, [remoteFileTabs, terminalTabs]);
 
   useEffect(() => {
     if (!workbenchTabMouseDrag) {
@@ -8003,7 +7961,6 @@ export function WorkspaceShell() {
     });
   }
 
-
   function handlePaneResizeStart(
     side: ResizablePaneSide,
     event: ReactPointerEvent<HTMLDivElement>,
@@ -13873,7 +13830,6 @@ async function writeFileToUploadTemp(
     await yieldToBrowser();
   }
 }
-
 
 function collectTarDirectories(items: RemoteFileUploadItem[]) {
   const directories = new Set<string>();

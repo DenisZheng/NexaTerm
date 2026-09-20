@@ -30,8 +30,13 @@
 - [x] WorkspaceShell 只换 import 与调用，状态与 effect 一行未动；14,190 → 14,096 行。
 - [x] 本机：tsc 0、Vitest 150/1 todo、build ✓、boundary ✓。**不需要 GUI 冒烟**（纯派生替换，无状态时序变化）。
 
-### 2b. 机械抽 `useSessionTabsController`（等用户完成第一刀分屏冒烟后再开）
-- [ ] 抽五个集合、七个指针含 `activeRemoteFileTabId`、`activeWorkspaceMode`、`homeActive`、三个 byConnection 记忆、4 个 ref 镜像 effect；renderHook characterization 先绿：关闭活动 tab 相邻激活、connecting→terminal、重连 sessionId 替换、RDP/VNC 失败留存、回退 file tab 规则。
+### 2b. 机械抽 `useSessionTabsController`（提交 `refactor(workspace): extract session tabs controller hook`）
+- [x] 迁入：5 个集合、7 个指针（含 `activeRemoteFileTabId`）、`activeView`、`activeWorkspaceMode`、`homeActive`、`activeTabByConnectionId` / `activeUnifiedTabByConnectionId` / `terminalFileLayoutByConnectionId`、2 个按连接归一 effect（文件布局清理补默认、unified tab 回退）。`TerminalTab` 以泛型注入。
+- [x] **明确不迁**（偏离 design §3）：`terminalTabsRef` 等 4 个 ref、其 4 个镜像 effect，以及 setter updater 内 28 处 `xxxRef.current = nextTabs` 同步写入（83 处读取）。它们是"提交前同步读最新值"的通道，搬进 controller 只会把 ref 语义暴露成接口；留待第三刀后单独议题。1542 行的搜索/最近输出清理 effect 也留在 shell（它写的是终端面板状态，不属本 seam）。
+- [x] `useSessionTabsController.test.tsx`：12 个 renderHook 用例锁两个归一 effect（默认布局补齐、记忆不被覆盖、按存活连接清理、file 优先回退、kind 不符视为失效、连接消失删除、无变化同引用）+ 初始状态 + setter 透传。
+- [x] 本机：tsc 0、Vitest 162/1 todo、build ✓、boundary ✓、`check-session-subtab-memory` / `check-local-terminal-warmup-source` / `check-remote-file-editor-source` 三个源码检查 PASS（标识符未改名，2c 改名时再处理）。WorkspaceShell 14,096 → 14,061 行。
+- [ ] GUI 冒烟（用户）：SSH / 本地 / RDP 各开关一次、断线重连、关闭活动 tab、回首页、远程文件 tab 关闭后 unified 回退。
+- [ ] CI run 记录。
 
 ### 2c. 换 reducer
 - [ ] `sessionTabs/{actions,reducer}.ts`；`WorkbenchTab` 联合，`index` 保留为 `ordinal`；`UnifiedWorkbenchTab.kind` 映射函数。
