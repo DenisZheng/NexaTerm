@@ -24,10 +24,10 @@ SSH 认证接受 PuTTY PPK（v2 / v3，含口令与无口令）私钥文件，�
 
 ## Acceptance Criteria
 
-- [ ] 用户手上的 PPK 可直接连接（GUI 验收，与 Task 04 分屏冒烟同一次完成）。
-- [ ] 上述 7 个单测通过；OpenSSH 密钥行为无变化。
-- [ ] 错误 code 与文案区分“口令问题”和“格式问题”。
-- [ ] `cargo deny check advisories` 无新增条目（ssh-key ppk feature 只拉 hex/hmac/sha1，均已在树中或为纯 Rust）。
+- [x] 用户手上的 PPK 可直接连接（2026-09-19 真实 PPK v3 RSA 连接成功；2026-09-20 文件选择器与 `~` 路径验收通过）。
+- [x] 单测 11 个通过（含 `~` 展开 2 个）；OpenSSH 密钥行为无变化，公钥一致性用例覆盖。
+- [x] 错误 code 与文案区分"口令问题"、"文件不存在"和"格式问题"。
+- [x] CI Security evidence job 通过，无新增 advisory；PPK 夹具未触发 secret 扫描。
 
 ## Out of Scope
 

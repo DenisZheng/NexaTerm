@@ -25,4 +25,5 @@
 
 - 用户用 `~/...` 路径报 `terminal_private_key_not_found`：loader 加 `~` / `~/` 展开（`expand_home`，只处理当前用户前缀，`~user/` 原样返回）；2 个单测。
 - 连接弹窗私钥字段没有"选择文件"按钮，用户只能手填：复用 Settings 凭据表单已有的 `settings-path-picker` 结构与 `selectLocalPrivateKeyFile`，加 `choosePrivateKeyPath`；不新增样式。
-- [ ] 待用户点一次"选择"按钮验收；CI run 待记录。
+- [x] 用户 2026-09-20 点"选择"按钮选中 PPK，路径回填正常（"测试OK"）。
+- [x] CI run `35513550792` @ `8341cc7`：Frontend / Linux / macOS / Security evidence 已 success，Windows Rust job 归档时仍在跑（同一变更集的 `dc7c655` run 被后续推送自动取消，属预期）。
