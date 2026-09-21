@@ -31,6 +31,7 @@ export type SessionTabsAction =
   | { type: "tabs/rememberActive"; connectionId: string; tabId: string }
   | { type: "tabs/forgetConnections"; connectionIds: readonly string[] }
   | { type: "tabs/rememberUnified"; connectionId: string; tab: UnifiedWorkbenchTab }
+  | { type: "tabs/forgetUnified"; connectionIds: readonly string[] }
   /** 输入型：终端/文件 tab 集合变化后校正 unified 记忆（失效则 file 优先回退，连接消失则删除）。 */
   | {
       type: "tabs/normalizeUnified";

@@ -97,7 +97,7 @@ describe("统一 tab 记忆回退（原 1587 行 effect）", () => {
     const { result } = setup();
     act(() => {
       result.current.setTerminalTabs([tab("t1", "a")]);
-      result.current.setActiveUnifiedTabByConnectionId({ a: { kind: "terminal", id: "t1" } });
+      result.current.dispatchTabs({ type: "tabs/rememberUnified", connectionId: "a", tab: { kind: "terminal", id: "t1" } });
     });
     expect(result.current.activeUnifiedTabByConnectionId).toEqual({ a: { kind: "terminal", id: "t1" } });
   });
@@ -107,7 +107,7 @@ describe("统一 tab 记忆回退（原 1587 行 effect）", () => {
     act(() => {
       result.current.setTerminalTabs([tab("t1", "a"), tab("t2", "a")]);
       result.current.setRemoteFileTabs([fileTab("f1", "a")]);
-      result.current.setActiveUnifiedTabByConnectionId({ a: { kind: "terminal", id: "t1" } });
+      result.current.dispatchTabs({ type: "tabs/rememberUnified", connectionId: "a", tab: { kind: "terminal", id: "t1" } });
     });
     act(() => result.current.setTerminalTabs([tab("t2", "a")]));
     expect(result.current.activeUnifiedTabByConnectionId).toEqual({ a: { kind: "file", id: "f1" } });
@@ -117,7 +117,7 @@ describe("统一 tab 记忆回退（原 1587 行 effect）", () => {
     const { result } = setup();
     act(() => {
       result.current.setTerminalTabs([tab("t1", "a"), tab("t2", "a")]);
-      result.current.setActiveUnifiedTabByConnectionId({ a: { kind: "terminal", id: "t1" } });
+      result.current.dispatchTabs({ type: "tabs/rememberUnified", connectionId: "a", tab: { kind: "terminal", id: "t1" } });
     });
     act(() => result.current.setTerminalTabs([tab("t2", "a")]));
     expect(result.current.activeUnifiedTabByConnectionId).toEqual({ a: { kind: "terminal", id: "t2" } });
@@ -127,7 +127,7 @@ describe("统一 tab 记忆回退（原 1587 行 effect）", () => {
     const { result } = setup();
     act(() => {
       result.current.setTerminalTabs([tab("t1", "a")]);
-      result.current.setActiveUnifiedTabByConnectionId({ a: { kind: "file", id: "t1" } });
+      result.current.dispatchTabs({ type: "tabs/rememberUnified", connectionId: "a", tab: { kind: "file", id: "t1" } });
     });
     expect(result.current.activeUnifiedTabByConnectionId).toEqual({ a: { kind: "terminal", id: "t1" } });
   });
@@ -136,7 +136,7 @@ describe("统一 tab 记忆回退（原 1587 行 effect）", () => {
     const { result } = setup();
     act(() => {
       result.current.setTerminalTabs([tab("t1", "a")]);
-      result.current.setActiveUnifiedTabByConnectionId({ a: { kind: "terminal", id: "t1" } });
+      result.current.dispatchTabs({ type: "tabs/rememberUnified", connectionId: "a", tab: { kind: "terminal", id: "t1" } });
     });
     act(() => result.current.setTerminalTabs([]));
     expect(result.current.activeUnifiedTabByConnectionId).toEqual({});
@@ -146,7 +146,7 @@ describe("统一 tab 记忆回退（原 1587 行 effect）", () => {
     const { result } = setup();
     act(() => {
       result.current.setTerminalTabs([tab("t1", "a")]);
-      result.current.setActiveUnifiedTabByConnectionId({ a: { kind: "terminal", id: "t1" } });
+      result.current.dispatchTabs({ type: "tabs/rememberUnified", connectionId: "a", tab: { kind: "terminal", id: "t1" } });
     });
     const before = result.current.activeUnifiedTabByConnectionId;
     act(() => result.current.setRemoteFileTabs([fileTab("f1", "a")]));
@@ -163,7 +163,7 @@ describe("setter 透传", () => {
       result.current.setActiveWorkspaceMode("ssh");
       result.current.setHomeActive(false);
       result.current.setActiveView("settings");
-      result.current.setActiveTabByConnectionId({ a: "t1" });
+      result.current.dispatchTabs({ type: "tabs/rememberActive", connectionId: "a", tabId: "t1" });
       result.current.setActiveRdpSessionId("r1");
       result.current.setActiveVncSessionId("v1");
       result.current.setActiveLocalTerminalTabId("l1");

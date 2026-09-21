@@ -858,6 +858,7 @@ export function WorkspaceShell() {
     activeView,
     activeVncSessionId,
     activeWorkspaceMode,
+    dispatchTabs,
     homeActive,
     localTerminalTabs,
     rdpSessions,
@@ -866,9 +867,7 @@ export function WorkspaceShell() {
     setActiveLocalTerminalTabId,
     setActiveRdpSessionId,
     setActiveRemoteFileTabId,
-    setActiveTabByConnectionId,
     setActiveTabId,
-    setActiveUnifiedTabByConnectionId,
     setActiveView,
     setActiveVncSessionId,
     setActiveWorkspaceMode,
@@ -2711,22 +2710,17 @@ export function WorkspaceShell() {
   }
 
   function activateRemoteFileTab(tab: RemoteFileEditorTab) {
-    setHomeActive(false);
-    setActiveWorkspaceMode("ssh");
-    setActiveConnectionId(tab.connectionId);
-    setActiveRemoteFileTabId(tab.id);
-    if (isConnectionTerminalFileUnified(tab.connectionId)) {
-      rememberUnifiedActiveTab(tab.connectionId, { kind: "file", id: tab.id });
-    }
-
     const sameConnectionActiveTerminal = activeTabId
       ? terminalTabs.find((item) => item.id === activeTabId && item.connectionId === tab.connectionId)
       : null;
     const terminalTab = sameConnectionActiveTerminal || preferredTabForConnection(tab.connectionId);
-    if (terminalTab) {
-      setActiveTabId(terminalTab.id);
-      rememberActiveTab(terminalTab);
-    }
+    dispatchTabs({
+      type: "tabs/activateFile",
+      connectionId: tab.connectionId,
+      fileTabId: tab.id,
+      rememberUnified: isConnectionTerminalFileUnified(tab.connectionId),
+      terminalTabId: terminalTab?.id ?? null,
+    });
   }
 
   function activateRemoteFileFallbackAfterRemoval(
@@ -2779,9 +2773,7 @@ export function WorkspaceShell() {
       return;
     }
 
-    setActiveConnectionId(null);
-    setActiveWorkspaceMode("home");
-    setHomeActive(true);
+    dispatchTabs({ type: "tabs/fallbackHomeKeepPointers" });
   }
 
   function openRemoteFile(entry: RemoteFileEntry) {
@@ -2997,9 +2989,7 @@ export function WorkspaceShell() {
     setTerminalFileLayoutByConnectionId((layouts) =>
       removeConnectionRecordEntries(layouts, closingConnectionIds),
     );
-    setActiveUnifiedTabByConnectionId((activeTabs) =>
-      removeConnectionRecordEntries(activeTabs, closingConnectionIds),
-    );
+    dispatchTabs({ type: "tabs/forgetUnified", connectionIds: Array.from(closingConnectionIds) });
 
     return nextRemoteFileTabs;
   }
@@ -3978,13 +3968,6 @@ export function WorkspaceShell() {
     setDialogOpen(true);
   }
 
-  function openHome() {
-    setActiveView("workspace");
-    setSettingsSectionRequest(undefined);
-    setActiveWorkspaceMode("home");
-    setHomeActive(true);
-  }
-
   async function editConnection(connection: ConnectionProfile) {
     setPendingConnectionGroupName(null);
     setEditingConnection(connection);
@@ -4283,28 +4266,14 @@ export function WorkspaceShell() {
   } = {}) {
     // 远程文件 tab 必须依附一个活的 SSH 终端才能渲染（见 activeRemoteFileTabs 派生）。
     // 因此只要没有终端/RDP/VNC/本地终端，即使剩孤立 remoteFile 也视作工作区为空，直接回首页。
-    if (
-      sshCount === 0 &&
-      localCount === 0 &&
-      rdpCount === 0 &&
-      vncCount === 0
-    ) {
-      setActiveConnectionId(null);
-      setActiveTabId(null);
-      setActiveRdpSessionId(null);
-      setActiveVncSessionId(null);
-      setActiveLocalTerminalTabId(null);
-      setActiveWorkspaceMode("home");
-      setHomeActive(true);
-    }
+    dispatchTabs({
+      type: "tabs/returnHomeIfEmpty",
+      counts: { local: localCount, rdp: rdpCount, ssh: sshCount, vnc: vncCount },
+    });
   }
 
   function rememberActiveTab(tab: TerminalTab) {
-    setActiveTabByConnectionId((activeTabs) =>
-      activeTabs[tab.connectionId] === tab.id
-        ? activeTabs
-        : { ...activeTabs, [tab.connectionId]: tab.id },
-    );
+    dispatchTabs({ type: "tabs/rememberActive", connectionId: tab.connectionId, tabId: tab.id });
   }
 
   function setConnectionTerminalFileLayout(connectionId: string, mode: RemoteFileOpenMode) {
@@ -4321,20 +4290,11 @@ export function WorkspaceShell() {
   }
 
   function rememberUnifiedActiveTab(connectionId: string, tab: UnifiedWorkbenchTab) {
-    setActiveUnifiedTabByConnectionId((activeTabs) => {
-      const current = activeTabs[connectionId];
-      return current?.kind === tab.kind && current.id === tab.id
-        ? activeTabs
-        : { ...activeTabs, [connectionId]: tab };
-    });
+    dispatchTabs({ type: "tabs/rememberUnified", connectionId, tab });
   }
 
   function forgetActiveConnectionTabs(connectionIds: string[]) {
-    if (connectionIds.length === 0) {
-      return;
-    }
-
-    setActiveTabByConnectionId((activeTabs) => removeDirectoryState(activeTabs, connectionIds));
+    dispatchTabs({ type: "tabs/forgetConnections", connectionIds });
   }
 
   function preferredTabForConnection(connectionId: string, tabs = terminalTabs) {
@@ -4410,19 +4370,41 @@ export function WorkspaceShell() {
     return tab ? { kind: "local", tabId: tab.id } : null;
   }
 
+  function openHome() {
+    setSettingsSectionRequest(undefined);
+    dispatchTabs({ type: "tabs/goHome" });
+  }
+
+  function openLocalTerminalWorkspace() {
+    setSettingsSectionRequest(undefined);
+    dispatchTabs({ type: "tabs/activateSplitHost", host: { kind: "local" } });
+    if (localTerminalTabsRef.current.length > 0) {
+      const standaloneTabs = localTerminalTabsRef.current.filter(
+        (tab) =>
+          !terminalSplitMemberKeys.has(
+            terminalPaneBindingKey({ kind: "local", tabId: tab.id }),
+          ),
+      );
+      const standaloneTab =
+        standaloneTabs.find((tab) => tab.id === activeLocalTerminalTabId) ||
+        standaloneTabs[0] ||
+        null;
+      if (standaloneTab) {
+        activateStandaloneLocalTerminalTab(standaloneTab);
+      } else if (terminalSplitExists && terminalSplitHost?.kind === "local") {
+        activateTerminalSplitTab();
+      }
+      return;
+    }
+    void openLocalTerminalByProfile(resolveDefaultLocalTerminalProfile());
+  }
+
   function activateTerminalSplitHost(host: TerminalSplitHost | null = terminalSplitHost) {
     if (!host) {
       return;
     }
-    setActiveView("workspace");
     setSettingsSectionRequest(undefined);
-    setHomeActive(false);
-    if (host.kind === "ssh") {
-      setActiveWorkspaceMode("ssh");
-      setActiveConnectionId(host.connectionId);
-    } else {
-      setActiveWorkspaceMode("local");
-    }
+    dispatchTabs({ type: "tabs/activateSplitHost", host });
   }
 
   function activateTerminalSplitTab(paneId?: string) {
@@ -4812,16 +4794,13 @@ export function WorkspaceShell() {
   function activateStandaloneTerminalTab(tab: TerminalTab) {
     setTerminalSplitTabActive(false);
     setTerminalSplitSyncEnabled(false);
-    setActiveView("workspace");
     setSettingsSectionRequest(undefined);
-    setActiveWorkspaceMode("ssh");
-    setHomeActive(false);
-    setActiveConnectionId(tab.connectionId);
-    setActiveTabId(tab.id);
-    rememberActiveTab(tab);
-    if (isConnectionTerminalFileUnified(tab.connectionId)) {
-      rememberUnifiedActiveTab(tab.connectionId, { kind: "terminal", id: tab.id });
-    }
+    dispatchTabs({
+      type: "tabs/activateTerminal",
+      connectionId: tab.connectionId,
+      tabId: tab.id,
+      rememberUnified: isConnectionTerminalFileUnified(tab.connectionId),
+    });
     syncCommandSenderTargetTab(tab.connectionId, tab.id);
   }
 
@@ -6130,11 +6109,8 @@ export function WorkspaceShell() {
   function activateStandaloneLocalTerminalTab(tab: LocalTerminalTab) {
     setTerminalSplitTabActive(false);
     setTerminalSplitSyncEnabled(false);
-    setActiveView("workspace");
     setSettingsSectionRequest(undefined);
-    setActiveWorkspaceMode("local");
-    setHomeActive(false);
-    setActiveLocalTerminalTabId(tab.id);
+    dispatchTabs({ type: "tabs/activateLocal", tabId: tab.id });
     syncCommandSenderTargetTab(localCommandSenderTargetId, tab.id);
   }
 
@@ -6216,32 +6192,6 @@ export function WorkspaceShell() {
       return;
     }
     closeLocalTerminalTabs(localTerminalTabs.slice(index + 1).map((tab) => tab.id));
-  }
-
-  function openLocalTerminalWorkspace() {
-    setActiveView("workspace");
-    setActiveWorkspaceMode("local");
-    setHomeActive(false);
-    setSettingsSectionRequest(undefined);
-    if (localTerminalTabsRef.current.length > 0) {
-      const standaloneTabs = localTerminalTabsRef.current.filter(
-        (tab) =>
-          !terminalSplitMemberKeys.has(
-            terminalPaneBindingKey({ kind: "local", tabId: tab.id }),
-          ),
-      );
-      const standaloneTab =
-        standaloneTabs.find((tab) => tab.id === activeLocalTerminalTabId) ||
-        standaloneTabs[0] ||
-        null;
-      if (standaloneTab) {
-        activateStandaloneLocalTerminalTab(standaloneTab);
-      } else if (terminalSplitExists && terminalSplitHost?.kind === "local") {
-        activateTerminalSplitTab();
-      }
-      return;
-    }
-    void openLocalTerminalByProfile(resolveDefaultLocalTerminalProfile());
   }
 
   function openLocalTerminalByProfile(
@@ -6685,12 +6635,8 @@ export function WorkspaceShell() {
   }
 
   function activateRdpSession(session: RdpSessionTab) {
-    setActiveView("workspace");
     setSettingsSectionRequest(undefined);
-    setActiveWorkspaceMode("rdp");
-    setHomeActive(false);
-    setActiveConnectionId(session.connectionId);
-    setActiveRdpSessionId(session.id);
+    dispatchTabs({ type: "tabs/activateRdp", connectionId: session.connectionId, sessionId: session.id });
     setRightTool("tools");
   }
 
@@ -7063,12 +7009,8 @@ export function WorkspaceShell() {
   }
 
   function activateVncSession(session: VncSessionTab) {
-    setActiveView("workspace");
     setSettingsSectionRequest(undefined);
-    setActiveWorkspaceMode("vnc");
-    setHomeActive(false);
-    setActiveConnectionId(session.connectionId);
-    setActiveVncSessionId(session.id);
+    dispatchTabs({ type: "tabs/activateVnc", connectionId: session.connectionId, sessionId: session.id });
     setRightTool("tools");
   }
 

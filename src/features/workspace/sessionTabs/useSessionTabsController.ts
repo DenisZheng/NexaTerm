@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useReducer, useState } from "react";
-import type { Dispatch, SetStateAction } from "react";
+import type { Dispatch } from "react";
 
 import type { RemoteFileEditorTab } from "../../editor/remoteFileEditorTypes";
 import type { RemoteFileOpenMode } from "../../settings/settingsTypes";
@@ -7,7 +7,7 @@ import type { LocalTerminalTab } from "../../terminal/localTerminalTypes";
 
 import type { SessionTabsAction } from "./actions";
 import { initialSessionPointerState, sessionPointerReducer } from "./reducer";
-import type { RdpSessionTab, UnifiedWorkbenchTab, VncSessionTab, WorkspaceMode } from "./types";
+import type { RdpSessionTab, VncSessionTab, WorkspaceMode } from "./types";
 
 export type { SessionTabsAction } from "./actions";
 
@@ -19,18 +19,14 @@ export interface SessionTabsControllerInputs {
   defaultRemoteFileOpenMode: RemoteFileOpenMode;
 }
 
-function resolve<T>(next: SetStateAction<T>, current: T): T {
-  return typeof next === "function" ? (next as (value: T) => T)(current) : next;
-}
-
 /**
  * 会话 tab 状态 controller —— Task 04 第二刀 2c-1。
  *
  * 指针、模式、首页记忆位与两张记忆表由 `sessionPointerReducer` 持有；五个会话集合与文件布局记忆
  * 仍是 `useState`（集合与 WorkspaceShell 里的 `*Ref` 同步写入耦合，待 ref 通道消灭后再迁）。
  *
- * 对外仍暴露 2b 的全部 setter 名作为过渡层（内部转 dispatch），另暴露 `dispatchTabs` 供 2c-2
- * 把 WorkspaceShell 的激活函数改为意图型 action。
+ * 对外暴露 `dispatchTabs`（意图型 action）以及九个单值 setter 过渡层（内部转 dispatch）；
+ * 两张记忆表只能经 remember / forget 系列 action 修改。过渡层在 2c-2b 关闭路径改完后删除。
  */
 export function useSessionTabsController<TTerminalTab extends { connectionId: string; id: string }>(
   inputs: SessionTabsControllerInputs,
@@ -121,43 +117,6 @@ export function useSessionTabsController<TTerminalTab extends { connectionId: st
     (value: boolean) => dispatchTabs({ type: "tabs/setHomeActive", value }),
     [],
   );
-  // 两张记忆表的旧 setter 接受 updater 函数（调用点在 rememberActiveTab 等处）。
-  // 过渡期在这里对当前值求值再整体替换；2c-2 把这些调用点改为 remember*/forget* action 后删除。
-  const pointersRef = { current: pointers };
-  const setActiveTabByConnectionId: Dispatch<SetStateAction<Record<string, string>>> = useCallback(
-    (next) => {
-      const value = resolve(next, pointersRef.current.activeTabByConnectionId);
-      if (value === pointersRef.current.activeTabByConnectionId) {
-        return;
-      }
-      const keep = new Set(Object.keys(value));
-      const removed = Object.keys(pointersRef.current.activeTabByConnectionId).filter((k) => !keep.has(k));
-      if (removed.length > 0) {
-        dispatchTabs({ type: "tabs/forgetConnections", connectionIds: removed });
-      }
-      for (const [connectionId, tabId] of Object.entries(value)) {
-        dispatchTabs({ type: "tabs/rememberActive", connectionId, tabId });
-      }
-    },
-    // pointersRef 每次渲染重建，闭包内读的是最新 pointers。
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [pointers.activeTabByConnectionId],
-  );
-  const setActiveUnifiedTabByConnectionId: Dispatch<SetStateAction<Record<string, UnifiedWorkbenchTab>>> =
-    useCallback(
-      (next) => {
-        const value = resolve(next, pointersRef.current.activeUnifiedTabByConnectionId);
-        if (value === pointersRef.current.activeUnifiedTabByConnectionId) {
-          return;
-        }
-        for (const [connectionId, tab] of Object.entries(value)) {
-          dispatchTabs({ type: "tabs/rememberUnified", connectionId, tab });
-        }
-      },
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      [pointers.activeUnifiedTabByConnectionId],
-    );
-
   return {
     activeConnectionId: pointers.activeConnectionId,
     activeLocalTerminalTabId: pointers.activeLocalTerminalTabId,
@@ -178,9 +137,7 @@ export function useSessionTabsController<TTerminalTab extends { connectionId: st
     setActiveLocalTerminalTabId,
     setActiveRdpSessionId,
     setActiveRemoteFileTabId,
-    setActiveTabByConnectionId,
     setActiveTabId,
-    setActiveUnifiedTabByConnectionId,
     setActiveView,
     setActiveVncSessionId,
     setActiveWorkspaceMode,

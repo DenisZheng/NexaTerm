@@ -149,4 +149,11 @@ describe("记忆表", () => {
         .activeUnifiedTabByConnectionId,
     ).toEqual({ a: { kind: "terminal", id: "f1" } });
   });
+
+  it("forgetUnified 删除存在的键，空数组或无命中返回原引用", () => {
+    const a = sessionPointerReducer(home, { type: "tabs/rememberUnified", connectionId: "a", tab: { kind: "file", id: "f1" } });
+    expect(sessionPointerReducer(a, { type: "tabs/forgetUnified", connectionIds: [] })).toBe(a);
+    expect(sessionPointerReducer(a, { type: "tabs/forgetUnified", connectionIds: ["zz"] })).toBe(a);
+    expect(sessionPointerReducer(a, { type: "tabs/forgetUnified", connectionIds: ["a"] }).activeUnifiedTabByConnectionId).toEqual({});
+  });
 });

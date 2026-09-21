@@ -162,6 +162,20 @@ export function sessionPointerReducer(
     }
     case "tabs/rememberUnified":
       return rememberUnified(state, action.connectionId, action.tab);
+    case "tabs/forgetUnified": {
+      if (action.connectionIds.length === 0) {
+        return state;
+      }
+      const next = { ...state.activeUnifiedTabByConnectionId };
+      let changed = false;
+      for (const id of action.connectionIds) {
+        if (id in next) {
+          delete next[id];
+          changed = true;
+        }
+      }
+      return changed ? { ...state, activeUnifiedTabByConnectionId: next } : state;
+    }
     case "tabs/normalizeUnified": {
       // 原 WorkspaceShell 的 unified 记忆回退 effect，逻辑原样。
       const { fileTabs, terminalTabs } = action;

@@ -46,11 +46,18 @@
 - [x] `reducer.test.ts` 14 例；controller 的 12 个 characterization 用例一字未改仍绿。
 - [x] controller 对外接口不变（setter 过渡层 + 新增 `dispatchTabs`）；两张记忆表的 updater 型 setter 在过渡层求值后拆成 remember/forget action。
 - [x] 本机：tsc 0、Vitest 176/1 todo、build ✓、boundary ✓、三个源码检查 PASS。
+- [x] CI run `35518747970` @ `52dff09` 全绿。
+
+#### 2c-2a 激活/记忆函数改 action（提交 `refactor(workspace): dispatch session tab activation as actions`）
+- [x] 13 个函数改为 dispatch 一个意图型 action：`returnHomeWhenWorkspaceEmpty` → `returnHomeIfEmpty`；`activateStandaloneTerminalTab` / `activateRdpSession` / `activateVncSession` / `activateRemoteFileTab` / `activateStandaloneLocalTerminalTab` / `activateTerminalSplitHost` / `openHome` / `openLocalTerminalWorkspace` → 对应 `activate*` / `goHome`；`rememberActiveTab` / `forgetActiveConnectionTabs` / `rememberUnifiedActiveTab` → remember / forget；`activateTerminalFallbackAfterFilesClose` 末尾 → `fallbackHomeKeepPointers`。seam 外的 `setSettingsSectionRequest` / `setRightTool` / split 两个 setter 留在原函数紧跟 dispatch。
+- [x] 新增 `tabs/forgetUnified` 承接 `clearRemoteFileSessionStateForConnections` 里唯一一处 updater 型删除；controller 删除两张记忆表的 updater 型 setter 过渡层（无调用者）。
+- [x] 摸底修正：`openHome` / `openLocalTerminalWorkspace` 不是死函数（作为 props 传给连接侧栏），保留并改 dispatch。
+- [x] 本机：tsc 0、Vitest 177/1 todo、build ✓、boundary ✓、三个源码检查 PASS。shell 剩 50 处单值指针 setter，全在关闭/删除路径（`closeTerminalTabs`、`deleteConnection`、`closeConnectionSessions`、`removeRdp/VncSessionsLocally`、`closeLocalTerminalTabs`、`startConnectionStep`、`focusTerminalSplitPane`、settings 视图两处），归 2c-2b。
+- [ ] GUI 冒烟（用户）：与 2b 同五步 + 从设置页返回工作区。
 - [ ] CI run。
 
-#### 2c-2 调用点改 action（待做）
-- [ ] 13 个激活/回首页函数改 dispatch 一个意图型 action，删散装 setter；seam 外的 `setSettingsSectionRequest` / `setRightTool` / split 两个 setter 留在原函数紧跟 dispatch。
-- [ ] `rememberActiveTab` / `forgetActiveConnectionTabs` / `rememberUnifiedActiveTab` 改 dispatch；删过渡层对应 setter。
+#### 2c-2b 关闭/删除路径改 action（待做）
+- [ ] 上述 50 处收成 `tabs/closeTerminals` / `tabs/closeConnection` / `tabs/closeLocalTerminals` / `tabs/removeRdp` / `tabs/removeVnc` 等意图型 action（它们在 `setXxx(updater)` 内读 `*Ref.current` 决定下一个活动项，需先把"算下一个活动项"抽成纯 selector）；删九个单值 setter 过渡层。
 - [ ] `WorkbenchTab` 联合、`index` 保留为 `ordinal`、`UnifiedWorkbenchTab.kind` 映射函数（原 2c 条目，顺延）。
 - [ ] 冒烟 + CI。
 - [ ] 把 46 个多 setter 函数逐个收成原子 action（`tabs/activate`、`tabs/close` 等）；不删 effect。
