@@ -5,6 +5,7 @@
 
 ## 0. 2026-09-23 增量校准（WF-00A）
 
+- **2026-09-23 WF-00B 后补记**：HEAD `d722bf5`，CI run `35825557106` 全绿（Windows 打包仍 skipped）；Vitest 13 文件、209 passed / 1 todo；`WorkspaceShell.tsx` 12,876 行。关闭/删除路径已改为 reducer 决策 + `followUp`（`src/features/workspace/sessionTabs/closeDecision.ts`），shell 内只剩 `setActiveRemoteFileTabId` 一个过渡 setter；五类集合仍为 useState。GUI 冒烟与 A01 真实窗口证据待做。
 - 提交：`45418f37`（2026-09-21）。CI run `35600276051` 全绿：Frontend checks、Rust linux-x64 / macos-arm64 / windows-x64、Security evidence；Package windows-x64 为 skipped，不能推导安装包已通过。
 - 本机：Vitest 12 文件、177 passed / 1 todo（2026-09-23 复跑）。
 - `src/features/layout/WorkspaceShell.tsx`：`git show HEAD:… | Measure-Object -Line` = 13,076（347c8b2 = 13,132）。此数字说明职责仍集中，不作为产品完成率或重构验收标准。

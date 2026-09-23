@@ -31,10 +31,10 @@
 
 ## 3. 验证与收尾
 
-- [ ] GUI 冒烟（用户）：关闭活动 SSH tab、关闭非活动 tab、关闭最后一个回首页、同 profile 两个终端关一个、分屏中关 pane、连接中立即关闭再等结果（A01）、删除有多个终端的连接、关 RDP/VNC 后回退、从设置页返回。
-- [ ] push，记录 CI run。
-- [ ] Task 04 `implement.md` 2c-2b 条目指向本任务结果；父任务地图 WF-00B 标完成。
-- [ ] `trellis-update-spec`：`state-management.md` 补 `followUp` 标记模式（与 split `collapsedTo` 同类）的约定。
+- [ ] GUI 冒烟（用户，2026-09-23 决定暂缓）：关闭活动 SSH tab、关闭非活动 tab、关闭最后一个回首页、同 profile 两个终端关一个、分屏中关 pane、连接中立即关闭再等结果（A01）、删除有多个终端的连接、关 RDP/VNC 后回退、从设置页返回。**未验证前不归档、不宣称 A01 通过。**
+- [x] push `45418f3..d722bf5`；CI run `35825557106` @ `d722bf5` 全绿：Frontend checks / Rust linux-x64 / macos-arm64 / windows-x64 / Security evidence 均 success，Package windows-x64 skipped（2026-09-23）。
+- [x] Task 04 `implement.md` 2c-2b 条目指向本任务提交；父任务地图 WF-00B 标"代码完成，冒烟待做"。
+- [x] `trellis-update-spec`：`state-management.md` 已补 followUp 标记模式与关闭路径形状（`d722bf5`）。
 
 ## 验证命令
 
