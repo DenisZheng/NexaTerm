@@ -1,2 +1,5 @@
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "核对 reducer/controller 是否符合约定"}
 {"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "核对 reducer 测试是否满足 Testing Requirements"}
-{"file": "docs/tasks/04-workspace-shell-state-seam.md", "reason": "对照原始验收标准"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "核对未改变组件 props 契约与 UI（本任务范围内不改 UI；不得据此要求后续任务保留旧布局）"}
+{"file": "docs/WORKFLOW_SPEC.md", "reason": "核对本任务未把旧布局写成永久约束，reducer 形状不与 WS-M01/M05/X03 冲突"}
+{"file": "docs/tasks/04-workspace-shell-state-seam.md", "reason": "原始验收（历史参考，非约束）；以 prd.md「2026-09-23 范围修订」与注记后的 Acceptance Criteria 为准"}

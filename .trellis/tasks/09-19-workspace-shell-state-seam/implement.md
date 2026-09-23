@@ -53,36 +53,53 @@
 - [x] 新增 `tabs/forgetUnified` 承接 `clearRemoteFileSessionStateForConnections` 里唯一一处 updater 型删除；controller 删除两张记忆表的 updater 型 setter 过渡层（无调用者）。
 - [x] 摸底修正：`openHome` / `openLocalTerminalWorkspace` 不是死函数（作为 props 传给连接侧栏），保留并改 dispatch。
 - [x] 本机：tsc 0、Vitest 177/1 todo、build ✓、boundary ✓、三个源码检查 PASS。shell 剩 50 处单值指针 setter，全在关闭/删除路径（`closeTerminalTabs`、`deleteConnection`、`closeConnectionSessions`、`removeRdp/VncSessionsLocally`、`closeLocalTerminalTabs`、`startConnectionStep`、`focusTerminalSplitPane`、settings 视图两处），归 2c-2b。
-- [ ] GUI 冒烟（用户）：与 2b 同五步 + 从设置页返回工作区。
-- [ ] CI run。
+- [ ] GUI 冒烟（用户）：与 2b 同五步 + 从设置页返回工作区。（2026-09-23 仍未做；CI 绿不能代替。）
+- [x] CI run `35600276051` @ `45418f3` 全绿：Frontend checks / Rust linux-x64 / macos-arm64 / windows-x64 / Security evidence 均 success；Package windows-x64 为 skipped（2026-09-23 经 GitHub API 复核）。
 
-#### 2c-2b 关闭/删除路径改 action（待做）
-- [ ] 上述 50 处收成 `tabs/closeTerminals` / `tabs/closeConnection` / `tabs/closeLocalTerminals` / `tabs/removeRdp` / `tabs/removeVnc` 等意图型 action（它们在 `setXxx(updater)` 内读 `*Ref.current` 决定下一个活动项，需先把"算下一个活动项"抽成纯 selector）；删九个单值 setter 过渡层。
-- [ ] `WorkbenchTab` 联合、`index` 保留为 `ordinal`、`UnifiedWorkbenchTab.kind` 映射函数（原 2c 条目，顺延）。
-- [ ] 冒烟 + CI。
-- [ ] 把 46 个多 setter 函数逐个收成原子 action（`tabs/activate`、`tabs/close` 等）；不删 effect。
-- [ ] `terminalSplitAnchorIndex` 语义改为按 owner tab id 锚定（design §2.2 备注）。
-- [ ] 静态脚本：`check-session-subtab-memory.mjs`、`check-local-terminal-warmup-source.mjs`、`check-remote-file-editor-source.mjs` 改断言 selector/action 名，提交信息说明。
-- [ ] 验证同第一刀，冒烟加 SSH/本地/RDP 各开关一次、断线重连、关闭活动 tab、回首页。
-- [ ] 提交 `refactor(workspace): extract session tabs reducer`；push，记录 CI run。
+#### 2c-2b 关闭/删除路径改 action（→ 迁往 WF-00B `09-23-wf-00b-close-lifecycle`，2026-09-23）
 
-## 3. 第三刀：MultiExec reducer
+> 以下条目在本任务内不再推进，保留为迁移前的范围记录；完成记录写在 WF-00B。
 
-- [ ] 新建 `multiExec/` 三件套；`buildCommandSenderTargets` 迁入 `selectors.ts` 并改为消费 SessionTabs state。
-- [ ] 扩展第一刀已建的 `multiExec/`：`mode` 加 `"send"`，吸收 command sender 状态与 `commandSenderTargetTabByConnectionId`。
-- [ ] 吸收 command sender 11 个 useState 与 `selectedCommandTargetKeys`。
-- [ ] 验证同前，加 `node scripts/check-command-sender-active-tab-source.mjs` 与 `check-command-sender-mvp-source.mjs`（两脚本此前已知漂移，若失败先核对是否为脚本假设过期，不为迁就脚本改行为）。
-- [ ] 提交 `refactor(workspace): extract multi-exec reducer`；push，记录 CI run。
+- [ ] 上述 50 处收成 `tabs/closeTerminals` / `tabs/closeConnection` / `tabs/closeLocalTerminals` / `tabs/removeRdp` / `tabs/removeVnc` 等意图型 action（它们在 `setXxx(updater)` 内读 `*Ref.current` 决定下一个活动项，需先把"算下一个活动项"抽成纯 selector）；删九个单值 setter 过渡层。→ WF-00B
+- [ ] `WorkbenchTab` 联合、`index` 保留为 `ordinal`、`UnifiedWorkbenchTab.kind` 映射函数（原 2c 条目，顺延）。→ WF-01
+- [ ] 冒烟 + CI。→ WF-00B
+- [ ] 把 46 个多 setter 函数逐个收成原子 action（`tabs/activate`、`tabs/close` 等）；不删 effect。→ 激活类已在 2c-2a 完成；关闭类 → WF-00B
+- [ ] `terminalSplitAnchorIndex` 语义改为按 owner tab id 锚定（design §2.2 备注）。→ WF-04B
+- [ ] 静态脚本：`check-session-subtab-memory.mjs`、`check-local-terminal-warmup-source.mjs`、`check-remote-file-editor-source.mjs` 改断言 selector/action 名，提交信息说明。→ WF-00B
+- [ ] 验证同第一刀，冒烟加 SSH/本地/RDP 各开关一次、断线重连、关闭活动 tab、回首页。→ WF-00B
+- [ ] 提交 `refactor(workspace): extract session tabs reducer`；push，记录 CI run。→ WF-00B
+
+## 3. 第三刀：MultiExec reducer（→ 迁往 WF-04C，2026-09-23）
+
+> 与 Task 06 的批量输入部分合并到 WF-04C；目标模型按 `docs/WORKFLOW_SPEC.md` WS-X03 以会话实例为单位重做，不在本任务先固化"每连接一个目标"。以下为迁移前范围记录。
+
+- [ ] 新建 `multiExec/` 三件套；`buildCommandSenderTargets` 迁入 `selectors.ts` 并改为消费 SessionTabs state。→ WF-04C
+- [ ] 扩展第一刀已建的 `multiExec/`：`mode` 加 `"send"`，吸收 command sender 状态与 `commandSenderTargetTabByConnectionId`。→ WF-04C
+- [ ] 吸收 command sender 11 个 useState 与 `selectedCommandTargetKeys`。→ WF-04C
+- [ ] 验证同前，加 `node scripts/check-command-sender-active-tab-source.mjs` 与 `check-command-sender-mvp-source.mjs`（两脚本此前已知漂移，若失败先核对是否为脚本假设过期，不为迁就脚本改行为）。→ WF-04C
+- [ ] 提交 `refactor(workspace): extract multi-exec reducer`；push，记录 CI run。→ WF-04C
 
 ## 4. 文档
 
 - [x] `.trellis/spec/frontend/state-management.md`：reducer/action/selector 约定、目录、命名、测试要求（2026-09-19，index 状态 To fill → Partial）。
-- [ ] `docs/ARCHITECTURE.md`、`docs/CURRENT_STATE.md`：WorkspaceShell 状态所有权与前后数字。
-- [ ] `docs/tasks/05-workspace-restore-and-schema.md`：注明快照输入为 `SessionTabsState` + `SplitState`。
+- [x] `docs/ARCHITECTURE.md`、`docs/CURRENT_STATE.md`：WorkspaceShell 状态所有权与前后数字。（2026-09-23 由 WF-00A 更新：所有权表列出 split / multiExec(sync) / sessionTabs 指针三个 reducer 与仍为 useState 的五类集合；行数按 `git show <sha>:… | Measure-Object -Line` 记录 347c8b2 = 13,132、45418f3 = 13,076。）
+- [x] `docs/tasks/05-workspace-restore-and-schema.md`：注明快照输入为 `SessionTabsState` + `SplitState`。（2026-09-23 由 WF-00A 在该文件顶部迁移说明中注明；快照契约本身按 WS-R01 在 WF-01 定义。）
 
 ## 5. 回滚点
 
 每刀独立提交，`git revert <sha>` 即回滚；reducer 目录无其它消费者。
+
+## 6. 剩余范围迁移（2026-09-23，WF-00A）
+
+| 剩余项 | 去向 | 说明 |
+| --- | --- | --- |
+| 2c-2b 关闭/删除 action、过渡 setter 清理、三个静态脚本断言 | WF-00B `09-23-wf-00b-close-lifecycle` | 验收 A01 |
+| `WorkbenchTab` 联合 / `ordinal` / `UnifiedWorkbenchTab.kind` 映射 | WF-01 `09-23-wf-01-unified-session-entry` | 与实例投影一起做 |
+| split anchor 改 owner id | WF-04B | 随分屏流程 |
+| 第三刀 MultiExec | WF-04C | 与 Task 06 批量输入合并，按 WS-X03 |
+| 五类集合合并、全文件拆分 | 按需 | 不再是前置任务 |
+
+本任务收尾条件见 prd.md「2026-09-23 范围修订」；2c-2a 的 GUI 冒烟仍未做，归档前需完成或明确记为未验证。
 
 ## 结果记录
 

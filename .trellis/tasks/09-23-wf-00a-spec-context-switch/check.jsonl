@@ -1,0 +1,4 @@
+{"file": "docs/WORKFLOW_SPEC.md", "reason": "检查：各文档引用的 WS 编号存在且状态标注一致；三个基准问题答案一致"}
+{"file": ".trellis/spec/frontend/index.md", "reason": "检查：Pre-Development Checklist / Quality Check 段存在且指向 WORKFLOW_SPEC"}
+{"file": "NEXATERM_WORKFLOW_DELIVERY_PLAN.md", "reason": "检查：§2.3 文件处理清单与 §2.6 验收标准逐项对照"}
+{"file": ".trellis/tasks/09-23-wf-00a-spec-context-switch/prd.md", "reason": "本任务验收标准"}

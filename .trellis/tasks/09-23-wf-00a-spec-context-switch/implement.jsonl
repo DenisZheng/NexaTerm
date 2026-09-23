@@ -1,0 +1,6 @@
+{"file": "docs/WORKFLOW_SPEC.md", "reason": "当前产品交互规则正文（WS-xx），本任务建立并作为所有修订的对照基准"}
+{"file": ".trellis/spec/frontend/index.md", "reason": "规范索引；本任务补 Pre-Development Checklist，需保持与 before-dev 读取路径一致"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "工程规则保留；仅对混入的入口/位置约束加范围标注"}
+{"file": ".trellis/spec/frontend/tauri-command-contracts.md", "reason": "IPC 契约保留；仅对右侧面板/手动定位等交互约束加范围标注"}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "reducer/controller 约束，WF-00B/WF-01 的实现边界来源"}
+{"file": "NEXATERM_WORKFLOW_DELIVERY_PLAN.md", "reason": "交付方案：WF 排序、文件处理清单（§2.3）与验收 A01–A15；本任务的修改范围依据"}

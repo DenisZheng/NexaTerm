@@ -113,3 +113,56 @@
 - 换 Mac / 完整工具链后：Batch B（cargo update + 编译验证）、Batch C（capability 按窗口拆分 + tauri dev 验证）、Batch E（check-*.mjs 静态断言）。
 - 继续 Phase 3（MCP loopback + AppError 收敛）、Phase 4（输入边界/生命周期）、Phase 5（CSP 收紧 + 发布门禁）。
 - 本会话改动已暂存待人工审核；确认后再提交（不自动提交）。
+
+
+## Session 3: WF-00A 规范切换与上下文校准
+
+**Date**: 2026-09-23
+**Task**: WF-00A 规范切换与上下文校准
+**Branch**: `main`
+
+### Summary
+
+建立 docs/WORKFLOW_SPEC.md；AGENTS/CLAUDE/原型说明/spec 索引与组件、IPC 规范加范围标注；Task 04 范围修订与剩余去向；DEVELOPMENT_PLAN 重组为 WF；新建父任务与 WF-00A/00B/01。无运行时改动，未提交。
+
+### Main Changes
+
+## WF-00A 规范切换与上下文校准（2026-09-23）
+
+### 结论
+
+- 开发主线切换为"以 MobaXterm 操作流程为主线"的交付包组织（WF-00 至 WF-08）；产品交互规则正文集中在 `docs/WORKFLOW_SPEC.md`（v0.1，规则编号 WS-xx，状态分已确认 / 默认值 / 待确认）。
+- 旧规则处置：原型说明中"顶部只放 SSH 连接、左侧固定连接仓库、文件在右侧"降为历史参考并逐条标注替代关系；`component-guidelines.md` / `tauri-command-contracts.md` 中混入的入口位置约束标注为 `[Current implementation — WS-xx replaces at WF-yy]`，工程规则不变；Task 04 的"不改任何 UI"限定为该任务自身。
+- Task 04 剩余范围：2c-2b → WF-00B；WorkbenchTab 联合 → WF-01；split anchor → WF-04B；MultiExec 第三刀 → WF-04C（与 Task 06 合并）。已完成切片（1a/1b/2a/2b/2c-1/2c-2a）保留，2c-2a 记录 CI `35600276051`，GUI 冒烟仍未做。
+- 新任务：父任务 `09-23-nexaterm-workflow-mainline`（planning，持任务地图、迁移表、A01–A15）；WF-00A（in_progress，本会话）；WF-00B、WF-01（planning，PRD 已写明继承范围与验收编号）。
+- 上下文加载路径校准：`.trellis/spec/frontend/index.md` 补 Pre-Development Checklist / Quality Check（此前缺失，before-dev 步骤 4 落空）；`CLAUDE.md` 引用改为 `@AGENTS.md`（git 跟踪名）；`.trellis/workflow.md` Guardrails 加一条项目规则；Task 04 与 WF-00A 的 implement/check manifest 引用同版规范并通过 validate。
+
+### 事实修正
+
+- `WorkspaceShell.tsx` 行数按 `git show <sha>:… | Measure-Object -Line`：HEAD 45418f3 = 13,076；347c8b2 = 13,132。交付方案与 Task 04 implement.md 的 14,0xx 系另一计数方法，已统一。
+- Vitest 复跑：12 文件、177 passed / 1 todo。
+
+### 待确认（WORKFLOW_SPEC §10）
+
+菜单是否保留 File；次级工具面板位置；窄窗口收起；跟随开关默认值与手动浏览暂停；关闭实例时运行中传输策略；MultiExec 目标固定 vs 跟随焦点；"连接全部"递归/并发/预览；Windows X server 分发；未保存编辑恢复；树形分组 schema 冲突；会话导入优先级。
+
+### 下一任务
+
+WF-00B `09-23-wf-00b-close-lifecycle`：关闭/删除纯决策 action + characterization + 编排接入；验收 A01。
+
+
+### Git Commits
+
+(No commits - planning session)
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

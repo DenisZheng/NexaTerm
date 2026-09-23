@@ -1,6 +1,7 @@
 # WorkspaceShell 状态 seam 设计
 
 > 2026-09-19 修订版：吸收 `review-plan.md` 的 B1-B6 阻塞项与 S1-S7 建议。修订点在各节以「评审修订」标出。
+> 2026-09-23（WF-00A）：本设计的第一刀、第二刀 2a–2c-2a 已按此实现；2c-2b 迁往 WF-00B，§4 第三刀迁往 WF-04C，§2.2 备注的 split anchor 语义调整迁往 WF-04B，`WorkbenchTab` 联合迁往 WF-01。以下正文保留作为已实现部分的设计依据与迁出部分的历史参考；目标数据模型以 `docs/WORKFLOW_SPEC.md` WS-M01/M05/X03 为准。
 
 ## 1. 总体形状
 
@@ -82,7 +83,9 @@ interface SessionTabsState {
 - 4 个 ref 镜像 effect：与 reducer state 一起保留在 controller hook 内，异步回调改读 `stateRef.current`；不试图消灭。
 - Characterization 同第一刀方法：先机械抽 `useSessionTabsController`，renderHook 锁定：关闭活动 tab 的相邻激活、connecting→terminal 迁移、重连 sessionId 替换、RDP/VNC 失败留存、回退 file tab 规则。
 
-## 4. 第三刀：MultiExec 合并
+## 4. 第三刀：MultiExec 合并（→ 迁往 WF-04C，2026-09-23）
+
+> 本节保留为历史参考。WF-04C 将按 WS-X03 以会话实例为目标重做目标模型，不先固化下述"吸收 `commandSenderTargetTabByConnectionId`"的每连接一目标形状。
 
 - 第一刀已建 `multiExec/`（`mode: off|live`、`targets`、`error`）。第三刀扩展 `mode` 加 `"send"`，并吸收 command sender 11 个 useState 与 `selectedCommandTargetKeys`、`commandSenderTargetTabByConnectionId`。
 - `buildCommandSenderTargets` 迁入 `selectors.ts`，输入改为 `SessionTabsState`。

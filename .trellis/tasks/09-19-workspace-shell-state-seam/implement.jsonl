@@ -1,3 +1,5 @@
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "reducer/action/selector/controller 约定（本任务产出，已完成切片与收尾必须遵守）"}
 {"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "测试约定：reducer 测试位置、命名、禁 snapshot"}
-{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "现有组件 props 契约，seam 提取不得改变"}
-{"file": "docs/ARCHITECTURE.md", "reason": "WorkspaceShell 当前职责与 lazy 边界"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "现有组件 props 契约，seam 提取不得改变；带 [Current implementation] 标注的位置条目在本任务内保持现状，不在本任务改布局"}
+{"file": "docs/ARCHITECTURE.md", "reason": "WorkspaceShell 当前职责、lazy 边界与状态所有权表"}
+{"file": "docs/WORKFLOW_SPEC.md", "reason": "目标数据形状参考（WS-M01/M05/X03）；本任务不改 UI，只保证 reducer 形状不与目标模型冲突；'不改 UI' 仅约束本任务（§11）"}

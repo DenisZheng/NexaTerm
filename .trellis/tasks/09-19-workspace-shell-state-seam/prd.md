@@ -2,6 +2,24 @@
 
 > 来源：`docs/tasks/04-workspace-shell-state-seam.md`（Task 04）、`NEXATERM_REQUIREMENTS.md` §16 / §21 / §33、`docs/GAP_ANALYSIS.md` H0.3。父任务：`09-09-nexaterm-architecture-audit-plan`。前置：Task 03 前端测试基线（`09-19-frontend-test-baseline`，Vitest 门禁已接入 CI）。
 
+## 2026-09-23 范围修订（WF-00A）
+
+主线已切换为以用户流程为单位的交付包（父任务 `09-23-nexaterm-workflow-mainline`，规则见 `docs/WORKFLOW_SPEC.md`）。对本任务的影响：
+
+- **"不改任何 UI" 只约束本任务**，不是全项目约束；新布局由 WF-01（`09-23-wf-01-unified-session-entry`）承接。
+- 本任务收缩为已完成切片的记录与收尾，不再作为"先拆完整个 WorkspaceShell"的前置任务。剩余工作去向：
+
+| 剩余项 | 去向 |
+| --- | --- |
+| 2c-2b 关闭/删除路径改 action、九个过渡 setter 清理、静态脚本断言更新 | WF-00B `09-23-wf-00b-close-lifecycle` |
+| `WorkbenchTab` 联合、`index` 保留为 `ordinal`、`UnifiedWorkbenchTab.kind` 映射 | WF-01 `09-23-wf-01-unified-session-entry` |
+| `terminalSplitAnchorIndex` 改按 owner tab id 锚定 | WF-04B（父任务地图，待创建） |
+| 第三刀 MultiExec owner 合并（含 `buildCommandSenderTargets` 迁入 selector、吸收 command sender 状态） | WF-04C（与 Task 06 批量输入部分合并；目标模型按 WS-X03 以实例为单位，不先固化"每连接一个目标"） |
+| 五类集合合并为单一 `tabs: WorkbenchTab[]`、全文件拆分 | 只在 WF-01 等流程确实需要时继续，不作为独立前置 |
+
+- 三个基准问题与本任务的关系：本任务的 reducer 形状（`SessionPointerState`、`SplitState`、`MultiExecState`）不得与 WS-M01/M05/X03 的目标模型冲突，但本任务不实现实例投影、Files 左置或 MultiExec 实例目标。
+- 本任务收尾条件改为：已完成切片（1a/1b/2a/2b/2c-1/2c-2a）有 CI 与冒烟记录；剩余项去向已登记（上表）；2c-2a 的 GUI 冒烟完成或明确记为未验证。随后归档，不等待第三刀。
+
 ## Goal
 
 在**不改变任何用户可见行为、UI 结构、样式和首屏 lazy 边界**的前提下，把 `src/features/layout/WorkspaceShell.tsx` 里散装的 useState 按三个 seam 收敛为纯 reducer，使 split、会话 tab、多目标命令各有单一 owner 且可用 Vitest 直接测试；数据形状按需求 §33 目标主布局与 §21 MultiExec 预留，让后续布局任务只换视图、不再拆状态。
@@ -31,16 +49,18 @@
 
 ## Acceptance Criteria
 
-- [ ] split、会话 tab、多目标命令各有单一 reducer owner；WorkspaceShell 中对应 `useState` 全部移除，无双写。
-- [ ] 每个 reducer 有 Vitest 用例覆盖：激活/关闭/重连/同步/错误路径，且 characterization 测试在重构前后同时通过。
-- [ ] `WorkspaceShell.tsx` 行数下降且 `useState` 计数下降（记录前后数字），首屏 chunk 不含新增重模块。
-- [ ] 无新增 `dangerouslySetInnerHTML`、去重掩盖、隐藏异常或跨 feature 复制组件。
-- [ ] 三刀各自 CI 全绿，run ID 记录在 implement.md。
-- [ ] state-management 规范、ARCHITECTURE、CURRENT_STATE 已更新。
+> 2026-09-23 标注：按实际完成度注记，未完成项不打勾；迁出项在括号内注明去向，不再作为本任务收尾条件。
+
+- [ ] split、会话 tab、多目标命令各有单一 reducer owner；WorkspaceShell 中对应 `useState` 全部移除，无双写。（split 已完成；会话指针已进 reducer、五类集合仍为 useState；MultiExec 仅 sync 三态进 reducer，其余 → WF-04C。本任务不再要求全部完成。）
+- [ ] 每个 reducer 有 Vitest 用例覆盖：激活/关闭/重连/同步/错误路径，且 characterization 测试在重构前后同时通过。（split / multiExec(sync) / sessionTabs 指针已有；关闭路径覆盖 → WF-00B。）
+- [ ] `WorkspaceShell.tsx` 行数下降且 `useState` 计数下降（记录前后数字），首屏 chunk 不含新增重模块。（行数按 `git show <sha>:… \| Measure-Object -Line`：347c8b2 = 13,132，45418f3 = 13,076；此前 implement.md 记录的 14,0xx 系另一计数方法，不再沿用。行数不作为里程碑。）
+- [x] 无新增 `dangerouslySetInnerHTML`、去重掩盖、隐藏异常或跨 feature 复制组件。（已完成切片经 check 与 CI 核对。）
+- [ ] 三刀各自 CI 全绿，run ID 记录在 implement.md。（一刀、二刀 2a–2c-2a 已记录；2c-2b → WF-00B；三刀 → WF-04C。）
+- [ ] state-management 规范、ARCHITECTURE、CURRENT_STATE 已更新。（state-management 已填；ARCHITECTURE / CURRENT_STATE 于 2026-09-23 由 WF-00A 更新所有权表与行数。）
 
 ## Out of Scope
 
-- 不改任何 UI：菜单、工具栏、侧栏、状态栏、tab 栏外观、CSS 一律不动；§33 布局落地另立任务。
+- 不改任何 UI：菜单、工具栏、侧栏、状态栏、tab 栏外观、CSS 一律不动；§33 布局落地另立任务。**本条只约束本任务**；布局任务为 WF-01 `09-23-wf-01-unified-session-entry`，替代关系见 `docs/WORKFLOW_SPEC.md` §11。
 - 不建立 remoteFileTabs 与 SSH tab 的父子关系（布局任务再做；tab 联合类型给 `editor` 留位即可）。
 - 不实现 workspace snapshot / 持久化（Task 05）。
 - 不迁 zustand，不改 Rust / IPC 契约，不动 `terminalSplitLayout.ts` 的纯函数语义。
