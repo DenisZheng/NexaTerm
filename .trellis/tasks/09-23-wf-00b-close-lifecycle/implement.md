@@ -8,25 +8,26 @@
 
 ## 1. 提交一：纯决策 + action（shell 不动）
 
-- [ ] `sessionTabs/closeDecision.ts`：`CloseSnapshot`、`FollowUp`、`CloseDecision`，五个 `decide*`，逐分支照抄 design §1 表。
-- [ ] `closeDecision.test.ts`：六场景 × 五路径的表驱动用例 + 回退顺序 + 全空回首页 + design §5.2 的 deleteConnection 边界。
-- [ ] `actions.ts`：加 `tabs/closeTerminals` / `closeConnections` / `closeLocalTerminals` / `removeRdp` / `removeVnc` / `clearActiveFile` / `focusPaneBinding` / `startConnecting` / `openSettings` / `closeSettings` / `consumeFollowUp`；八个 `tabs/set*` 先保留（提交二删）。
-- [ ] `reducer.ts`：`followUp` 字段 + 各 case；`initialSessionPointerState.followUp = null`。
-- [ ] `reducer.test.ts`：新 case 各一例；`followUp` 设置/清除；无变化同引用。
-- [ ] `useSessionTabsController.ts`：`onFollowUp` 输入 + 消费 effect；`useSessionTabsController.test.tsx` 加 followUp 用例，旧 12 例不改。
-- [ ] 验证：tsc / Vitest / build / boundary。
-- [ ] 提交 `refactor(workspace): add close decision selectors and session close actions`。
+- [x] `sessionTabs/closeDecision.ts`：`CloseSnapshot`、`FollowUp`、`CloseDecision`，五个 `decide*`，逐分支照抄 design §1 表。
+- [x] `closeDecision.test.ts`：终端 9 例、连接 6 例、本地 3 例、rdp/vnc 4 例，含回退顺序与全空回首页。
+- [x] `actions.ts`：加 `tabs/closeTerminals` / `closeConnections` / `closeLocalTerminals` / `removeRdp` / `removeVnc` / `clearActiveFile` / `focusPaneBinding` / `startConnecting` / `openSettings` / `closeSettings` / `consumeFollowUp`。
+- [x] `reducer.ts`：`followUp` 字段 + 各 case；`applyDecision` 把 patch / remember / forget / followUp 落到 state。
+- [x] `reducer.test.ts`：新 case 各一例；`followUp` 设置/清除；无变化同引用。
+- [x] `useSessionTabsController.ts`：`onFollowUp` 输入 + 消费 effect；测试加 2 例，旧 12 例不改。
+- [x] 验证：tsc 0、Vitest sessionTabs 70/70、build ✓、boundary ✓。
+- [x] 提交 `0079f15 refactor(workspace): add close decision selectors and session close actions`。
 
 ## 2. 提交二：shell 接入 + 清理
 
-- [ ] `snapshotFromRefs()` 辅助（shell 内，组装五个 ref 的 id/connectionId）。
-- [ ] 改写 `closeTerminalTabs`、`closeConnectionSessions`、`deleteConnection`、`closeLocalTerminalTabs`、`removeRdpSessionsLocally`、`removeVncSessionsLocally`：外部清理不变 → ref 计算 nextTabs → 值式 set → 一次 dispatch。
-- [ ] `onFollowUp` 接到 controller：按 kind 用 `*Ref.current` 找实体后调 `activateTerminalTab` / `activateLocalTerminalTab` / `activateRdpSession` / `activateVncSession`。
-- [ ] `focusTerminalSplitPane` → `tabs/focusPaneBinding`；`startConnectionStep` → `tabs/startConnecting`；`openSettingsSection` / `returnFromSettings` → `tabs/openSettings` / `closeSettings`；2744 / 2967 → `tabs/clearActiveFile`。
-- [ ] `grep -n 'setActiveConnectionId(\|setActiveTabId(\|setActiveRdpSessionId(\|setActiveVncSessionId(\|setActiveLocalTerminalTabId(\|setActiveView(\|setActiveWorkspaceMode(\|setHomeActive(' src/features/layout/WorkspaceShell.tsx` 为 0 → 删八个过渡 setter 与对应 `tabs/set*` action；`setActiveRemoteFileTabId` 保留并标 `@deprecated`（3206）。
-- [ ] 更新 `check-workspace-empty-home-source.mjs`、`check-workspace-ssh-activation-source.mjs` 断言（design §3）。
-- [ ] 验证：tsc / Vitest / build / boundary / 五个检查脚本；行数记录。
-- [ ] 提交 `refactor(workspace): route session close paths through close actions`。
+- [x] `sessionRef()` / `snapshotFromRefs()` 辅助（shell 内，紧随 `connectingTabExists`）。
+- [x] 改写六条路径：外部清理不变 → ref 计算 nextTabs → 值式 set → 一次 dispatch。
+- [x] `onFollowUp` 接到 controller：按 kind 用 `*Ref.current` 找实体后调 `activateTerminalTab` / `activateLocalTerminalTab` / `activateRdpSession` / `activateVncSession`。
+- [x] `focusTerminalSplitPane` → `tabs/focusPaneBinding`；`startConnectionStep` → `tabs/startConnecting`；`openSettingsSection` / `returnFromSettings` → `tabs/openSettings` / `closeSettings`；两处 `setActiveRemoteFileTabId(null)` → `tabs/clearActiveFile`。
+- [x] 八个过渡 setter 调用点 grep 为 0 → 从 controller / actions / reducer 删除；`setActiveRemoteFileTabId` 保留一个调用点（远程文件重命名）并标 `@deprecated`。顺带删除因此无调用者的 `returnHomeWhenWorkspaceEmpty`、`rememberActiveTab`（reducer 的 `tabs/returnHomeIfEmpty` / `tabs/rememberActive` 保留，有测试）。
+- [x] 检查脚本：`check-workspace-empty-home-source.mjs`（改为断言六条路径 dispatch close action、函数体内无集合 updater / 无 activate* 直调、reducer 回首页清指针、closeDecision 的 RETURN_HOME_PATCH）；`check-workspace-ssh-activation-source.mjs`（断言 `tabs/startConnecting` dispatch 与 reducer case 先写 mode 再写 activeTabId）；`check-session-subtab-memory.mjs`（记忆写入改为断言 reducer 的 activateTerminal / startConnecting case 与 `decision.remember`）。
+- [x] 验证：tsc 0；Vitest sessionTabs 70/70；六个相关检查全过；全部 `check-*.mjs` 工作树 10 失败，与 HEAD worktree 完全相同（app-select、command-sender-active-tab、command-sender-mvp、connection-jump、connection-quick-search、dark-mode、global-scrollbar、ironrdp-macos、rdp-release-readiness、settings-page），无新增失败；build ✓、boundary ✓。`WorkspaceShell.tsx` 13,076 → 12,876。
+- [x] 全量 `pnpm test`：13 文件、209 passed / 1 todo（基线 177 + 新增 32）。
+- [x] 提交 `refactor(workspace): route session close paths through close actions`（hash 见 git log；随后单独提交 spec 与本记录）。
 
 ## 3. 验证与收尾
 
@@ -55,4 +56,13 @@ node scripts/check-workspace-ssh-activation-source.mjs
 
 ## 结果记录
 
-（逐步填写）
+### 2026-09-23 提交一 / 提交二
+
+- 接受的行为差异（复述 design §5，均已在测试中固定）：
+  1. 回退激活（activate*）由 reducer `followUp` → controller effect → shell 调用，晚一个 effect tick，仍在同一提交前。
+  2. 决策读 reducer 当前指针而非 shell 闭包；同一事件里先关 RDP/VNC 再关终端（`deleteConnection`）时，后一个决策看到的是前一个决策已更新的指针，且 `followUp` 以最后一个决策为准（前一个尚未消费的标记被覆盖，这是正确的：它指向的实体可能已被后续关闭）。原代码在该边界会额外跑一次 `activateTerminalTab` 的 split / 命令目标同步效果，新代码不跑；只影响"删除一个同时有活动 RDP/VNC 和终端的连接"这一路径。
+  3. 集合从 updater 改为"ref 计算 + 值式 set"；`closeTerminalTabs` / `closeConnectionSessions` / `deleteConnection` 的 `closingTabIds` 改从 ref 取（原来 warmup 停止用渲染态、运行时关闭用 ref，两者正常情况下一致）。
+- 未改：任何回退顺序；五类集合仍为 useState；`*Ref` 通道；`runConnectionStep` 的 `connectingTabExists()` 保护。
+- 顺带清理：`returnHomeWhenWorkspaceEmpty`、`rememberActiveTab` 两个 shell 函数因无调用者删除；`check-session-subtab-memory.mjs` 原本断言 `rememberActiveTab` 字符串存在，改为断言 reducer 写记忆的 case。
+- 预存失败、本任务不处理：`check-command-sender-active-tab-source.mjs`（HEAD 即失败，它断言 `activateTerminalTab` 体内含 `rememberActiveTab`，而该函数早在 2c-2a 前就已改为委托 `activateStandaloneTerminalTab`）与其余 9 个已知失败脚本，归 WF-04C / 对应包。
+- 未做：GUI 冒烟（§3）、CI run 记录。

@@ -166,3 +166,45 @@ WF-00B `09-23-wf-00b-close-lifecycle`：关闭/删除纯决策 action + characte
 ### Next Steps
 
 - None - task complete
+
+
+## Session 4: WF-00B 关闭/删除生命周期：提交一、二
+
+**Date**: 2026-09-23
+**Task**: WF-00B 关闭/删除生命周期：提交一、二
+**Branch**: `main`
+
+### Summary
+
+closeDecision 纯决策 + close action + followUp；六条关闭路径接入、过渡 setter 删除、检查脚本改行为断言。tsc/Vitest 209/build/boundary 通过；GUI 冒烟与 CI 待做。
+
+### Main Changes
+
+## WF-00B 关闭/删除生命周期收尾 —— 提交一、二（2026-09-23）
+
+- `0079f15`：`sessionTabs/closeDecision.ts` 纯决策（五个 decide*，逐分支对应 45418f3 的六条关闭路径）、新 action（closeTerminals / closeConnections / closeLocalTerminals / removeRdp / removeVnc / focusPaneBinding / startConnecting / openSettings / closeSettings / clearActiveFile / consumeFollowUp）、reducer `followUp` 标记、controller `onFollowUp` 消费 effect；测试 32 例。
+- `0f421fc`：WorkspaceShell 六条关闭路径改为"外部清理 → ref 计算 → 值式 set → 一次 dispatch"；删八个过渡 setter；`returnHomeWhenWorkspaceEmpty` / `rememberActiveTab` 无调用者删除；三个检查脚本改为行为断言。13,076 → 12,876 行。
+- 验证：tsc、Vitest 209/1 todo、build、startup boundary、六个相关检查全过；全部 check-*.mjs 的 10 个失败与 HEAD worktree 完全一致，无新增。
+- 接受的差异：回退激活晚一个 effect tick；决策读 reducer 当前指针（deleteConnection 先关 RDP/VNC 再关终端的边界）。
+- 预存且未处理：`check-command-sender-active-tab-source.mjs` 等 10 个脚本（HEAD 即失败）。
+- 待办：GUI 冒烟（关闭活动/非活动/最后一个、同 profile 两实例、分屏 pane、连接中立即关闭 A01、删除多终端连接、RDP/VNC 回退、设置页返回）；push 后记录 CI run；更新父任务地图。
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `0079f15` | (see git log) |
+| `0f421fc` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

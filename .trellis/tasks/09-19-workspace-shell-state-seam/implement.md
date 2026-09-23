@@ -59,6 +59,7 @@
 #### 2c-2b 关闭/删除路径改 action（→ 迁往 WF-00B `09-23-wf-00b-close-lifecycle`，2026-09-23）
 
 > 以下条目在本任务内不再推进，保留为迁移前的范围记录；完成记录写在 WF-00B。
+> 2026-09-23 进展：WF-00B 提交一 `0079f15`（closeDecision + action + followUp）、提交二 `0f421fc`（六条路径接入、八个过渡 setter 删除、三个检查脚本改为行为断言）。剩余：GUI 冒烟与 CI run 记录（见 WF-00B implement.md §3）。
 
 - [ ] 上述 50 处收成 `tabs/closeTerminals` / `tabs/closeConnection` / `tabs/closeLocalTerminals` / `tabs/removeRdp` / `tabs/removeVnc` 等意图型 action（它们在 `setXxx(updater)` 内读 `*Ref.current` 决定下一个活动项，需先把"算下一个活动项"抽成纯 selector）；删九个单值 setter 过渡层。→ WF-00B
 - [ ] `WorkbenchTab` 联合、`index` 保留为 `ordinal`、`UnifiedWorkbenchTab.kind` 映射函数（原 2c 条目，顺延）。→ WF-01
