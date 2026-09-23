@@ -4,18 +4,18 @@
 
 - [x] 决策 D1–D8 确认并回写 WORKFLOW_SPEC v0.2（2026-09-23）。
 - [x] 前置：WF-00B 代码完成（`0079f15` / `0f421fc`，CI 绿）；GUI 冒烟由维护者另行安排，不阻塞原型与纯函数切片，但阻塞切片 3 的真实窗口验证结论。
-- [ ] `task.py start` 本任务。
+- [x] `task.py start` 本任务。
 
 ## 1. 原型（`prototype/light-neutral/mxterm-light-neutral.html`）
 
-- [ ] 顶部：菜单栏（会话 / 视图 / 终端 / 工具 / 设置 / 帮助，可展开伪菜单）+ 高频工具栏（新建会话、分屏、MultiExec、隧道、X11[禁用+原因]、搜索、设置）+ 实例标签行（`名称 · 终端 N`、Local `profile · N`、RDP `· RDP`、分屏组一个标签）。
-- [ ] 左侧：Sessions / Files 分段切换；Sessions 复用现有连接仓库内容；Files 复用现有文件工具栏 + 树，头部显示绑定的实例与目录、跟随开关（WS-F02 只做静态占位）。
-- [ ] 右侧：只剩监控 / 命令 / Docker / AI 工具标签，可收起。
-- [ ] 中间：状态 1 空工作区（首页：快速连接 / 最近 / 收藏）；状态 2 一个 SSH 终端 + 左侧 Files；状态 3 四 pane + MultiExec 目标面板（实例勾选、live/send 切换、`MULTIEXEC ACTIVE` 状态与停止）。
-- [ ] 窄窗口：工具栏折叠进 `⋯`，右侧面板收起，菜单栏保留。
-- [ ] 状态切换：原型内少量 JS（`data-state` on `.app`）+ 顶部小状态条；保持现有 token、间距、8px 内圆角、细边框。
-- [ ] 设计评审：`ui-ux-pro-max` 不可用时由维护者按 component-guidelines 桌面工具风格人工评审；评审结论若改动规则则回写 WORKFLOW_SPEC。
-- [ ] 提交 `docs(prototype): add unified session entry states to the light-neutral master`。
+- [x] 顶部：菜单栏（会话 / 视图 / 终端 / 工具 / 设置 / 帮助，可展开伪菜单）+ 高频工具栏（新建会话、分屏、MultiExec、隧道、X11[禁用+原因]、搜索、设置）+ 实例标签行（`名称 · 终端 N`、Local `profile · N`、RDP `· RDP`、分屏组一个标签）。
+- [x] 左侧：Sessions / Files 分段切换；Sessions 复用现有连接仓库内容；Files 复用现有文件工具栏 + 树，头部显示绑定的实例与目录、跟随开关（WS-F02 只做静态占位）。
+- [x] 右侧：只剩监控 / 命令 / Docker / AI 工具标签，可收起。
+- [x] 中间：状态 1 空工作区（首页：快速连接 / 最近 / 收藏）；状态 2 一个 SSH 终端 + 左侧 Files；状态 3 四 pane + MultiExec 目标面板（实例勾选、live/send 切换、`MULTIEXEC ACTIVE` 状态与停止）。
+- [x] 窄窗口：工具栏折叠进 `⋯`，右侧面板收起，菜单栏保留。
+- [x] 状态切换：原型内少量 JS（`data-state` on `.app`）+ 顶部小状态条；保持现有 token、间距、8px 内圆角、细边框。
+- [x] 设计评审：`ui-ux-pro-max` 不可用时由维护者按 component-guidelines 桌面工具风格人工评审；评审结论若改动规则则回写 WORKFLOW_SPEC。
+- [x] 提交 `docs(prototype): add unified session entry states to the light-neutral master`。
 
 ## 2. 实例投影（纯函数，shell 不变）
 
@@ -75,4 +75,8 @@ node scripts/check-workspace-empty-home-source.mjs
 
 ## 结果记录
 
-（逐步填写）
+- 切片 1（原型）2026-09-23 完成：统一会话入口三态（空工作区首页 / 单 SSH + 左侧 Files / 四 pane + MultiExec）+ 窄窗口折叠，落到 `prototype/light-neutral/mxterm-light-neutral.html`（`.app` 上 `data-state / data-sidebar / data-right / data-narrow` 驱动，无 `:target` 依赖）。结构与配色 token 自检通过（标签平衡、无乱码、token 全部命中母版 `:root`）。
+  - 状态切换器实际放在窗口底部居中（原型专用，非产品 UI），与计划文案“顶部小状态条”略有出入，仅原型辅助控件。
+  - 设计评审：`ui-ux-pro-max` 本会话不可用，按约定由维护者人工评审，结论「先按此原型验证 OK，后续按需再改」。
+  - 已知偏离（维护者确认暂不改）：底部 MultiExec 栏做成了目标面板（Live/Send 分段 + 逐实例 chip），比 MobaXterm 的单行广播栏重；实例级目标与 RDP 置灰按 WS-X03 / WS-X05 保留，形态待后续需求再向 MobaXterm 收敛。
+  - 提交：`docs(prototype): add unified session entry states to the light-neutral master`。

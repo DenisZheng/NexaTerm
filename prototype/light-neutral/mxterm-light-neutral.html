@@ -925,25 +925,714 @@
     body:has(#right-collapsed:target) .right-collapsed-bar {
       display: grid;
     }
+
+    /* ===== WF-01：统一会话入口原型（2026-09-23，见 docs/WORKFLOW_SPEC.md WS-E01–E13） =====
+       状态由 .app 上的 data-state（empty | ssh | multi）、data-sidebar（sessions | files）、
+       data-right（expanded | collapsed）、data-narrow（true | false）驱动；底部"原型状态"条切换。 */
+
+    .app {
+      grid-template-rows: 46px 34px 1fr;
+    }
+
+    /* 顶部第二行：菜单栏 + 高频工具栏 */
+    .actionbar {
+      min-width: 0;
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 8px;
+      padding: 0 8px 0 10px;
+      border-bottom: 1px solid var(--line-soft);
+      background: var(--top);
+    }
+
+    .menubar {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .menu-item {
+      position: relative;
+    }
+
+    .menu-btn {
+      height: 26px;
+      padding: 0 10px;
+      border: 0;
+      border-radius: 7px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .menu-btn:hover,
+    .menu-item.is-open > .menu-btn {
+      background: rgba(156, 163, 175, 0.12);
+      color: var(--text);
+    }
+
+    .menu-pop {
+      display: none;
+      position: absolute;
+      top: 30px;
+      left: 0;
+      min-width: 210px;
+      padding: 4px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: var(--panel);
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.10);
+      z-index: 20;
+    }
+
+    .menu-item.is-open > .menu-pop {
+      display: block;
+    }
+
+    .menu-row {
+      height: 28px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 12px;
+      padding: 0 10px;
+      border-radius: 6px;
+      font-size: 13px;
+      color: var(--text);
+      cursor: default;
+    }
+
+    .menu-row:hover {
+      background: rgba(156, 163, 175, 0.12);
+    }
+
+    .menu-row.is-disabled {
+      color: var(--subtle);
+    }
+
+    .menu-row kbd {
+      font: 11px var(--font-ui);
+      color: var(--subtle);
+    }
+
+    .menu-sep {
+      height: 1px;
+      margin: 4px 6px;
+      background: var(--line-soft);
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      justify-self: end;
+      min-width: 0;
+    }
+
+    .toolbar-btn {
+      height: 26px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 9px;
+      border: 0;
+      border-radius: 7px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 12.5px;
+      white-space: nowrap;
+    }
+
+    .toolbar-btn .glyph {
+      width: 16px;
+      height: 16px;
+    }
+
+    .toolbar-btn:hover {
+      background: rgba(156, 163, 175, 0.12);
+      color: var(--text);
+    }
+
+    .toolbar-btn.is-on {
+      background: var(--accent-soft);
+      color: var(--accent-strong);
+      font-weight: 650;
+    }
+
+    .toolbar-btn.is-disabled {
+      color: var(--subtle);
+      cursor: not-allowed;
+    }
+
+    .toolbar-btn.is-disabled:hover {
+      background: transparent;
+    }
+
+    .toolbar-overflow {
+      display: none;
+    }
+
+    .toolbar-sep {
+      width: 1px;
+      height: 18px;
+      margin: 0 4px;
+      background: var(--line-soft);
+    }
+
+    /* 顶层实例标签（WS-M02 / WS-E11 / WS-E12 / WS-E13） */
+    .instance-tab {
+      width: auto;
+      min-width: 0;
+      max-width: 220px;
+      padding: 0 6px 0 10px;
+      gap: 8px;
+      justify-content: flex-start;
+      font-weight: 560;
+      font-size: 13px;
+    }
+
+    .instance-tab .kind {
+      flex: 0 0 auto;
+      min-width: 26px;
+      height: 18px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 5px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      color: var(--subtle);
+      font-size: 10.5px;
+      font-weight: 650;
+      letter-spacing: 0.02em;
+    }
+
+    .instance-tab .label {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .instance-tab .close {
+      margin-left: 2px;
+      width: 18px;
+      height: 18px;
+      display: grid;
+      place-items: center;
+      border-radius: 5px;
+    }
+
+    .instance-tab .close:hover {
+      background: rgba(156, 163, 175, 0.18);
+      color: var(--text);
+    }
+
+    .instance-tab.is-hidden {
+      display: none;
+    }
+
+    /* 左栏：Sessions / Files 切换（WS-E04） */
+    .connection-pane {
+      grid-template-rows: 38px 36px 1fr;
+    }
+
+    .sidebar-switch {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2px;
+      margin: 0 8px;
+      padding: 2px;
+      border: 1px solid var(--line-soft);
+      border-radius: 8px;
+      background: var(--panel);
+    }
+
+    .seg-btn {
+      height: 26px;
+      border: 0;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 12.5px;
+    }
+
+    .seg-btn.is-active {
+      background: var(--accent-soft);
+      color: var(--accent-strong);
+      font-weight: 650;
+    }
+
+    .sidebar-view {
+      display: none;
+      min-height: 0;
+    }
+
+    .sidebar-view.is-active {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      min-height: 0;
+    }
+
+    .sidebar-view.sessions.is-active {
+      grid-template-rows: 1fr;
+    }
+
+    .files-head {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px 4px;
+      border-bottom: 1px solid var(--line-soft);
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .files-head strong {
+      display: block;
+      color: var(--text);
+      font-weight: 620;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .follow-toggle {
+      height: 22px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 8px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: var(--panel);
+      color: var(--muted);
+      font-size: 11.5px;
+    }
+
+    .follow-toggle.is-on {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .files-body {
+      display: grid;
+      grid-template-rows: 42px 42px 1fr;
+      min-height: 0;
+    }
+
+    .files-empty {
+      padding: 18px 12px;
+      color: var(--subtle);
+      font-size: 12.5px;
+      line-height: 1.6;
+    }
+
+    /* 右栏：次级工具面板（WS-E06） */
+    .tools-pane {
+      order: 5;
+      display: grid;
+      grid-template-rows: 44px 1fr;
+    }
+
+    .tools-empty {
+      padding: 18px 14px;
+      color: var(--subtle);
+      font-size: 12.5px;
+      line-height: 1.6;
+    }
+
+    .app[data-right="collapsed"] .shell {
+      grid-template-columns: var(--left-pane, 224px) 6px minmax(0, 1fr) 6px 44px;
+    }
+
+    .app[data-right="collapsed"] .tools-pane {
+      grid-template-rows: 1fr;
+    }
+
+    .app[data-right="collapsed"] .tools-pane > :not(.right-collapsed-bar) {
+      display: none;
+    }
+
+    .app[data-right="collapsed"] .right-collapsed-bar {
+      display: grid;
+    }
+
+    /* 工作区三种状态 */
+    .workspace-view {
+      display: none;
+      min-height: 0;
+    }
+
+    .app[data-state="empty"] .workspace,
+    .app[data-state="multi"] .workspace {
+      grid-template-rows: minmax(0, 1fr);
+    }
+
+    .app[data-state="empty"] .ssh-only,
+    .app[data-state="multi"] .ssh-only {
+      display: none;
+    }
+
+    .app[data-state="empty"] .workspace-view.home,
+    .app[data-state="multi"] .workspace-view.multi {
+      display: grid;
+    }
+
+    .app[data-state="empty"] .tools-pane .monitor-scroll,
+    .app[data-state="empty"] .files-body {
+      display: none;
+    }
+
+    .app:not([data-state="empty"]) .tools-empty,
+    .app:not([data-state="empty"]) .files-empty {
+      display: none;
+    }
+
+    /* 首页（WS-E07） */
+    .workspace-view.home {
+      align-content: start;
+      gap: 22px;
+      padding: 30px 36px;
+      overflow: auto;
+    }
+
+    .quick-connect {
+      display: grid;
+      grid-template-columns: minmax(0, 520px) auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .quick-connect input {
+      height: 34px;
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 13px;
+    }
+
+    .primary-btn {
+      height: 34px;
+      padding: 0 16px;
+      border: 0;
+      border-radius: 8px;
+      background: var(--accent);
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: 620;
+    }
+
+    .home-hint {
+      color: var(--subtle);
+      font-size: 12px;
+    }
+
+    .home-section {
+      display: grid;
+      gap: 6px;
+    }
+
+    .home-section h3 {
+      margin: 0;
+      font-size: 12px;
+      font-weight: 680;
+      color: var(--subtle);
+    }
+
+    .home-list {
+      display: grid;
+      gap: 2px;
+      max-width: 720px;
+    }
+
+    .home-row {
+      height: 34px;
+      display: grid;
+      grid-template-columns: 26px minmax(0, 1fr) auto auto;
+      align-items: center;
+      gap: 10px;
+      padding: 0 8px;
+      border-radius: 8px;
+      font-size: 13px;
+    }
+
+    .home-row:hover {
+      background: var(--panel-soft);
+    }
+
+    .home-row .host {
+      color: var(--subtle);
+      font-family: var(--font-mono);
+      font-size: 12px;
+    }
+
+    .ghost-btn {
+      height: 26px;
+      padding: 0 10px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: var(--panel);
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .ghost-btn:hover {
+      color: var(--text);
+      background: var(--panel-soft);
+    }
+
+    /* 四 pane 分屏 + MultiExec（WS-X01–X08） */
+    .workspace-view.multi {
+      grid-template-rows: minmax(0, 1fr) 46px;
+    }
+
+    .split-grid {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      gap: 1px;
+      background: var(--line);
+    }
+
+    .split-pane {
+      min-height: 0;
+      display: grid;
+      grid-template-rows: 28px 1fr;
+      background: var(--terminal);
+    }
+
+    .split-pane-head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 10px;
+      background: var(--panel);
+      color: var(--muted);
+      font-size: 12px;
+      border-bottom: 1px solid var(--line-soft);
+    }
+
+    .split-pane-head .kind {
+      min-width: 26px;
+      height: 16px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 4px;
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      font-size: 10px;
+      font-weight: 650;
+      color: var(--subtle);
+    }
+
+    .split-pane-head .mx-dot {
+      margin-left: auto;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--line);
+    }
+
+    .split-pane.is-target .split-pane-head .mx-dot {
+      background: var(--accent);
+    }
+
+    .split-pane.is-focused .split-pane-head {
+      color: var(--text);
+      box-shadow: inset 0 -2px 0 var(--accent);
+    }
+
+    .split-pane .terminal-body {
+      padding: 8px 12px;
+      font-size: 12px;
+    }
+
+    .multiexec-bar {
+      display: grid;
+      grid-template-columns: auto auto minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 12px;
+      padding: 0 12px;
+      border-top: 1px solid var(--line);
+      background: var(--panel-warm);
+    }
+
+    .mx-badge {
+      height: 24px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 9px;
+      border: 1px solid var(--accent);
+      border-radius: 7px;
+      color: var(--accent);
+      font-size: 11px;
+      font-weight: 720;
+      letter-spacing: 0.06em;
+    }
+
+    .mx-badge::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+
+    .multiexec-bar.is-off .mx-badge {
+      border-color: var(--line);
+      color: var(--subtle);
+    }
+
+    .multiexec-bar.is-off .mx-badge::before {
+      background: var(--line);
+    }
+
+    .mode-seg {
+      display: inline-grid;
+      grid-template-columns: 1fr 1fr;
+      padding: 2px;
+      border: 1px solid var(--line-soft);
+      border-radius: 8px;
+      background: var(--panel);
+    }
+
+    .mode-seg .seg-btn {
+      height: 22px;
+      padding: 0 10px;
+      font-size: 12px;
+    }
+
+    .target-list {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .target-chip {
+      height: 24px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 8px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: var(--panel);
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .target-chip::before {
+      content: "";
+      width: 12px;
+      height: 12px;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      background: var(--panel);
+    }
+
+    .target-chip.is-on {
+      color: var(--text);
+      border-color: var(--accent);
+    }
+
+    .target-chip.is-on::before {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .target-chip.is-unavailable {
+      color: var(--subtle);
+      border-style: dashed;
+      cursor: not-allowed;
+    }
+
+    .danger-btn {
+      height: 26px;
+      padding: 0 10px;
+      border: 1px solid var(--danger);
+      border-radius: 7px;
+      background: var(--panel);
+      color: var(--danger);
+      font-size: 12px;
+    }
+
+    /* 窄窗口（WS-E08）：工具栏低优先级项折进 ⋯，仅图标；右侧收起 */
+    .app[data-narrow="true"] {
+      max-width: 1040px;
+      margin: 0 auto;
+      border-left: 1px solid var(--line);
+      border-right: 1px solid var(--line);
+    }
+
+    .app[data-narrow="true"] .toolbar-btn .label {
+      display: none;
+    }
+
+    .app[data-narrow="true"] .toolbar-btn.low {
+      display: none;
+    }
+
+    .app[data-narrow="true"] .toolbar-overflow {
+      display: flex;
+    }
+
+    .app[data-narrow="true"] .shell {
+      grid-template-columns: var(--left-pane, 200px) 6px minmax(0, 1fr) 6px 44px;
+    }
+
+    /* 原型专用：状态切换条 */
+    .state-bar {
+      position: fixed;
+      left: 50%;
+      bottom: 12px;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 6px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--panel);
+      box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+      z-index: 30;
+      font-size: 12px;
+      color: var(--subtle);
+    }
+
+    .state-bar .ghost-btn.is-active {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
   </style>
 </head>
 <body>
-  <span id="right-expanded" class="state-anchor"></span>
-  <span id="right-collapsed" class="state-anchor"></span>
-
-  <div class="app">
+  <div class="app" data-state="ssh" data-sidebar="files" data-right="expanded" data-narrow="false">
     <header class="topbar">
       <div class="window-brand">
-        <span class="brand-mark">M</span>
-        <span>mXterm</span>
+        <span class="brand-mark">N</span>
+        <span>NexaTerm</span>
       </div>
-      <nav class="connection-tabs" aria-label="终端连接标签">
-        <div class="session-tab"><span>203.0.113.70</span><span class="close">×</span></div>
-        <div class="session-tab"><span>203.0.113.131</span><span class="close">×</span></div>
-        <div class="session-tab active"><span>203.0.113.70</span><span class="close">×</span></div>
+      <nav class="connection-tabs" aria-label="工作区实例标签">
+        <div class="session-tab instance-tab" data-item="home"><span class="kind">⌂</span><span class="label">首页</span></div>
+        <div class="session-tab instance-tab active only-ssh" data-item="ssh-a-1"><span class="kind">SSH</span><span class="label">server-A · 终端 1</span><span class="close" aria-label="关闭">×</span></div>
+        <div class="session-tab instance-tab only-multi" data-item="split-a"><span class="kind">⊞</span><span class="label">server-A · 终端 1</span><span class="close" aria-label="关闭">×</span></div>
+        <div class="session-tab instance-tab only-multi" data-item="local-1"><span class="kind">本地</span><span class="label">Ubuntu · 1</span><span class="close" aria-label="关闭">×</span></div>
+        <div class="session-tab instance-tab only-multi" data-item="rdp-b"><span class="kind">RDP</span><span class="label">server-B · RDP</span><span class="close" aria-label="关闭">×</span></div>
+        <button class="add-tab" aria-label="新建会话" title="新建会话">+</button>
       </nav>
       <div class="top-actions" aria-label="窗口操作">
-        <button class="title-btn" aria-label="搜索">
+        <button class="title-btn" aria-label="搜索（Ctrl+K）" title="搜索会话、命令、工具（Ctrl+K）">
           <svg class="glyph" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M16 16l4 4"/></svg>
         </button>
         <button class="title-btn" aria-label="最小化">−</button>
@@ -952,117 +1641,228 @@
       </div>
     </header>
 
+    <div class="actionbar">
+      <nav class="menubar" aria-label="主菜单">
+        <div class="menu-item">
+          <button class="menu-btn" type="button">会话</button>
+          <div class="menu-pop" role="menu">
+            <div class="menu-row"><span>新建会话…</span><kbd>Ctrl+N</kbd></div>
+            <div class="menu-row"><span>新建本地终端</span><kbd>Ctrl+Shift+T</kbd></div>
+            <div class="menu-row"><span>快速连接…</span><kbd>Ctrl+K</kbd></div>
+            <div class="menu-sep"></div>
+            <div class="menu-row"><span>重新连接</span></div>
+            <div class="menu-row"><span>断开</span></div>
+            <div class="menu-row"><span>编辑当前会话…</span></div>
+            <div class="menu-row"><span>连接整个文件夹</span></div>
+            <div class="menu-sep"></div>
+            <div class="menu-row"><span>导入…</span></div>
+            <div class="menu-row"><span>导出…</span></div>
+            <div class="menu-sep"></div>
+            <div class="menu-row"><span>退出</span><kbd>Alt+F4</kbd></div>
+          </div>
+        </div>
+        <div class="menu-item">
+          <button class="menu-btn" type="button">视图</button>
+          <div class="menu-pop" role="menu">
+            <div class="menu-row"><span>侧栏</span><kbd>Ctrl+B</kbd></div>
+            <div class="menu-row"><span>左侧显示文件</span><kbd>Ctrl+Shift+E</kbd></div>
+            <div class="menu-row"><span>工具面板</span><kbd>Ctrl+J</kbd></div>
+            <div class="menu-row"><span>状态栏</span></div>
+            <div class="menu-sep"></div>
+            <div class="menu-row"><span>全屏</span><kbd>F11</kbd></div>
+            <div class="menu-row"><span>命令面板</span><kbd>Ctrl+Shift+P</kbd></div>
+          </div>
+        </div>
+        <div class="menu-item">
+          <button class="menu-btn" type="button">终端</button>
+          <div class="menu-pop" role="menu">
+            <div class="menu-row"><span>新建终端标签</span><kbd>Ctrl+Shift+N</kbd></div>
+            <div class="menu-row"><span>分屏</span><kbd>Ctrl+Shift+D</kbd></div>
+            <div class="menu-row"><span>关闭 pane</span></div>
+            <div class="menu-row"><span>MultiExec</span><kbd>Ctrl+Shift+M</kbd></div>
+            <div class="menu-sep"></div>
+            <div class="menu-row"><span>清屏</span></div>
+            <div class="menu-row"><span>重置</span></div>
+          </div>
+        </div>
+        <div class="menu-item">
+          <button class="menu-btn" type="button">工具</button>
+          <div class="menu-pop" role="menu">
+            <div class="menu-row"><span>隧道管理</span></div>
+            <div class="menu-row is-disabled" title="当前平台未检测到 X server（WF-06C 交付）"><span>X11</span><span>不可用</span></div>
+            <div class="menu-row"><span>命令库</span></div>
+            <div class="menu-row"><span>监控</span></div>
+            <div class="menu-row"><span>Docker</span></div>
+            <div class="menu-row"><span>密钥管理</span></div>
+          </div>
+        </div>
+        <div class="menu-item">
+          <button class="menu-btn" type="button">设置</button>
+          <div class="menu-pop" role="menu">
+            <div class="menu-row"><span>常规</span></div>
+            <div class="menu-row"><span>终端</span></div>
+            <div class="menu-row"><span>SSH</span></div>
+            <div class="menu-row"><span>外观</span></div>
+            <div class="menu-row"><span>安全</span></div>
+            <div class="menu-row is-disabled"><span>X11</span></div>
+            <div class="menu-row"><span>同步</span></div>
+            <div class="menu-sep"></div>
+            <div class="menu-row"><span>语言 / Language</span><kbd>zh-CN</kbd></div>
+          </div>
+        </div>
+        <div class="menu-item">
+          <button class="menu-btn" type="button">帮助</button>
+          <div class="menu-pop" role="menu">
+            <div class="menu-row"><span>快捷键一览</span></div>
+            <div class="menu-row"><span>检查更新</span></div>
+            <div class="menu-row"><span>关于 NexaTerm</span></div>
+          </div>
+        </div>
+      </nav>
+      <div></div>
+      <div class="toolbar" aria-label="高频工具栏">
+        <button class="toolbar-btn" type="button" title="新建会话（Ctrl+N）">
+          <svg class="glyph" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span class="label">新建会话</span>
+        </button>
+        <button class="toolbar-btn" type="button" title="分屏（Ctrl+Shift+D）">
+          <svg class="glyph" viewBox="0 0 24 24"><path d="M4 5h16v14H4z"/><path d="M12 5v14"/></svg><span class="label">分屏</span>
+        </button>
+        <button class="toolbar-btn" type="button" data-toggle-multiexec title="MultiExec（Ctrl+Shift+M）">
+          <svg class="glyph" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span class="label">MultiExec</span>
+        </button>
+        <span class="toolbar-sep"></span>
+        <button class="toolbar-btn low" type="button" title="隧道管理">
+          <svg class="glyph" viewBox="0 0 24 24"><path d="M4 12h6l2-3 2 6 2-3h4"/></svg><span class="label">隧道</span>
+        </button>
+        <button class="toolbar-btn low is-disabled" type="button" aria-disabled="true" title="X11：当前平台未检测到 X server（WF-06C 交付）">
+          <svg class="glyph" viewBox="0 0 24 24"><path d="M5 5l14 14M19 5 5 19"/></svg><span class="label">X11</span>
+        </button>
+        <button class="toolbar-btn low" type="button" title="设置">
+          <svg class="glyph" viewBox="0 0 24 24"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"/><path d="M4 12h2M18 12h2M12 4v2M12 18v2"/></svg><span class="label">设置</span>
+        </button>
+        <button class="toolbar-btn toolbar-overflow" type="button" title="更多工具" aria-label="更多工具">⋯</button>
+      </div>
+    </div>
+
     <main class="shell">
       <aside class="pane connection-pane">
         <header class="pane-head">
-          <div class="head-title" aria-label="连接仓库" title="连接仓库">
+          <div class="head-title" aria-label="工作区侧栏" title="工作区侧栏">
             <svg class="glyph" viewBox="0 0 24 24"><path d="M4 6h16v5H4zM4 15h16v5H4z"/></svg>
           </div>
           <button class="tool-btn" aria-label="刷新连接">
             <svg class="glyph" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v6h-6"/></svg>
           </button>
         </header>
-        <div class="side-scroll">
-          <div class="side-title">固定</div>
-          <div class="group-row active"><span>▣</span><span>最近连接</span><span class="count">9</span></div>
-          <div class="group-row"><span>☆</span><span>收藏</span><span class="count">6</span></div>
-          <div class="side-title">分组</div>
-          <div class="group-row"><span>▸</span><span>开发环境</span><span class="count">12</span></div>
-          <div class="group-row"><span>▸</span><span>测试环境</span><span class="count">8</span></div>
-          <div class="group-row"><span>▸</span><span>生产跳板</span><span class="count">4</span></div>
-          <div class="group-row"><span>▸</span><span>云主机</span><span class="count">5</span></div>
-          <div class="side-title">快速访问</div>
-          <div class="group-row"><span>•</span><span>203.0.113.70</span><span></span></div>
-          <div class="group-row"><span>•</span><span>203.0.113.131</span><span></span></div>
-          <div class="group-row"><span>•</span><span>100.93.140.33</span><span></span></div>
+        <div class="sidebar-switch" role="tablist" aria-label="侧栏视图">
+          <button class="seg-btn" type="button" role="tab" data-sidebar-view="sessions">会话</button>
+          <button class="seg-btn" type="button" role="tab" data-sidebar-view="files">文件</button>
+        </div>
+
+        <div class="sidebar-view sessions" data-view="sessions">
+          <div class="side-scroll">
+            <div class="side-title">固定</div>
+            <div class="group-row active"><span>▣</span><span>最近连接</span><span class="count">9</span></div>
+            <div class="group-row"><span>☆</span><span>收藏</span><span class="count">6</span></div>
+            <div class="side-title">分组</div>
+            <div class="group-row"><span>▾</span><span>生产</span><span class="count">4</span></div>
+            <div class="group-row" style="padding-left: 22px"><span>•</span><span>server-A</span><span class="count">2</span></div>
+            <div class="group-row" style="padding-left: 22px"><span>•</span><span>server-B</span><span></span></div>
+            <div class="group-row"><span>▸</span><span>开发环境</span><span class="count">12</span></div>
+            <div class="group-row"><span>▸</span><span>测试环境</span><span class="count">8</span></div>
+            <div class="group-row"><span>▸</span><span>云主机</span><span class="count">5</span></div>
+            <div class="side-title">本地</div>
+            <div class="group-row"><span>›</span><span>PowerShell 7</span><span></span></div>
+            <div class="group-row"><span>›</span><span>WSL · Ubuntu</span><span></span></div>
+            <div class="group-row"><span>›</span><span>Git Bash</span><span></span></div>
+          </div>
+        </div>
+
+        <div class="sidebar-view files" data-view="files">
+          <div class="files-head">
+            <div>
+              <strong>server-A · 终端 1</strong>
+              <span>/root</span>
+            </div>
+            <button class="follow-toggle is-on" type="button" data-toggle-follow title="跟随终端目录（WS-F02）">跟随 ●</button>
+          </div>
+          <div class="files-empty">没有活动的 SSH 会话。打开或选择一个 SSH 实例后，这里显示它当前目录的文件。</div>
+          <div class="files-body">
+            <div class="file-toolbar" aria-label="文件工具栏">
+              <div class="file-toolbar-group">
+                <button class="tool-btn" aria-label="树形视图">
+                  <svg class="glyph" viewBox="0 0 24 24"><path d="M12 4v6M8 10h8M6 14h4v4H6zM14 14h4v4h-4zM10 10v4M16 10v4"/></svg>
+                </button>
+                <button class="tool-btn" aria-label="列表视图">
+                  <svg class="glyph" viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12"/><path d="M4 6h.01M4 12h.01M4 18h.01"/></svg>
+                </button>
+                <button class="tool-btn" aria-label="定位到终端目录">
+                  <svg class="glyph" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="m15 9-2 6-4 1 2-6z"/></svg>
+                </button>
+              </div>
+              <div class="file-toolbar-group">
+                <button class="tool-btn" aria-label="上传">
+                  <svg class="glyph" viewBox="0 0 24 24"><path d="M12 17V4"/><path d="M7 9l5-5 5 5"/><path d="M4 20h16"/></svg>
+                </button>
+                <button class="tool-btn" aria-label="下载">
+                  <svg class="glyph" viewBox="0 0 24 24"><path d="M12 4v13"/><path d="M7 12l5 5 5-5"/><path d="M4 20h16"/></svg>
+                </button>
+                <button class="tool-btn" aria-label="刷新">
+                  <svg class="glyph" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v6h-6"/></svg>
+                </button>
+                <button class="tool-btn" aria-label="更多">⋮</button>
+              </div>
+            </div>
+            <div class="pathbar">
+              <span>/</span>
+              <span class="path-sep">></span>
+              <span class="path-current">root</span>
+            </div>
+            <div class="tree" aria-label="远程文件树">
+              <div class="tree-row"><span>▸</span><span>▣</span><span class="name">etc</span><span></span></div>
+              <div class="tree-row"><span>▸</span><span>▣</span><span class="name">home</span><span></span></div>
+              <div class="tree-row"><span>▸</span><span>▣</span><span class="name">opt</span><span></span></div>
+              <div class="tree-row"><span>▾</span><span>▣</span><span class="name">root</span><span></span></div>
+              <div class="tree-row child"><span>▸</span><span>▣</span><span class="name">.ssh</span><span></span></div>
+              <div class="tree-row child"><span></span><span>□</span><span class="name">.bash_history</span><span class="meta">3 KB</span></div>
+              <div class="tree-row child active"><span></span><span>□</span><span class="name">.bashrc</span><span class="meta">176 B</span></div>
+              <div class="tree-row child"><span></span><span>□</span><span class="name">.profile</span><span class="meta">807 B</span></div>
+              <div class="tree-row"><span>▸</span><span>▣</span><span class="name">tmp</span><span></span></div>
+              <div class="tree-row"><span>▸</span><span>▣</span><span class="name">var</span><span></span></div>
+            </div>
+          </div>
         </div>
       </aside>
 
-      <div class="splitter vertical splitter-left" data-splitter="left" aria-label="拖拽调整连接仓库宽度" title="拖拽调整连接仓库宽度"></div>
-
-      <aside class="pane file-pane">
-        <nav class="file-tab-strip" role="tablist" aria-label="右侧工具面板标签">
-          <button class="right-panel-tab is-active" type="button" role="tab" aria-selected="true">文件</button>
-          <button class="right-panel-tab" type="button" role="tab" aria-selected="false">传输</button>
-          <button class="right-panel-tab" type="button" role="tab" aria-selected="false">监控</button>
-          <div class="file-window-tools">
-            <a class="tool-btn" href="#right-collapsed" aria-label="收起右侧面板">
-              <svg class="glyph" viewBox="0 0 24 24"><path d="M9 5 4 12l5 7"/><path d="M4 12h16"/></svg>
-            </a>
-          </div>
-        </nav>
-        <div class="file-toolbar" aria-label="文件工具栏">
-          <div class="file-toolbar-group">
-            <button class="tool-btn" aria-label="树形视图">
-              <svg class="glyph" viewBox="0 0 24 24"><path d="M12 4v6M8 10h8M6 14h4v4H6zM14 14h4v4h-4zM10 10v4M16 10v4"/></svg>
-            </button>
-            <button class="tool-btn" aria-label="列表视图">
-              <svg class="glyph" viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12"/><path d="M4 6h.01M4 12h.01M4 18h.01"/></svg>
-            </button>
-            <button class="tool-btn" aria-label="链接">
-              <svg class="glyph" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7 0l2-2a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-2 2a5 5 0 0 0 7 7l1-1"/></svg>
-            </button>
-            <button class="tool-btn" aria-label="选择模式">
-              <svg class="glyph" viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h16"/><path d="M8 3v4M16 10v4M12 17v4"/></svg>
-            </button>
-          </div>
-          <div class="file-toolbar-group">
-            <button class="tool-btn" aria-label="更多">⋮</button>
-            <button class="tool-btn" aria-label="收藏">
-              <svg class="glyph" viewBox="0 0 24 24"><path d="M12 21s-7-4.4-9-9a5 5 0 0 1 8-5 5 5 0 0 1 8 5c-2 4.6-9 9-9 9z"/></svg>
-            </button>
-            <button class="tool-btn" aria-label="上传">
-              <svg class="glyph" viewBox="0 0 24 24"><path d="M12 17V4"/><path d="M7 9l5-5 5 5"/><path d="M4 20h16"/></svg>
-            </button>
-            <button class="tool-btn" aria-label="下载">
-              <svg class="glyph" viewBox="0 0 24 24"><path d="M12 4v13"/><path d="M7 12l5 5 5-5"/><path d="M4 20h16"/></svg>
-            </button>
-            <button class="tool-btn" aria-label="刷新">
-              <svg class="glyph" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v6h-6"/></svg>
-            </button>
-          </div>
-        </div>
-        <div class="pathbar">
-          <span>/</span>
-          <span class="path-sep">></span>
-          <span class="path-current">root</span>
-        </div>
-        <div class="tree" aria-label="远程文件树">
-          <div class="tree-row"><span>▸</span><span>▣</span><span class="name">bin</span><span class="meta">usr/bin</span></div>
-          <div class="tree-row"><span>▸</span><span>▣</span><span class="name">boot</span><span></span></div>
-          <div class="tree-row"><span>▸</span><span>▣</span><span class="name">dev</span><span></span></div>
-          <div class="tree-row"><span>▸</span><span>▣</span><span class="name">etc</span><span></span></div>
-          <div class="tree-row"><span>▸</span><span>▣</span><span class="name">home</span><span></span></div>
-          <div class="tree-row"><span>▸</span><span>▣</span><span class="name">lib</span><span class="meta">usr/lib</span></div>
-          <div class="tree-row"><span>▸</span><span>▣</span><span class="name">lib64</span><span class="meta">usr/lib64</span></div>
-          <div class="tree-row"><span>▸</span><span>▣</span><span class="name">media</span><span></span></div>
-          <div class="tree-row"><span>▸</span><span>▣</span><span class="name">opt</span><span></span></div>
-          <div class="tree-row"><span>▸</span><span>▣</span><span class="name">proc</span><span></span></div>
-          <div class="tree-row"><span>▾</span><span>▣</span><span class="name">root</span><span></span></div>
-          <div class="tree-row child"><span>▸</span><span>▣</span><span class="name">.pki</span><span></span></div>
-          <div class="tree-row child"><span>▸</span><span>▣</span><span class="name">.ssh</span><span></span></div>
-          <div class="tree-row child"><span>▸</span><span>▣</span><span class="name">.xterminal</span><span></span></div>
-          <div class="tree-row child"><span></span><span>□</span><span class="name">.bash_history</span><span class="meta">3 KB</span></div>
-          <div class="tree-row child"><span></span><span>□</span><span class="name">.bash_logout</span><span class="meta">18 B</span></div>
-          <div class="tree-row child"><span></span><span>□</span><span class="name">.bash_profile</span><span class="meta">176 B</span></div>
-          <div class="tree-row child active"><span></span><span>□</span><span class="name">.bashrc</span><span class="meta">176 B</span></div>
-          <div class="tree-row child"><span></span><span>□</span><span class="name">.cshrc</span><span class="meta">100 B</span></div>
-          <div class="tree-row child"><span></span><span>□</span><span class="name">.mylogin.cnf</span><span class="meta">1 KB</span></div>
-          <div class="tree-row"><span>▸</span><span>▣</span><span class="name">run</span><span></span></div>
-          <div class="tree-row"><span>▸</span><span>▣</span><span class="name">sbin</span><span class="meta">usr/sbin</span></div>
-          <div class="tree-row"><span>▸</span><span>▣</span><span class="name">tmp</span><span></span></div>
-        </div>
-        <div class="right-collapsed-bar" aria-label="右侧面板已收起">
-          <a class="panel-toggle" href="#right-expanded" aria-label="展开右侧面板" title="展开右侧面板">
-            <svg class="glyph" viewBox="0 0 24 24"><path d="m15 5 5 7-5 7"/><path d="M20 12H4"/></svg>
-          </a>
-        </div>
-      </aside>
-
-      <div class="splitter vertical splitter-right" data-splitter="right" aria-label="拖拽调整右侧面板宽度" title="拖拽调整右侧面板宽度"></div>
+      <div class="splitter vertical splitter-left" data-splitter="left" aria-label="拖拽调整侧栏宽度" title="拖拽调整侧栏宽度"></div>
 
       <section class="workspace">
-        <section class="editor-pane">
+        <div class="workspace-view home">
+          <div>
+            <div class="quick-connect">
+              <input type="text" placeholder="user@host 或 ssh://user@host:2222" aria-label="快速连接" value="">
+              <button class="primary-btn" type="button">连接</button>
+            </div>
+            <div class="home-hint" style="margin-top: 6px">临时连接成功后可"保存为会话"；不会从 URL 读取密码。</div>
+          </div>
+          <div class="home-section">
+            <h3>最近</h3>
+            <div class="home-list">
+              <div class="home-row"><span class="kind">SSH</span><span>server-A</span><span class="host">root@203.0.113.70</span><button class="ghost-btn" type="button">连接</button></div>
+              <div class="home-row"><span class="kind">RDP</span><span>server-B</span><span class="host">203.0.113.131</span><button class="ghost-btn" type="button">连接</button></div>
+              <div class="home-row"><span class="kind">本地</span><span>WSL · Ubuntu</span><span class="host">wsl.exe -d Ubuntu</span><button class="ghost-btn" type="button">打开</button></div>
+            </div>
+          </div>
+          <div class="home-section">
+            <h3>收藏</h3>
+            <div class="home-list">
+              <div class="home-row"><span class="kind">SSH</span><span>生产跳板</span><span class="host">ops@203.0.113.9</span><button class="ghost-btn" type="button">连接</button></div>
+              <div class="home-row"><span class="kind">SSH</span><span>100.93.140.33</span><span class="host">admin@100.93.140.33</span><button class="ghost-btn" type="button">连接</button></div>
+            </div>
+          </div>
+        </div>
+
+        <section class="editor-pane ssh-only">
           <nav class="editor-tabs" aria-label="编辑文件标签">
             <div class="file-tab active"><span>.bashrc</span><span>×</span></div>
             <button class="add-tab" aria-label="新建编辑标签">+</button>
@@ -1071,81 +1871,98 @@
             <div class="toolbar-group">
               <button class="tool-btn" aria-label="撤销">↶</button>
               <button class="tool-btn" aria-label="重做">↷</button>
-              <button class="tool-btn" aria-label="刷新">
-                <svg class="glyph" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v6h-6"/></svg>
-              </button>
               <button class="tool-btn" aria-label="保存">
                 <svg class="glyph" viewBox="0 0 24 24"><path d="M5 5h14v14H5z"/><path d="M8 5v6h8"/><path d="M8 19v-5h8v5"/></svg>
               </button>
-              <button class="tool-btn" aria-label="下载">
-                <svg class="glyph" viewBox="0 0 24 24"><path d="M12 4v13"/><path d="M7 12l5 5 5-5"/><path d="M4 20h16"/></svg>
-              </button>
-              <button class="tool-btn" aria-label="定位">
-                <svg class="glyph" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="m15 9-2 6-4 1 2-6z"/></svg>
-              </button>
-              <button class="tool-btn" aria-label="缩小">−</button>
-              <button class="tool-btn" aria-label="放大">+</button>
               <button class="tool-btn" aria-label="搜索">
                 <svg class="glyph" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M16 16l4 4"/></svg>
               </button>
             </div>
             <div class="toolbar-group">
               <span class="select-like">LF</span>
-              <span class="select-like">CRLF</span>
               <span class="select-like">UTF-8 <span>⌄</span></span>
             </div>
           </div>
           <div class="code" aria-label="代码编辑器">
             <div class="line"><span class="ln">1</span><span><span class="comment"># .bashrc</span></span></div>
             <div class="line"><span class="ln">2</span><span></span></div>
-            <div class="line"><span class="ln">3</span><span><span class="comment"># User specific aliases and functions</span></span></div>
-            <div class="line"><span class="ln">4</span><span></span></div>
-            <div class="line"><span class="ln">5</span><span>alias rm=<span class="str">'rm -i'</span></span></div>
-            <div class="line"><span class="ln">6</span><span>alias cp=<span class="str">'cp -i'</span></span></div>
-            <div class="line"><span class="ln">7</span><span>alias mv=<span class="str">'mv -i'</span></span></div>
-            <div class="line current"><span class="ln">8</span><span></span></div>
-            <div class="line"><span class="ln">9</span><span><span class="comment"># Source global definitions</span></span></div>
-            <div class="line"><span class="ln">10</span><span><span class="kw">if</span> [ -f <span class="path-token">/etc/bashrc</span> ]; <span class="kw">then</span></span></div>
-            <div class="line"><span class="ln">11</span><span>    . <span class="path-token">/etc/bashrc</span></span></div>
-            <div class="line"><span class="ln">12</span><span><span class="kw">fi</span></span></div>
-            <div class="line"><span class="ln">13</span><span></span></div>
+            <div class="line"><span class="ln">3</span><span>alias rm=<span class="str">'rm -i'</span></span></div>
+            <div class="line current"><span class="ln">4</span><span></span></div>
+            <div class="line"><span class="ln">5</span><span><span class="kw">if</span> [ -f <span class="path-token">/etc/bashrc</span> ]; <span class="kw">then</span></span></div>
+            <div class="line"><span class="ln">6</span><span>    . <span class="path-token">/etc/bashrc</span></span></div>
+            <div class="line"><span class="ln">7</span><span><span class="kw">fi</span></span></div>
           </div>
         </section>
 
-        <div class="splitter horizontal" data-splitter="terminal" aria-label="拖拽调整终端高度" title="拖拽调整终端高度"></div>
+        <div class="splitter horizontal ssh-only" data-splitter="terminal" aria-label="拖拽调整终端高度" title="拖拽调整终端高度"></div>
 
-        <section class="terminal-pane">
+        <section class="terminal-pane ssh-only">
           <nav class="terminal-tabs" aria-label="终端标签">
             <div class="term-tab active">终端 1 <span>×</span></div>
-            <div class="term-tab">终端 2 <span>×</span></div>
-            <div class="term-tab">日志 <span>×</span></div>
             <button class="add-tab" aria-label="新建终端">+</button>
           </nav>
           <div class="terminal-body">
             <div>Last login: Thu <span class="date">Jun 4 21:01:25 2026</span> from <span class="ip">203.0.113.225</span></div>
-            <div><span class="prompt">[root@server ~]#</span> cd /opt/edgs</div>
-            <div><span class="prompt">[root@server edgs]#</span> systemctl status nginx</div>
-            <div>active (running) since Thu 2026-06-04 20:49:33 CST</div>
-            <div><span class="prompt">[root@server edgs]#</span> tail -f logs/app.log</div>
+            <div><span class="prompt">[root@server-a ~]#</span> cd /root</div>
+            <div><span class="prompt">[root@server-a ~]#</span> ls -la</div>
+            <div>drwx------  5 root root 4096 .ssh   -rw-r--r--  1 root root  176 .bashrc</div>
           </div>
         </section>
+
+        <div class="workspace-view multi">
+          <div class="split-grid" aria-label="四 pane 分屏">
+            <div class="split-pane is-focused is-target" data-pane="a1">
+              <div class="split-pane-head"><span class="kind">SSH</span><span>server-A · 终端 1</span><span class="mx-dot" title="MultiExec 目标"></span></div>
+              <div class="terminal-body"><div><span class="prompt">[root@server-a ~]#</span> uptime</div><div> 21:04:11 up 15 days</div></div>
+            </div>
+            <div class="split-pane is-target" data-pane="a2">
+              <div class="split-pane-head"><span class="kind">SSH</span><span>server-A · 终端 2</span><span class="mx-dot" title="MultiExec 目标"></span></div>
+              <div class="terminal-body"><div><span class="prompt">[root@server-a edgs]#</span> tail -f logs/app.log</div></div>
+            </div>
+            <div class="split-pane" data-pane="l1">
+              <div class="split-pane-head"><span class="kind">本地</span><span>Ubuntu · 1</span><span class="mx-dot" title="MultiExec 目标"></span></div>
+              <div class="terminal-body"><div><span class="prompt">denis@ubuntu:~$</span> docker ps</div></div>
+            </div>
+            <div class="split-pane" data-pane="empty">
+              <div class="split-pane-head"><span class="kind">空</span><span>选择或新建会话…</span></div>
+              <div class="terminal-body" style="color: var(--subtle)"><div>把已打开实例放入此 pane，或为此 pane 新建会话。</div></div>
+            </div>
+          </div>
+          <div class="multiexec-bar" data-multiexec>
+            <span class="mx-badge">MULTIEXEC ACTIVE</span>
+            <div class="mode-seg" role="tablist" aria-label="MultiExec 模式">
+              <button class="seg-btn is-active" type="button" data-mx-mode="live">Live</button>
+              <button class="seg-btn" type="button" data-mx-mode="send">Send</button>
+            </div>
+            <div class="target-list" aria-label="目标实例">
+              <button class="target-chip is-on" type="button" data-target="a1">server-A · 终端 1</button>
+              <button class="target-chip is-on" type="button" data-target="a2">server-A · 终端 2</button>
+              <button class="target-chip" type="button" data-target="l1">Ubuntu · 1</button>
+              <button class="target-chip is-unavailable" type="button" disabled title="RDP 不能接收终端输入（WS-X05）">server-B · RDP</button>
+            </div>
+            <button class="danger-btn" type="button" data-mx-stop>停止</button>
+          </div>
+        </div>
       </section>
 
-      <aside class="pane monitor">
-        <header class="pane-head">
-          <div class="head-title">
-            <svg class="glyph" viewBox="0 0 24 24"><path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 15l3-4 3 2 4-6"/></svg>
-            <span>监控</span>
-          </div>
-          <div class="head-tools">
-            <button class="tool-btn" aria-label="弹出">
-              <svg class="glyph" viewBox="0 0 24 24"><path d="M14 4h6v6"/><path d="M10 14 20 4"/><path d="M20 14v6H4V4h6"/></svg>
+      <div class="splitter vertical splitter-right" data-splitter="right" aria-label="拖拽调整工具面板宽度" title="拖拽调整工具面板宽度"></div>
+
+      <aside class="pane tools-pane">
+        <nav class="file-tab-strip" role="tablist" aria-label="工具面板标签">
+          <button class="right-panel-tab is-active" type="button" role="tab" aria-selected="true">监控</button>
+          <button class="right-panel-tab" type="button" role="tab" aria-selected="false">命令</button>
+          <button class="right-panel-tab" type="button" role="tab" aria-selected="false">Docker</button>
+          <button class="right-panel-tab" type="button" role="tab" aria-selected="false">AI</button>
+          <div class="file-window-tools">
+            <button class="tool-btn" type="button" data-right-collapse aria-label="收起工具面板" title="收起工具面板">
+              <svg class="glyph" viewBox="0 0 24 24"><path d="m15 5 5 7-5 7"/><path d="M20 12H4"/></svg>
             </button>
           </div>
-        </header>
+        </nav>
+        <div class="tools-empty">没有活动的 SSH 会话，工具面板无内容。</div>
         <div class="monitor-scroll">
           <section class="monitor-section">
-            <div class="monitor-title"><span>系统</span><span class="badge">203.0.113.70</span></div>
+            <div class="monitor-title"><span>系统</span><span class="badge">server-A</span></div>
             <div class="kv-grid">
               <div class="kv"><span>系统</span><strong>CentOS</strong></div>
               <div class="kv"><span>核心</span><strong>7 Core</strong></div>
@@ -1153,54 +1970,172 @@
               <div class="kv"><span>运行</span><strong>15 天</strong></div>
             </div>
           </section>
-
           <section class="monitor-section">
             <div class="monitor-title"><span>CPU</span><span class="badge">14.7%</span></div>
             <div class="mini-chart" aria-hidden="true">
               <span style="height:12%"></span><span style="height:18%"></span><span style="height:17%"></span><span style="height:24%"></span><span style="height:21%"></span><span style="height:19%"></span>
               <span style="height:33%"></span><span style="height:28%"></span><span style="height:36%"></span><span style="height:26%"></span><span style="height:21%"></span><span style="height:18%"></span>
-              <span style="height:23%"></span><span style="height:31%"></span><span style="height:27%"></span><span style="height:20%"></span><span style="height:16%"></span><span style="height:22%"></span>
             </div>
             <div class="metric-row"><span>0</span><div class="meter"><div class="fill" style="width: 37%"></div></div><span>3.7%</span></div>
             <div class="metric-row"><span>1</span><div class="meter"><div class="fill warn" style="width: 27%"></div></div><span>2.7%</span></div>
-            <div class="metric-row"><span>2</span><div class="meter"><div class="fill" style="width: 34%"></div></div><span>3.4%</span></div>
-            <div class="metric-row"><span>3</span><div class="meter"><div class="fill" style="width: 30%"></div></div><span>3.0%</span></div>
-            <div class="metric-row"><span>4</span><div class="meter"><div class="fill warn" style="width: 44%"></div></div><span>4.4%</span></div>
-            <div class="metric-row"><span>5</span><div class="meter"><div class="fill" style="width: 27%"></div></div><span>2.7%</span></div>
-            <div class="metric-row"><span>6</span><div class="meter"><div class="fill" style="width: 34%"></div></div><span>3.4%</span></div>
           </section>
-
           <section class="monitor-section">
             <div class="monitor-title"><span>内存</span><span class="badge">31.3G</span></div>
             <div class="transfer-row"><span><span class="dot warn"></span></span><span>已用</span><strong>12.0G</strong></div>
             <div class="transfer-row"><span><span class="dot"></span></span><span>缓存</span><strong>19.0G</strong></div>
-            <div class="transfer-row"><span><span class="dot"></span></span><span>空闲</span><strong>257M</strong></div>
             <div class="meter"><div class="fill warn" style="width: 38%"></div></div>
           </section>
-
-          <section class="monitor-section">
-            <div class="monitor-title"><span>网络</span><span class="badge">实时</span></div>
-            <div class="transfer-row"><span><span class="dot"></span></span><span>上传</span><strong>49.3KB/s</strong></div>
-            <div class="transfer-row"><span><span class="dot warn"></span></span><span>下载</span><strong>38.8KB/s</strong></div>
-          </section>
-
           <section class="monitor-section">
             <div class="monitor-title"><span>磁盘</span><span class="badge">21.2G / 89.8G</span></div>
             <div class="disk-row"><span>/</span><strong>rootfs</strong></div>
             <div class="meter"><div class="fill" style="width: 24%"></div></div>
           </section>
         </div>
+        <div class="right-collapsed-bar" aria-label="工具面板已收起">
+          <button class="panel-toggle" type="button" data-right-expand aria-label="展开工具面板" title="展开工具面板">
+            <svg class="glyph" viewBox="0 0 24 24"><path d="m9 5-5 7 5 7"/><path d="M4 12h16"/></svg>
+          </button>
+        </div>
       </aside>
     </main>
-
-    <button class="settings-fab" aria-label="设置">
-      <svg class="glyph" viewBox="0 0 24 24"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"/><path d="M4 12h2M18 12h2M12 4v2M12 18v2"/></svg>
-    </button>
   </div>
+
+  <div class="state-bar" aria-label="原型状态切换（仅原型）">
+    <span>原型状态</span>
+    <button class="ghost-btn" type="button" data-set-state='{"state":"empty","sidebar":"sessions"}'>空工作区</button>
+    <button class="ghost-btn" type="button" data-set-state='{"state":"ssh","sidebar":"files"}'>SSH + Files</button>
+    <button class="ghost-btn" type="button" data-set-state='{"state":"multi","sidebar":"sessions"}'>四 pane + MultiExec</button>
+    <button class="ghost-btn" type="button" data-toggle-narrow>窄窗口</button>
+  </div>
+
   <script>
     const root = document.documentElement;
+    const app = document.querySelector(".app");
     const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
+    // ---- 原型状态控制（仅原型；真实实现由 sessionTabs reducer 派生） ----
+    function syncUi() {
+      const { state, sidebar } = app.dataset;
+      document.querySelectorAll("[data-sidebar-view]").forEach((btn) => {
+        btn.classList.toggle("is-active", btn.dataset.sidebarView === sidebar);
+        btn.setAttribute("aria-selected", String(btn.dataset.sidebarView === sidebar));
+      });
+      document.querySelectorAll(".sidebar-view").forEach((view) => {
+        view.classList.toggle("is-active", view.dataset.view === sidebar);
+      });
+      document.querySelectorAll(".instance-tab").forEach((tab) => {
+        const onlySsh = tab.classList.contains("only-ssh");
+        const onlyMulti = tab.classList.contains("only-multi");
+        const visible = (!onlySsh && !onlyMulti) || (onlySsh && state === "ssh") || (onlyMulti && state === "multi");
+        tab.classList.toggle("is-hidden", !visible);
+      });
+      const activeItem = state === "empty" ? "home" : state === "ssh" ? "ssh-a-1" : "split-a";
+      document.querySelectorAll(".instance-tab").forEach((tab) => {
+        tab.classList.toggle("active", tab.dataset.item === activeItem);
+      });
+      document.querySelectorAll(".state-bar [data-set-state]").forEach((btn) => {
+        btn.classList.toggle("is-active", JSON.parse(btn.dataset.setState).state === state);
+      });
+      const multiexecOn = state === "multi" && !document.querySelector("[data-multiexec]").classList.contains("is-off");
+      document.querySelector("[data-toggle-multiexec]").classList.toggle("is-on", multiexecOn);
+    }
+
+    function setState(patch) {
+      Object.entries(patch).forEach(([key, value]) => {
+        app.dataset[key] = value;
+      });
+      syncUi();
+    }
+
+    document.querySelectorAll("[data-set-state]").forEach((btn) => {
+      btn.addEventListener("click", () => setState(JSON.parse(btn.dataset.setState)));
+    });
+    document.querySelectorAll("[data-sidebar-view]").forEach((btn) => {
+      btn.addEventListener("click", () => setState({ sidebar: btn.dataset.sidebarView }));
+    });
+    document.querySelector("[data-toggle-narrow]").addEventListener("click", (event) => {
+      const narrow = app.dataset.narrow !== "true";
+      event.currentTarget.classList.toggle("is-active", narrow);
+      setState({ narrow: String(narrow), right: narrow ? "collapsed" : "expanded" });
+    });
+    document.querySelector("[data-right-collapse]").addEventListener("click", () => setState({ right: "collapsed" }));
+    document.querySelector("[data-right-expand]").addEventListener("click", () => setState({ right: "expanded" }));
+    document.querySelector("[data-toggle-follow]").addEventListener("click", (event) => {
+      const on = event.currentTarget.classList.toggle("is-on");
+      event.currentTarget.textContent = on ? "跟随 ●" : "跟随 ○";
+    });
+
+    // 实例标签：点击切换活动项（首页 → 空工作区，SSH → ssh，其它 → 保持当前状态只换高亮）
+    document.querySelectorAll(".instance-tab").forEach((tab) => {
+      tab.addEventListener("click", (event) => {
+        if (event.target.classList.contains("close")) {
+          return;
+        }
+        const item = tab.dataset.item;
+        if (item === "home") {
+          setState({ state: "empty", sidebar: "sessions" });
+        } else if (item === "ssh-a-1") {
+          setState({ state: "ssh", sidebar: "files" });
+        } else {
+          document.querySelectorAll(".instance-tab").forEach((other) => other.classList.toggle("active", other === tab));
+        }
+      });
+    });
+
+    // 菜单：点击展开，点击其它地方收起
+    document.querySelectorAll(".menu-item > .menu-btn").forEach((btn) => {
+      btn.addEventListener("click", (event) => {
+        event.stopPropagation();
+        const item = btn.parentElement;
+        const open = item.classList.contains("is-open");
+        document.querySelectorAll(".menu-item.is-open").forEach((other) => other.classList.remove("is-open"));
+        item.classList.toggle("is-open", !open);
+      });
+    });
+    document.addEventListener("click", () => {
+      document.querySelectorAll(".menu-item.is-open").forEach((item) => item.classList.remove("is-open"));
+    });
+
+    // MultiExec：目标勾选、模式、停止
+    const multiexecBar = document.querySelector("[data-multiexec]");
+    document.querySelectorAll("[data-target]").forEach((chip) => {
+      chip.addEventListener("click", () => {
+        const on = chip.classList.toggle("is-on");
+        const pane = document.querySelector(`.split-pane[data-pane="${chip.dataset.target}"]`);
+        if (pane) {
+          pane.classList.toggle("is-target", on);
+        }
+      });
+    });
+    document.querySelectorAll("[data-mx-mode]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll("[data-mx-mode]").forEach((other) => other.classList.toggle("is-active", other === btn));
+        multiexecBar.classList.remove("is-off");
+        syncUi();
+      });
+    });
+    document.querySelector("[data-mx-stop]").addEventListener("click", () => {
+      multiexecBar.classList.add("is-off");
+      document.querySelectorAll("[data-mx-mode]").forEach((btn) => btn.classList.remove("is-active"));
+      syncUi();
+    });
+    document.querySelector("[data-toggle-multiexec]").addEventListener("click", () => {
+      if (app.dataset.state !== "multi") {
+        setState({ state: "multi", sidebar: "sessions" });
+      }
+      multiexecBar.classList.toggle("is-off");
+      if (!multiexecBar.classList.contains("is-off") && !document.querySelector("[data-mx-mode].is-active")) {
+        document.querySelector('[data-mx-mode="live"]').classList.add("is-active");
+      }
+      syncUi();
+    });
+    document.querySelectorAll(".split-pane").forEach((pane) => {
+      pane.addEventListener("click", () => {
+        document.querySelectorAll(".split-pane").forEach((other) => other.classList.toggle("is-focused", other === pane));
+      });
+    });
+
+    // ---- 分隔线拖拽（沿用母版） ----
     document.querySelectorAll("[data-splitter]").forEach((splitter) => {
       splitter.addEventListener("pointerdown", (event) => {
         event.preventDefault();
@@ -1210,18 +2145,16 @@
         const startX = event.clientX;
         const startY = event.clientY;
         const leftStart = document.querySelector(".connection-pane").getBoundingClientRect().width;
-        const rightStart = document.querySelector(".file-pane").getBoundingClientRect().width;
+        const rightStart = document.querySelector(".tools-pane").getBoundingClientRect().width;
         const terminalStart = document.querySelector(".terminal-pane").getBoundingClientRect().height;
 
         const move = (moveEvent) => {
           if (type === "left") {
-            root.style.setProperty("--left-pane", `${clamp(leftStart + moveEvent.clientX - startX, 176, 300)}px`);
+            root.style.setProperty("--left-pane", `${clamp(leftStart + moveEvent.clientX - startX, 176, 320)}px`);
           }
-
           if (type === "right") {
             root.style.setProperty("--right-pane", `${clamp(rightStart - (moveEvent.clientX - startX), 240, 520)}px`);
           }
-
           if (type === "terminal") {
             root.style.setProperty("--terminal-height", `${clamp(terminalStart - (moveEvent.clientY - startY), 120, 460)}px`);
           }
@@ -1237,6 +2170,8 @@
         window.addEventListener("pointerup", stop);
       });
     });
+
+    syncUi();
   </script>
 </body>
 </html>
