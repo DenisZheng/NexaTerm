@@ -1,5 +1,7 @@
 # Tauri Command Contracts
 
+> **Scope note (2026-09-23).** Every payload, auth, host-key, output-ordering, error and cleanup contract in this file stays in force. A handful of bullets also pin *where* a UI entry point currently sits (right-pane tool ids, command library in the right pane, manual-only locate, connection-id-only file context). Those are tagged `[Current implementation — WS-xx replaces at WF-yy]`; the position part is a fact about today's code and is owned by `docs/WORKFLOW_SPEC.md`, while the IPC part of the same bullet still applies. Quick Connect's ephemeral context (WS-C04/C06) will extend the file/monitor wrappers at WF-02B; until then `connection_id` remains the only accepted file context.
+
 ## Scenario: React Wrappers for Rust Commands
 
 ### 1. Scope / Trigger
@@ -347,7 +349,7 @@ listenTerminalOutput((event) => terminalOutputQueue.enqueue(decode(event.data)))
 
 - Trigger: a React feature lists remote files, records or manually locates to the active terminal directory, or changes the `remote_file_list` Tauri command payload.
 - Source files: `src/shared/tauri/commands.ts`, `src/features/files/remoteFileTypes.ts`, `src/features/files/RemoteFilePanel.tsx`, and `src/features/terminal/TerminalPanel.tsx`.
-- This is a cross-layer command contract: the UI sends only a saved connection id plus an optional path; Rust reloads credentials from the saved profile.
+- This is a cross-layer command contract: the UI sends only a saved connection id plus an optional path; Rust reloads credentials from the saved profile. `[Current implementation — WS-C06 extends at WF-02B]`: an ephemeral Quick Connect session will add an opaque Rust-owned context reference as an alternative to `connection_id`; the frontend must still never send credentials.
 
 ### 2. Signatures
 
@@ -380,7 +382,7 @@ invoke<RemoteFileEntry[]>("remote_file_list", {
 - Response entries use the serialized `type` field, not Rust's internal `kind` field name.
 - Directories render before symlinks, files, and other entries. The frontend may sort defensively, but should not rely on receiving unsorted output.
 - `TerminalPanel` may report current directory via `onCurrentDirectoryChange(tabId, path)` when terminal output contains `OSC 7` or when the user enters a simple `cd` command that can be resolved locally. When the file-panel locate action needs a fallback and `OSC 7` is absent, `WorkspaceShell` may ask the active tab for a locate-time xterm snapshot and inspect a few already-rendered lines for a high-confidence shell prompt path such as `user@host:/path$`.
-- The file panel must not automatically reload remote files on every terminal directory change. The toolbar locate action is manual: clicking it uses the active tab's stored path first and may fall back to a locate-time prompt snapshot only for that click. If no path can be resolved, the locate action must stay disabled or show an explanatory tooltip; it must not ask `TerminalPanel` to write any command.
+- The file panel must not automatically reload remote files on every terminal directory change. The toolbar locate action is manual: clicking it uses the active tab's stored path first and may fall back to a locate-time prompt snapshot only for that click. If no path can be resolved, the locate action must stay disabled or show an explanatory tooltip; it must not ask `TerminalPanel` to write any command. `[Current implementation — WS-F02 replaces at WF-03]`: WF-03 introduces a per-instance follow toggle; while it is on, a trusted OSC7 / complete `cd` event may trigger a locate without a click. Snapshot fallback remains click-only and the no-command-write rule is unchanged.
 - When no Tauri runtime exists, preview-only fallback entries are acceptable so browser layout checks remain inspectable.
 
 ### 4. Validation & Error Matrix
@@ -978,7 +980,7 @@ interface TunnelRuntimeCredentialInput {
 - Host-key errors from tunnel start must be parsed with the shared host-key parser, trusted through `knownHostTrust(...)`, and then retried with the same optional runtime credential.
 - Delete actions must remove a tunnel row only after `tunnelDelete(...)` succeeds. If delete fails, keep the row, show the `AppError.message`, close the confirmation dialog, and refresh the list so React does not drift from Rust runtime state.
 - `TunnelPanel` may refresh and list rules, but app-level autostart belongs in `WorkspaceShell` mount so auto-start rules run even if the user never opens the toolbox tunnel view.
-- The right-pane entry is `RemoteFileTool = "files" | "monitor" | "commands" | "tools" | "ai"`. File transfers are rendered as the file pane's bottom transfer dock, not as a first-level right-pane tool tab. SSH tunnels are low-frequency global tools hosted by the `tools` entry's internal toolbox view, not by a first-level right-pane tab.
+- The right-pane entry is `RemoteFileTool = "files" | "monitor" | "commands" | "tools" | "ai"`. File transfers are rendered as the file pane's bottom transfer dock, not as a first-level right-pane tool tab. SSH tunnels are low-frequency global tools hosted by the `tools` entry's internal toolbox view, not by a first-level right-pane tab. `[Current implementation — WS-E04/WS-E06/WS-F06 replace at WF-01/WF-03]`: Files moves to the left Sessions / Files switch; the secondary tools' placement is a pending decision (WS-E06). The transfer-dock and tunnel-as-toolbox contracts follow their views.
 - Tunnel UI must use Radix Dialog, Lucide icons, `AppSelect`, shared confirmation dialog, and global `--mx-*` tokens. Do not use native `<select>` or feature-local dropdown popovers.
 - A visible `running` state means data was written to the local forwarding machinery, not that the remote target command or service succeeded.
 
@@ -1065,11 +1067,11 @@ Frontend types mirror Rust snake_case fields. `CommandSnippet.group` is a displa
 - Selecting a snippet fills the textarea and tracks the selected snippet id. Any manual textarea change clears that selected snippet id so edited commands are treated as ordinary sends.
 - Sending an unchanged selected snippet should call `commandSnippetMarkUsed(id)` after at least one target write succeeds.
 - Selecting a history row fills the textarea. Saving a history command as a snippet uses the normal snippet upsert flow; history itself is not promoted automatically.
-- The right-side tool pane owns the command library entry. `RemoteFilePanel` exposes a `commands` tab that renders `CommandLibraryPanel`; the bottom Command Sender remains the only target-selection and terminal-write surface.
+- The right-side tool pane owns the command library entry. `RemoteFilePanel` exposes a `commands` tab that renders `CommandLibraryPanel`; the bottom Command Sender remains the only target-selection and terminal-write surface. `[Current implementation — WS-E06/WS-X03 replace at WF-04C]`: the target-selection surface becomes the unified MultiExec (instance targets); the library's placement follows WS-E06. The "single terminal-write surface" invariant is kept.
 - Snippets should be grouped by `group` as a one-level tree: root snippets render directly at the top, folder headers render only for explicit non-root groups, and folder children are indented. Do not use left/right split panes, nested folders, or horizontal group chips in the narrow right pane.
 - Snippet rows should keep only high-frequency direct actions visible: copy, insert, and send. Edit/delete live in the snippet row context menu; group rename/delete actions live in the folder context menu. Deleting a group deletes the snippets inside that group.
 - Direct send from the right-pane command library must write to the resolved target list without expanding the bottom Command Sender and without clearing any existing Command Sender draft input.
-- Command Sender target lists may include SSH terminals and local terminals. Local terminal workspaces expose only the right-pane command tool; SSH-only tools such as files, monitor, and tunnels stay hidden there.
+- Command Sender target lists may include SSH terminals and local terminals. Local terminal workspaces expose only the right-pane command tool; SSH-only tools such as files, monitor, and tunnels stay hidden there. `[Current implementation — WS-X03/WS-X05/WS-F07 replace at WF-03/WF-04C]`: targets become session instances (one per terminal, not one per connection); non-SSH instances show the protocol's real file capability instead of hiding Files.
 - History should render as compact command rows, not large cards. It may offer copy, insert, run, save-as-snippet, delete, and clear actions.
 - History scope filtering should default to the current SSH connection in SSH workspaces and the current local terminal profile in local workspaces. The filter list is flat: current context, other SSH connections, local profiles, and all history.
 - Terminal input recording is controlled from Settings through `settings.command.recordTerminalInputHistory`; the right-pane history view shows only the current state and a Settings entry, not a local checkbox.
@@ -1879,7 +1881,7 @@ type DockerLogStreamEvent = {
 ### 3. Contracts
 
 - Components must use the typed wrappers in `src/shared/tauri/commands.ts`; do not call `invoke("docker_*")` directly from UI components.
-- The right-pane first-level tool id is `tools`. The toolbox owns internal tabs for Docker, SSH tunnels, network diagnostics, and scheduled tasks. SSH tunnel management is hosted here through `TunnelPanel`; switching away from Docker must not trigger Docker refresh work.
+- The right-pane first-level tool id is `tools`. The toolbox owns internal tabs for Docker, SSH tunnels, network diagnostics, and scheduled tasks. SSH tunnel management is hosted here through `TunnelPanel`; switching away from Docker must not trigger Docker refresh work. `[Current implementation — WS-E06 decides placement; WS-N01 adds a toolbar tunnel entry at WF-06A]`: the no-refresh-on-switch rule is placement-independent.
 - Docker actions require an active SSH connection. Local-terminal workspaces should not expose Docker controls unless a future task defines a local Docker model.
 - Delete container and delete image actions must use `ConfirmDialog`. Do not use `window.confirm`, bulk destructive actions, prune, or silent optimistic deletion.
 - Container terminal entry opens a new SSH terminal tab for the same saved connection and writes `docker exec -it <quoted container id> sh`. It must not embed a second terminal in the right pane or record the command as Command Sender history.
@@ -2062,7 +2064,7 @@ type ScheduledTaskLogEntry = {
 - Components must call scheduled task backend commands through `src/shared/tauri/commands.ts`; do not call raw `invoke("scheduled_task_*")` from feature components.
 - Wrapper request keys must match Rust exactly: `connection_id`, `task`, `task_id`, and `enabled`.
 - The UI sends only the saved `ConnectionProfile.id`. It must not send SSH host, username, password, private-key path, or passphrase for scheduled task operations.
-- The scheduled task view belongs under the existing tools tab value `schedule`; do not create another right-pane first-level tool just for this MVP.
+- The scheduled task view belongs under the existing tools tab value `schedule`; do not create another right-pane first-level tool just for this MVP. `[Current implementation — WS-E06 decides placement]`.
 - Browser preview may render deterministic sample rows and local-only edits, but must not fake persistence when Tauri runtime is available.
 - Create/edit uses an inline compact panel inside the toolbox, visible labels, and token-driven form styles. Do not introduce native selects, `window.confirm`, feature-local modal shells, or a separate dashboard visual system.
 - Delete must use `ConfirmDialog`; do not optimistically remove the row until the delete command succeeds.
@@ -2183,7 +2185,7 @@ type AiContextBlock = {
 - Components must listen to `ai:chat_stream` through `listenAiChatStream(...)`, store the returned unlisten function, and call it during cleanup. Stream chunks must be matched by `stream_id` before mutating messages.
 - After `aiChatStreamStart(...)` returns, `AiAssistantPanel` must synchronously write the returned `stream_id` into its current stream ref before relying on React state/effects. Some providers can emit the first SSE chunk immediately, and waiting for a state commit can make the listener drop early chunks as stale.
 - `AiAssistantPanel` must be lazy-loaded from `WorkspaceShell`; do not statically import the panel component or provider logic into `main.tsx`, `App.tsx`, or top-level workspace startup code.
-- The right-pane first-level tool id is `ai`. It lives beside `files`, `monitor`, `commands`, and `tools`; local terminal workspaces may expose `commands` and `ai`.
+- The right-pane first-level tool id is `ai`. It lives beside `files`, `monitor`, `commands`, and `tools`; local terminal workspaces may expose `commands` and `ai`. `[Current implementation — WS-E06 decides placement; AI stays a secondary, lazy-loaded tool and is frozen for new features until WF-04]`.
 - Terminal right-click selection handoff uses xterm's selection API. The menu action only opens the AI pane and appends a visible `terminal_selection` context block; it must not automatically submit a model request.
 - Adding the AI handoff action must not replace ordinary terminal context-menu actions. Keep copy, paste, select all, and terminal reconnect where available in the same terminal right-click menu, with copy using the raw xterm selection text and AI handoff using the trimmed selection for context.
 - Visible context blocks must show source and size metadata and be removable before send. Connection context must be redacted metadata only; do not include passwords, private keys, tokens, or full hidden connection config.

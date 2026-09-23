@@ -20,6 +20,18 @@ Do not add a new UI framework unless the project explicitly decides to replace
 the current Radix-based approach. For example, avoid introducing shadcn/ui,
 Ant Design, Mantine, or similar libraries just to fix one modal or button.
 
+### Scope note (2026-09-23)
+
+Product interaction rules — where Files lives, what a top-level tab represents,
+what MultiExec targets, how directory follow works — are owned by
+`docs/WORKFLOW_SPEC.md` (`WS-xx`). This file keeps engineering rules. A few
+bullets below also describe the *current* placement of an entry point; they are
+tagged `[Current implementation — WS-xx replaces at WF-yy]`. Read such a bullet
+as: the mechanism/safety part still applies, the position part is a fact about
+today's code and changes when the named workflow package lands. Do not cite a
+tagged bullet as a reason to keep the old layout, and do not remove it until the
+replacing package has shipped.
+
 ---
 
 ## Component Structure
@@ -233,9 +245,13 @@ Ant Design, Mantine, or similar libraries just to fix one modal or button.
   scrolls.
 - Remote file locate actions are one-way UI reveals: use the active terminal
   tab's recorded directory only to expand/highlight the folder in the file tree.
-  Do not navigate into the located folder's child listing, auto-follow every
-  `cd`, execute probe commands, or write `cd` back into the interactive
-  terminal.
+  Do not navigate into the located folder's child listing, execute probe
+  commands, or write `cd` back into the interactive terminal.
+  `[Current implementation — WS-F02 replaces at WF-03]`: today locate is
+  manual-only and the panel never auto-follows `cd`. WF-03 adds an explicit
+  per-instance "follow terminal directory" toggle (WS-F02/F03); when it lands,
+  auto-locate on a trusted directory event is allowed while the toggle is on.
+  The no-probe / no-write-back / no-arbitrary-output-parsing rule stays.
 - Terminal current-directory fallback should only resolve complete user input
   that can be reconstructed locally, such as a simple typed `cd /path` line.
   If the line contains Tab completion, history navigation, cursor editing, or
@@ -272,7 +288,10 @@ Ant Design, Mantine, or similar libraries just to fix one modal or button.
   active directory; selection uses Explorer-style modifiers (`Ctrl` / `Meta` to
   toggle, `Shift` to range-select visible rows). Bulk selection actions belong
   in the selected row context menu, not in a persistent toolbar/action bar,
-  unless the product explicitly changes the right-pane interaction model.
+  unless the product explicitly changes the files interaction model.
+  `[Current implementation — WS-E04/WS-F06 relocate the Files view at WF-03]`:
+  the "right-pane" wording here refers to today's placement only; the
+  selection/context-menu rule follows the Files view wherever it is mounted.
 - Remote file directory loads may overlap during startup, refresh handoff, and
   locate actions. Keep a current entries ref in sync with state, and do not let
   a stale non-forced auto-load failure display a global error after another
@@ -466,6 +485,10 @@ Ant Design, Mantine, or similar libraries just to fix one modal or button.
   terminal action group alongside the right-pane open/close button. Keep future
   terminal-level utility buttons in the same action group instead of using
   one-off floating overlays.
+  `[Current implementation — WS-E03/WS-X03 replace at WF-01/WF-04C]`: the
+  target entry point is a MultiExec action on the unified toolbar/menu that
+  targets session instances. Until WF-04C ships, the subtab entry stays; the
+  "no one-off floating overlays" rule stays regardless.
 - Terminal semantic highlighting should use xterm's parsed-write and decoration
   APIs (`onWriteParsed`, `registerDecoration`) against the normal buffer after
   output is written. Do not inject ANSI color sequences into `terminal.write`
@@ -513,6 +536,9 @@ Ant Design, Mantine, or similar libraries just to fix one modal or button.
   drags. The tab drag should only switch between split and unified layouts, keep
   terminals and editors mounted, preserve ordinary arrow cursor styling, and not
   implement free tab sorting until a separate ordering model is designed.
+  `[Current implementation — WS-M05 defines the ordering model at WF-01]`: the
+  instance-id order table introduced by WF-01 is that ordering model; free tab
+  sorting may be implemented against it, still without native `draggable`.
 - Remote editor chrome should stay close to icon height. If the file name is
   already present in a tab, do not repeat it as a large title inside the editor;
   keep path, save state, and toolbar actions in a single compact row and let long

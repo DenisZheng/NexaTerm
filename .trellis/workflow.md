@@ -292,6 +292,7 @@ When a user request matches one of these intents inside an active task, route fi
 - Task creation approval is not implementation approval; implementation waits for `task.py start` after artifact review.
 - PRD-only is valid for lightweight tasks; complex tasks need `design.md` + `implement.md`.
 - Planning must be persisted to task artifacts; checks must run before reporting completion.
+- Project rule (NexaTerm, 2026-09-23): a UI / workspace / session / files / MultiExec task must cite the `WS-xx` rules and acceptance ids (`A01`–`A15`) from `docs/WORKFLOW_SPEC.md` in its `prd.md`; implement and check read the same spec version, and a check must not revert an approved new entry point to an old placement asserted by a stale source check. Backend-only and dependency tasks skip this rule.
 
 ### Loading Step Detail
 
