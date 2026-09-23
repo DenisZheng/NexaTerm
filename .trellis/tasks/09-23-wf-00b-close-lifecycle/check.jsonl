@@ -1,1 +1,4 @@
-{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "核对新 action 是否意图型、reducer 无变化同引用、selector 纯函数、controller 仅持 useReducer 与归一 effect"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "核对测试环境声明与 fixture 规则"}
+{"file": "docs/WORKFLOW_SPEC.md", "reason": "核对未改变回退顺序等产品行为（WS-M06），未把旧布局写成约束"}
+{"file": ".trellis/tasks/09-23-wf-00b-close-lifecycle/design.md", "reason": "对照 §5 接受的差异清单：任何其它行为变化都是缺陷"}

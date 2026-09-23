@@ -1,1 +1,5 @@
-{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "reducer/action/selector/controller 约定；followUp 标记模式须与 split collapsedTo 同类"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "测试位置、node/jsdom 声明、禁 snapshot、fixture 不含真实主机"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "不改组件 props 契约与 UI；带 [Current implementation] 标注的位置条目本任务保持现状"}
+{"file": "docs/WORKFLOW_SPEC.md", "reason": "WS-M06：保留 home/settings 与记忆指针行为；不实现实例投影（WS-M02/M05 留给 WF-01）"}
+{"file": ".trellis/tasks/09-19-workspace-shell-state-seam/design.md", "reason": "Task 04 design §3 前提（指针靠多 setter 序列）与 §5 脚本原则，本任务承接其 2c-2b"}

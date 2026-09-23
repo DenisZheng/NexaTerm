@@ -3,7 +3,7 @@
   "name": "wf-00b-close-lifecycle",
   "title": "WF-00B 关闭/删除生命周期收尾",
   "description": "承接 Task 04 2c-2b：关闭/删除路径改为纯决策 action 并接入 shell 编排；验收 A01",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,

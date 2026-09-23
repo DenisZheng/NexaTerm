@@ -12,7 +12,7 @@
 
 - HEAD `45418f37`（2026-09-21），与交付方案基线一致；远端未在本轮复查。
 - 未提交改动（本任务之前已存在，不属本任务，保持不动）：`.trellis/tasks/09-18-license-inventory-and-notices/`、`.trellis/tasks/09-20-ssh-private-key-file-picker/`、`NEXATERM_WORKFLOW_DELIVERY_PLAN.md`、`THIRD_PARTY_LICENSES.md`、`scripts/license-*.{mjs,json}`、`scripts/invoke-pnpm-licenses.ps1`。
-- `task.py current --source` 在本会话开始时为 none；活动任务：`00-bootstrap-guidelines`（in_progress）、`09-09-nexaterm-architecture-audit-plan`（planning，3/5）、`09-19-frontend-test-baseline`（in_progress）、`09-19-workspace-shell-state-seam`（in_progress）、`09-20-ssh-private-key-file-picker`（planning，PRD 为模板）。
+- `task.py current --source` 在本会话开始时为 none；活动任务：`00-bootstrap-guidelines`（in_progress）、`09-09-nexaterm-architecture-audit-plan`（planning，3/5）、`09-19-frontend-test-baseline`（in_progress）、`09-19-workspace-shell-state-seam`（in_progress）、`09-20-ssh-private-key-file-picker`（planning，PRD 为模板；经维护者确认于 2026-09-23 删除，功能已在 `dc7c655` 交付）。
 - `src/features/layout/WorkspaceShell.tsx` 按 `git show HEAD:… | Measure-Object -Line` 为 **13,076 行**（347c8b2 / 52dff09 为 13,132）。交付方案写 14,003、Task 04 implement.md 写 14,061，与本方法计数不一致；以后统一用本方法记录。
 - Vitest：12 文件、177 passed / 1 todo（本机 2026-09-23 复跑）。
 - 上下文加载路径：Claude Code 走 `.claude/settings.local.json`（无 Trellis hook），Codex 走 `.codex/hooks.json` → `inject-workflow-state.py` 读 `workflow.md` 的 `[workflow-state:*]` 块，默认 `inline`；inline 模式实现读 `prd.md` → `design.md` → `implement.md`，规范经 `trellis-before-dev` 读 `.trellis/spec/<layer>/index.md` 的 Pre-Development Checklist。**`.trellis/spec/frontend/index.md` 原本没有 Pre-Development Checklist 段**，before-dev 的步骤 4 落空。

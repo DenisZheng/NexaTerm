@@ -18,7 +18,7 @@
   - 快速连接：Rust `TerminalConnectRequest.connection_id` 可选，已有 host/user/key 直连入口；现有 UI 搜索只针对已保存连接；文件 IPC 仍按保存的 connectionId 解析。
   - 批量输入：`buildCommandSenderTargets()` 每个连接选一个子 tab；Local 也聚合为一个目标；Split Sync Input 与 Command Sender 分散。
   - 分屏：`terminalSplitMaxPanes = 4`，横向/纵向/四宫格、拖动比例。
-- 未提交改动（非本轮产物，保持不动）：许可证清单任务与脚本（`09-18-license-inventory-and-notices`、`THIRD_PARTY_LICENSES.md`、`scripts/license-*`、`scripts/invoke-pnpm-licenses.ps1`）、`09-20-ssh-private-key-file-picker`（PRD 为模板）、`NEXATERM_WORKFLOW_DELIVERY_PLAN.md`。
+- 未提交改动（非本轮产物，保持不动）：许可证清单任务与脚本（`09-18-license-inventory-and-notices`、`THIRD_PARTY_LICENSES.md`、`scripts/license-*`、`scripts/invoke-pnpm-licenses.ps1`，Task 02 持续任务，PRD 待补）。`09-20-ssh-private-key-file-picker` 空模板任务已于 2026-09-23 删除（对应功能已在 `dc7c655` 交付）。
 
 ## 1. 能力矩阵
 
