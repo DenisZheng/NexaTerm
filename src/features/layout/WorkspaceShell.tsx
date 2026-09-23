@@ -441,6 +441,7 @@ import type {
   WorkspaceMode,
 } from "../workspace/sessionTabs/types";
 import { useSessionTabsController } from "../workspace/sessionTabs/useSessionTabsController";
+import type { CloseSnapshot, SessionRef } from "../workspace/sessionTabs/closeDecision";
 import type {
   LocalTerminalProfile,
   LocalTerminalProfileInput,
@@ -847,6 +848,8 @@ export function WorkspaceShell() {
   } = useCredentials({ enabled: storageReady });
   // Task 04 第二刀 2b：会话集合、当前项指针、模式与按连接记忆已原样迁入 useSessionTabsController；
   // 四个 *Ref 及其在 updater 内的同步写入仍留在本组件（见 controller 文档）。
+  // WF-00B：关闭/删除路径改为"外部清理 → ref 计算集合 → 值式 set → 一次 dispatch"，下一个活动项由
+  // reducer 经 closeDecision 决定；需要跨 seam 激活的分支经 onFollowUp 在 reducer 之外执行。
   const {
     activeConnectionId,
     activeLocalTerminalTabId,
@@ -863,15 +866,7 @@ export function WorkspaceShell() {
     localTerminalTabs,
     rdpSessions,
     remoteFileTabs,
-    setActiveConnectionId,
-    setActiveLocalTerminalTabId,
-    setActiveRdpSessionId,
     setActiveRemoteFileTabId,
-    setActiveTabId,
-    setActiveView,
-    setActiveVncSessionId,
-    setActiveWorkspaceMode,
-    setHomeActive,
     setLocalTerminalTabs,
     setRdpSessions,
     setRemoteFileTabs,
@@ -883,6 +878,41 @@ export function WorkspaceShell() {
     vncSessions,
   } = useSessionTabsController<TerminalTab>({
     defaultRemoteFileOpenMode: settings.basic.remoteFileOpenMode,
+    onFollowUp: (followUp) => {
+      // 原关闭路径 updater 内的 activate* 调用；实体已不存在（同一事件里又被关掉）则忽略。
+      switch (followUp.kind) {
+        case "terminal": {
+          const tab = terminalTabsRef.current.find((item) => item.id === followUp.tabId);
+          if (tab) {
+            activateTerminalTab(tab);
+          }
+          return;
+        }
+        case "local": {
+          const tab = localTerminalTabsRef.current.find((item) => item.id === followUp.tabId);
+          if (tab) {
+            activateLocalTerminalTab(tab);
+          }
+          return;
+        }
+        case "rdp": {
+          const session = rdpSessionsRef.current.find((item) => item.id === followUp.sessionId);
+          if (session) {
+            activateRdpSession(session);
+          }
+          return;
+        }
+        case "vnc": {
+          const session = vncSessionsRef.current.find((item) => item.id === followUp.sessionId);
+          if (session) {
+            activateVncSession(session);
+          }
+          return;
+        }
+        default:
+          return;
+      }
+    },
   });
   const [settingsSectionRequest, setSettingsSectionRequest] =
     useState<SettingsSectionId | undefined>();
@@ -2741,7 +2771,7 @@ export function WorkspaceShell() {
       return;
     }
 
-    setActiveRemoteFileTabId(null);
+    dispatchTabs({ type: "tabs/clearActiveFile" });
     activateTerminalFallbackAfterFilesClose();
   }
 
@@ -2964,7 +2994,7 @@ export function WorkspaceShell() {
       activeRemoteFileTabId &&
       !nextRemoteFileTabs.some((tab) => tab.id === activeRemoteFileTabId)
     ) {
-      setActiveRemoteFileTabId(null);
+      dispatchTabs({ type: "tabs/clearActiveFile" });
     }
     setPendingRemoteFileCloseId((tabId) =>
       tabId && nextRemoteFileTabs.some((tab) => tab.id === tabId) ? tabId : null,
@@ -4007,57 +4037,20 @@ export function WorkspaceShell() {
         .filter((session) => session.connectionId === connection.id)
         .map((session) => session.id),
     );
-    const closingTabIds = terminalTabs.filter((tab) => tab.connectionId === connection.id).map((tab) => tab.id);
+    const closingTabs = terminalTabsRef.current.filter((tab) => tab.connectionId === connection.id);
+    const closingTabIds = closingTabs.map((tab) => tab.id);
     closingTabIds.forEach(stopTerminalWarmupCapture);
-    closeRuntimeTerminalSessions(
-      terminalTabsRef.current.filter((tab) => tab.connectionId === connection.id),
-    );
+    closeRuntimeTerminalSessions(closingTabs);
     setTerminalDirectories((directories) => removeDirectoryState(directories, closingTabIds));
     forgetActiveConnectionTabs([connection.id]);
-    setTerminalTabs((tabs) => {
-      const nextTabs = tabs.filter((tab) => tab.connectionId !== connection.id);
-      terminalTabsRef.current = nextTabs;
-      if (
-        nextTabs.length === 0 &&
-        remainingRemoteFileTabs.length === 0 &&
-        localTerminalTabsRef.current.length === 0 &&
-        !rdpSessionsRef.current.some((session) => session.connectionId !== connection.id) &&
-        !vncSessionsRef.current.some((session) => session.connectionId !== connection.id)
-      ) {
-        setActiveConnectionId(null);
-        setActiveTabId(null);
-        setActiveWorkspaceMode("home");
-        setHomeActive(true);
-      }
-      if (activeConnectionId === connection.id) {
-        const nextActiveTab = nextTabs[0] || null;
-        const nextActiveFile = remainingRemoteFileTabs[0] || null;
-        setActiveTabId(nextActiveTab?.id || null);
-        setActiveConnectionId(nextActiveTab?.connectionId || nextActiveFile?.connectionId || null);
-        if (nextActiveFile && !nextActiveTab) {
-          setActiveRemoteFileTabId(nextActiveFile.id);
-        } else if (!nextActiveTab) {
-          const nextRdpSession =
-            rdpSessionsRef.current.find((session) => session.connectionId !== connection.id) || null;
-          if (nextRdpSession) {
-            activateRdpSession(nextRdpSession);
-          } else {
-            const nextVncSession =
-              vncSessionsRef.current.find((session) => session.connectionId !== connection.id) || null;
-            if (nextVncSession) {
-              activateVncSession(nextVncSession);
-            } else {
-              const nextLocalTerminalTab = localTerminalTabsRef.current[0] || null;
-              if (nextLocalTerminalTab) {
-                activateLocalTerminalTab(nextLocalTerminalTab);
-              }
-            }
-          }
-        }
-      } else if (!nextTabs.some((tab) => tab.id === activeTabId)) {
-        setActiveTabId(nextTabs[0]?.id || null);
-      }
-      return nextTabs;
+    const nextTabs = terminalTabsRef.current.filter((tab) => tab.connectionId !== connection.id);
+    terminalTabsRef.current = nextTabs;
+    setTerminalTabs(nextTabs);
+    dispatchTabs({
+      type: "tabs/closeConnections",
+      connectionIds: [connection.id],
+      snapshot: snapshotFromRefs({ remoteFileTabs: remainingRemoteFileTabs.map(sessionRef), terminalTabs: nextTabs.map(sessionRef) }),
+      variant: "delete",
     });
 
     if (selectedConnectionId === connection.id) {
@@ -4237,6 +4230,25 @@ export function WorkspaceShell() {
     return terminalTabsRef.current.some((tab) => tab.id === tabId && tab.type === "connecting");
   }
 
+  function sessionRef(item: { connectionId: string; id: string }): SessionRef {
+    return { connectionId: item.connectionId, id: item.id };
+  }
+
+  /**
+   * WF-00B：关闭/删除决策的集合快照。默认从四个 *Ref 与渲染态 remoteFileTabs 组装；
+   * 调用方把本次已算出的"移除后"列表通过 overrides 传入。
+   */
+  function snapshotFromRefs(overrides: Partial<CloseSnapshot> = {}): CloseSnapshot {
+    return {
+      localTerminalTabs: localTerminalTabsRef.current.map((tab) => ({ id: tab.id })),
+      rdpSessions: rdpSessionsRef.current.map(sessionRef),
+      remoteFileTabs: remoteFileTabs.map(sessionRef),
+      terminalTabs: terminalTabsRef.current.map(sessionRef),
+      vncSessions: vncSessionsRef.current.map(sessionRef),
+      ...overrides,
+    };
+  }
+
   function terminalTabExists(tabId: string) {
     return terminalTabsRef.current.some((tab) => tab.id === tabId);
   }
@@ -4251,29 +4263,6 @@ export function WorkspaceShell() {
         return keyConnectionId === connectionId ? commandSenderTargetKey(connectionId, tabId) : key;
       }),
     );
-  }
-
-  function returnHomeWhenWorkspaceEmpty({
-    localCount = localTerminalTabsRef.current.length,
-    rdpCount = rdpSessionsRef.current.length,
-    sshCount = terminalTabsRef.current.length,
-    vncCount = vncSessionsRef.current.length,
-  }: {
-    localCount?: number;
-    rdpCount?: number;
-    sshCount?: number;
-    vncCount?: number;
-  } = {}) {
-    // 远程文件 tab 必须依附一个活的 SSH 终端才能渲染（见 activeRemoteFileTabs 派生）。
-    // 因此只要没有终端/RDP/VNC/本地终端，即使剩孤立 remoteFile 也视作工作区为空，直接回首页。
-    dispatchTabs({
-      type: "tabs/returnHomeIfEmpty",
-      counts: { local: localCount, rdp: rdpCount, ssh: sshCount, vnc: vncCount },
-    });
-  }
-
-  function rememberActiveTab(tab: TerminalTab) {
-    dispatchTabs({ type: "tabs/rememberActive", connectionId: tab.connectionId, tabId: tab.id });
   }
 
   function setConnectionTerminalFileLayout(connectionId: string, mode: RemoteFileOpenMode) {
@@ -4445,14 +4434,14 @@ export function WorkspaceShell() {
     if (pane.binding.kind === "ssh") {
       const tab = terminalTabs.find((item) => item.id === pane.binding?.tabId);
       if (tab) {
-        setActiveTabId(tab.id);
+        dispatchTabs({ type: "tabs/focusPaneBinding", binding: { kind: "ssh", tabId: tab.id } });
         syncCommandSenderTargetTab(tab.connectionId, tab.id);
       }
       return;
     }
     const tab = localTerminalTabs.find((item) => item.id === pane.binding?.tabId);
     if (tab) {
-      setActiveLocalTerminalTabId(tab.id);
+      dispatchTabs({ type: "tabs/focusPaneBinding", binding: { kind: "local", tabId: tab.id } });
       syncCommandSenderTargetTab(localCommandSenderTargetId, tab.id);
     }
   }
@@ -6155,30 +6144,13 @@ export function WorkspaceShell() {
     closeRuntimeTerminalSessions(
       localTerminalTabsRef.current.filter((tab) => closingIds.has(tab.id)),
     );
-    setLocalTerminalTabs((tabs) => {
-      const nextTabs = tabs.filter((tab) => !closingIds.has(tab.id));
-      localTerminalTabsRef.current = nextTabs;
-      if (activeLocalTerminalTabId && closingIds.has(activeLocalTerminalTabId)) {
-        const nextActive = nextTabs[0] || null;
-        setActiveLocalTerminalTabId(nextActive?.id || null);
-        if (
-          !nextActive &&
-          terminalTabsRef.current.length === 0 &&
-          remoteFileTabs.length === 0 &&
-          rdpSessionsRef.current.length === 0 &&
-          vncSessionsRef.current.length === 0
-        ) {
-          setHomeActive(true);
-          setActiveWorkspaceMode("home");
-        } else if (!nextActive && terminalTabsRef.current.length > 0) {
-          setActiveWorkspaceMode("ssh");
-        } else if (!nextActive && rdpSessionsRef.current.length > 0) {
-          activateRdpSession(rdpSessionsRef.current[0]);
-        } else if (!nextActive && vncSessionsRef.current.length > 0) {
-          activateVncSession(vncSessionsRef.current[0]);
-        }
-      }
-      return nextTabs;
+    const nextTabs = localTerminalTabsRef.current.filter((tab) => !closingIds.has(tab.id));
+    localTerminalTabsRef.current = nextTabs;
+    setLocalTerminalTabs(nextTabs);
+    dispatchTabs({
+      type: "tabs/closeLocalTerminals",
+      closingIds: tabIds,
+      snapshot: snapshotFromRefs({ localTerminalTabs: nextTabs.map((tab) => ({ id: tab.id })) }),
     });
   }
 
@@ -6421,21 +6393,21 @@ export function WorkspaceShell() {
     setSettingsSectionRequest(sectionId);
     setSettingsSectionRequestKey((current) => current + 1);
     if (LoadedSettingsView) {
-      setActiveView("settings");
+      dispatchTabs({ type: "tabs/openSettings" });
       return;
     }
     void preloadSettingsViewComponent()
       .then((SettingsComponent) => {
         setLoadedSettingsView(() => SettingsComponent);
-        setActiveView("settings");
+        dispatchTabs({ type: "tabs/openSettings" });
       })
       .catch(() => {
-        setActiveView("settings");
+        dispatchTabs({ type: "tabs/openSettings" });
       });
   }
 
   function returnFromSettings() {
-    setActiveView("workspace");
+    dispatchTabs({ type: "tabs/closeSettings" });
     setSettingsSectionRequest(undefined);
   }
 
@@ -6650,42 +6622,13 @@ export function WorkspaceShell() {
     }
 
     const closingIds = new Set(sessionIds);
-    setRdpSessions((sessions) => {
-      const nextSessions = sessions.filter((session) => !closingIds.has(session.id));
-      rdpSessionsRef.current = nextSessions;
-      const activeRdpClosed = activeRdpSessionId
-        ? closingIds.has(activeRdpSessionId)
-        : activeWorkspaceMode === "rdp";
-
-      if (activeRdpClosed) {
-        const sameConnectionSession =
-          activeConnectionId
-            ? nextSessions.find((session) => session.connectionId === activeConnectionId) || null
-            : null;
-        const nextRdpSession = sameConnectionSession || nextSessions[0] || null;
-        if (nextRdpSession) {
-          setActiveRdpSessionId(nextRdpSession.id);
-          setActiveConnectionId(nextRdpSession.connectionId);
-          setActiveWorkspaceMode("rdp");
-          setHomeActive(false);
-        } else {
-          setActiveRdpSessionId(null);
-          const nextVncSession = vncSessionsRef.current[0] || null;
-          const nextTerminalTab = terminalTabsRef.current[0] || null;
-          const nextLocalTerminalTab = localTerminalTabsRef.current[0] || null;
-          if (nextVncSession) {
-            activateVncSession(nextVncSession);
-          } else if (nextTerminalTab) {
-            activateTerminalTab(nextTerminalTab);
-          } else if (nextLocalTerminalTab) {
-            activateLocalTerminalTab(nextLocalTerminalTab);
-          } else {
-            returnHomeWhenWorkspaceEmpty({ rdpCount: nextSessions.length });
-          }
-        }
-      }
-
-      return nextSessions;
+    const nextSessions = rdpSessionsRef.current.filter((session) => !closingIds.has(session.id));
+    rdpSessionsRef.current = nextSessions;
+    setRdpSessions(nextSessions);
+    dispatchTabs({
+      type: "tabs/removeRdp",
+      closingIds: sessionIds,
+      snapshot: snapshotFromRefs({ rdpSessions: nextSessions.map(sessionRef) }),
     });
   }
 
@@ -7024,42 +6967,13 @@ export function WorkspaceShell() {
     }
 
     const closingIds = new Set(sessionIds);
-    setVncSessions((sessions) => {
-      const nextSessions = sessions.filter((session) => !closingIds.has(session.id));
-      vncSessionsRef.current = nextSessions;
-      const activeVncClosed = activeVncSessionId
-        ? closingIds.has(activeVncSessionId)
-        : activeWorkspaceMode === "vnc";
-
-      if (activeVncClosed) {
-        const sameConnectionSession =
-          activeConnectionId
-            ? nextSessions.find((session) => session.connectionId === activeConnectionId) || null
-            : null;
-        const nextVncSession = sameConnectionSession || nextSessions[0] || null;
-        if (nextVncSession) {
-          setActiveVncSessionId(nextVncSession.id);
-          setActiveConnectionId(nextVncSession.connectionId);
-          setActiveWorkspaceMode("vnc");
-          setHomeActive(false);
-        } else {
-          setActiveVncSessionId(null);
-          const nextRdpSession = rdpSessionsRef.current[0] || null;
-          const nextTerminalTab = terminalTabsRef.current[0] || null;
-          const nextLocalTerminalTab = localTerminalTabsRef.current[0] || null;
-          if (nextRdpSession) {
-            activateRdpSession(nextRdpSession);
-          } else if (nextTerminalTab) {
-            activateTerminalTab(nextTerminalTab);
-          } else if (nextLocalTerminalTab) {
-            activateLocalTerminalTab(nextLocalTerminalTab);
-          } else {
-            returnHomeWhenWorkspaceEmpty({ vncCount: nextSessions.length });
-          }
-        }
-      }
-
-      return nextSessions;
+    const nextSessions = vncSessionsRef.current.filter((session) => !closingIds.has(session.id));
+    vncSessionsRef.current = nextSessions;
+    setVncSessions(nextSessions);
+    dispatchTabs({
+      type: "tabs/removeVnc",
+      closingIds: sessionIds,
+      snapshot: snapshotFromRefs({ vncSessions: nextSessions.map(sessionRef) }),
     });
   }
 
@@ -7192,101 +7106,27 @@ export function WorkspaceShell() {
 
   function closeTerminalTabs(tabIds: string[]) {
     const closingIds = new Set(tabIds);
-    const closingTabIds = terminalTabs.filter((tab) => closingIds.has(tab.id)).map((tab) => tab.id);
+    const closingTabs = terminalTabsRef.current.filter((tab) => closingIds.has(tab.id));
+    const closingTabIds = closingTabs.map((tab) => tab.id);
     closingTabIds.forEach(stopTerminalWarmupCapture);
-    closeRuntimeTerminalSessions(
-      terminalTabsRef.current.filter((tab) => closingIds.has(tab.id)),
-    );
+    closeRuntimeTerminalSessions(closingTabs);
     setTerminalDirectories((directories) => removeDirectoryState(directories, closingTabIds));
-    setTerminalTabs((tabs) => {
-      const activeClosingTab = activeTabId
-        ? tabs.find((tab) => tab.id === activeTabId && closingIds.has(tab.id)) || null
-        : null;
-      const closingActiveConnectionTab =
-        activeClosingTab ||
-        (activeConnectionId
-          ? tabs.find((tab) => tab.connectionId === activeConnectionId && closingIds.has(tab.id)) || null
-          : null);
-      const nextTabs = tabs.filter((tab) => !closingIds.has(tab.id));
-      const finalClosedConnectionIds = new Set(
-        tabs
-          .filter((tab) => closingIds.has(tab.id))
-          .map((tab) => tab.connectionId)
-          .filter((connectionId) => !nextTabs.some((tab) => tab.connectionId === connectionId)),
-      );
-      finalClosedConnectionIds.forEach((connectionId) => {
-        invalidateDockerExecConnection(connectionId);
-      });
-      terminalTabsRef.current = nextTabs;
-      if (
-        nextTabs.length === 0 &&
-        remoteFileTabs.length === 0 &&
-        localTerminalTabsRef.current.length === 0 &&
-        rdpSessionsRef.current.length === 0 &&
-        vncSessionsRef.current.length === 0
-      ) {
-        setActiveTabId(null);
-        setActiveConnectionId(null);
-        setActiveWorkspaceMode("home");
-        setHomeActive(true);
-      }
-
-      if (activeClosingTab) {
-        const nextActiveTab =
-          (activeClosingTab
-            ? nextTabs.find((tab) => tab.connectionId === activeClosingTab.connectionId)
-            : null) ||
-          nextTabs[0] ||
-          null;
-        const nextActiveFile =
-          (activeClosingTab
-            ? remoteFileTabs.find((tab) => tab.connectionId === activeClosingTab.connectionId)
-            : null) ||
-          remoteFileTabs[0] ||
-          null;
-
-        setActiveTabId(nextActiveTab?.id || null);
-        setActiveConnectionId(nextActiveTab?.connectionId || nextActiveFile?.connectionId || null);
-        if (nextActiveFile && !nextActiveTab) {
-          setActiveRemoteFileTabId(nextActiveFile.id);
-        }
-        if (nextActiveTab) {
-          rememberActiveTab(nextActiveTab);
-        } else if (activeClosingTab) {
-          forgetActiveConnectionTabs([activeClosingTab.connectionId]);
-          if (!nextActiveFile) {
-            const nextRdpSession = rdpSessionsRef.current[0] || null;
-            const nextVncSession = vncSessionsRef.current[0] || null;
-            const nextLocalTerminalTab = localTerminalTabsRef.current[0] || null;
-            if (nextRdpSession) {
-              activateRdpSession(nextRdpSession);
-            } else if (nextVncSession) {
-              activateVncSession(nextVncSession);
-            } else if (nextLocalTerminalTab) {
-              activateLocalTerminalTab(nextLocalTerminalTab);
-            }
-          }
-        }
-      } else if (
-        closingActiveConnectionTab &&
-        activeConnectionId === closingActiveConnectionTab.connectionId &&
-        !nextTabs.some((tab) => tab.connectionId === closingActiveConnectionTab.connectionId)
-      ) {
-        const nextActiveFile =
-          remoteFileTabs.find((tab) => tab.connectionId === closingActiveConnectionTab.connectionId) ||
-          remoteFileTabs[0] ||
-          null;
-        setActiveConnectionId(nextTabs[0]?.connectionId || nextActiveFile?.connectionId || null);
-        forgetActiveConnectionTabs([closingActiveConnectionTab.connectionId]);
-        if (!nextTabs[0] && !nextActiveFile && rdpSessionsRef.current.length > 0) {
-          activateRdpSession(rdpSessionsRef.current[0]);
-        } else if (!nextTabs[0] && !nextActiveFile && vncSessionsRef.current.length > 0) {
-          activateVncSession(vncSessionsRef.current[0]);
-        } else if (!nextTabs[0] && !nextActiveFile && localTerminalTabsRef.current.length > 0) {
-          activateLocalTerminalTab(localTerminalTabsRef.current[0]);
-        }
-      }
-      return nextTabs;
+    const nextTabs = terminalTabsRef.current.filter((tab) => !closingIds.has(tab.id));
+    const finalClosedConnectionIds = new Set(
+      closingTabs
+        .map((tab) => tab.connectionId)
+        .filter((connectionId) => !nextTabs.some((tab) => tab.connectionId === connectionId)),
+    );
+    finalClosedConnectionIds.forEach((connectionId) => {
+      invalidateDockerExecConnection(connectionId);
+    });
+    terminalTabsRef.current = nextTabs;
+    setTerminalTabs(nextTabs);
+    // 文件列表按原实现取渲染态 remoteFileTabs（closeConnectionSessions / deleteConnection 用清理后的列表）。
+    dispatchTabs({
+      type: "tabs/closeTerminals",
+      closingTabs: closingTabs.map(sessionRef),
+      snapshot: snapshotFromRefs({ terminalTabs: nextTabs.map(sessionRef) }),
     });
   }
 
@@ -7350,64 +7190,20 @@ export function WorkspaceShell() {
         .filter((session) => closingConnectionIds.has(session.connectionId))
         .map((session) => session.id),
     );
-    const closingTabIds = terminalTabs
-      .filter((tab) => closingConnectionIds.has(tab.connectionId))
-      .map((tab) => tab.id);
+    const closingTabs = terminalTabsRef.current.filter((tab) => closingConnectionIds.has(tab.connectionId));
+    const closingTabIds = closingTabs.map((tab) => tab.id);
     closingTabIds.forEach(stopTerminalWarmupCapture);
-    closeRuntimeTerminalSessions(
-      terminalTabsRef.current.filter((tab) => closingConnectionIds.has(tab.connectionId)),
-    );
+    closeRuntimeTerminalSessions(closingTabs);
     setTerminalDirectories((directories) => removeDirectoryState(directories, closingTabIds));
     forgetActiveConnectionTabs(connectionIds);
-    setTerminalTabs((tabs) => {
-      const nextTabs = tabs.filter((tab) => !closingConnectionIds.has(tab.connectionId));
-      terminalTabsRef.current = nextTabs;
-      if (
-        nextTabs.length === 0 &&
-        remainingRemoteFileTabs.length === 0 &&
-        localTerminalTabsRef.current.length === 0 &&
-        !rdpSessionsRef.current.some((session) => !closingConnectionIds.has(session.connectionId)) &&
-        !vncSessionsRef.current.some((session) => !closingConnectionIds.has(session.connectionId))
-      ) {
-        setActiveConnectionId(null);
-        setActiveTabId(null);
-        setActiveWorkspaceMode("home");
-        setHomeActive(true);
-      }
-
-      if (activeConnectionId && closingConnectionIds.has(activeConnectionId)) {
-        const nextActiveTab = nextTabs[0] || null;
-        const nextActiveFile =
-          remainingRemoteFileTabs.find((tab) => !closingConnectionIds.has(tab.connectionId)) ||
-          remainingRemoteFileTabs[0] ||
-          null;
-        setActiveTabId(nextActiveTab?.id || null);
-        setActiveConnectionId(nextActiveTab?.connectionId || nextActiveFile?.connectionId || null);
-        if (nextActiveFile) {
-          setActiveRemoteFileTabId(nextActiveFile.id);
-        } else if (!nextActiveTab) {
-          const nextRdpSession = rdpSessionsRef.current.find(
-            (session) => !closingConnectionIds.has(session.connectionId),
-          );
-          if (nextRdpSession) {
-            activateRdpSession(nextRdpSession);
-          } else {
-            const nextVncSession = vncSessionsRef.current.find(
-              (session) => !closingConnectionIds.has(session.connectionId),
-            );
-            if (nextVncSession) {
-              activateVncSession(nextVncSession);
-            } else {
-              const nextLocalTerminalTab = localTerminalTabsRef.current[0] || null;
-              if (nextLocalTerminalTab) {
-                activateLocalTerminalTab(nextLocalTerminalTab);
-              }
-            }
-          }
-        }
-      }
-
-      return nextTabs;
+    const nextTabs = terminalTabsRef.current.filter((tab) => !closingConnectionIds.has(tab.connectionId));
+    terminalTabsRef.current = nextTabs;
+    setTerminalTabs(nextTabs);
+    dispatchTabs({
+      type: "tabs/closeConnections",
+      connectionIds,
+      snapshot: snapshotFromRefs({ remoteFileTabs: remainingRemoteFileTabs.map(sessionRef), terminalTabs: nextTabs.map(sessionRef) }),
+      variant: "sessions",
     });
   }
 
@@ -7710,11 +7506,7 @@ export function WorkspaceShell() {
       return nextTabs;
     });
     if (activate) {
-      setActiveWorkspaceMode("ssh");
-      setHomeActive(false);
-      setActiveConnectionId(connection.id);
-      setActiveTabId(tab.id);
-      rememberActiveTab(tab);
+      dispatchTabs({ type: "tabs/startConnecting", connectionId: connection.id, tabId: tab.id });
     }
     if (connection.credential_mode !== "prompt") {
       void runConnectionStep(tab.id, step);

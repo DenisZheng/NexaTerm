@@ -7,7 +7,7 @@ const home: SessionPointerState = { ...initialSessionPointerState, homeActive: t
 describe("基本", () => {
   it("未知 action 与无变化返回原引用", () => {
     expect(sessionPointerReducer(home, { type: "x" } as never)).toBe(home);
-    expect(sessionPointerReducer(home, { type: "tabs/setHomeActive", value: true })).toBe(home);
+    expect(sessionPointerReducer(home, { type: "tabs/consumeFollowUp" })).toBe(home);
     expect(sessionPointerReducer(home, { type: "tabs/goHome" })).toBe(home);
   });
 });

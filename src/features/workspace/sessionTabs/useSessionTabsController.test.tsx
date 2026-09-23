@@ -154,19 +154,13 @@ describe("统一 tab 记忆回退（原 1587 行 effect）", () => {
   });
 });
 
-describe("setter 透传", () => {
-  it("指针与模式各自独立更新", () => {
+describe("意图型 action 经 controller 透传", () => {
+  it("指针与模式各自独立更新（原 setter 透传用例，WF-00B 改为 dispatch）", () => {
     const { result } = setup();
     act(() => {
-      result.current.setActiveConnectionId("a");
-      result.current.setActiveTabId("t1");
-      result.current.setActiveWorkspaceMode("ssh");
-      result.current.setHomeActive(false);
-      result.current.setActiveView("settings");
-      result.current.dispatchTabs({ type: "tabs/rememberActive", connectionId: "a", tabId: "t1" });
-      result.current.setActiveRdpSessionId("r1");
-      result.current.setActiveVncSessionId("v1");
-      result.current.setActiveLocalTerminalTabId("l1");
+      result.current.dispatchTabs({ type: "tabs/activateTerminal", connectionId: "a", tabId: "t1", rememberUnified: false });
+      result.current.dispatchTabs({ type: "tabs/openSettings" });
+      result.current.dispatchTabs({ type: "tabs/focusPaneBinding", binding: { kind: "local", tabId: "l1" } });
       result.current.setActiveRemoteFileTabId("f1");
     });
     const c = result.current;
@@ -178,11 +172,22 @@ describe("setter 透传", () => {
       "settings",
     ]);
     expect(c.activeTabByConnectionId).toEqual({ a: "t1" });
-    expect([c.activeRdpSessionId, c.activeVncSessionId, c.activeLocalTerminalTabId, c.activeRemoteFileTabId]).toEqual([
+    expect([c.activeLocalTerminalTabId, c.activeRemoteFileTabId]).toEqual(["l1", "f1"]);
+    act(() => {
+      result.current.dispatchTabs({ type: "tabs/activateRdp", connectionId: "b", sessionId: "r1" });
+    });
+    expect([result.current.activeRdpSessionId, result.current.activeConnectionId, result.current.activeWorkspaceMode]).toEqual([
       "r1",
+      "b",
+      "rdp",
+    ]);
+    act(() => {
+      result.current.dispatchTabs({ type: "tabs/activateVnc", connectionId: "c", sessionId: "v1" });
+    });
+    expect([result.current.activeVncSessionId, result.current.activeConnectionId, result.current.activeWorkspaceMode]).toEqual([
       "v1",
-      "l1",
-      "f1",
+      "c",
+      "vnc",
     ]);
   });
 });

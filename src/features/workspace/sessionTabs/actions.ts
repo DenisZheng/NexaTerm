@@ -1,5 +1,5 @@
 import type { CloseSnapshot, SessionRef } from "./closeDecision";
-import type { UnifiedWorkbenchTab, WorkspaceMode } from "./types";
+import type { UnifiedWorkbenchTab } from "./types";
 
 /**
  * 会话 tab action，命名 `tabs/动词`。
@@ -11,7 +11,7 @@ import type { UnifiedWorkbenchTab, WorkspaceMode } from "./types";
  * WF-00B 加入关闭/删除意图型 action：reducer 用 `closeDecision.ts` 从当前指针与移除后的集合快照算出
  * 下一个活动项；需要跨 seam 激活的分支写入 `followUp`，由 controller effect 交给 shell 执行。
  *
- * `tabs/set*` 是与旧 setter 一一对应的过渡通道，调用点改为意图型 action 后删除。
+ * `tabs/setActiveRemoteFileTabId` 是与旧 setter 一一对应的最后一个过渡通道，调用点改为意图型 action 后删除。
  */
 export type SessionTabsAction =
   // ---- 意图型 ----
@@ -66,13 +66,5 @@ export type SessionTabsAction =
   | { type: "tabs/removeVnc"; closingIds: readonly string[]; snapshot: CloseSnapshot }
   /** controller 已把 followUp 交给 shell 执行后清除标记。 */
   | { type: "tabs/consumeFollowUp" }
-  // ---- 过渡型（与旧 setter 同语义） ----
-  | { type: "tabs/setActiveConnectionId"; value: string | null }
-  | { type: "tabs/setActiveTabId"; value: string | null }
-  | { type: "tabs/setActiveRdpSessionId"; value: string | null }
-  | { type: "tabs/setActiveVncSessionId"; value: string | null }
-  | { type: "tabs/setActiveLocalTerminalTabId"; value: string | null }
-  | { type: "tabs/setActiveRemoteFileTabId"; value: string | null }
-  | { type: "tabs/setActiveView"; value: "workspace" | "settings" }
-  | { type: "tabs/setMode"; value: WorkspaceMode }
-  | { type: "tabs/setHomeActive"; value: boolean };
+  // ---- 过渡型：WF-00B 后仅剩这一条（远程文件重命名后重指活动文件 tab），WF-03 抽出 Files 视图时删除。 ----
+  | { type: "tabs/setActiveRemoteFileTabId"; value: string | null };

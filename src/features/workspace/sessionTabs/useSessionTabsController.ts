@@ -8,7 +8,7 @@ import type { LocalTerminalTab } from "../../terminal/localTerminalTypes";
 import type { SessionTabsAction } from "./actions";
 import type { FollowUp } from "./closeDecision";
 import { initialSessionPointerState, sessionPointerReducer } from "./reducer";
-import type { RdpSessionTab, VncSessionTab, WorkspaceMode } from "./types";
+import type { RdpSessionTab, VncSessionTab } from "./types";
 
 export type { SessionTabsAction } from "./actions";
 export type { CloseSnapshot, FollowUp, SessionRef } from "./closeDecision";
@@ -33,8 +33,8 @@ export interface SessionTabsControllerInputs {
  * 指针、模式、首页记忆位与两张记忆表由 `sessionPointerReducer` 持有；五个会话集合与文件布局记忆
  * 仍是 `useState`（集合与 WorkspaceShell 里的 `*Ref` 同步写入耦合，待 ref 通道消灭后再迁）。
  *
- * 对外暴露 `dispatchTabs`（意图型 action）以及九个单值 setter 过渡层（内部转 dispatch）；
- * 两张记忆表只能经 remember / forget 系列 action 修改。过渡层在 WF-00B 关闭路径改完后删除。
+ * 对外暴露 `dispatchTabs`（意图型 action）与唯一保留的过渡 setter `setActiveRemoteFileTabId`；
+ * 两张记忆表只能经 remember / forget 系列 action 修改。
  */
 export function useSessionTabsController<TTerminalTab extends { connectionId: string; id: string }>(
   inputs: SessionTabsControllerInputs,
@@ -102,41 +102,10 @@ export function useSessionTabsController<TTerminalTab extends { connectionId: st
     dispatchTabs({ type: "tabs/normalizeUnified", fileTabs: remoteFileTabs, terminalTabs });
   }, [remoteFileTabs, terminalTabs]);
 
-  // ---- 过渡层：与 2b 同名的 setter，内部转 dispatch。2c-2 替换调用点后逐个删除。 ----
-  const setActiveConnectionId = useCallback(
-    (value: string | null) => dispatchTabs({ type: "tabs/setActiveConnectionId", value }),
-    [],
-  );
-  const setActiveTabId = useCallback(
-    (value: string | null) => dispatchTabs({ type: "tabs/setActiveTabId", value }),
-    [],
-  );
-  const setActiveRdpSessionId = useCallback(
-    (value: string | null) => dispatchTabs({ type: "tabs/setActiveRdpSessionId", value }),
-    [],
-  );
-  const setActiveVncSessionId = useCallback(
-    (value: string | null) => dispatchTabs({ type: "tabs/setActiveVncSessionId", value }),
-    [],
-  );
-  const setActiveLocalTerminalTabId = useCallback(
-    (value: string | null) => dispatchTabs({ type: "tabs/setActiveLocalTerminalTabId", value }),
-    [],
-  );
+  // ---- 过渡层：WF-00B 后仅剩 setActiveRemoteFileTabId 一个调用点（远程文件重命名后重指 tab，归 WF-03）。 ----
+  /** @deprecated 仅供 WorkspaceShell 远程文件重命名路径使用；WF-03 抽出 Files 视图时改为意图型 action 并删除。 */
   const setActiveRemoteFileTabId = useCallback(
     (value: string | null) => dispatchTabs({ type: "tabs/setActiveRemoteFileTabId", value }),
-    [],
-  );
-  const setActiveView = useCallback(
-    (value: "workspace" | "settings") => dispatchTabs({ type: "tabs/setActiveView", value }),
-    [],
-  );
-  const setActiveWorkspaceMode = useCallback(
-    (value: WorkspaceMode) => dispatchTabs({ type: "tabs/setMode", value }),
-    [],
-  );
-  const setHomeActive = useCallback(
-    (value: boolean) => dispatchTabs({ type: "tabs/setHomeActive", value }),
     [],
   );
   return {
@@ -155,15 +124,7 @@ export function useSessionTabsController<TTerminalTab extends { connectionId: st
     localTerminalTabs,
     rdpSessions,
     remoteFileTabs,
-    setActiveConnectionId,
-    setActiveLocalTerminalTabId,
-    setActiveRdpSessionId,
     setActiveRemoteFileTabId,
-    setActiveTabId,
-    setActiveView,
-    setActiveVncSessionId,
-    setActiveWorkspaceMode,
-    setHomeActive,
     setLocalTerminalTabs,
     setRdpSessions,
     setRemoteFileTabs,

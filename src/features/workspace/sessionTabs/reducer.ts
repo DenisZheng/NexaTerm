@@ -272,24 +272,8 @@ export function sessionPointerReducer(
       });
       return changed ? { ...state, activeUnifiedTabByConnectionId: nextActiveTabs } : state;
     }
-    case "tabs/setActiveConnectionId":
-      return set(state, "activeConnectionId", action.value);
-    case "tabs/setActiveTabId":
-      return set(state, "activeTabId", action.value);
-    case "tabs/setActiveRdpSessionId":
-      return set(state, "activeRdpSessionId", action.value);
-    case "tabs/setActiveVncSessionId":
-      return set(state, "activeVncSessionId", action.value);
-    case "tabs/setActiveLocalTerminalTabId":
-      return set(state, "activeLocalTerminalTabId", action.value);
     case "tabs/setActiveRemoteFileTabId":
       return set(state, "activeRemoteFileTabId", action.value);
-    case "tabs/setActiveView":
-      return set(state, "activeView", action.value);
-    case "tabs/setMode":
-      return set(state, "mode", action.value);
-    case "tabs/setHomeActive":
-      return set(state, "homeActive", action.value);
     default:
       return state;
   }
