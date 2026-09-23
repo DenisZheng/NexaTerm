@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useReducer, useState } from "react";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import type { Dispatch } from "react";
 
 import type { RemoteFileEditorTab } from "../../editor/remoteFileEditorTypes";
@@ -6,10 +6,12 @@ import type { RemoteFileOpenMode } from "../../settings/settingsTypes";
 import type { LocalTerminalTab } from "../../terminal/localTerminalTypes";
 
 import type { SessionTabsAction } from "./actions";
+import type { FollowUp } from "./closeDecision";
 import { initialSessionPointerState, sessionPointerReducer } from "./reducer";
 import type { RdpSessionTab, VncSessionTab, WorkspaceMode } from "./types";
 
 export type { SessionTabsAction } from "./actions";
+export type { CloseSnapshot, FollowUp, SessionRef } from "./closeDecision";
 
 /**
  * 会话 tab controller 需要从外部读取的输入。
@@ -17,21 +19,27 @@ export type { SessionTabsAction } from "./actions";
 export interface SessionTabsControllerInputs {
   /** 新连接首次打开远程文件时的默认布局；来自设置。 */
   defaultRemoteFileOpenMode: RemoteFileOpenMode;
+  /**
+   * 关闭/删除决策要求的跨 seam 激活（原 updater 内的 activateRdpSession / activateVncSession /
+   * activateTerminalTab / activateLocalTerminalTab）。在 reducer 提交后的 effect 中调用一次；
+   * 实体已不存在时由 shell 自行忽略。经 ref 读取，不进 effect 依赖。
+   */
+  onFollowUp?: (followUp: FollowUp) => void;
 }
 
 /**
- * 会话 tab 状态 controller —— Task 04 第二刀 2c-1。
+ * 会话 tab 状态 controller —— Task 04 第二刀 2c-1 + WF-00B。
  *
  * 指针、模式、首页记忆位与两张记忆表由 `sessionPointerReducer` 持有；五个会话集合与文件布局记忆
  * 仍是 `useState`（集合与 WorkspaceShell 里的 `*Ref` 同步写入耦合，待 ref 通道消灭后再迁）。
  *
  * 对外暴露 `dispatchTabs`（意图型 action）以及九个单值 setter 过渡层（内部转 dispatch）；
- * 两张记忆表只能经 remember / forget 系列 action 修改。过渡层在 2c-2b 关闭路径改完后删除。
+ * 两张记忆表只能经 remember / forget 系列 action 修改。过渡层在 WF-00B 关闭路径改完后删除。
  */
 export function useSessionTabsController<TTerminalTab extends { connectionId: string; id: string }>(
   inputs: SessionTabsControllerInputs,
 ) {
-  const { defaultRemoteFileOpenMode } = inputs;
+  const { defaultRemoteFileOpenMode, onFollowUp } = inputs;
 
   const [pointers, dispatchTabs] = useReducer(sessionPointerReducer, {
     ...initialSessionPointerState,
@@ -44,6 +52,20 @@ export function useSessionTabsController<TTerminalTab extends { connectionId: st
   const [remoteFileTabs, setRemoteFileTabs] = useState<RemoteFileEditorTab[]>([]);
   const [terminalFileLayoutByConnectionId, setTerminalFileLayoutByConnectionId] =
     useState<Record<string, RemoteFileOpenMode>>({});
+
+  // 跨 seam 回调走 ref，与 split controller 的 onCollapseToStandalone 一致。
+  const onFollowUpRef = useRef(onFollowUp);
+  onFollowUpRef.current = onFollowUp;
+
+  // 归一 0（WF-00B）：关闭/删除决策的跨 seam 激活在 reducer 之外执行一次，然后清除标记。
+  useEffect(() => {
+    if (!pointers.followUp) {
+      return;
+    }
+    const followUp = pointers.followUp;
+    dispatchTabs({ type: "tabs/consumeFollowUp" });
+    onFollowUpRef.current?.(followUp);
+  }, [pointers.followUp]);
 
   // 归一 1：文件布局记忆只保留仍有终端或文件 tab 的连接；有文件 tab 但无记忆的连接补默认布局。
   useEffect(() => {

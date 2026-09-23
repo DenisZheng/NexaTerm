@@ -186,3 +186,46 @@ describe("setter 透传", () => {
     ]);
   });
 });
+
+describe("WF-00B：followUp 消费", () => {
+  it("关闭决策产生 followUp 时 onFollowUp 恰好调用一次，随后标记被清除", () => {
+    const calls: unknown[] = [];
+    const { result } = renderHook(() =>
+      useSessionTabsController<Tab>({ defaultRemoteFileOpenMode: "split", onFollowUp: (f) => calls.push(f) }),
+    );
+    act(() => {
+      result.current.dispatchTabs({ type: "tabs/activateTerminal", connectionId: "a", tabId: "t1", rememberUnified: false });
+    });
+    act(() => {
+      result.current.dispatchTabs({
+        type: "tabs/closeTerminals",
+        closingTabs: [{ connectionId: "a", id: "t1" }],
+        snapshot: { localTerminalTabs: [{ id: "l1" }], rdpSessions: [], remoteFileTabs: [], terminalTabs: [], vncSessions: [] },
+      });
+    });
+    expect(calls).toEqual([{ kind: "local", tabId: "l1" }]);
+    expect(result.current.activeTabId).toBeNull();
+    // 再来一次无 followUp 的关闭：回调不再触发
+    act(() => {
+      result.current.dispatchTabs({
+        type: "tabs/closeTerminals",
+        closingTabs: [{ connectionId: "z", id: "zz" }],
+        snapshot: { localTerminalTabs: [{ id: "l1" }], rdpSessions: [], remoteFileTabs: [], terminalTabs: [], vncSessions: [] },
+      });
+    });
+    expect(calls).toHaveLength(1);
+  });
+
+  it("未提供 onFollowUp 时标记仍被清除，不报错", () => {
+    const { result } = setup();
+    act(() => {
+      result.current.dispatchTabs({ type: "tabs/activateLocal", tabId: "l1" });
+      result.current.dispatchTabs({
+        type: "tabs/closeLocalTerminals",
+        closingIds: ["l1"],
+        snapshot: { localTerminalTabs: [], rdpSessions: [{ connectionId: "b", id: "r1" }], remoteFileTabs: [], terminalTabs: [], vncSessions: [] },
+      });
+    });
+    expect(result.current.activeLocalTerminalTabId).toBeNull();
+  });
+});

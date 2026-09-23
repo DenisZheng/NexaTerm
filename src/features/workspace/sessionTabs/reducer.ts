@@ -1,4 +1,13 @@
 import type { SessionTabsAction } from "./actions";
+import {
+  decideConnectionClose,
+  decideLocalClose,
+  decideRdpRemove,
+  decideTerminalClose,
+  decideVncRemove,
+  type CloseDecision,
+  type FollowUp,
+} from "./closeDecision";
 import type { UnifiedWorkbenchTab, WorkspaceMode } from "./types";
 
 /**
@@ -17,6 +26,11 @@ export interface SessionPointerState {
   activeUnifiedTabByConnectionId: Record<string, UnifiedWorkbenchTab>;
   activeView: "workspace" | "settings";
   activeVncSessionId: string | null;
+  /**
+   * 关闭/删除决策要求 shell 在 reducer 之外执行的跨 seam 激活（原 updater 内的 activate* 调用）。
+   * controller effect 消费后 dispatch `tabs/consumeFollowUp` 清除；同 split reducer 的 `collapsedTo`。
+   */
+  followUp: FollowUp | null;
   /** 独立于 mode 的首页记忆位：mode 不是 home 但没有会话时也可能显示首页。 */
   homeActive: boolean;
   mode: WorkspaceMode;
@@ -32,6 +46,7 @@ export const initialSessionPointerState: SessionPointerState = {
   activeUnifiedTabByConnectionId: {},
   activeView: "workspace",
   activeVncSessionId: null,
+  followUp: null,
   homeActive: false,
   mode: "home",
 };
@@ -68,6 +83,24 @@ function enterWorkspace(state: SessionPointerState, mode: WorkspaceMode): Sessio
   let next = set(state, "activeView", "workspace");
   next = set(next, "mode", mode);
   return set(next, "homeActive", false);
+}
+
+/** 按 closeDecision 的结果更新指针：patch 逐键 set，remember / forget 走记忆表，followUp 写标记。 */
+function applyDecision(state: SessionPointerState, decision: CloseDecision): SessionPointerState {
+  let next = state;
+  for (const [key, value] of Object.entries(decision.patch) as [
+    keyof CloseDecision["patch"],
+    SessionPointerState[keyof CloseDecision["patch"]],
+  ][]) {
+    next = set(next, key, value as never);
+  }
+  if (decision.remember) {
+    next = rememberActive(next, decision.remember.connectionId, decision.remember.tabId);
+  }
+  if (decision.forget && decision.forget.length > 0) {
+    next = sessionPointerReducer(next, { type: "tabs/forgetConnections", connectionIds: decision.forget });
+  }
+  return set(next, "followUp", decision.followUp);
 }
 
 export function sessionPointerReducer(
@@ -121,6 +154,39 @@ export function sessionPointerReducer(
       }
       return enterWorkspace(state, "local");
     }
+    case "tabs/focusPaneBinding":
+      return action.binding.kind === "ssh"
+        ? set(state, "activeTabId", action.binding.tabId)
+        : set(state, "activeLocalTerminalTabId", action.binding.tabId);
+    case "tabs/startConnecting": {
+      // 原 startConnectionStep：mode / homeActive / connection / tab / 记忆，不写 activeView。
+      let next = set(state, "mode", "ssh");
+      next = set(next, "homeActive", false);
+      next = set(next, "activeConnectionId", action.connectionId);
+      next = set(next, "activeTabId", action.tabId);
+      return rememberActive(next, action.connectionId, action.tabId);
+    }
+    case "tabs/openSettings":
+      return set(state, "activeView", "settings");
+    case "tabs/closeSettings":
+      return set(state, "activeView", "workspace");
+    case "tabs/clearActiveFile":
+      return set(state, "activeRemoteFileTabId", null);
+    case "tabs/closeTerminals":
+      return applyDecision(state, decideTerminalClose(state, action.closingTabs, action.snapshot));
+    case "tabs/closeConnections":
+      return applyDecision(
+        state,
+        decideConnectionClose(state, action.connectionIds, action.snapshot, action.variant),
+      );
+    case "tabs/closeLocalTerminals":
+      return applyDecision(state, decideLocalClose(state, action.closingIds, action.snapshot));
+    case "tabs/removeRdp":
+      return applyDecision(state, decideRdpRemove(state, action.closingIds, action.snapshot));
+    case "tabs/removeVnc":
+      return applyDecision(state, decideVncRemove(state, action.closingIds, action.snapshot));
+    case "tabs/consumeFollowUp":
+      return set(state, "followUp", null);
     case "tabs/goHome": {
       let next = set(state, "activeView", "workspace");
       next = set(next, "mode", "home");

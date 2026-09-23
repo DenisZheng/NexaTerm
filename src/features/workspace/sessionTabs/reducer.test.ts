@@ -157,3 +157,101 @@ describe("记忆表", () => {
     expect(sessionPointerReducer(a, { type: "tabs/forgetUnified", connectionIds: ["a"] }).activeUnifiedTabByConnectionId).toEqual({});
   });
 });
+
+describe("WF-00B：单值 setter 的意图型替代", () => {
+  it("focusPaneBinding 只改对应类型的一个指针", () => {
+    const ssh = sessionPointerReducer(home, { type: "tabs/focusPaneBinding", binding: { kind: "ssh", tabId: "t1" } });
+    expect(ssh).toMatchObject({ activeTabId: "t1", activeLocalTerminalTabId: null, mode: "home" });
+    const local = sessionPointerReducer(home, { type: "tabs/focusPaneBinding", binding: { kind: "local", tabId: "l1" } });
+    expect(local).toMatchObject({ activeLocalTerminalTabId: "l1", activeTabId: null });
+  });
+
+  it("startConnecting 写 mode/home/connection/tab 与记忆，但不改 activeView", () => {
+    const next = sessionPointerReducer({ ...home, activeView: "settings" }, { type: "tabs/startConnecting", connectionId: "a", tabId: "c1" });
+    expect(next).toMatchObject({
+      activeView: "settings",
+      mode: "ssh",
+      homeActive: false,
+      activeConnectionId: "a",
+      activeTabId: "c1",
+      activeTabByConnectionId: { a: "c1" },
+    });
+    expect(next.activeUnifiedTabByConnectionId).toEqual({});
+  });
+
+  it("openSettings / closeSettings 只改 activeView；clearActiveFile 只清文件指针", () => {
+    const opened = sessionPointerReducer(home, { type: "tabs/openSettings" });
+    expect(opened.activeView).toBe("settings");
+    expect(sessionPointerReducer(opened, { type: "tabs/closeSettings" }).activeView).toBe("workspace");
+    expect(sessionPointerReducer(home, { type: "tabs/closeSettings" })).toBe(home);
+    const withFile = { ...home, activeRemoteFileTabId: "f1", activeTabId: "t1" };
+    expect(sessionPointerReducer(withFile, { type: "tabs/clearActiveFile" })).toMatchObject({ activeRemoteFileTabId: null, activeTabId: "t1" });
+    expect(sessionPointerReducer(home, { type: "tabs/clearActiveFile" })).toBe(home);
+  });
+});
+
+describe("WF-00B：关闭/删除 action 经 closeDecision 落到指针与 followUp", () => {
+  const snapshot = {
+    localTerminalTabs: [],
+    rdpSessions: [{ connectionId: "b", id: "r1" }],
+    remoteFileTabs: [],
+    terminalTabs: [],
+    vncSessions: [],
+  };
+  const sshActive: SessionPointerState = { ...home, activeTabId: "t1", activeConnectionId: "a", mode: "ssh", homeActive: false, activeTabByConnectionId: { a: "t1" } };
+
+  it("closeTerminals：无终端无文件时写 followUp（rdp），清指针并忘记记忆", () => {
+    const next = sessionPointerReducer(sshActive, { type: "tabs/closeTerminals", closingTabs: [{ connectionId: "a", id: "t1" }], snapshot });
+    expect(next).toMatchObject({
+      activeTabId: null,
+      activeConnectionId: null,
+      activeTabByConnectionId: {},
+      followUp: { kind: "rdp", connectionId: "b", sessionId: "r1" },
+      mode: "ssh",
+    });
+  });
+
+  it("closeTerminals：切到同连接下一个 tab 时记忆更新且无 followUp", () => {
+    const next = sessionPointerReducer(sshActive, {
+      type: "tabs/closeTerminals",
+      closingTabs: [{ connectionId: "a", id: "t1" }],
+      snapshot: { ...snapshot, terminalTabs: [{ connectionId: "a", id: "t2" }] },
+    });
+    expect(next).toMatchObject({ activeTabId: "t2", activeTabByConnectionId: { a: "t2" }, followUp: null });
+  });
+
+  it("consumeFollowUp 清除标记；关闭非活动 tab 无变化返回原引用", () => {
+    const withFollowUp = sessionPointerReducer(sshActive, { type: "tabs/closeTerminals", closingTabs: [{ connectionId: "a", id: "t1" }], snapshot });
+    const consumed = sessionPointerReducer(withFollowUp, { type: "tabs/consumeFollowUp" });
+    expect(consumed.followUp).toBeNull();
+    expect(sessionPointerReducer(consumed, { type: "tabs/consumeFollowUp" })).toBe(consumed);
+    const untouched = sessionPointerReducer(sshActive, {
+      type: "tabs/closeTerminals",
+      closingTabs: [{ connectionId: "a", id: "t2" }],
+      snapshot: { ...snapshot, terminalTabs: [{ connectionId: "a", id: "t1" }] },
+    });
+    expect(untouched).toBe(sshActive);
+  });
+
+  it("closeConnections(delete) 全空回首页；removeRdp 全空清五个指针", () => {
+    const deleted = sessionPointerReducer(sshActive, {
+      type: "tabs/closeConnections",
+      connectionIds: ["a"],
+      snapshot: { ...snapshot, rdpSessions: [] },
+      variant: "delete",
+    });
+    expect(deleted).toMatchObject({ activeTabId: null, activeConnectionId: null, mode: "home", homeActive: true, followUp: null });
+    const rdpActive: SessionPointerState = { ...home, activeRdpSessionId: "r1", activeConnectionId: "b", mode: "rdp", homeActive: false, activeLocalTerminalTabId: "l0" };
+    const removed = sessionPointerReducer(rdpActive, { type: "tabs/removeRdp", closingIds: ["r1"], snapshot: { ...snapshot, rdpSessions: [] } });
+    expect(removed).toMatchObject({ activeRdpSessionId: null, activeLocalTerminalTabId: null, activeConnectionId: null, mode: "home", homeActive: true });
+  });
+
+  it("closeLocalTerminals / removeVnc 走对应决策", () => {
+    const localActive: SessionPointerState = { ...home, activeLocalTerminalTabId: "l1", mode: "local", homeActive: false };
+    const next = sessionPointerReducer(localActive, { type: "tabs/closeLocalTerminals", closingIds: ["l1"], snapshot: { ...snapshot, rdpSessions: [], terminalTabs: [{ connectionId: "a", id: "t1" }] } });
+    expect(next).toMatchObject({ activeLocalTerminalTabId: null, mode: "ssh", followUp: null });
+    const vncActive: SessionPointerState = { ...home, activeVncSessionId: "v1", activeConnectionId: "c", mode: "vnc", homeActive: false };
+    const removed = sessionPointerReducer(vncActive, { type: "tabs/removeVnc", closingIds: ["v1"], snapshot });
+    expect(removed).toMatchObject({ activeVncSessionId: null, followUp: { kind: "rdp", connectionId: "b", sessionId: "r1" } });
+  });
+});
