@@ -2106,3 +2106,24 @@ SSH
 因此：
 
 > 本文档定义产品目标和当前可信基线，但后续 AskMatt / Codex 必须用真实仓库和可运行测试验证后再生成最终开发计划。
+
+---
+
+# 68. 工作流映射（2026-09-23 补充）
+
+本文档仍是产品范围依据；未完成的需求不因阶段重排而删减。自 2026-09-23 起，开发主线按 `NEXATERM_WORKFLOW_DELIVERY_PLAN.md` 的交付包（WF）组织，交互规则正文在 `docs/WORKFLOW_SPEC.md`（按 `WS-xx` 引用）。本文各节与交付包的对应：
+
+| 本文章节 | 交付包 | 规则 |
+| --- | --- | --- |
+| §29 Home、§31 Session Manager、§33 主 UI 布局、§34 Menu、§35 Toolbar、§37 Command Palette | WF-01（树数据模型 → WF-04A） | WS-M、WS-E |
+| §30 Quick Connect、§32 New/Edit Session | WF-02A / WF-02B | WS-C |
+| §12 SFTP/Files、§26 Remote Editor | WF-03 | WS-F |
+| §20 Split、§21 MultiExec、§38 Saved Commands | WF-04B / WF-04C | WS-X |
+| §13 Local Shell、§14 WSL、§15 Serial、§16 Telnet、§22 RDP、§23 VNC、§47 Capability | WF-05 | WS-P |
+| §17 Jump（多跳）、§18 Proxy、§19 Tunnel、§24 X11 | WF-06A/B/C（X11 spike 提前到 WF-01 期间） | WS-N |
+| §25 Workspace Restore | 契约 WF-01，实现 WF-07 | WS-R |
+| §41 i18n | 基础自 WF-01，各包接入，清理 WF-08 | WS-E09 |
+| §45 安全依赖、§46 License、§52 迁移、§53 品牌、§49 性能、§50 稳定性、§60 v1 验收 | 随各包门禁；完整验收 WF-08 | — |
+| §42 UI 架构技术债、§57 H0.3 | 已完成部分保留；剩余按需，不再是前置 | — |
+
+§64 的 Codex 工作规则第 3 条"读取当前 Architecture / Development Plan"现指 `docs/ARCHITECTURE.md`、`docs/DEVELOPMENT_PLAN.md` 与 `docs/WORKFLOW_SPEC.md`；第 4 条"读取对应 Task"指 `.trellis/tasks/` 下的当前任务，`docs/tasks/0x-*.md` 为历史规划稿。

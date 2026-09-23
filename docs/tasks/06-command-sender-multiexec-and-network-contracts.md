@@ -1,5 +1,7 @@
 # Task 06：Command Sender/MultiExec 与网络契约
 
+> **迁移说明（2026-09-23，WF-00A）**：本文件是 2026-09-09 规划稿，作为历史参考保留。MultiExec 部分（含 Task 04 第三刀）→ WF-04C，目标模型按 `docs/WORKFLOW_SPEC.md` WS-X03–X08 以会话实例为单位；隧道 → WF-06A；Proxy/Jump → WF-06B，其中**多跳**必须显式覆盖（本文"不实现多跳 jump"的排除项与原 v1 要求不一致，已修正为 WF-06B 范围）。父任务 `09-23-nexaterm-workflow-mainline`。
+
 ## Goal
 
 固化 Command Sender、Sync Input、MultiExec、Proxy/Jump/Tunnel 的状态和 IPC 契约，修复检查脚本与真实实现漂移，并覆盖失败隔离。

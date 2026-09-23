@@ -1,5 +1,7 @@
 # Task 04：WorkspaceShell 状态 seam 渐进提取
 
+> **迁移说明（2026-09-23，WF-00A）**：本文件是 2026-09-09 规划稿，作为历史参考保留。实际执行记录与范围修订以 `.trellis/tasks/09-19-workspace-shell-state-seam/{prd,design,implement}.md` 为准。已完成：Split reducer/controller、sessionTabs types/selectors/controller、指针 reducer、激活/记忆 action。剩余项去向：关闭/删除路径 → WF-00B；`WorkbenchTab` 联合 → WF-01；split anchor → WF-04B；MultiExec 第三刀 → WF-04C（父任务 `09-23-nexaterm-workflow-mainline`）。本文"不改变用户行为"只约束本任务，不是全项目约束；目标交互规则见 `docs/WORKFLOW_SPEC.md`。
+
 ## Goal
 
 在不改变用户行为和首屏边界的前提下，降低 WorkspaceShell 的状态耦合，建立 WorkspaceState、SessionTabs、Split/Sync 和工具控制器的可测试所有权。

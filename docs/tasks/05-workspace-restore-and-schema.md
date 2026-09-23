@@ -1,5 +1,7 @@
 # Task 05：Workspace Restore 数据模型与迁移
 
+> **迁移说明（2026-09-23，WF-00A）**：本文件是 2026-09-09 规划稿，作为历史参考保留。快照契约（非敏感字段集，见 `docs/WORKFLOW_SPEC.md` WS-R01）在 WF-01 定义；持久化、迁移与恢复实现在 WF-07（父任务 `09-23-nexaterm-workflow-mainline`），位于 WF-04 目标会话模型之后，避免先保存旧的 connection-group/tab 结构再推倒迁移。快照输入为目标实例模型加 `SplitState`（Task 04 已产出 `SplitState`；`SessionTabsState` 目前只有指针部分进 reducer，实例集合在 WF-01 投影）。安全、迁移、回滚与局部失败隔离要求继续有效（WS-R02）。
+
 ## Goal
 
 定义并实现版本化 workspace snapshot、session/tab/split 恢复和局部失败隔离，使重启恢复可测试、可迁移、可回滚。

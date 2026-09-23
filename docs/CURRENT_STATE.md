@@ -1,6 +1,24 @@
 # 当前状态基线
 
-> 审计日期：2026-09-09。结论来自本地源码、配置、锁文件和可运行脚本；“Confirmed”表示静态链路存在，不表示三平台互操作已经验收。
+> 审计日期：2026-09-09。结论来自本地源码、配置、锁文件和可运行脚本；"Confirmed"表示静态链路存在，不表示三平台互操作已经验收。
+> 本文只记录**当前实现的事实**。目标交互规则在 `docs/WORKFLOW_SPEC.md`；"目前 Files 在右侧"是事实，不等于"以后必须在右侧"。
+
+## 0. 2026-09-23 增量校准（WF-00A）
+
+- 提交：`45418f37`（2026-09-21）。CI run `35600276051` 全绿：Frontend checks、Rust linux-x64 / macos-arm64 / windows-x64、Security evidence；Package windows-x64 为 skipped，不能推导安装包已通过。
+- 本机：Vitest 12 文件、177 passed / 1 todo（2026-09-23 复跑）。
+- `src/features/layout/WorkspaceShell.tsx`：`git show HEAD:… | Measure-Object -Line` = 13,076（347c8b2 = 13,132）。此数字说明职责仍集中，不作为产品完成率或重构验收标准。
+- 状态所有权（Task 04 已完成切片）：`split/` reducer + `useTerminalSplitController`；`multiExec/` 只持 sync 三态（`off|live`、targets、error）；`sessionTabs/` 持 7 个指针 + view + mode + homeActive + 2 张记忆表的 `SessionPointerState`，激活/记忆函数已 dispatch action；**五类会话集合（terminalTabs / localTerminalTabs / rdpSessions / vncSessions / remoteFileTabs）与文件布局记忆仍是 useState**，关闭/删除路径仍有约 50 处单值指针 setter（→ WF-00B）。
+- 当前 UI 事实（与目标的差距见 WORKFLOW_SPEC §9）：
+  - 顶部标签：`AppTitlebar.tsx` 接收按 connectionId 分组的摘要；Local 是独立聚合入口，子终端隐藏在其下。
+  - 左侧：连接仓库（`ConnectionPane`，树形分组的 `parentId` 存 localStorage；SQLite `connection_groups` 与 `SyncConnectionGroup` 仍是平面结构）。
+  - 右侧：`RemoteFilePanel` 承载 `files | monitor | commands | tools | ai` 五个一级工具；文件传输为 files 面板底部 dock；隧道在 tools 内部。
+  - Files 绑定：按保存的 connectionId 解析；有 tab 级 stateKey、terminalPath、手动定位、目录请求失效保护；不自动跟随目录。
+  - 新建连接：`ConnectionDialog.submit()` 保存后关闭；`onSave` 返回 `Promise<void>`；shell 的 `saveConnection()` 实际已返回保存结果（WF-02A 可复用）。
+  - 快速连接：Rust `TerminalConnectRequest.connection_id` 可选，已有 host/user/key 直连入口；现有 UI 搜索只针对已保存连接；文件 IPC 仍按保存的 connectionId 解析。
+  - 批量输入：`buildCommandSenderTargets()` 每个连接选一个子 tab；Local 也聚合为一个目标；Split Sync Input 与 Command Sender 分散。
+  - 分屏：`terminalSplitMaxPanes = 4`，横向/纵向/四宫格、拖动比例。
+- 未提交改动（非本轮产物，保持不动）：许可证清单任务与脚本（`09-18-license-inventory-and-notices`、`THIRD_PARTY_LICENSES.md`、`scripts/license-*`、`scripts/invoke-pnpm-licenses.ps1`）、`09-20-ssh-private-key-file-picker`（PRD 为模板）、`NEXATERM_WORKFLOW_DELIVERY_PLAN.md`。
 
 ## 1. 能力矩阵
 
@@ -16,9 +34,9 @@
 | Jump Host | Confirmed（单跳静态） | `terminal/session.rs` 的 `connect_target_client` 使用 direct-tcpip，`validate_jump_runtime` 明确拒绝嵌套 jump；不应标成多跳。 |
 | HTTP/SOCKS Proxy | Confirmed（静态） | `open_proxy_stream` 支持 HTTP CONNECT、SOCKS5，配置在 `connections/mod.rs`；代理认证、DNS、超时仍需互操作。 |
 | Local/Remote/Dynamic Tunnel | Confirmed（静态） | `src-tauri/src/tunnels.rs` 有三种 TunnelKind、启动/停止和 dynamic SOCKS；需 bind 权限、泄露和异常清理测试。 |
-| Split | Confirmed（静态） | WorkspaceShell 与终端面板持有 split layout/active pane；需多 tab、重连、关闭边界测试。 |
-| Sync Input | Partial | 有 split sync handler 和 source checks，但跨 tab/目标选择契约仍由 WorkspaceShell 组合，尚缺独立状态测试。 |
-| Command Sender / MultiExec | Partial | 有 history/targets/controller 与 UI；`check-command-sender-mvp-source.mjs` 报缺少 `commandSenderHistory`，SSH 激活 tab 同步检查也失败，属于契约未固化/可能漂移。 |
+| Split | Confirmed（静态 + reducer 测试） | 2026-09-19 起由 `src/features/workspace/split/` reducer + controller 持有，Vitest 覆盖；需多 tab、重连、关闭边界的真实窗口验证。 |
+| Sync Input | Partial | sync 三态已进 `multiExec/` reducer（2026-09-19）；跨 tab/目标选择契约仍由 WorkspaceShell 组合；目标模型改为实例 → WF-04C。 |
+| Command Sender / MultiExec | Partial | 有 history/targets/controller 与 UI，目标按连接每组一个；`check-command-sender-mvp-source.mjs` 报缺少 `commandSenderHistory`，SSH 激活 tab 同步检查也失败，属于契约未固化/可能漂移；统一 MultiExec → WF-04C。 |
 | RDP | Partial / platform-dependent | `rdp.rs` 有 Windows native/embedded 路径与非 Windows external/stub 路径；IronRDP 检查受本机 Windows Rust 链接环境不可用阻塞（MSVC C++ 工作负载半装 + 未安装 Windows SDK），不能宣称三平台可用。 |
 | VNC | Confirmed（静态 runner） | `vnc.rs` 有 noVNC websocket relay/fallback runner 和 session manager；真实 server、外部进程退出、平台窗口需验收。 |
 | Workspace persistence | Partial | `shared/tauri/windowState.ts` 仅恢复 `mxterm.windowState.v1` 窗口几何；未发现保存连接 session/tab/split 布局的 schema 或恢复链路。 |
@@ -28,9 +46,9 @@
 | Monitoring | Confirmed（静态） | `remote_monitor`、事件和面板存在；CPU topology source check 受缺少 TypeScript 阻塞，采集性能尚未验收。 |
 | X11 | Missing | 未发现对应 Rust module/command/runner 的完整实现；需求 v1 仍列为验收项，应单独决策交付范围。 |
 | i18n | Weak | 未发现 i18n 依赖或 catalog；features 中存在大量硬编码中文和 `toLocaleString("zh-CN")`。 |
-| Frontend tests | Partial | `pnpm test` 已是真实 Vitest 门禁（2026-09-19）：纯逻辑模块与 `ConfirmDialog` 组件测试接入 CI；WorkspaceShell 内嵌的 session/tab、command sender、restore 逻辑仍无独立 reducer，待 Task 04/05 提取后补 characterization。 |
+| Frontend tests | Partial | `pnpm test` 已是真实 Vitest 门禁（2026-09-19）：纯逻辑模块、`ConfirmDialog`、split/multiExec/sessionTabs reducer 与 controller characterization 接入 CI（2026-09-23：177 passed / 1 todo）；关闭路径、实例投影、MultiExec 目标的测试随 WF-00B/01/04C 补。 |
 | Lazy loading / startup | Confirmed（源码） | `main.tsx`、`App.tsx` 动态加载 WorkspaceShell/VNC 等，已有 idle prewarm；`check-startup-module-boundary-source.mjs` 通过，build 也生成了独立的 WorkspaceShell/Terminal/RemoteFileEditor/VNC chunk。 |
-| 三平台 build/run | Environment-blocked | Rust/cargo 已安装到 `D:\tmp\nexaterm-rust`；本机 Windows 的 MSVC C++ 工作负载不完整（缺 CRT 头文件与 `lib\x64`）且未安装 Windows SDK，`link.exe` 虽存在但无法工作，仍未取得 Windows/macOS/Linux 构建和运行证据。 |
+| 三平台 build/run | Partial（CI check/test） | 2026-09-23：CI run `35600276051` 的 Rust linux-x64 / macos-arm64 / windows-x64 check/test 均 success；Windows 打包 job skipped；本机 Windows MSVC 环境问题仍存在（见 SECURITY_REVIEW）。仍无三平台**运行**与安装包证据。 |
 | FTP/FTPS | P2 / not in current baseline | 需求表列为 P2，当前不是 v1 主线阻塞。 |
 
 ## 2. 已执行验证
