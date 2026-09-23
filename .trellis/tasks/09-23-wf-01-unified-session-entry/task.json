@@ -3,7 +3,7 @@
   "name": "wf-01-unified-session-entry",
   "title": "WF-01 主窗口与统一会话入口",
   "description": "统一菜单/工具栏入口、会话实例标签投影、左侧 Sessions/Files 切换壳；验收 A02",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,

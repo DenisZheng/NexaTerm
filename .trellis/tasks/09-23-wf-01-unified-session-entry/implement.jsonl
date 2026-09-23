@@ -1,1 +1,5 @@
-{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file": "docs/WORKFLOW_SPEC.md", "reason": "WS-M01–M05、WS-E01–E13、WS-R01：本任务实现的目标规则（v0.2 已确认 D1–D8）"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Radix/Lucide、token、暗色、快捷键基础设施、titlebar 溢出机制、lazy 边界；带 [Current implementation] 标注的条目在本任务按 WS 规则替换"}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "reducer/selector/controller 与 followUp 约定；顺序表与投影 selector 必须遵守"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "测试位置与 fixture 规则"}
+{"file": "prototype/light-neutral/mxterm-light-neutral-design.md", "reason": "原型说明顶部适用范围表：哪些视觉条目保留、哪些布局条目已替代"}

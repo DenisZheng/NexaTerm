@@ -1,1 +1,4 @@
-{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file": "docs/WORKFLOW_SPEC.md", "reason": "核对实现与 WS-E02/E06/E08/E11–E13 一致；三个基准问题答案未被改回旧布局"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "核对 token/暗色/共享组件/lazy 边界；不得依据 [Current implementation] 标注把新入口改回旧位置"}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "核对投影为纯 selector、顺序表在 reducer、无第二份会话数据"}
+{"file": ".trellis/tasks/09-23-wf-01-unified-session-entry/design.md", "reason": "对照 §4 切片与 §5 风险"}
