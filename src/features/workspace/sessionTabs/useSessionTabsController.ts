@@ -32,6 +32,7 @@ export interface SessionTabsControllerInputs {
  *
  * 指针、模式、首页记忆位与两张记忆表由 `sessionPointerReducer` 持有；五个会话集合与文件布局记忆
  * 仍是 `useState`（集合与 WorkspaceShell 里的 `*Ref` 同步写入耦合，待 ref 通道消灭后再迁）。
+ * reducer 另持有工作区项顺序表 `order`（WF-01 切片 2），切片 3 接入顶栏实例标签时再对外暴露。
  *
  * 对外暴露 `dispatchTabs`（意图型 action）与唯一保留的过渡 setter `setActiveRemoteFileTabId`；
  * 两张记忆表只能经 remember / forget 系列 action 修改。

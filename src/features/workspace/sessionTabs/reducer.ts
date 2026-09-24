@@ -6,8 +6,10 @@ import {
   decideTerminalClose,
   decideVncRemove,
   type CloseDecision,
+  type CloseSnapshot,
   type FollowUp,
 } from "./closeDecision";
+import { liveInstanceIds } from "./instances";
 import type { UnifiedWorkbenchTab, WorkspaceMode } from "./types";
 
 /**
@@ -34,6 +36,13 @@ export interface SessionPointerState {
   /** 独立于 mode 的首页记忆位：mode 不是 home 但没有会话时也可能显示首页。 */
   homeActive: boolean;
   mode: WorkspaceMode;
+  /**
+   * 工作区项顺序表（WF-01，WS-M05），职责只是排序。元素为实例项 id（`instanceItemId`，`kind:原始id`）；
+   * 首页固定在最前、分屏组占其最靠前成员的位置，二者都不入表。`tabs/itemOpened` 追加且已在表中则不变，
+   * 所以表内无重复；关闭 / 删除 action 按移除后的快照裁剪。集合里有而表里没有的实例由
+   * `selectWorkspaceItems` 按集合顺序补尾。拖拽重排（`tabs/moveItem`）预留：当前没有重排入口，不实现。
+   */
+  order: string[];
 }
 
 export const initialSessionPointerState: SessionPointerState = {
@@ -49,6 +58,7 @@ export const initialSessionPointerState: SessionPointerState = {
   followUp: null,
   homeActive: false,
   mode: "home",
+  order: [],
 };
 
 function set<K extends keyof SessionPointerState>(
@@ -101,6 +111,30 @@ function applyDecision(state: SessionPointerState, decision: CloseDecision): Ses
     next = sessionPointerReducer(next, { type: "tabs/forgetConnections", connectionIds: decision.forget });
   }
   return set(next, "followUp", decision.followUp);
+}
+
+/** 顺序表只保留移除后快照里仍存在的实例（WS-M05）；没有需要移除的 id 时返回原引用。 */
+function pruneOrder(
+  state: SessionPointerState,
+  snapshot: CloseSnapshot,
+  closingConnectionIds?: ReadonlySet<string>,
+): SessionPointerState {
+  if (state.order.length === 0) {
+    return state;
+  }
+  const live = liveInstanceIds(snapshot, closingConnectionIds);
+  const order = state.order.filter((id) => live.has(id));
+  return order.length === state.order.length ? state : { ...state, order };
+}
+
+/** 关闭 / 删除 action 的公共收尾：按决策改指针，再裁剪顺序表。 */
+function applyClose(
+  state: SessionPointerState,
+  decision: CloseDecision,
+  snapshot: CloseSnapshot,
+  closingConnectionIds?: ReadonlySet<string>,
+): SessionPointerState {
+  return pruneOrder(applyDecision(state, decision), snapshot, closingConnectionIds);
 }
 
 export function sessionPointerReducer(
@@ -173,18 +207,24 @@ export function sessionPointerReducer(
     case "tabs/clearActiveFile":
       return set(state, "activeRemoteFileTabId", null);
     case "tabs/closeTerminals":
-      return applyDecision(state, decideTerminalClose(state, action.closingTabs, action.snapshot));
+      return applyClose(state, decideTerminalClose(state, action.closingTabs, action.snapshot), action.snapshot);
     case "tabs/closeConnections":
-      return applyDecision(
+      return applyClose(
         state,
         decideConnectionClose(state, action.connectionIds, action.snapshot, action.variant),
+        action.snapshot,
+        new Set(action.connectionIds),
       );
     case "tabs/closeLocalTerminals":
-      return applyDecision(state, decideLocalClose(state, action.closingIds, action.snapshot));
+      return applyClose(state, decideLocalClose(state, action.closingIds, action.snapshot), action.snapshot);
     case "tabs/removeRdp":
-      return applyDecision(state, decideRdpRemove(state, action.closingIds, action.snapshot));
+      return applyClose(state, decideRdpRemove(state, action.closingIds, action.snapshot), action.snapshot);
     case "tabs/removeVnc":
-      return applyDecision(state, decideVncRemove(state, action.closingIds, action.snapshot));
+      return applyClose(state, decideVncRemove(state, action.closingIds, action.snapshot), action.snapshot);
+    case "tabs/itemOpened":
+      return state.order.includes(action.itemId)
+        ? state
+        : { ...state, order: [...state.order, action.itemId] };
     case "tabs/consumeFollowUp":
       return set(state, "followUp", null);
     case "tabs/goHome": {

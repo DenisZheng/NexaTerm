@@ -422,6 +422,7 @@ import {
   useTerminalSplitController,
   type TerminalSplitHost,
 } from "../workspace/split/useTerminalSplitController";
+import { nextOrdinal } from "../workspace/sessionTabs/instances";
 import {
   groupByConnection,
   selectActiveConnectedTerminalTab,
@@ -4073,13 +4074,13 @@ export function WorkspaceShell() {
     connection: ConnectionProfile,
     step: ConnectionStepState,
   ): TerminalTab {
-    const nextIndex = nextTerminalIndexForConnection(tabs, connection.id);
+    const ordinal = nextTerminalOrdinalForConnection(tabs, connection.id);
 
     return {
       connectionId: connection.id,
       connectionStep: step,
       id: `connection-${connection.id}-${step.id.toString()}`,
-      index: nextIndex,
+      ordinal,
       status: connectionStepStatusTitle(step),
       title: step.mode === "terminal" ? "连接准备" : "连接测试",
       type: "connecting",
@@ -4094,16 +4095,16 @@ export function WorkspaceShell() {
   ): TerminalTab {
     const now = Date.now();
     const nonce = `${now.toString()}-${Math.random().toString(36).slice(2, 8)}`;
-    const nextIndex = nextTerminalIndexForConnection(tabs, connection.id);
+    const ordinal = nextTerminalOrdinalForConnection(tabs, connection.id);
 
     return {
       connectionId: connection.id,
       connectionStep: null,
       id: `terminal-${connection.id}-${nonce}`,
-      index: nextIndex,
+      ordinal,
       requestId: `terminal-${connection.id}-${nonce}`,
       status: "正在连接",
-      title: title || terminalTabTitle(nextIndex),
+      title: title || terminalTabTitle(ordinal),
       type: "terminal",
       warmupOutput: [],
     };
@@ -4150,7 +4151,7 @@ export function WorkspaceShell() {
               requestId,
               sessionId,
               status: "已连接",
-              title: terminalTabTitle(tab.index),
+              title: terminalTabTitle(tab.ordinal),
               type: "terminal" as const,
               warmupOutput,
             }
@@ -6116,13 +6117,14 @@ export function WorkspaceShell() {
     tabs: LocalTerminalTab[],
     profile: LocalTerminalProfile,
   ): LocalTerminalTab {
-    const nextIndex =
-      tabs.filter((tab) => tab.profileId === profile.id).length + 1;
+    const sameProfileTabs = tabs.filter((tab) => tab.profileId === profile.id);
+    const nextIndex = sameProfileTabs.length + 1;
     const now = Date.now();
     const nonce = `${now.toString()}-${Math.random().toString(36).slice(2, 8)}`;
 
     return {
       id: `local-terminal-${nonce}`,
+      ordinal: nextOrdinal(sameProfileTabs.map((tab) => tab.ordinal)),
       profileId: profile.id,
       profileKind: profile.kind,
       requestId: `local-terminal-${nonce}`,
@@ -6292,9 +6294,11 @@ export function WorkspaceShell() {
   ): LocalTerminalTab {
     const now = Date.now();
     const nonce = `${now.toString()}-${Math.random().toString(36).slice(2, 8)}`;
-    const nextIndex = tabs.filter((tab) => tab.profileId === profileId).length + 1;
+    const sameProfileTabs = tabs.filter((tab) => tab.profileId === profileId);
+    const nextIndex = sameProfileTabs.length + 1;
     return {
       id: `${source}-terminal-${nonce}`,
+      ordinal: nextOrdinal(sameProfileTabs.map((tab) => tab.ordinal)),
       profileId,
       profileKind: source,
       requestId: `${source}-terminal-${nonce}`,
@@ -11740,17 +11744,12 @@ function removeDirectoryState<T>(
   return next;
 }
 
-function nextTerminalIndexForConnection(tabs: TerminalTab[], connectionId: string) {
-  return (
-    Math.max(
-      -1,
-      ...tabs.filter((tab) => tab.connectionId === connectionId).map((tab) => tab.index),
-    ) + 1
-  );
+function nextTerminalOrdinalForConnection(tabs: TerminalTab[], connectionId: string) {
+  return nextOrdinal(tabs.filter((tab) => tab.connectionId === connectionId).map((tab) => tab.ordinal));
 }
 
-function terminalTabTitle(index: number) {
-  return index === 0 ? "终端" : `终端 ${index.toString()}`;
+function terminalTabTitle(ordinal: number) {
+  return ordinal === 0 ? "终端" : `终端 ${ordinal.toString()}`;
 }
 
 function shortDockerRuntimeId(id: string) {

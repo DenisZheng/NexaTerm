@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import type { CloseSnapshot } from "./closeDecision";
 import { initialSessionPointerState, sessionPointerReducer, type SessionPointerState } from "./reducer";
 
 const home: SessionPointerState = { ...initialSessionPointerState, homeActive: true };
@@ -253,5 +254,92 @@ describe("WF-00B：关闭/删除 action 经 closeDecision 落到指针与 follow
     const vncActive: SessionPointerState = { ...home, activeVncSessionId: "v1", activeConnectionId: "c", mode: "vnc", homeActive: false };
     const removed = sessionPointerReducer(vncActive, { type: "tabs/removeVnc", closingIds: ["v1"], snapshot });
     expect(removed).toMatchObject({ activeVncSessionId: null, followUp: { kind: "rdp", connectionId: "b", sessionId: "r1" } });
+  });
+});
+
+describe("WF-01：工作区项顺序表", () => {
+  const emptySnapshot: CloseSnapshot = {
+    localTerminalTabs: [],
+    rdpSessions: [],
+    remoteFileTabs: [],
+    terminalTabs: [],
+    vncSessions: [],
+  };
+
+  it("itemOpened 按打开顺序追加，跨类型保持全局顺序", () => {
+    const first = sessionPointerReducer(home, { type: "tabs/itemOpened", itemId: "ssh:t1" });
+    const second = sessionPointerReducer(first, { type: "tabs/itemOpened", itemId: "local:l1" });
+    expect(second.order).toEqual(["ssh:t1", "local:l1"]);
+  });
+
+  it("itemOpened 对已在表中的 id 返回原引用，位置不变", () => {
+    const opened: SessionPointerState = { ...home, order: ["ssh:t1", "local:l1"] };
+    expect(sessionPointerReducer(opened, { type: "tabs/itemOpened", itemId: "ssh:t1" })).toBe(opened);
+  });
+
+  it("closeTerminals 只移除快照里已不存在的实例", () => {
+    const state: SessionPointerState = { ...home, order: ["ssh:t1", "local:l1", "ssh:t2"] };
+    const next = sessionPointerReducer(state, {
+      type: "tabs/closeTerminals",
+      closingTabs: [{ connectionId: "a", id: "t1" }],
+      snapshot: { ...emptySnapshot, localTerminalTabs: [{ id: "l1" }], terminalTabs: [{ connectionId: "a", id: "t2" }] },
+    });
+    expect(next.order).toEqual(["local:l1", "ssh:t2"]);
+  });
+
+  it("closeConnections 移除该连接的全部实例，快照里残留的同连接 RDP / VNC 也一并移除", () => {
+    const state: SessionPointerState = { ...home, order: ["ssh:t1", "rdp:r1", "vnc:v1", "local:l1", "rdp:r2"] };
+    const next = sessionPointerReducer(state, {
+      type: "tabs/closeConnections",
+      connectionIds: ["a"],
+      snapshot: {
+        ...emptySnapshot,
+        localTerminalTabs: [{ id: "l1" }],
+        rdpSessions: [
+          { connectionId: "a", id: "r1" },
+          { connectionId: "b", id: "r2" },
+        ],
+        vncSessions: [{ connectionId: "a", id: "v1" }],
+      },
+      variant: "sessions",
+    });
+    expect(next.order).toEqual(["local:l1", "rdp:r2"]);
+  });
+
+  it("closeLocalTerminals / removeRdp / removeVnc 移除各自的实例", () => {
+    const state: SessionPointerState = { ...home, order: ["local:l1", "rdp:r1", "vnc:v1"] };
+    const all: CloseSnapshot = {
+      ...emptySnapshot,
+      localTerminalTabs: [{ id: "l1" }],
+      rdpSessions: [{ connectionId: "b", id: "r1" }],
+      vncSessions: [{ connectionId: "c", id: "v1" }],
+    };
+    expect(
+      sessionPointerReducer(state, { type: "tabs/closeLocalTerminals", closingIds: ["l1"], snapshot: { ...all, localTerminalTabs: [] } })
+        .order,
+    ).toEqual(["rdp:r1", "vnc:v1"]);
+    expect(
+      sessionPointerReducer(state, { type: "tabs/removeRdp", closingIds: ["r1"], snapshot: { ...all, rdpSessions: [] } }).order,
+    ).toEqual(["local:l1", "vnc:v1"]);
+    expect(
+      sessionPointerReducer(state, { type: "tabs/removeVnc", closingIds: ["v1"], snapshot: { ...all, vncSessions: [] } }).order,
+    ).toEqual(["local:l1", "rdp:r1"]);
+  });
+
+  it("关闭非活动实例且顺序表无需裁剪时返回原引用", () => {
+    const state: SessionPointerState = {
+      ...home,
+      activeConnectionId: "a",
+      activeTabId: "t1",
+      homeActive: false,
+      mode: "ssh",
+      order: ["ssh:t1"],
+    };
+    const next = sessionPointerReducer(state, {
+      type: "tabs/closeTerminals",
+      closingTabs: [{ connectionId: "a", id: "t2" }],
+      snapshot: { ...emptySnapshot, terminalTabs: [{ connectionId: "a", id: "t1" }] },
+    });
+    expect(next).toBe(state);
   });
 });

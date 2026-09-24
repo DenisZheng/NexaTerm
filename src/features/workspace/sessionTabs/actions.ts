@@ -42,6 +42,8 @@ export type SessionTabsAction =
   | { type: "tabs/forgetConnections"; connectionIds: readonly string[] }
   | { type: "tabs/rememberUnified"; connectionId: string; tab: UnifiedWorkbenchTab }
   | { type: "tabs/forgetUnified"; connectionIds: readonly string[] }
+  /** 实例加入集合后登记到工作区项顺序表末尾（WF-01，WS-M05）；`itemId` 为 `instanceItemId(kind, 原始 id)`。 */
+  | { type: "tabs/itemOpened"; itemId: string }
   /** 输入型：终端/文件 tab 集合变化后校正 unified 记忆（失效则 file 优先回退，连接消失则删除）。 */
   | {
       type: "tabs/normalizeUnified";

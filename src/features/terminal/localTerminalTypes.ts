@@ -66,6 +66,11 @@ export interface LocalTerminalTab {
   source?: "local" | "telnet" | "serial";
   profileId: string;
   profileKind: string;
+  /**
+   * 同一 profile（telnet / serial 为同一连接）内的实例编号，0 起、创建时取 max+1，之后不变；
+   * 用于顶层实例标签标题（WS-E11），不是排序位。`title` 仍按原规则生成，二者互不推导。
+   */
+  ordinal: number;
   title: string;
   requestId?: string;
   sessionId?: string;
