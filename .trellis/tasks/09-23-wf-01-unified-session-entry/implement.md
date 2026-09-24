@@ -19,11 +19,11 @@
 
 ## 2. 实例投影（纯函数，shell 不变）
 
-- [ ] `sessionTabs/instances.ts`：`WorkspaceItem` 联合（`home | ssh | local | rdp | vnc | split`）、`selectWorkspaceItems(collections, order, splitHost)`、`itemTitle(item, lookups)`（WS-E11）、缺失顺序项按集合顺序补尾。
-- [ ] `SessionPointerState.order: string[]`：`tabs/itemOpened(id)` / 关闭 action 内移除 / `tabs/moveItem` 预留；`selectActiveItemId(pointers)` 派生。
-- [ ] 承接 Task 04 顺延：`WorkbenchTab` 联合、`TerminalTab.index` → `ordinal` 命名（类型层），`UnifiedWorkbenchTab.kind` 映射。
-- [ ] 测试：`instances.test.ts`（投影、标题、顺序补尾、分屏组折叠）+ reducer 新 case。
-- [ ] 提交 `refactor(workspace): add workspace item projection and order table`。
+- [x] `sessionTabs/instances.ts`：`WorkspaceItem` 联合（`home | ssh | local | rdp | vnc | split`）、`selectWorkspaceItems(collections, order, split)`（`split` 为 `{ host, bindings } | null`）、`itemTitle(item, lookups)`（WS-E11，返回结构化描述）、缺失顺序项按集合顺序补尾。
+- [x] `SessionPointerState.order: string[]`：`tabs/itemOpened(itemId)` / 关闭 action 内按移除后快照裁剪 / `tabs/moveItem` 只在字段注释预留、不加 action；`selectActiveItemId(active, items)` 派生（输入改为 shell 已解析的活动状态，见结果记录）。
+- [x] 承接 Task 04 顺延：`WorkbenchTab` 联合由 `WorkspaceItem` 承接；`TerminalTab.index` → `ordinal`；`UnifiedWorkbenchTab.kind` 映射被 WS-E05 / WS-M05 取代，不实现（见结果记录）。
+- [x] 测试：`instances.test.ts`（投影、标题、顺序补尾、分屏组折叠、活动项）+ reducer 新 case。
+- [x] 提交 `refactor(workspace): add workspace item projection and order table`。
 
 ## 3. 顶栏改实例标签
 
@@ -80,3 +80,15 @@ node scripts/check-workspace-empty-home-source.mjs
   - 设计评审：`ui-ux-pro-max` 本会话不可用，按约定由维护者人工评审，结论「先按此原型验证 OK，后续按需再改」。
   - 已知偏离（维护者确认暂不改）：底部 MultiExec 栏做成了目标面板（Live/Send 分段 + 逐实例 chip），比 MobaXterm 的单行广播栏重；实例级目标与 RDP 置灰按 WS-X03 / WS-X05 保留，形态待后续需求再向 MobaXterm 收敛。
   - 提交：`docs(prototype): add unified session entry states to the light-neutral master`。
+- 切片 2（实例投影）2026-09-23 完成：新增 `src/features/workspace/sessionTabs/instances.ts`（+ `instances.test.ts`）；`SessionPointerState.order` 顺序表与 `tabs/itemOpened`；`TerminalTab.index` → `ordinal`；`LocalTerminalTab` 新增 `ordinal`。shell 只做字段改名与两处本地 tab 构造补 `ordinal`，不接线：不 dispatch `itemOpened`，运行时顺序表恒为空，投影按集合顺序。
+  - 开工前维护者确认的四点（2026-09-23，均按推荐）：
+    1. Task 04 顺延项收口：`WorkbenchTab` 联合由 `WorkspaceItem` 承接，不另建类型（Task 04 设想的顶层 `editor` 与 WS-E05 冲突）；`index → ordinal` 完成；`UnifiedWorkbenchTab.kind` 映射原本服务于"五个集合合并成 tabs[]"的模型，在实例投影里没有消费者（文件子标签不是顶层项，终端即 `ssh:<id>`），视为被 WS-E05 / WS-M05 取代，不实现；切片 3 若真需要再加。
+    2. `itemTitle` 返回结构化描述（`{ kind, name, ordinal }`），不拼中文（WS-E09）。显示基数留到切片 3 与 `terminalTabTitle` 一起定：原型首个终端为"终端 1"，现有内部标题为"终端"，分屏 pane 头与命令目标用的是后者。
+    3. `LocalTerminalTab.ordinal`：同 profile（telnet / serial 为同一连接）内 max+1、0 起，在两个构造函数赋值；现有 `title` 生成规则（同 profile 数量 + 1）不变，关闭实例后二者编号可能不一致，切片 3 统一。telnet / serial 标题取连接名，项上带 `source`。
+    4. 分屏组标题取 pane 顺序中第一个属于宿主的成员（宿主在代码里是连接级），找不到取第一个成员。`selectActiveItemId(active, items)` 吃 shell 已解析的 showingHome / mode / terminalSplitActive / 各类活动实例（RDP / VNC 为 `selectActiveSession` 结果），不照原计划只吃指针：showingHome 取决于集合是否为空，RDP / VNC 活动会话有按连接回退的规则。
+  - 实现细节：实例 id 为 `kind:原始id`（ssh / local 与 `terminalPaneBindingKey` 同格式，测试锁定）；分屏组 id 固定为 `split`（计划曾写 `split:<布局根 id>`，但根节点 id 随增减 pane 变化，且同一时间至多一个分屏组）；五个关闭 action 统一按移除后快照裁剪顺序表，closeConnections 额外按连接排除（与 `decideConnectionClose` 的防御性过滤一致）。已核实 shell 里 6 处实例移除路径都配对了关闭 action，四个实例集合的快照都取自 `*Ref.current`。
+  - 与原型的出入：原型状态 3 里 "Ubuntu · 1" 同时出现在分屏 pane 与顶栏，与 WS-E12 矛盾；按 WS-E12 实现，原型不改。
+  - 验证：`pnpm run check` 通过；`pnpm test` 237 passed / 1 todo（预存的 `terminalSplitLayout.test.ts` NaN 比例 todo）；`pnpm run build` 通过；`check-startup-module-boundary-source`、`check-session-subtab-memory`、`check-workspace-ssh-activation-source`、`check-workspace-empty-home-source` 通过；`check-command-sender-active-tab-source` 失败，已在 HEAD `224d8fa` 上复现同一错误，属预存，留给 WF-04C。TDD：先写测试见红（模块缺失、顺序表未实现），朴素实现下"返回原引用"类用例变红，最终实现全绿。
+  - 流程说明：本会话 Trellis 指针回退到 2026-09-22 旧会话的 Task 04（会话无 session identity，`task.py start` 走 degraded 分支不写指针）；为避免 hook 按旧指针注入错误任务上下文，未派 trellis-implement / check 子代理，实施与检查在主会话完成。
+  - spec：`.trellis/spec/frontend/state-management.md` 补"Workspace item projection"约定。
+  - 提交：`refactor(workspace): add workspace item projection and order table`。

@@ -12,7 +12,7 @@
 
 1. **先原型后实现**：在 `prototype/light-neutral/mxterm-light-neutral.html` 上展示三种状态（空工作区、一个 SSH + Files、四 pane + MultiExec 目标面板），并标出窄窗口下菜单/工具栏收起方式；经现有设计流程（`ui-ux-pro-max` 审查 + 用户确认）后再改 React。原型确认的同时回写 `docs/WORKFLOW_SPEC.md` 的待确认项 WS-E02、WS-E06、WS-E08。
 2. 一个保存的连接可产生多个实例；顶层标签使用实例投影；Local 不再只能作为一个聚合入口隐藏全部子终端；分屏工作区项与其中的 pane 引用同一套实例 ID（WS-M02、WS-M04）。
-3. 投影用 selector 从现有 Terminal/Local/RDP/VNC 集合生成，不复制第二份会话数据；标签顺序可用独立 ID 顺序表（WS-M05）。承接 Task 04 顺延项：`WorkbenchTab` 联合、`TerminalTab.index` 保留为 `ordinal`、`UnifiedWorkbenchTab.kind` 映射函数。
+3. 投影用 selector 从现有 Terminal/Local/RDP/VNC 集合生成，不复制第二份会话数据；标签顺序可用独立 ID 顺序表（WS-M05）。承接 Task 04 顺延项：`WorkbenchTab` 联合、`TerminalTab.index` 保留为 `ordinal`、`UnifiedWorkbenchTab.kind` 映射函数。（切片 2 维护者确认：`WorkbenchTab` 联合由 `WorkspaceItem` 承接；`UnifiedWorkbenchTab.kind` 映射被 WS-E05 / WS-M05 取代，不实现，见 implement.md 结果记录。）
 4. 菜单、工具栏、上下文菜单和快捷键调用同一动作入口，能力判断集中派生；未实现功能显示可用状态及原因（WS-E01）。复用 `src/features/shortcuts/`，不另起注册中心（WS-E10）。
 5. 左侧 Sessions / Files 切换壳（WS-E04）：本包只建立切换与 Files 占位绑定到活动 pane 的上下文；Files 视图的抽出与目录跟随在 WF-03。
 6. English/zh-CN 资源与 OS 快捷键标记随新入口引入（WS-E09）。
