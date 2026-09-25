@@ -3,11 +3,13 @@ import { describe, expect, it } from "vitest";
 import { terminalPaneBindingKey } from "../../terminal/terminalSplitLayout";
 
 import {
+  displayOrdinal,
   instanceItemId,
   itemTitle,
   nextOrdinal,
   selectActiveItemId,
   selectWorkspaceItems,
+  unregisteredInstanceIds,
   type ActiveInstanceRefs,
   type InstanceCollections,
   type TerminalInstanceItem,
@@ -39,6 +41,34 @@ describe("实例 id 与编号", () => {
   it("nextOrdinal 取 owner 内最大值 + 1，0 起；关闭中间实例留下的空号不复用", () => {
     expect(nextOrdinal([])).toBe(0);
     expect(nextOrdinal([0, 2])).toBe(3);
+  });
+
+  it("displayOrdinal：owner 内首个实例不显示编号，其后显示 ordinal + 1（终端、终端 2…）", () => {
+    expect(displayOrdinal(0)).toBeNull();
+    expect(displayOrdinal(1)).toBe(2);
+    expect(displayOrdinal(4)).toBe(5);
+  });
+});
+
+describe("unregisteredInstanceIds", () => {
+  it("返回集合里有、顺序表里没有的实例 id，按 ssh → local → rdp → vnc 的集合顺序", () => {
+    expect(
+      unregisteredInstanceIds(
+        {
+          localTerminalTabs: [{ id: "l1" }],
+          rdpSessions: [{ id: "r1" }],
+          terminalTabs: [{ id: "t1" }, { id: "t2" }],
+          vncSessions: [{ id: "v1" }],
+        },
+        ["ssh:t1", "rdp:r1"],
+      ),
+    ).toEqual(["ssh:t2", "local:l1", "vnc:v1"]);
+  });
+
+  it("全部已登记时返回空数组", () => {
+    expect(
+      unregisteredInstanceIds({ ...noInstances, terminalTabs: [ssh("t1", "a")] }, ["ssh:t1"]),
+    ).toEqual([]);
   });
 });
 

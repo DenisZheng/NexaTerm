@@ -11,7 +11,7 @@
 - `src/features/layout/WorkspaceShell.tsx`：`git show HEAD:… | Measure-Object -Line` = 13,076（347c8b2 = 13,132）。此数字说明职责仍集中，不作为产品完成率或重构验收标准。
 - 状态所有权（Task 04 已完成切片）：`split/` reducer + `useTerminalSplitController`；`multiExec/` 只持 sync 三态（`off|live`、targets、error）；`sessionTabs/` 持 7 个指针 + view + mode + homeActive + 2 张记忆表的 `SessionPointerState`，激活/记忆函数已 dispatch action；**五类会话集合（terminalTabs / localTerminalTabs / rdpSessions / vncSessions / remoteFileTabs）与文件布局记忆仍是 useState**，关闭/删除路径仍有约 50 处单值指针 setter（→ WF-00B）。
 - 当前 UI 事实（与目标的差距见 WORKFLOW_SPEC §9）：
-  - 顶部标签：`AppTitlebar.tsx` 接收按 connectionId 分组的摘要；Local 是独立聚合入口，子终端隐藏在其下。
+  - 顶部标签（WF-01 切片 3 起）：`AppTitlebar.tsx` 按会话实例成项（`selectWorkspaceItems` → `buildTitlebarItems`），首页为首个不可关闭项，同一连接多终端各占一项，分屏组一项；聚合"首页 / 终端"按钮已退役，本地终端经标签行末 `+`（`NewSessionMenu`）新建。工作区内部仍保留按连接的终端子标签行（去留见 WORKFLOW_SPEC 后续交付包）。
   - 左侧：连接仓库（`ConnectionPane`，树形分组的 `parentId` 存 localStorage；SQLite `connection_groups` 与 `SyncConnectionGroup` 仍是平面结构）。
   - 右侧：`RemoteFilePanel` 承载 `files | monitor | commands | tools | ai` 五个一级工具；文件传输为 files 面板底部 dock；隧道在 tools 内部。
   - Files 绑定：按保存的 connectionId 解析；有 tab 级 stateKey、terminalPath、手动定位、目录请求失效保护；不自动跟随目录。

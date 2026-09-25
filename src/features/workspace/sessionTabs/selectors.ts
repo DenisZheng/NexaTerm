@@ -1,6 +1,6 @@
 import type { TerminalPaneBinding } from "../../terminal/terminalSplitLayout";
 
-import type { ConnectionSessionSummary, WorkspaceMode } from "./types";
+import type { WorkspaceMode } from "./types";
 
 /** 按 connectionId 分组；保持原插入顺序。返回新 Map，组件内需 useMemo。 */
 export function groupByConnection<T extends { connectionId: string }>(items: readonly T[]) {
@@ -11,31 +11,6 @@ export function groupByConnection<T extends { connectionId: string }>(items: rea
     groups.set(item.connectionId, group);
   }
   return groups;
-}
-
-/**
- * 每个连接下的会话摘要（终端 + RDP + VNC 合并）。
- * 合并顺序：终端 → RDP → VNC，与 WorkspaceShell 原实现一致。
- */
-export function selectConnectionSessions(
-  terminalsByConnection: ReadonlyMap<string, readonly { id: string }[]>,
-  rdpByConnection: ReadonlyMap<string, readonly { id: string }[]>,
-  vncByConnection: ReadonlyMap<string, readonly { id: string }[]>,
-): ConnectionSessionSummary[] {
-  const sessions = new Map<string, ConnectionSessionSummary>();
-  const merge = (groups: ReadonlyMap<string, readonly { id: string }[]>) => {
-    groups.forEach((tabs, connectionId) => {
-      const existing = sessions.get(connectionId);
-      sessions.set(connectionId, {
-        connectionId,
-        tabs: existing ? [...existing.tabs, ...tabs] : [...tabs],
-      });
-    });
-  };
-  merge(terminalsByConnection);
-  merge(rdpByConnection);
-  merge(vncByConnection);
-  return Array.from(sessions.values());
 }
 
 /**

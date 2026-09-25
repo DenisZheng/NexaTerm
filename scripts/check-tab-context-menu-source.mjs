@@ -28,10 +28,11 @@ for (const [sourceName, source, needles] of [
     "AppTitlebar.tsx",
     titlebarSource,
     [
+      // WF-01 切片 3：顶栏标签是会话实例（WS-M02），关闭范围按实例计算。
       "TabContextMenu",
-      "onCloseAllConnectionSessions",
-      "onCloseConnectionSessionsToRight",
-      "onCloseOtherConnectionSessions",
+      "onCloseAll",
+      "onCloseToRight(item.id)",
+      "onCloseOthers(item.id)",
       "Ctrl+K W",
     ],
   ],
@@ -46,8 +47,8 @@ for (const [sourceName, source, needles] of [
       "closeTerminalTabsToRight",
       "closeOtherLocalTerminalTabs",
       "closeLocalTerminalTabsToRight",
-      "closeOtherConnectionSessions",
-      "closeConnectionSessionsToRight",
+      "closeWorkspaceItems(itemId, \"others\")",
+      "closeWorkspaceItems(itemId, \"right\")",
       "copyRemotePath(tab.path)",
       "isClosableSavedRemoteFileTab",
     ],
@@ -75,12 +76,17 @@ for (const functionName of [
   "closeRemoteFileTabsToRight",
   "closeTerminalTabsToRight",
   "closeLocalTerminalTabsToRight",
-  "closeConnectionSessionsToRight",
 ]) {
   const match = workspaceSource.match(new RegExp(`function ${functionName}\\([^)]*\\) \\{[\\s\\S]*?\\n  \\}`));
   if (!match || !match[0].includes("if (index < 0)")) {
     throw new Error(`${functionName} should guard missing tab indexes before slicing.`);
   }
+}
+
+// 顶栏实例的"关闭右侧"由 closeScopeItemIds 计算，目标不存在时返回空（itemClose.test.ts 覆盖）。
+const itemCloseSource = readFileSync("src/features/workspace/sessionTabs/itemClose.ts", "utf8");
+if (!itemCloseSource.includes("return index < 0 ? [] : closable.slice(index + 1);")) {
+  throw new Error("closeScopeItemIds should guard missing item indexes before slicing.");
 }
 
 console.log("Tab context menu source check passed.");

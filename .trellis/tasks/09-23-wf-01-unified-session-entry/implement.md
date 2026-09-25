@@ -27,12 +27,12 @@
 
 ## 3. 顶栏改实例标签
 
-- [ ] `AppTitlebar` props：`items` + `activeItemId` + `onSelectItem` / `onCloseItem` / `onCloseOthers` / `onCloseToRight` / `onCloseAll`；溢出机制沿用；`localTerminalActive` / `connectionSessions` 退役。
-- [ ] shell：`selectWorkspaceItems` 接入；点击项 → 按 kind 调现有 activate*；关闭项 → 现有 close 路径（WF-00B action）。
-- [ ] 文案走 i18n key（依赖切片 6，可先建最小 `t`）。
-- [ ] 检查脚本：`check-session-subtab-memory.mjs` 中 `activateTerminalTab(tab)` 断言核对；`check-command-sender-active-tab-source.mjs`（预存失败）改为断言动作表或明确留给 WF-04C。
-- [ ] 验证：tsc / Vitest / build / boundary；**真实窗口**：同 profile 两终端 + Local + 一个 RDP/VNC 可直接定位，关一个不影响兄弟，焦点后操作作用于正确实例（A02）。
-- [ ] 提交 `feat(workspace): show session instances as top-level tabs`。
+- [x] `AppTitlebar` props：`items` + `activeItemId` + `onSelectItem` / `onCloseItem` / `onCloseOthers` / `onCloseToRight` / `onCloseAll`；溢出机制沿用；`localTerminalActive` / `connectionSessions` 退役。
+- [x] shell：`selectWorkspaceItems` 接入；点击项 → 按 kind 调现有 activate*；关闭项 → 现有 close 路径（WF-00B action）。
+- [x] 文案走 i18n key（依赖切片 6，可先建最小 `t`）。
+- [x] 检查脚本：`check-session-subtab-memory.mjs` 中 `activateTerminalTab(tab)` 断言核对；`check-command-sender-active-tab-source.mjs`（预存失败）改为断言动作表或明确留给 WF-04C。
+- [ ] 验证：tsc / Vitest / build / boundary 已过；**真实窗口**：同 profile 两终端 + Local + 一个 RDP/VNC 可直接定位，关一个不影响兄弟，焦点后操作作用于正确实例（A02）——维护者 GUI 冒烟，见结果记录。
+- [x] 提交 `feat(workspace): show session instances as top-level tabs`。
 
 ## 4. 动作表与统一入口
 
@@ -92,3 +92,14 @@ node scripts/check-workspace-empty-home-source.mjs
   - 流程说明：本会话 Trellis 指针回退到 2026-09-22 旧会话的 Task 04（会话无 session identity，`task.py start` 走 degraded 分支不写指针）；为避免 hook 按旧指针注入错误任务上下文，未派 trellis-implement / check 子代理，实施与检查在主会话完成。
   - spec：`.trellis/spec/frontend/state-management.md` 补"Workspace item projection"约定。
   - 提交：`refactor(workspace): add workspace item projection and order table`。
+- 切片 3（顶栏实例标签）2026-09-25 完成代码与自动化验证；真实窗口 A02 冒烟由维护者安排（人力阻塞，与 WF-00B GUI 冒烟同批）。
+  - 显示规则定稿（按推荐执行）：`displayOrdinal`——owner 内首个实例不带编号，其后显示 `ordinal + 1`（"prod · 终端"、"prod · 终端 2"、"Ubuntu · 2"）；工作区内终端子标题 `terminalTabTitle` 与本地 / telnet / serial 标题同改为基于 `ordinal`，关闭中间实例后标题与顶层编号不再错位。
+  - 结构：`src/features/layout/titlebarItems.ts`（标题 / 类型角标 / 副标题、可见集合裁剪、切换器搜索）；`src/features/workspace/sessionTabs/itemClose.ts`（`closeScopeItemIds` + `planItemClose`）；`NewSessionMenu.tsx`（标签行末 `+`：本地终端 profile / 新建连接 / 打开已保存连接）。首页是首个不可关闭项、不入顺序表；聚合"首页 / 终端"按钮与 `openLocalTerminalWorkspace`、`selectConnectionSessions`、`LocalTerminalWorkspaceIcon` 随之删除（WS-E13）。
+  - 顺序表登记：controller 归一 effect 用 `unregisteredInstanceIds` 把新实例按出现顺序 dispatch `tabs/itemOpened`，创建路径不逐个改；`order` 经 controller 暴露。
+  - 关闭语义：关闭范围按顶栏实例顺序计算（首页永不在范围内）；分屏组项走 `requestCloseTerminalSplitGroup`（多 pane 确认）。若关掉某连接最后一个 SSH 实例而该连接仍有远程文件 tab，改走 `closeConnectionSessions`（WS-E05 编辑器无处可回；脏文件确认沿用连接级路径）。
+  - 视觉：按原型 `.instance-tab .kind` 用文字角标（`.tab-kind-badge`，`--mx-line` / `--mx-subtle` token，亮 / 暗 / system-dark 同源）区分类型，顶栏标签不再显示连接系统图标；标签 tooltip 显示"标题 · 地址"。
+  - i18n：切片 6 的内核提前落地（`src/shared/i18n/`：`translate` / `t` / `useLocale` / `useI18n` + `en.json` / `zh-CN.json`，键与占位符一致性有测试）；顶栏与新建会话菜单全部走 key。设置项 `basic.locale`、`Keybinding`、CJK 检查脚本仍在切片 6。
+  - 检查脚本按新契约更新（不回退旧位置）：`check-connection-system-icon`（顶栏断言角标）、`check-local-terminal-launcher-source`（断言聚合入口已退役、新建会话菜单按 profile 开本地终端）、`check-middle-click-close-tabs-source`（`onCloseItem(item.id)`）、`check-tab-context-menu-source`（实例级关闭 + `closeScopeItemIds` 越界保护）。`check-session-subtab-memory` 原样通过。`check-command-sender-active-tab-source` 为预存失败，明确留给 WF-04C（命令目标改为实例后再改断言）。
+  - 验证：`pnpm run check` 通过；`pnpm test` 18 文件 267 passed / 1 todo（新增 `titlebarItems.test.ts`、`itemClose.test.ts`、`AppTitlebar.test.tsx`、`i18n.test.ts`、controller 顺序表用例）；`pnpm run build` 通过；`check-startup-module-boundary-source`、`check-session-subtab-memory`、`check-workspace-ssh-activation-source`、`check-workspace-empty-home-source` 通过。全部 `scripts/check-*.mjs` 与 HEAD `a0b8a02` 干净工作树对比：失败集合相同（10 个预存：app-select、command-sender-active-tab、command-sender-mvp、connection-jump、connection-quick-search、dark-mode、global-scrollbar、ironrdp-macos-prototype、rdp-release-readiness、settings-page），无新增失败。
+  - 已知遗留：工作区内部仍有按连接的终端子标签行，与顶层实例标签部分重复；去留不在 WF-01 切片 3 范围，待 WORKFLOW_SPEC 后续交付包对齐。
+  - 提交：`feat(workspace): show session instances as top-level tabs`。

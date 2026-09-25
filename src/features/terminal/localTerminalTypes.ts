@@ -68,7 +68,7 @@ export interface LocalTerminalTab {
   profileKind: string;
   /**
    * 同一 profile（telnet / serial 为同一连接）内的实例编号，0 起、创建时取 max+1，之后不变；
-   * 用于顶层实例标签标题（WS-E11），不是排序位。`title` 仍按原规则生成，二者互不推导。
+   * 用于顶层实例标签标题（WS-E11），不是排序位。`title` 由它经 `displayOrdinal` 生成（WF-01 切片 3 统一）。
    */
   ordinal: number;
   title: string;

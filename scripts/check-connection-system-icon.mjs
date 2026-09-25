@@ -111,8 +111,11 @@ try {
   assert.match(connectionPaneSource, /ConnectionSystemLogo/);
   assert.doesNotMatch(connectionPaneSource, /<Server className="ui-icon connection-server-icon"/);
 
+  // WF-01 切片 3：顶栏改为会话实例标签，类型用文字角标区分（WS-E11 / 原型 `.instance-tab .kind`），
+  // 不再按连接显示系统图标；这里锁定角标契约，系统图标继续由连接列表断言覆盖。
   const appTitlebarSource = readFileSync("src/features/layout/AppTitlebar.tsx", "utf8");
-  assert.match(appTitlebarSource, /<ConnectionSystemLogo\s+compact\s+connection=\{connectionById\.get\(session\.connectionId\)\}\s+decorative\s+\/>/);
+  assert.match(appTitlebarSource, /<ItemKindBadge item=\{item\} \/>/);
+  assert.doesNotMatch(appTitlebarSource, /connectionSessions/);
 
   const connectionTypesSource = readFileSync("src/features/connections/connectionTypes.ts", "utf8");
   assert.match(connectionTypesSource, /remote_os_id\?: string/);

@@ -55,11 +55,6 @@ export interface VncSessionTab {
   windowLabel?: string | null;
 }
 
-export interface ConnectionSessionSummary {
-  connectionId: string;
-  tabs: Array<{ id: string }>;
-}
-
 /** 工作区当前显示的会话类型；与目标布局的统一 tab 栏 `kind` 同源。 */
 export type WorkspaceMode = "home" | "ssh" | "local" | "rdp" | "vnc";
 

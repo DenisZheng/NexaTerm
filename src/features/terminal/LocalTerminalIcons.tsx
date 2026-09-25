@@ -1,5 +1,4 @@
 import {
-  AppWindow,
   Cable,
   Command,
   MonitorCog,
@@ -68,10 +67,7 @@ export function LocalTerminalIcon({
   return <Terminal className={className} aria-hidden="true" />;
 }
 
-export function LocalTerminalWorkspaceIcon({ className }: { className?: string }) {
-  return <AppWindow className={className} aria-hidden="true" />;
-}
-
-export function localTerminalTitle(profile: Pick<LocalTerminalProfile, "name">, index: number) {
-  return index <= 1 ? profile.name : `${profile.name} ${index.toString()}`;
+/** 本地终端标题；`displayNumber` 为 `displayOrdinal(ordinal)` 的结果，null 表示 profile 内首个实例不带编号（WS-E11）。 */
+export function localTerminalTitle(profile: Pick<LocalTerminalProfile, "name">, displayNumber: number | null) {
+  return displayNumber === null ? profile.name : `${profile.name} · ${displayNumber.toString()}`;
 }

@@ -7,6 +7,7 @@ import type { LocalTerminalTab } from "../../terminal/localTerminalTypes";
 
 import type { SessionTabsAction } from "./actions";
 import type { FollowUp } from "./closeDecision";
+import { unregisteredInstanceIds } from "./instances";
 import { initialSessionPointerState, sessionPointerReducer } from "./reducer";
 import type { RdpSessionTab, VncSessionTab } from "./types";
 
@@ -32,7 +33,7 @@ export interface SessionTabsControllerInputs {
  *
  * 指针、模式、首页记忆位与两张记忆表由 `sessionPointerReducer` 持有；五个会话集合与文件布局记忆
  * 仍是 `useState`（集合与 WorkspaceShell 里的 `*Ref` 同步写入耦合，待 ref 通道消灭后再迁）。
- * reducer 另持有工作区项顺序表 `order`（WF-01 切片 2），切片 3 接入顶栏实例标签时再对外暴露。
+ * reducer 另持有工作区项顺序表 `order`（WF-01 切片 2），切片 3 起对外暴露给顶栏实例标签。
  *
  * 对外暴露 `dispatchTabs`（意图型 action）与唯一保留的过渡 setter `setActiveRemoteFileTabId`；
  * 两张记忆表只能经 remember / forget 系列 action 修改。
@@ -103,6 +104,13 @@ export function useSessionTabsController<TTerminalTab extends { connectionId: st
     dispatchTabs({ type: "tabs/normalizeUnified", fileTabs: remoteFileTabs, terminalTabs });
   }, [remoteFileTabs, terminalTabs]);
 
+  // 归一 3（WF-01 切片 3）：新实例按出现顺序登记到顶栏顺序表末尾，创建路径无需各自 dispatch。
+  useEffect(() => {
+    unregisteredInstanceIds({ localTerminalTabs, rdpSessions, terminalTabs, vncSessions }, pointers.order).forEach(
+      (itemId) => dispatchTabs({ type: "tabs/itemOpened", itemId }),
+    );
+  }, [localTerminalTabs, pointers.order, rdpSessions, terminalTabs, vncSessions]);
+
   // ---- 过渡层：WF-00B 后仅剩 setActiveRemoteFileTabId 一个调用点（远程文件重命名后重指 tab，归 WF-03）。 ----
   /** @deprecated 仅供 WorkspaceShell 远程文件重命名路径使用；WF-03 抽出 Files 视图时改为意图型 action 并删除。 */
   const setActiveRemoteFileTabId = useCallback(
@@ -123,6 +131,8 @@ export function useSessionTabsController<TTerminalTab extends { connectionId: st
     dispatchTabs: dispatchTabs as Dispatch<SessionTabsAction>,
     homeActive: pointers.homeActive,
     localTerminalTabs,
+    /** 顶栏工作区项顺序表；配合 `selectWorkspaceItems` 使用。 */
+    order: pointers.order,
     rdpSessions,
     remoteFileTabs,
     setActiveRemoteFileTabId,

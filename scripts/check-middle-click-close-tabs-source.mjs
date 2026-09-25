@@ -18,9 +18,10 @@ for (const snippet of [
 
 for (const [label, source, binding] of [
   [
-    "titlebar connection",
+    // WF-01 切片 3：顶栏标签是会话实例，中键关闭走实例关闭入口。
+    "titlebar instance",
     titlebarSource,
-    /onAuxClick=\{createMiddleClickCloseHandler\(\(\) =>\s*onCloseConnectionSession\(session\.connectionId\),?\s*\)\}/,
+    /onAuxClick=\{createMiddleClickCloseHandler\(\(\) => onCloseItem\(item\.id\)\)\}/,
   ],
   [
     "terminal split group",
@@ -54,7 +55,7 @@ for (const [label, source, binding] of [
 }
 
 for (const [label, source, expectedCount] of [
-  ["titlebar connection", titlebarSource, 1],
+  ["titlebar instance", titlebarSource, 1],
   ["workspace terminal/file", workspaceSource, 4],
   ["VNC runner", vncRunnerSource, 1],
 ]) {

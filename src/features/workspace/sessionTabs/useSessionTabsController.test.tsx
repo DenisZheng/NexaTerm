@@ -234,3 +234,20 @@ describe("WF-00B：followUp 消费", () => {
     expect(result.current.activeLocalTerminalTabId).toBeNull();
   });
 });
+
+describe("WF-01 切片 3：新实例自动登记到顶栏顺序表", () => {
+  it("集合新增的实例按出现顺序追加到 order，已登记的不重复", () => {
+    const { result } = setup();
+    act(() => {
+      result.current.setRdpSessions([{ connectionId: "b", createdAt: 0, id: "r1", status: "launching", title: "r1" }]);
+    });
+    act(() => {
+      result.current.setTerminalTabs([tab("t1", "a")]);
+    });
+    expect(result.current.order).toEqual(["rdp:r1", "ssh:t1"]);
+    act(() => {
+      result.current.setTerminalTabs([tab("t1", "a"), tab("t2", "a")]);
+    });
+    expect(result.current.order).toEqual(["rdp:r1", "ssh:t1", "ssh:t2"]);
+  });
+});

@@ -10,7 +10,7 @@ import type { WorkspaceMode } from "./types";
  *
  * 顶层标签代表会话实例：用 selector 从四个实例集合（SSH 终端、本地 / telnet / serial 终端、RDP、VNC）
  * 投影，不复制第二份会话数据；`SessionPointerState.order` 只负责排序。远程文件 tab 不是顶层项
- * （WS-E05：编辑器留在所属 SSH 工作区内）。纯函数，shell 在切片 3 接线。
+ * （WS-E05：编辑器留在所属 SSH 工作区内）。纯函数；shell 在切片 3 接入顶栏。
  */
 
 export const HOME_ITEM_ID = "home";
@@ -67,6 +67,31 @@ export function instanceItemId(kind: InstanceKind, rawId: string) {
  */
 export function nextOrdinal(ordinals: readonly number[]) {
   return Math.max(-1, ...ordinals) + 1;
+}
+
+/**
+ * 编号的显示值（WS-E11，切片 3 定稿）：owner 内首个实例（ordinal 0）不显示编号，其后显示 ordinal + 1，
+ * 即"终端、终端 2、终端 3"与"Ubuntu、Ubuntu · 2"。顶层实例标签与工作区内终端子标签共用这一规则。
+ */
+export function displayOrdinal(ordinal: number): number | null {
+  return ordinal === 0 ? null : ordinal + 1;
+}
+
+/**
+ * 集合里已有、顺序表里还没有的实例 id（按 ssh → local → rdp → vnc 的集合顺序）。
+ * controller 据此把新实例登记到顺序表末尾，创建路径无需各自 dispatch `tabs/itemOpened`。
+ */
+export function unregisteredInstanceIds(
+  collections: { readonly [K in keyof InstanceCollections]: readonly { id: string }[] },
+  order: readonly string[],
+): string[] {
+  const registered = new Set(order);
+  return [
+    ...collections.terminalTabs.map((tab) => instanceItemId("ssh", tab.id)),
+    ...collections.localTerminalTabs.map((tab) => instanceItemId("local", tab.id)),
+    ...collections.rdpSessions.map((session) => instanceItemId("rdp", session.id)),
+    ...collections.vncSessions.map((session) => instanceItemId("vnc", session.id)),
+  ].filter((id) => !registered.has(id));
 }
 
 /**
@@ -176,7 +201,7 @@ export interface ItemTitleLookups {
 /**
  * 实例标签标题的结构化描述（WS-E11：`配置名 · 终端 N`、`profile 名 · N`、`配置名 · RDP / VNC`）。
  * 这里不拼文案（WS-E09 不新增硬编码中文），由 UI 经 i18n 格式化；`ordinal` 为 owner 内 0 起编号，
- * 显示基数在切片 3 接 UI 时与终端内部标题一起确定。`name` 为 null 时回退文案由 UI 决定。
+ * 显示值见 `displayOrdinal`。`name` 为 null 时回退文案由 UI 决定。
  */
 export type WorkspaceItemTitle =
   | { kind: "home" }

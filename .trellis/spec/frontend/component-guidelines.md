@@ -149,6 +149,11 @@ replacing package has shipped.
   session into that set when overflow happens, and move the remaining sessions
   into a compact body-ported `⋯` menu. Do not leave the titlebar as an
   unbounded horizontal scroller once tabs exceed the visible cap.
+- Titlebar tabs are session instances (WF-01, WS-M02): build them with
+  `selectWorkspaceItems` + `buildTitlebarItems` (`src/features/layout/titlebarItems.ts`),
+  mark the kind with a text badge (`.tab-kind-badge`, not color alone), keep Home
+  as the first pinned non-closable item, and route close scopes through
+  `closeScopeItemIds` + `planItemClose` instead of per-connection close helpers.
 - Radix portals render outside `.app-shell` by default, so they must receive the
   same theme context through `document.body`. `WorkspaceShell` owns the body
   `data-theme-mode`, `data-window-material`, density/platform attributes, and

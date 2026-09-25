@@ -388,6 +388,8 @@ import { syncCurrentWebviewBackground } from "../../shared/tauri/webviewBackgrou
 import { initializeWindowStatePersistence } from "../../shared/tauri/windowState";
 import { Tooltip } from "../../shared/ui/Tooltip";
 import { AppTitlebar } from "./AppTitlebar";
+import { buildTitlebarItems } from "./titlebarItems";
+import { useI18n } from "../../shared/i18n";
 import { buildSshRemoteFilePanelStack } from "./remoteFilePanelStrategy";
 import {
   LocalTerminalIcon,
@@ -422,14 +424,20 @@ import {
   useTerminalSplitController,
   type TerminalSplitHost,
 } from "../workspace/split/useTerminalSplitController";
-import { nextOrdinal } from "../workspace/sessionTabs/instances";
+import {
+  displayOrdinal,
+  HOME_ITEM_ID,
+  nextOrdinal,
+  selectActiveItemId,
+  selectWorkspaceItems,
+} from "../workspace/sessionTabs/instances";
+import { closeScopeItemIds, planItemClose, type CloseScope } from "../workspace/sessionTabs/itemClose";
 import {
   groupByConnection,
   selectActiveConnectedTerminalTab,
   selectActiveSession,
   selectActiveTerminalSplitBinding,
   selectActiveTerminalTab,
-  selectConnectionSessions,
 } from "../workspace/sessionTabs/selectors";
 import type {
   RdpSessionStatus,
@@ -806,6 +814,7 @@ type WorkbenchTabScrollController = ReturnType<typeof useWorkbenchTabScroller>;
 type NativeFileDropPosition = Extract<DragDropEvent, { type: "enter" | "over" | "drop" }>["position"];
 
 export function WorkspaceShell() {
+  const { t } = useI18n();
   const {
     reset,
     settings,
@@ -865,6 +874,7 @@ export function WorkspaceShell() {
     dispatchTabs,
     homeActive,
     localTerminalTabs,
+    order: workspaceItemOrder,
     rdpSessions,
     remoteFileTabs,
     setActiveRemoteFileTabId,
@@ -1280,15 +1290,6 @@ export function WorkspaceShell() {
   const terminalTabsByConnection = useMemo(() => groupByConnection(terminalTabs), [terminalTabs]);
   const rdpSessionsByConnection = useMemo(() => groupByConnection(rdpSessions), [rdpSessions]);
   const vncSessionsByConnection = useMemo(() => groupByConnection(vncSessions), [vncSessions]);
-  const connectionSessions = useMemo(
-    () =>
-      selectConnectionSessions(
-        terminalTabsByConnection,
-        rdpSessionsByConnection,
-        vncSessionsByConnection,
-      ),
-    [rdpSessionsByConnection, terminalTabsByConnection, vncSessionsByConnection],
-  );
   const activeConnectionTabs = activeConnectionId
     ? terminalTabsByConnection.get(activeConnectionId) || []
     : [];
@@ -1745,6 +1746,59 @@ export function WorkspaceShell() {
   const showingLocalTerminal = activeWorkspaceMode === "local";
   const showingRdp = activeWorkspaceMode === "rdp";
   const showingVnc = activeWorkspaceMode === "vnc";
+  // WF-01 切片 3：顶栏按会话实例成项（WS-M02 / WS-E11–E13），分屏组折叠为一项。
+  const workspaceItems = useMemo(
+    () =>
+      selectWorkspaceItems(
+        { localTerminalTabs, rdpSessions, terminalTabs, vncSessions },
+        workspaceItemOrder,
+        terminalSplitExists && terminalSplitHost
+          ? {
+              bindings: terminalSplitPanes.flatMap((pane) => (pane.binding ? [pane.binding] : [])),
+              host: terminalSplitHost,
+            }
+          : null,
+      ),
+    [
+      localTerminalTabs,
+      rdpSessions,
+      terminalSplitExists,
+      terminalSplitHost,
+      terminalSplitPanes,
+      terminalTabs,
+      vncSessions,
+      workspaceItemOrder,
+    ],
+  );
+  const activeWorkspaceItemId = selectActiveItemId(
+    {
+      localTerminalTabId: activeLocalTerminalTabId,
+      mode: activeWorkspaceMode,
+      rdpSessionId: activeRdpSession?.id ?? null,
+      showingHome,
+      splitActive: terminalSplitActive,
+      terminalTabId: activeTabId,
+      vncSessionId: activeVncSession?.id ?? null,
+    },
+    workspaceItems,
+  );
+  const titlebarItems = useMemo(
+    () =>
+      buildTitlebarItems(
+        workspaceItems,
+        {
+          connectionAddress: (connectionId) => {
+            const connection = connectionById.get(connectionId);
+            return connection ? formatConnectionAddress(connection) : null;
+          },
+          connectionName: (connectionId) => connectionById.get(connectionId)?.name || null,
+          localProfileName: (profileId) =>
+            localTerminalProfiles.find((profile) => profile.id === profileId)?.name ?? null,
+        },
+        t,
+      ),
+    [connectionById, localTerminalProfiles, t, workspaceItems],
+  );
   const showSessionWorkspace = !showingHome && activeWorkspaceMode === "ssh" && hasSessionWorkspace;
   const showTerminalSplitSurface =
     terminalSplitActive &&
@@ -4365,30 +4419,6 @@ export function WorkspaceShell() {
     dispatchTabs({ type: "tabs/goHome" });
   }
 
-  function openLocalTerminalWorkspace() {
-    setSettingsSectionRequest(undefined);
-    dispatchTabs({ type: "tabs/activateSplitHost", host: { kind: "local" } });
-    if (localTerminalTabsRef.current.length > 0) {
-      const standaloneTabs = localTerminalTabsRef.current.filter(
-        (tab) =>
-          !terminalSplitMemberKeys.has(
-            terminalPaneBindingKey({ kind: "local", tabId: tab.id }),
-          ),
-      );
-      const standaloneTab =
-        standaloneTabs.find((tab) => tab.id === activeLocalTerminalTabId) ||
-        standaloneTabs[0] ||
-        null;
-      if (standaloneTab) {
-        activateStandaloneLocalTerminalTab(standaloneTab);
-      } else if (terminalSplitExists && terminalSplitHost?.kind === "local") {
-        activateTerminalSplitTab();
-      }
-      return;
-    }
-    void openLocalTerminalByProfile(resolveDefaultLocalTerminalProfile());
-  }
-
   function activateTerminalSplitHost(host: TerminalSplitHost | null = terminalSplitHost) {
     if (!host) {
       return;
@@ -6118,20 +6148,20 @@ export function WorkspaceShell() {
     profile: LocalTerminalProfile,
   ): LocalTerminalTab {
     const sameProfileTabs = tabs.filter((tab) => tab.profileId === profile.id);
-    const nextIndex = sameProfileTabs.length + 1;
+    const ordinal = nextOrdinal(sameProfileTabs.map((tab) => tab.ordinal));
     const now = Date.now();
     const nonce = `${now.toString()}-${Math.random().toString(36).slice(2, 8)}`;
 
     return {
       id: `local-terminal-${nonce}`,
-      ordinal: nextOrdinal(sameProfileTabs.map((tab) => tab.ordinal)),
+      ordinal,
       profileId: profile.id,
       profileKind: profile.kind,
       requestId: `local-terminal-${nonce}`,
       source: "local",
       sessionId: undefined,
       status: "正在打开",
-      title: localTerminalTitle(profile, nextIndex),
+      title: localTerminalTitle(profile, displayOrdinal(ordinal)),
       warmupOutput: [],
     };
   }
@@ -6295,17 +6325,18 @@ export function WorkspaceShell() {
     const now = Date.now();
     const nonce = `${now.toString()}-${Math.random().toString(36).slice(2, 8)}`;
     const sameProfileTabs = tabs.filter((tab) => tab.profileId === profileId);
-    const nextIndex = sameProfileTabs.length + 1;
+    const ordinal = nextOrdinal(sameProfileTabs.map((tab) => tab.ordinal));
+    const displayNumber = displayOrdinal(ordinal);
     return {
       id: `${source}-terminal-${nonce}`,
-      ordinal: nextOrdinal(sameProfileTabs.map((tab) => tab.ordinal)),
+      ordinal,
       profileId,
       profileKind: source,
       requestId: `${source}-terminal-${nonce}`,
       sessionId: undefined,
       source,
       status: "正在连接",
-      title: nextIndex > 1 ? `${title} ${nextIndex.toString()}` : title,
+      title: displayNumber === null ? title : `${title} · ${displayNumber.toString()}`,
       warmupOutput: [],
     };
   }
@@ -7163,8 +7194,72 @@ export function WorkspaceShell() {
     closeTerminalTabs(terminalTabs.filter((tab) => tab.connectionId === connectionId).map((tab) => tab.id));
   }
 
-  function closeConnectionSession(connectionId: string) {
-    closeConnectionSessions([connectionId]);
+  /** 顶栏实例标签点击（WF-01 切片 3）：按项类型走现有 activate*；分屏组回到分屏面。 */
+  function selectWorkspaceItem(itemId: string) {
+    const item = workspaceItems.find((candidate) => candidate.id === itemId);
+    switch (item?.kind) {
+      case "home":
+        openHome();
+        return;
+      case "split":
+        activateTerminalSplitTab();
+        return;
+      case "ssh": {
+        const tab = terminalTabsRef.current.find((candidate) => candidate.id === item.tabId);
+        if (tab) {
+          activateTerminalTab(tab);
+        }
+        return;
+      }
+      case "local": {
+        const tab = localTerminalTabsRef.current.find((candidate) => candidate.id === item.tabId);
+        if (tab) {
+          activateLocalTerminalTab(tab);
+        }
+        return;
+      }
+      case "rdp": {
+        const session = rdpSessionsRef.current.find((candidate) => candidate.id === item.sessionId);
+        if (session) {
+          activateRdpSession(session);
+        }
+        return;
+      }
+      case "vnc": {
+        const session = vncSessionsRef.current.find((candidate) => candidate.id === item.sessionId);
+        if (session) {
+          activateVncSession(session);
+        }
+        return;
+      }
+      case undefined:
+        return;
+    }
+  }
+
+  /**
+   * 顶栏实例标签关闭（关闭 / 关闭其他 / 关闭右侧 / 全部关闭）：按 `planItemClose` 分派到 WF-00B 的现有关闭路径。
+   * 分屏组先关（多 pane 时弹确认），再按连接 / 实例关；各路径都以 ref 为准，已关掉的 id 自然跳过。
+   */
+  function closeWorkspaceItems(targetId: string, scope: CloseScope) {
+    const plan = planItemClose(closeScopeItemIds(workspaceItems, targetId, scope), workspaceItems, {
+      remoteFileConnectionIds: new Set(remoteFileTabs.map((tab) => tab.connectionId)),
+      terminalTabs: terminalTabsRef.current,
+    });
+    if (plan.splitGroup) {
+      requestCloseTerminalSplitGroup();
+    }
+    if (plan.connectionIds.length > 0) {
+      closeConnectionSessions(plan.connectionIds);
+    }
+    if (plan.sshTabIds.length > 0) {
+      closeTerminalTabs(plan.sshTabIds);
+    }
+    if (plan.localTabIds.length > 0) {
+      closeLocalTerminalTabs(plan.localTabIds);
+    }
+    closeRdpSessions(plan.rdpSessionIds);
+    closeVncSessions(plan.vncSessionIds);
   }
 
   function closeConnectionSessions(
@@ -7209,22 +7304,6 @@ export function WorkspaceShell() {
       snapshot: snapshotFromRefs({ remoteFileTabs: remainingRemoteFileTabs.map(sessionRef), terminalTabs: nextTabs.map(sessionRef) }),
       variant: "sessions",
     });
-  }
-
-  function closeOtherConnectionSessions(connectionId: string) {
-    closeConnectionSessions(
-      connectionSessions
-        .filter((session) => session.connectionId !== connectionId)
-        .map((session) => session.connectionId),
-    );
-  }
-
-  function closeConnectionSessionsToRight(connectionId: string) {
-    const index = connectionSessions.findIndex((session) => session.connectionId === connectionId);
-    if (index < 0) {
-      return;
-    }
-    closeConnectionSessions(connectionSessions.slice(index + 1).map((session) => session.connectionId));
   }
 
   function openTerminalInActiveConnection() {
@@ -8153,7 +8232,7 @@ export function WorkspaceShell() {
       ) : null}
 
       <AppTitlebar
-        activeConnectionId={activeConnectionId}
+        activeItemId={activeWorkspaceItemId}
         appUpdateNotice={
           appUpdate.workspaceNoticeVisible
             ? {
@@ -8163,35 +8242,20 @@ export function WorkspaceShell() {
               }
             : null
         }
-        connectionById={connectionById}
-        connectionSessions={connectionSessions}
-        homeActive={showingHome}
-        localTerminalActive={showingLocalTerminal}
+        items={titlebarItems}
         leftPaneCollapsed={leftPaneCollapsed}
-        onCloseAllConnectionSessions={() =>
-          closeConnectionSessions(connectionSessions.map((session) => session.connectionId))
-        }
-        onCloseConnectionSession={closeConnectionSession}
-        onCloseConnectionSessionsToRight={closeConnectionSessionsToRight}
-        onCloseOtherConnectionSessions={closeOtherConnectionSessions}
-        onOpenHome={openHome}
-        onOpenLocalTerminal={openLocalTerminalWorkspace}
-        onSelectConnectionSession={(connectionId) => {
-          const rdpSession = preferredRdpSessionForConnection(connectionId);
-          if (rdpSession) {
-            activateRdpSession(rdpSession);
-            return;
-          }
-          const vncSession = preferredVncSessionForConnection(connectionId);
-          if (vncSession) {
-            activateVncSession(vncSession);
-            return;
-          }
-          const nextTab = preferredTabForConnection(connectionId);
-          if (nextTab) {
-            activateTerminalTab(nextTab);
-          }
+        newSession={{
+          localProfiles: localTerminalProfiles,
+          localProfilesLoading: localTerminalProfilesLoading,
+          onCreateConnection: () => createConnection(),
+          onOpenLocalProfile: (profile) => void openLocalTerminalByProfile(profile),
+          onQuickOpen: () => setConnectionSearchOpen(true),
         }}
+        onCloseAll={() => closeWorkspaceItems(HOME_ITEM_ID, "all")}
+        onCloseItem={(itemId) => closeWorkspaceItems(itemId, "self")}
+        onCloseOthers={(itemId) => closeWorkspaceItems(itemId, "others")}
+        onCloseToRight={(itemId) => closeWorkspaceItems(itemId, "right")}
+        onSelectItem={selectWorkspaceItem}
         onToggleLeftPane={() => setLeftPaneCollapsed((collapsed) => !collapsed)}
       />
 
@@ -11748,8 +11812,10 @@ function nextTerminalOrdinalForConnection(tabs: TerminalTab[], connectionId: str
   return nextOrdinal(tabs.filter((tab) => tab.connectionId === connectionId).map((tab) => tab.ordinal));
 }
 
+/** 工作区内终端子标签标题；编号显示规则与顶层实例标签共用 `displayOrdinal`（WS-E11）。 */
 function terminalTabTitle(ordinal: number) {
-  return ordinal === 0 ? "终端" : `终端 ${ordinal.toString()}`;
+  const displayNumber = displayOrdinal(ordinal);
+  return displayNumber === null ? "终端" : `终端 ${displayNumber.toString()}`;
 }
 
 function shortDockerRuntimeId(id: string) {

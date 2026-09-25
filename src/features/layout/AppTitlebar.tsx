@@ -15,28 +15,18 @@ import {
 } from "lucide-react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
-import { ConnectionSystemLogo } from "../connections/ConnectionSystemLogo";
-import { buildConnectionSearchEntries } from "../connections/connectionSearch";
+import { useI18n } from "../../shared/i18n";
 import { TabContextMenu } from "../../shared/ui/TabContextMenu";
 import { Tooltip } from "../../shared/ui/Tooltip";
 import { createMiddleClickCloseHandler } from "../../shared/ui/tabEvents";
 import { hasTauriRuntime } from "../../shared/tauri/runtime";
-import type { ConnectionProfile } from "../connections/connectionTypes";
-import { LocalTerminalWorkspaceIcon } from "../terminal/LocalTerminalIcons";
+import { NewSessionMenu, type NewSessionMenuProps } from "./NewSessionMenu";
+import { filterTitlebarItems, pickVisibleTitlebarItems, type TitlebarItem } from "./titlebarItems";
 
 const windowDragThresholdPx = 4;
 
-interface TitlebarTerminalTab {
-  id: string;
-}
-
-interface TitlebarConnectionSession {
-  connectionId: string;
-  tabs: TitlebarTerminalTab[];
-}
-
 interface AppTitlebarProps {
-  activeConnectionId: string | null;
+  activeItemId: string | null;
   appUpdateNotice?:
     | {
         label: string;
@@ -44,66 +34,40 @@ interface AppTitlebarProps {
         onOpen: () => void;
       }
     | null;
-  connectionById: Map<string, ConnectionProfile>;
-  connectionSessions: TitlebarConnectionSession[];
-  homeActive: boolean;
-  localTerminalActive: boolean;
+  /** 顶层工作区项（WS-M02）：首页 + 会话实例 + 分屏组，已按顺序表排好。 */
+  items: TitlebarItem[];
   leftPaneCollapsed: boolean;
-  onCloseAllConnectionSessions: () => void;
-  onCloseConnectionSession: (connectionId: string) => void;
-  onCloseConnectionSessionsToRight: (connectionId: string) => void;
-  onCloseOtherConnectionSessions: (connectionId: string) => void;
-  onOpenHome: () => void;
-  onOpenLocalTerminal: () => void;
-  onSelectConnectionSession: (connectionId: string) => void;
+  newSession: NewSessionMenuProps;
+  onCloseAll: () => void;
+  onCloseItem: (itemId: string) => void;
+  onCloseOthers: (itemId: string) => void;
+  onCloseToRight: (itemId: string) => void;
+  onSelectItem: (itemId: string) => void;
   onToggleLeftPane: () => void;
 }
 
 export function AppTitlebar({
-  activeConnectionId,
+  activeItemId,
   appUpdateNotice,
-  connectionById,
-  connectionSessions,
-  homeActive,
-  localTerminalActive,
+  items,
   leftPaneCollapsed,
-  onCloseAllConnectionSessions,
-  onCloseConnectionSession,
-  onCloseConnectionSessionsToRight,
-  onCloseOtherConnectionSessions,
-  onOpenHome,
-  onOpenLocalTerminal,
-  onSelectConnectionSession,
+  newSession,
+  onCloseAll,
+  onCloseItem,
+  onCloseOthers,
+  onCloseToRight,
+  onSelectItem,
   onToggleLeftPane,
 }: AppTitlebarProps) {
+  const { t } = useI18n();
   const titleTabsRef = useRef<HTMLElement | null>(null);
   const [titleTabsWidth, setTitleTabsWidth] = useState(0);
-  const visibleConnectionSessions = useMemo(
-    () =>
-      pickVisibleConnectionSessions(
-        connectionSessions,
-        connectionById,
-        activeConnectionId,
-        homeActive,
-        localTerminalActive,
-        titleTabsWidth,
-      ),
-    [
-      activeConnectionId,
-      connectionById,
-      connectionSessions,
-      homeActive,
-      localTerminalActive,
-      titleTabsWidth,
-    ],
+  const visibleItems = useMemo(
+    () => pickVisibleTitlebarItems(items, activeItemId, titleTabsWidth),
+    [activeItemId, items, titleTabsWidth],
   );
-  const visibleConnectionSessionIdSet = useMemo(
-    () => new Set(visibleConnectionSessions.map((session) => session.connectionId)),
-    [visibleConnectionSessions],
-  );
-  const overflowConnectionSessions = connectionSessions.filter(
-    (session) => !visibleConnectionSessionIdSet.has(session.connectionId),
-  );
+  const hiddenItemCount = items.length - visibleItems.length;
+  const closableItems = items.filter((item) => item.closable);
 
   useLayoutEffect(() => {
     const element = titleTabsRef.current;
@@ -136,128 +100,103 @@ export function AppTitlebar({
       onDoubleClick={handleTitlebarDoubleClick}
       onPointerDown={handleDragStart}
     >
-      <div className="macos-traffic-lights" role="group" aria-label="窗口控制">
+      <div className="macos-traffic-lights" role="group" aria-label={t("titlebar.windowControls")}>
         <button
           className="macos-traffic-light close"
           type="button"
-          aria-label="关闭窗口"
+          aria-label={t("titlebar.closeWindow")}
           onClick={() => void runTauriWindowAction("close")}
         />
         <button
           className="macos-traffic-light minimize"
           type="button"
-          aria-label="最小化"
+          aria-label={t("titlebar.minimize")}
           onClick={() => void runTauriWindowAction("minimize")}
         />
         <button
           className="macos-traffic-light zoom"
           type="button"
-          aria-label="缩放窗口"
+          aria-label={t("titlebar.zoom")}
           onClick={() => void runTauriWindowAction("toggleMaximize")}
         />
       </div>
 
       <div className="title-leading">
-        <Tooltip label={leftPaneCollapsed ? "展开侧边栏" : "收起侧边栏"}>
+        <Tooltip label={leftPaneCollapsed ? t("titlebar.expandSidebar") : t("titlebar.collapseSidebar")}>
           <button
             className="title-tool-button title-pane-toggle"
             type="button"
-            aria-label={leftPaneCollapsed ? "展开侧边栏" : "收起侧边栏"}
+            aria-label={leftPaneCollapsed ? t("titlebar.expandSidebar") : t("titlebar.collapseSidebar")}
             aria-expanded={!leftPaneCollapsed}
             onClick={onToggleLeftPane}
           >
             <SidebarToggleGlyph collapsed={leftPaneCollapsed} />
           </button>
         </Tooltip>
-
-        <div className="title-sidebar-tools">
-          <Tooltip label="首页">
-            <button
-              className={`title-sidebar-home ${homeActive ? "active" : ""}`}
-              type="button"
-              aria-label="首页"
-              aria-current={homeActive ? "page" : undefined}
-              onClick={onOpenHome}
-            >
-              <HomeGlyph />
-              <span>首页</span>
-            </button>
-          </Tooltip>
-          <Tooltip label="终端">
-            <button
-              className={`title-sidebar-home ${localTerminalActive ? "active" : ""}`}
-              type="button"
-              aria-label="终端"
-              aria-current={localTerminalActive ? "page" : undefined}
-              onClick={onOpenLocalTerminal}
-            >
-              <LocalTerminalWorkspaceIcon className="title-tool-icon" />
-              <span>终端</span>
-            </button>
-          </Tooltip>
-        </div>
       </div>
 
-      <nav ref={titleTabsRef} className="title-session-tabs" aria-label="工作区标签">
-        {visibleConnectionSessions.map((session, index) => {
-          const hasOtherSessions = connectionSessions.length > 1;
-          const hasRightSessions = index < visibleConnectionSessions.length - 1;
+      <nav ref={titleTabsRef} className="title-session-tabs" aria-label={t("titlebar.tabs")}>
+        {visibleItems.map((item) => {
+          const active = item.id === activeItemId;
+          const tabButton = (
+            <Tooltip label={item.detail ? `${item.label} · ${item.detail}` : item.label}>
+              <button
+                className="tab instance-tab"
+                type="button"
+                aria-current={active ? "page" : undefined}
+                onClick={() => onSelectItem(item.id)}
+              >
+                <ItemKindBadge item={item} />
+                <span className="tab-label">{item.label}</span>
+              </button>
+            </Tooltip>
+          );
+
+          if (!item.closable) {
+            return (
+              <div key={item.id} className={`tab-shell is-pinned ${active ? "active" : ""}`}>
+                {tabButton}
+              </div>
+            );
+          }
+
+          const index = closableItems.indexOf(item);
           return (
             <TabContextMenu
-              key={session.connectionId}
+              key={item.id}
               actions={[
                 {
                   hint: "Ctrl+F4",
-                  label: "关闭",
-                  onSelect: () => onCloseConnectionSession(session.connectionId),
+                  label: t("titlebar.close"),
+                  onSelect: () => onCloseItem(item.id),
                 },
                 {
-                  disabled: !hasOtherSessions,
-                  label: "关闭其他",
-                  onSelect: () => onCloseOtherConnectionSessions(session.connectionId),
+                  disabled: closableItems.length <= 1,
+                  label: t("titlebar.closeOthers"),
+                  onSelect: () => onCloseOthers(item.id),
                 },
                 {
-                  disabled: !hasRightSessions,
-                  label: "关闭右侧标签页",
-                  onSelect: () => onCloseConnectionSessionsToRight(session.connectionId),
+                  disabled: index < 0 || index >= closableItems.length - 1,
+                  label: t("titlebar.closeToRight"),
+                  onSelect: () => onCloseToRight(item.id),
                 },
                 {
-                  disabled: connectionSessions.length === 0,
                   hint: "Ctrl+K W",
-                  label: "全部关闭",
-                  onSelect: onCloseAllConnectionSessions,
+                  label: t("titlebar.closeAll"),
+                  onSelect: onCloseAll,
                 },
               ]}
             >
               <div
-                className={`tab-shell ${
-                  !homeActive && !localTerminalActive && session.connectionId === activeConnectionId
-                    ? "active"
-                    : ""
-                }`}
-                onAuxClick={createMiddleClickCloseHandler(() =>
-                  onCloseConnectionSession(session.connectionId),
-                )}
+                className={`tab-shell ${active ? "active" : ""}`}
+                onAuxClick={createMiddleClickCloseHandler(() => onCloseItem(item.id))}
               >
-                <button
-                  className="tab"
-                  type="button"
-                  onClick={() => onSelectConnectionSession(session.connectionId)}
-                >
-                  <ConnectionSystemLogo
-                    compact
-                    connection={connectionById.get(session.connectionId)}
-                    decorative
-                  />
-                  <span className="tab-label">
-                    {connectionName(session.connectionId, connectionById)}
-                  </span>
-                </button>
+                {tabButton}
                 <button
                   className="tab-close"
                   type="button"
-                  aria-label={`关闭 ${connectionName(session.connectionId, connectionById)}`}
-                  onClick={() => onCloseConnectionSession(session.connectionId)}
+                  aria-label={t("titlebar.closeItem", { label: item.label })}
+                  onClick={() => onCloseItem(item.id)}
                 >
                   <CloseGlyph />
                 </button>
@@ -266,30 +205,31 @@ export function AppTitlebar({
           );
         })}
 
-        {overflowConnectionSessions.length > 0 ? (
-          <TitlebarSessionSwitcher
-            activeConnectionId={!homeActive && !localTerminalActive ? activeConnectionId : null}
-            connectionById={connectionById}
-            connectionSessions={connectionSessions}
-            hiddenSessionCount={overflowConnectionSessions.length}
-            onCloseConnectionSession={onCloseConnectionSession}
-            onSelectConnectionSession={onSelectConnectionSession}
+        {hiddenItemCount > 0 ? (
+          <TitlebarItemSwitcher
+            activeItemId={activeItemId}
+            hiddenItemCount={hiddenItemCount}
+            items={items}
+            onCloseItem={onCloseItem}
+            onSelectItem={onSelectItem}
           />
         ) : null}
+
+        <NewSessionMenu {...newSession} />
       </nav>
 
       <div className="title-trailing">
         {appUpdateNotice ? (
-          <div className="title-update-entry" aria-label="应用更新">
+          <div className="title-update-entry" aria-label={t("titlebar.appUpdate")}>
             <button className="title-update-pill" type="button" onClick={appUpdateNotice.onOpen}>
               <Download className="title-tool-icon" aria-hidden="true" />
               <span>{appUpdateNotice.label}</span>
             </button>
-            <Tooltip label="关闭本次提示">
+            <Tooltip label={t("titlebar.dismissUpdateTooltip")}>
               <button
                 className="title-update-close"
                 type="button"
-                aria-label="关闭本次更新提示"
+                aria-label={t("titlebar.dismissUpdate")}
                 onClick={appUpdateNotice.onDismiss}
               >
                 <X className="title-tool-icon" aria-hidden="true" />
@@ -297,11 +237,11 @@ export function AppTitlebar({
             </Tooltip>
           </div>
         ) : null}
-        <div className="window-controls" aria-label="窗口控制">
+        <div className="window-controls" aria-label={t("titlebar.windowControls")}>
         <button
           className="window-control"
           type="button"
-          aria-label="最小化"
+          aria-label={t("titlebar.minimize")}
           onClick={() => void runTauriWindowAction("minimize")}
         >
           <MinimizeGlyph />
@@ -309,7 +249,7 @@ export function AppTitlebar({
         <button
           className="window-control"
           type="button"
-          aria-label="最大化或还原"
+          aria-label={t("titlebar.maximizeRestore")}
           onClick={() => void runTauriWindowAction("toggleMaximize")}
         >
           <MaximizeGlyph />
@@ -317,7 +257,7 @@ export function AppTitlebar({
         <button
           className="window-control close"
           type="button"
-          aria-label="关闭窗口"
+          aria-label={t("titlebar.closeWindow")}
           onClick={() => void runTauriWindowAction("close")}
         >
           <CloseGlyph />
@@ -372,23 +312,31 @@ export function AppTitlebar({
   }
 }
 
-interface TitlebarSessionSwitcherProps {
-  activeConnectionId: string | null;
-  connectionById: Map<string, ConnectionProfile>;
-  connectionSessions: TitlebarConnectionSession[];
-  hiddenSessionCount: number;
-  onCloseConnectionSession: (connectionId: string) => void;
-  onSelectConnectionSession: (connectionId: string) => void;
+/** 类型角标：首页用图标，其余用文字（SSH / 本地 / RDP / 分屏…）。 */
+function ItemKindBadge({ item }: { item: TitlebarItem }) {
+  return (
+    <span className="tab-kind-badge" aria-hidden="true">
+      {item.badge ?? <House className="title-tool-icon" />}
+    </span>
+  );
 }
 
-function TitlebarSessionSwitcher({
-  activeConnectionId,
-  connectionById,
-  connectionSessions,
-  hiddenSessionCount,
-  onCloseConnectionSession,
-  onSelectConnectionSession,
-}: TitlebarSessionSwitcherProps) {
+interface TitlebarItemSwitcherProps {
+  activeItemId: string | null;
+  hiddenItemCount: number;
+  items: TitlebarItem[];
+  onCloseItem: (itemId: string) => void;
+  onSelectItem: (itemId: string) => void;
+}
+
+function TitlebarItemSwitcher({
+  activeItemId,
+  hiddenItemCount,
+  items,
+  onCloseItem,
+  onSelectItem,
+}: TitlebarItemSwitcherProps) {
+  const { t } = useI18n();
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -396,20 +344,7 @@ function TitlebarSessionSwitcher({
   const [position, setPosition] = useState<TitlebarSessionSwitcherPosition | null>(null);
   const [query, setQuery] = useState("");
   const [highlightedIndex, setHighlightedIndex] = useState(0);
-  const searchConnections = useMemo(
-    () =>
-      connectionSessions.map((session) => connectionById.get(session.connectionId)),
-    [connectionById, connectionSessions],
-  );
-  const entries = useMemo(
-    () =>
-      buildConnectionSearchEntries(
-        searchConnections.filter((connection): connection is ConnectionProfile => Boolean(connection)),
-        query,
-        searchConnections.length,
-      ),
-    [query, searchConnections],
-  );
+  const entries = useMemo(() => filterTitlebarItems(items, query), [items, query]);
   const selectedIndex = Math.min(highlightedIndex, Math.max(0, entries.length - 1));
   const selectedEntry = entries[selectedIndex] || null;
 
@@ -486,18 +421,17 @@ function TitlebarSessionSwitcher({
     setHighlightedIndex(0);
   }
 
-  function handleSelect(connectionId: string) {
+  function handleSelect(itemId: string) {
     closeMenu();
-    onSelectConnectionSession(connectionId);
+    onSelectItem(itemId);
   }
 
   function handleMenuKeyDown(event: KeyboardEvent<HTMLInputElement>) {
     if ((event.ctrlKey || event.metaKey) && /^[1-9]$/.test(event.key)) {
-      const targetIndex = Number.parseInt(event.key, 10) - 1;
-      const targetEntry = entries[targetIndex];
+      const targetEntry = entries[Number.parseInt(event.key, 10) - 1];
       if (targetEntry) {
         event.preventDefault();
-        handleSelect(targetEntry.connection.id);
+        handleSelect(targetEntry.id);
       }
       return;
     }
@@ -516,7 +450,7 @@ function TitlebarSessionSwitcher({
 
     if (event.key === "Enter" && selectedEntry) {
       event.preventDefault();
-      handleSelect(selectedEntry.connection.id);
+      handleSelect(selectedEntry.id);
       return;
     }
 
@@ -528,14 +462,14 @@ function TitlebarSessionSwitcher({
 
   return (
     <>
-      <Tooltip label={`更多会话${hiddenSessionCount > 0 ? ` · ${hiddenSessionCount}` : ""}`}>
+      <Tooltip label={t("titlebar.moreItemsCount", { count: hiddenItemCount })}>
         <button
           ref={triggerRef}
           className="title-tool-button title-session-switcher-button"
           type="button"
           aria-haspopup="dialog"
           aria-expanded={open}
-          aria-label={`更多会话${hiddenSessionCount > 0 ? `，${hiddenSessionCount} 个隐藏会话` : ""}`}
+          aria-label={t("titlebar.moreItemsHidden", { count: hiddenItemCount })}
           onClick={() => {
             if (open) {
               closeMenu();
@@ -562,84 +496,91 @@ function TitlebarSessionSwitcher({
                 } as CSSProperties
               }
               role="dialog"
-              aria-label="会话切换"
+              aria-label={t("titlebar.switcher.title")}
               onPointerDown={(event) => event.stopPropagation()}
             >
               <div className="connection-search-head title-session-switcher-head">
                 <div>
-                  <div className="connection-search-title">会话切换</div>
-                  <p className="title-session-switcher-subtitle">搜索已打开的会话</p>
+                  <div className="connection-search-title">{t("titlebar.switcher.title")}</div>
+                  <p className="title-session-switcher-subtitle">{t("titlebar.switcher.subtitle")}</p>
                 </div>
                 <button
                   className="icon-button dialog-close-button"
                   type="button"
-                  aria-label="关闭会话切换"
+                  aria-label={t("titlebar.switcher.close")}
                   onClick={closeMenu}
                 >
                   <X className="ui-icon" aria-hidden="true" />
                 </button>
               </div>
 
-              <label className="connection-search-input-wrap title-session-switcher-input-wrap" aria-label="搜索会话">
+              <label
+                className="connection-search-input-wrap title-session-switcher-input-wrap"
+                aria-label={t("titlebar.switcher.search")}
+              >
                 <Search className="ui-icon" aria-hidden="true" />
                 <input
                   ref={inputRef}
                   spellCheck={false}
                   value={query}
-                  placeholder="搜索会话、主机、分组"
+                  placeholder={t("titlebar.switcher.placeholder")}
                   onKeyDown={handleMenuKeyDown}
                   onChange={(event) => setQuery(event.currentTarget.value)}
                 />
               </label>
 
               <div className="connection-search-section-title">
-                <span>{query.trim().length > 0 ? "搜索结果" : "最近会话"}</span>
+                <span>
+                  {query.trim().length > 0 ? t("titlebar.switcher.results") : t("titlebar.switcher.open")}
+                </span>
                 <small>{entries.length.toString()}</small>
               </div>
 
               <div
                 className="title-session-switcher-results connection-search-results"
                 role="listbox"
-                aria-label="会话列表"
+                aria-label={t("titlebar.switcher.list")}
               >
                 {entries.length === 0 ? (
-                  <p className="connection-search-empty">暂无可切换的会话</p>
+                  <p className="connection-search-empty">{t("titlebar.switcher.empty")}</p>
                 ) : null}
 
                 {entries.map((entry, index) => {
-                  const connection = entry.connection;
-                  const current = connection.id === activeConnectionId;
+                  const current = entry.id === activeItemId;
 
                   return (
                     <div
-                      key={connection.id}
+                      key={entry.id}
                       className={`connection-search-result title-session-switcher-row ${index === selectedIndex ? "active" : ""} ${current ? "current" : ""}`}
                       role="option"
                       aria-selected={index === selectedIndex}
                       onMouseEnter={() => setHighlightedIndex(index)}
-                      onClick={() => handleSelect(connection.id)}
+                      onClick={() => handleSelect(entry.id)}
                     >
-                      <ConnectionSystemLogo connection={connection} compact decorative />
+                      <ItemKindBadge item={entry} />
                       <span className="connection-search-result-main title-session-switcher-main">
-                        <strong>{connection.name}</strong>
-                        <small>{entry.address}</small>
+                        <strong>{entry.label}</strong>
+                        {entry.detail ? <small>{entry.detail}</small> : null}
                       </span>
                       <div className="connection-search-result-side title-session-switcher-side">
-                        <span className="connection-search-result-meta">{entry.metaLabel}</span>
-                        {current ? <span className="connection-search-badge">当前</span> : null}
-                        <Tooltip label={`关闭 ${connection.name}`}>
-                          <button
-                            className="title-session-switcher-close"
-                            type="button"
-                            aria-label={`关闭 ${connection.name}`}
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              onCloseConnectionSession(connection.id);
-                            }}
-                          >
-                            <X className="ui-icon" aria-hidden="true" />
-                          </button>
-                        </Tooltip>
+                        {current ? (
+                          <span className="connection-search-badge">{t("titlebar.switcher.current")}</span>
+                        ) : null}
+                        {entry.closable ? (
+                          <Tooltip label={t("titlebar.closeItem", { label: entry.label })}>
+                            <button
+                              className="title-session-switcher-close"
+                              type="button"
+                              aria-label={t("titlebar.closeItem", { label: entry.label })}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                onCloseItem(entry.id);
+                              }}
+                            >
+                              <X className="ui-icon" aria-hidden="true" />
+                            </button>
+                          </Tooltip>
+                        ) : null}
                       </div>
                     </div>
                   );
@@ -694,136 +635,6 @@ function readTitlebarSessionMenuPosition(
     top: openAbove ? rect.top - gap - maxHeight : rect.bottom + gap,
     width,
   };
-}
-
-function pickVisibleConnectionSessions(
-  connectionSessions: TitlebarConnectionSession[],
-  connectionById: Map<string, ConnectionProfile>,
-  activeConnectionId: string | null,
-  homeActive: boolean,
-  localTerminalActive: boolean,
-  availableWidth: number,
-) {
-  const effectiveActiveConnectionId = homeActive || localTerminalActive ? null : activeConnectionId;
-
-  if (connectionSessions.length === 0) {
-    return [];
-  }
-
-  if (!Number.isFinite(availableWidth) || availableWidth <= 0) {
-    const fallbackVisibleSessions = 4;
-    if (connectionSessions.length <= fallbackVisibleSessions) {
-      return connectionSessions;
-    }
-
-    const head = connectionSessions.slice(0, fallbackVisibleSessions - 1);
-    if (effectiveActiveConnectionId) {
-      const activeSession = connectionSessions.find(
-        (session) => session.connectionId === effectiveActiveConnectionId,
-      );
-      if (
-        activeSession &&
-        !head.some((session) => session.connectionId === activeSession.connectionId)
-      ) {
-        return [...head, activeSession];
-      }
-    }
-
-    return connectionSessions.slice(0, fallbackVisibleSessions);
-  }
-
-  const availableTabsWidth = Math.max(0, availableWidth - 20);
-  const switcherWidth = connectionSessions.length > 1 ? 34 : 0;
-  const tabGap = 6;
-  const visibleBudget = Math.max(0, availableTabsWidth - switcherWidth);
-  const fittedSessions: TitlebarConnectionSession[] = [];
-  let consumedWidth = 0;
-
-  for (const session of connectionSessions) {
-    const estimatedWidth = estimateTitlebarSessionWidth(session, connectionById);
-    const nextWidth =
-      consumedWidth + (fittedSessions.length > 0 ? tabGap : 0) + estimatedWidth;
-
-    if (nextWidth > visibleBudget) {
-      break;
-    }
-
-    fittedSessions.push(session);
-    consumedWidth = nextWidth;
-  }
-
-  if (connectionSessions.length <= fittedSessions.length) {
-    return connectionSessions;
-  }
-
-  if (!effectiveActiveConnectionId) {
-    return fittedSessions;
-  }
-
-  const activeSession = connectionSessions.find(
-    (session) => session.connectionId === effectiveActiveConnectionId,
-  );
-  if (!activeSession) {
-    return fittedSessions;
-  }
-
-  if (fittedSessions.some((session) => session.connectionId === activeSession.connectionId)) {
-    return fittedSessions;
-  }
-
-  const activeWidth = estimateTitlebarSessionWidth(activeSession, connectionById);
-  let trimmedSessions = fittedSessions.slice();
-  let trimmedWidth = calculateTitlebarSessionsWidth(trimmedSessions, connectionById);
-
-  while (
-    trimmedSessions.length > 0 &&
-    trimmedWidth + (trimmedSessions.length > 0 ? tabGap : 0) + activeWidth > visibleBudget
-  ) {
-    trimmedSessions.pop();
-    trimmedWidth = calculateTitlebarSessionsWidth(trimmedSessions, connectionById);
-  }
-
-  if (trimmedSessions.length === 0 && activeWidth <= visibleBudget) {
-    return [activeSession];
-  }
-
-  if (trimmedSessions.length === 0) {
-    return [activeSession];
-  }
-
-  return [...trimmedSessions, activeSession];
-}
-
-function estimateTitlebarSessionWidth(
-  session: TitlebarConnectionSession,
-  connectionById: Map<string, ConnectionProfile>,
-) {
-  const connection = connectionById.get(session.connectionId);
-  const labelLength = (connection?.name || "连接已删除").trim().length;
-  return Math.min(182, Math.max(118, 80 + labelLength * 5.2));
-}
-
-function calculateTitlebarSessionsWidth(
-  sessions: TitlebarConnectionSession[],
-  connectionById: Map<string, ConnectionProfile>,
-) {
-  let width = 0;
-
-  sessions.forEach((session, index) => {
-    width += estimateTitlebarSessionWidth(session, connectionById);
-    if (index < sessions.length - 1) {
-      width += 6;
-    }
-  });
-
-  return width;
-}
-
-function connectionName(
-  connectionId: string,
-  connectionById: Map<string, ConnectionProfile>,
-) {
-  return connectionById.get(connectionId)?.name || "连接已删除";
 }
 
 function isInteractiveDragTarget(target: EventTarget) {
@@ -897,10 +708,6 @@ function SidebarToggleGlyph({ collapsed }: { collapsed: boolean }) {
       <rect x={railX} y="6.25" width="3" height="7.5" rx="1" fill="currentColor" stroke="none" />
     </svg>
   );
-}
-
-function HomeGlyph() {
-  return <House className="title-tool-icon" aria-hidden="true" />;
 }
 
 function MinimizeGlyph() {

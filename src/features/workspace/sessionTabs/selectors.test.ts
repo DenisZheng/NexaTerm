@@ -6,7 +6,6 @@ import {
   selectActiveSession,
   selectActiveTerminalSplitBinding,
   selectActiveTerminalTab,
-  selectConnectionSessions,
 } from "./selectors";
 
 const rdp = (id: string, connectionId: string) => ({ connectionId, id });
@@ -20,25 +19,6 @@ describe("groupByConnection", () => {
 
   it("空输入返回空 Map", () => {
     expect(groupByConnection([]).size).toBe(0);
-  });
-});
-
-describe("selectConnectionSessions", () => {
-  it("终端 → RDP → VNC 顺序合并同一连接的 tab", () => {
-    const t = new Map([["a", [{ id: "t1" }]]]);
-    const r = new Map([["a", [{ id: "r1" }]], ["b", [{ id: "r2" }]]]);
-    const v = new Map([["a", [{ id: "v1" }]]]);
-    expect(selectConnectionSessions(t, r, v)).toEqual([
-      { connectionId: "a", tabs: [{ id: "t1" }, { id: "r1" }, { id: "v1" }] },
-      { connectionId: "b", tabs: [{ id: "r2" }] },
-    ]);
-  });
-
-  it("不改变输入 Map 里的数组", () => {
-    const tabs = [{ id: "t1" }];
-    const t = new Map([["a", tabs]]);
-    selectConnectionSessions(t, new Map([["a", [{ id: "r1" }]]]), new Map());
-    expect(tabs).toEqual([{ id: "t1" }]);
   });
 });
 
