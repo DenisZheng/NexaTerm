@@ -25,7 +25,13 @@ async function bootstrap() {
   });
 }
 
-void bootstrap().catch((error: unknown) => {
-  console.error(error);
-  void showCurrentWindow();
-});
+if (import.meta.env.VITE_NEXATERM_IME_SMOKE === "1") {
+  void import("./features/terminal/linuxImeSmoke")
+    .then(({ mountLinuxImeSmoke }) => mountLinuxImeSmoke())
+    .catch((error: unknown) => console.error(error));
+} else {
+  void bootstrap().catch((error: unknown) => {
+    console.error(error);
+    void showCurrentWindow();
+  });
+}
