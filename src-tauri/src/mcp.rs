@@ -968,8 +968,10 @@ pub fn normalize_timeout(seconds: Option<u64>) -> Duration {
 
 /// 危险命令策略判定：只有「设置里允许」且「本次调用显式确认」同时成立才放行。
 ///
-/// 从 `execute_command` 里拆出来是为了可测——这是 MCP 最核心的安全门，埋在需要真实 SSH
+/// 从 `execute_command` 里拆出来是为了可测——埋在需要真实 SSH
 /// 连接的函数里等于没有测试覆盖。
+/// 注意：`detect_dangerous_command` 只是 13 条子串的启发式匹配，能绕过也会误报，
+/// 不是安全边界；真正的安全门是「默认关闭 + 每次调用显式确认」的策略本身。
 ///
 /// 拒绝时只回命中原因，**不回显完整命令**：命令行里可能带密码、token 等参数。
 pub fn ensure_dangerous_command_allowed(

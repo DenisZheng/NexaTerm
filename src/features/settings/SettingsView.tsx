@@ -1073,7 +1073,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
       id: "stdio" as const,
       label: "stdio client",
       title: "stdio client 配置",
-      description: "发布包中 sidecar 会随 MXterm 一起提供；开发期可替换为本地绝对路径。",
+      description: "发布包中 sidecar 会随 NexaTerm 一起提供；开发期可替换为本地绝对路径。",
       snippet: configSnippet,
       copied,
       setCopied,
@@ -1084,8 +1084,8 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
       title: "远程 HTTP client 配置",
       description:
         settings.remote_host === "0.0.0.0" && suggestedRemoteHost
-          ? "主入口使用 Streamable HTTP；已自动填入当前本机 IP。"
-          : "主入口使用 Streamable HTTP；监听 0.0.0.0 时会优先填入本机 IP。",
+          ? "主入口使用 Streamable HTTP；已自动填入当前本机 IP。远程 HTTP 无 TLS，token 与命令输出均为明文：仅建议经 SSH 隧道访问，不要直接暴露到网络。"
+          : "主入口使用 Streamable HTTP；监听 0.0.0.0 时会优先填入本机 IP。远程 HTTP 无 TLS，token 与命令输出均为明文：仅建议经 SSH 隧道访问，不要直接暴露到网络。",
       snippet: remoteConfigSnippet,
       copied: remoteConfigCopied,
       setCopied: setRemoteConfigCopied,
@@ -1405,7 +1405,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
         <SettingsRow
           icon={ShieldCheck}
           title="允许危险命令确认"
-          description="关闭时直接拒绝危险命令；开启后仍需要 MCP 工具参数显式确认。"
+          description="关闭时拒绝命中启发式规则的命令（子串匹配，可能漏报/误报，不是安全边界）；开启后仍需要 MCP 工具参数显式确认。"
         >
           <SettingsToggle
             checked={settings.allow_dangerous_commands}
