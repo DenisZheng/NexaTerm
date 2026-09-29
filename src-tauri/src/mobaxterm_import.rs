@@ -1,11 +1,20 @@
 use std::borrow::Cow;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::Path;
+use std::time::{SystemTime, UNIX_EPOCH};
+
+use tauri::AppHandle;
 
 use encoding_rs::WINDOWS_1252;
 use serde::{Deserialize, Serialize};
 
 use crate::app_error::AppError;
+use crate::connections::{
+    ConnectionAdvancedConfig, ConnectionAuthKind, ConnectionCredentialMode, ConnectionJumpConfig,
+    ConnectionProfile, ConnectionProfileInput, ConnectionProtocol, ConnectionProxyConfig,
+};
+use crate::storage_repository::StorageRepository;
 use crate::sync_snapshot::sha256_hex;
 
 const MOBAXTERM_IMPORT_MAX_FILE_BYTES: u64 = 16 * 1024 * 1024;
@@ -32,8 +41,19 @@ pub enum MobaXtermImportStatus {
     Invalid,
 }
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum MobaXtermImportConflict {
+    #[default]
+    None,
+    ExactDuplicate,
+    NameConflict,
+    PossibleTargetDuplicate,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct MobaXtermImportItem {
+    pub source_index: usize,
     pub name: String,
     pub folder_path: Option<String>,
     pub kind: MobaXtermSessionKind,
@@ -45,6 +65,14 @@ pub struct MobaXtermImportItem {
     pub status: MobaXtermImportStatus,
     pub missing_fields: Vec<String>,
     pub warnings: Vec<String>,
+    #[serde(default)]
+    pub conflict: MobaXtermImportConflict,
+    #[serde(default)]
+    pub suggested_name: Option<String>,
+    #[serde(default)]
+    pub effective_username: Option<String>,
+    #[serde(default)]
+    pub selectable: bool,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize)]
@@ -54,6 +82,9 @@ pub struct MobaXtermImportSummary {
     pub needs_input: usize,
     pub unsupported: usize,
     pub invalid: usize,
+    pub exact_duplicates: usize,
+    pub name_conflicts: usize,
+    pub possible_target_duplicates: usize,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -68,14 +99,76 @@ pub struct MobaXtermImportPreviewRequest {
     pub path: String,
 }
 
+#[derive(Clone, Debug, Deserialize)]
+pub struct MobaXtermImportSelection {
+    pub source_index: usize,
+    pub name: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct MobaXtermImportApplyRequest {
+    pub path: String,
+    pub fingerprint: String,
+    #[serde(default)]
+    pub default_username: Option<String>,
+    #[serde(default)]
+    pub selections: Vec<MobaXtermImportSelection>,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize)]
+pub struct MobaXtermImportApplyResult {
+    pub created: usize,
+    pub skipped_exact_duplicates: usize,
+}
+
 #[tauri::command]
 pub async fn mobaxterm_import_preview(
+    app: AppHandle,
     request: MobaXtermImportPreviewRequest,
 ) -> Result<MobaXtermImportPreviewResult, AppError> {
-    preview_file(Path::new(&request.path))
+    let repository = StorageRepository::open_app(&app)?;
+    preview_for_repository(&repository, Path::new(&request.path), None)
+}
+
+#[tauri::command]
+pub async fn mobaxterm_import_apply(
+    app: AppHandle,
+    request: MobaXtermImportApplyRequest,
+) -> Result<MobaXtermImportApplyResult, AppError> {
+    let mut repository = StorageRepository::open_app(&app)?;
+    import_from_file(&mut repository, request)
 }
 
 pub fn preview_file(path: &Path) -> Result<MobaXtermImportPreviewResult, AppError> {
+    let (fingerprint, items) = read_source_file(path)?;
+    let summary = summarize(&items);
+    Ok(MobaXtermImportPreviewResult {
+        fingerprint,
+        summary,
+        items,
+    })
+}
+
+pub fn preview_for_repository(
+    repository: &StorageRepository,
+    path: &Path,
+    default_username: Option<&str>,
+) -> Result<MobaXtermImportPreviewResult, AppError> {
+    let (fingerprint, mut items) = read_source_file(path)?;
+    enrich_items_for_repository(
+        &mut items,
+        &repository.connection_list()?,
+        default_username,
+    );
+    let summary = summarize(&items);
+    Ok(MobaXtermImportPreviewResult {
+        fingerprint,
+        summary,
+        items,
+    })
+}
+
+fn read_source_file(path: &Path) -> Result<(String, Vec<MobaXtermImportItem>), AppError> {
     validate_import_path(path)?;
     let metadata = fs::metadata(path).map_err(mobaxterm_import_file_read_failed)?;
     if !metadata.is_file() || metadata.len() == 0 {
@@ -92,14 +185,7 @@ pub fn preview_file(path: &Path) -> Result<MobaXtermImportPreviewResult, AppErro
         return Err(mobaxterm_import_file_too_large(bytes.len() as u64));
     }
 
-    let fingerprint = sha256_hex(&bytes);
-    let items = parse_bytes(&bytes)?;
-    let summary = summarize(&items);
-    Ok(MobaXtermImportPreviewResult {
-        fingerprint,
-        summary,
-        items,
-    })
+    Ok((sha256_hex(&bytes), parse_bytes(&bytes)?))
 }
 
 fn parse_bytes(bytes: &[u8]) -> Result<Vec<MobaXtermImportItem>, AppError> {
@@ -148,7 +234,13 @@ fn parse_bytes(bytes: &[u8]) -> Result<Vec<MobaXtermImportItem>, AppError> {
             continue;
         }
 
-        items.push(parse_session(name, folder_path.as_deref(), value));
+        let source_index = items.len();
+        items.push(parse_session(
+            source_index,
+            name,
+            folder_path.as_deref(),
+            value,
+        ));
     }
 
     if items.is_empty() {
@@ -173,10 +265,16 @@ fn decode_mobaxterm_text(bytes: &[u8]) -> Cow<'_, str> {
     }
 }
 
-fn parse_session(name: &str, folder_path: Option<&str>, value: &str) -> MobaXtermImportItem {
+fn parse_session(
+    source_index: usize,
+    name: &str,
+    folder_path: Option<&str>,
+    value: &str,
+) -> MobaXtermImportItem {
     let characteristics: Vec<&str> = value.split('#').collect();
     if characteristics.len() < 3 || !characteristics[0].trim().is_empty() {
         return invalid_item(
+            source_index,
             name,
             folder_path,
             "",
@@ -190,12 +288,22 @@ fn parse_session(name: &str, folder_path: Option<&str>, value: &str) -> MobaXter
     let kind = session_kind(source_type_code, icon_code);
 
     match kind {
-        MobaXtermSessionKind::Ssh => parse_ssh_session(name, folder_path, source_type_code, &primary),
-        _ => parse_unsupported_session(name, folder_path, source_type_code, kind, &primary),
+        MobaXtermSessionKind::Ssh => {
+            parse_ssh_session(source_index, name, folder_path, source_type_code, &primary)
+        }
+        _ => parse_unsupported_session(
+            source_index,
+            name,
+            folder_path,
+            source_type_code,
+            kind,
+            &primary,
+        ),
     }
 }
 
 fn parse_ssh_session(
+    source_index: usize,
     name: &str,
     folder_path: Option<&str>,
     source_type_code: &str,
@@ -258,6 +366,7 @@ fn parse_ssh_session(
     };
 
     MobaXtermImportItem {
+        source_index,
         name: name.to_string(),
         folder_path: folder_path.and_then(non_empty).map(ToOwned::to_owned),
         kind: MobaXtermSessionKind::Ssh,
@@ -269,10 +378,15 @@ fn parse_ssh_session(
         status,
         missing_fields,
         warnings,
+        conflict: MobaXtermImportConflict::None,
+        suggested_name: None,
+        effective_username: None,
+        selectable: false,
     }
 }
 
 fn parse_unsupported_session(
+    source_index: usize,
     name: &str,
     folder_path: Option<&str>,
     source_type_code: &str,
@@ -303,6 +417,7 @@ fn parse_unsupported_session(
     };
 
     MobaXtermImportItem {
+        source_index,
         name: name.to_string(),
         folder_path: folder_path.and_then(non_empty).map(ToOwned::to_owned),
         kind,
@@ -314,16 +429,22 @@ fn parse_unsupported_session(
         status: MobaXtermImportStatus::Unsupported,
         missing_fields: Vec::new(),
         warnings: vec!["session_type_not_imported_yet".to_string()],
+        conflict: MobaXtermImportConflict::None,
+        suggested_name: None,
+        effective_username: None,
+        selectable: false,
     }
 }
 
 fn invalid_item(
+    source_index: usize,
     name: &str,
     folder_path: Option<&str>,
     source_type_code: &str,
     warnings: Vec<String>,
 ) -> MobaXtermImportItem {
     MobaXtermImportItem {
+        source_index,
         name: name.to_string(),
         folder_path: folder_path.and_then(non_empty).map(ToOwned::to_owned),
         kind: MobaXtermSessionKind::Other,
@@ -335,6 +456,10 @@ fn invalid_item(
         status: MobaXtermImportStatus::Invalid,
         missing_fields: Vec::new(),
         warnings,
+        conflict: MobaXtermImportConflict::None,
+        suggested_name: None,
+        effective_username: None,
+        selectable: false,
     }
 }
 
@@ -350,8 +475,312 @@ fn summarize(items: &[MobaXtermImportItem]) -> MobaXtermImportSummary {
             MobaXtermImportStatus::Unsupported => summary.unsupported += 1,
             MobaXtermImportStatus::Invalid => summary.invalid += 1,
         }
+        match item.conflict {
+            MobaXtermImportConflict::ExactDuplicate => summary.exact_duplicates += 1,
+            MobaXtermImportConflict::NameConflict => summary.name_conflicts += 1,
+            MobaXtermImportConflict::PossibleTargetDuplicate => {
+                summary.possible_target_duplicates += 1
+            }
+            MobaXtermImportConflict::None => {}
+        }
     }
     summary
+}
+
+fn enrich_items_for_repository(
+    items: &mut [MobaXtermImportItem],
+    existing: &[ConnectionProfile],
+    default_username: Option<&str>,
+) {
+    let default_username = default_username.and_then(non_empty);
+    let mut reserved_names: BTreeSet<String> =
+        existing.iter().map(|item| item.name.clone()).collect();
+
+    for item in items {
+        if item.kind != MobaXtermSessionKind::Ssh {
+            continue;
+        }
+        item.effective_username = item
+            .username
+            .clone()
+            .or_else(|| default_username.map(ToOwned::to_owned));
+
+        let blocked_network_settings = item
+            .missing_fields
+            .iter()
+            .any(|field| field == "network_settings_review");
+        let username_missing = item.effective_username.is_none();
+        item.status = if item.host.is_none() || item.port.is_none() {
+            MobaXtermImportStatus::Invalid
+        } else if username_missing || blocked_network_settings {
+            MobaXtermImportStatus::NeedsInput
+        } else {
+            MobaXtermImportStatus::Ready
+        };
+
+        if item.status == MobaXtermImportStatus::Invalid {
+            item.selectable = false;
+            continue;
+        }
+
+        let host = item.host.as_deref().unwrap_or_default();
+        let port = item.port.unwrap_or_default();
+        let username = item.effective_username.as_deref().unwrap_or_default();
+        let exact = existing.iter().any(|candidate| {
+            candidate.protocol == ConnectionProtocol::Ssh
+                && candidate.name == item.name
+                && same_host(&candidate.host, host)
+                && candidate.port == port
+                && candidate.username == username
+        });
+        let same_target = existing.iter().any(|candidate| {
+            candidate.protocol == ConnectionProtocol::Ssh
+                && same_host(&candidate.host, host)
+                && candidate.port == port
+                && candidate.username == username
+                && candidate.name != item.name
+        });
+
+        if exact {
+            item.conflict = MobaXtermImportConflict::ExactDuplicate;
+            item.selectable = false;
+            continue;
+        }
+
+        if reserved_names.contains(&item.name) {
+            item.conflict = MobaXtermImportConflict::NameConflict;
+            item.suggested_name = Some(suggest_unique_name(&item.name, &reserved_names));
+        } else if same_target {
+            item.conflict = MobaXtermImportConflict::PossibleTargetDuplicate;
+        }
+        reserved_names.insert(
+            item.suggested_name
+                .clone()
+                .unwrap_or_else(|| item.name.clone()),
+        );
+        item.selectable = item.status == MobaXtermImportStatus::Ready;
+    }
+}
+
+fn suggest_unique_name(base: &str, reserved: &BTreeSet<String>) -> String {
+    let first = format!("{base} (MobaXterm)");
+    if !reserved.contains(&first) {
+        return first;
+    }
+    for suffix in 2..10_000 {
+        let candidate = format!("{base} (MobaXterm {suffix})");
+        if !reserved.contains(&candidate) {
+            return candidate;
+        }
+    }
+    format!("{base} (MobaXterm {})", uuid::Uuid::new_v4())
+}
+
+fn same_host(left: &str, right: &str) -> bool {
+    left.trim().eq_ignore_ascii_case(right.trim())
+}
+
+fn import_from_file(
+    repository: &mut StorageRepository,
+    request: MobaXtermImportApplyRequest,
+) -> Result<MobaXtermImportApplyResult, AppError> {
+    let path = Path::new(&request.path);
+    let (fingerprint, mut items) = read_source_file(path)?;
+    if request.fingerprint.len() != 64 || fingerprint != request.fingerprint {
+        return Err(AppError::new(
+            "mobaxterm_import_file_changed",
+            "MobaXterm 会话文件在预览后发生了变化，请重新预览。",
+            "MobaXterm import fingerprint mismatch",
+            true,
+        ));
+    }
+
+    let existing = repository.connection_list()?;
+    enrich_items_for_repository(
+        &mut items,
+        &existing,
+        request.default_username.as_deref(),
+    );
+    let selections: BTreeMap<usize, String> = request
+        .selections
+        .into_iter()
+        .map(|selection| (selection.source_index, selection.name.trim().to_string()))
+        .collect();
+    if selections.values().any(|name| name.is_empty()) {
+        return Err(mobaxterm_import_invalid_selection(
+            "selected connection name is empty",
+        ));
+    }
+    if selections.len() == 0 {
+        return Err(mobaxterm_import_invalid_selection(
+            "no MobaXterm sessions selected",
+        ));
+    }
+
+    repository.create_sync_backup()?;
+    repository
+        .sqlite_connection()
+        .execute_batch("BEGIN IMMEDIATE;")
+        .map_err(mobaxterm_import_apply_failed)?;
+
+    let apply_result = (|| -> Result<MobaXtermImportApplyResult, AppError> {
+        let mut result = MobaXtermImportApplyResult::default();
+        let mut used_names: BTreeSet<String> =
+            existing.iter().map(|item| item.name.clone()).collect();
+
+        for (source_index, selected_name) in &selections {
+            let Some(item) = items.get(*source_index) else {
+                return Err(mobaxterm_import_invalid_selection(format!(
+                    "source index {source_index} is out of range"
+                )));
+            };
+            if item.source_index != *source_index || item.kind != MobaXtermSessionKind::Ssh {
+                return Err(mobaxterm_import_invalid_selection(format!(
+                    "source index {source_index} is not an SSH session"
+                )));
+            }
+            if item.conflict == MobaXtermImportConflict::ExactDuplicate {
+                result.skipped_exact_duplicates += 1;
+                continue;
+            }
+            if !item.selectable {
+                return Err(mobaxterm_import_invalid_selection(format!(
+                    "source index {source_index} is not ready for import"
+                )));
+            }
+
+            let username = item
+                .effective_username
+                .clone()
+                .ok_or_else(|| mobaxterm_import_invalid_selection("SSH username is missing"))?;
+            let host = item
+                .host
+                .clone()
+                .ok_or_else(|| mobaxterm_import_invalid_selection("SSH host is missing"))?;
+            let port = item
+                .port
+                .ok_or_else(|| mobaxterm_import_invalid_selection("SSH port is invalid"))?;
+
+            if used_names.contains(selected_name) && selected_name != &item.name {
+                return Err(mobaxterm_import_name_conflict(selected_name));
+            }
+            if existing
+                .iter()
+                .any(|candidate| candidate.name == *selected_name)
+            {
+                return Err(mobaxterm_import_name_conflict(selected_name));
+            }
+            used_names.insert(selected_name.clone());
+
+            let (credential_mode, inline_auth_kind, inline_private_key_path, prompt_auth_kind) =
+                if let Some(private_key_path) = item.private_key_path.clone() {
+                    (
+                        ConnectionCredentialMode::Inline,
+                        Some(ConnectionAuthKind::PrivateKey),
+                        Some(private_key_path),
+                        None,
+                    )
+                } else {
+                    (
+                        ConnectionCredentialMode::Prompt,
+                        None,
+                        None,
+                        Some(ConnectionAuthKind::Password),
+                    )
+                };
+
+            repository.connection_upsert(
+                ConnectionProfileInput {
+                    id: None,
+                    source_connection_id: None,
+                    protocol: ConnectionProtocol::Ssh,
+                    name: Some(selected_name.clone()),
+                    group: item.folder_path.clone(),
+                    host,
+                    port,
+                    username,
+                    credential_mode,
+                    credential_id: None,
+                    inline_auth_kind,
+                    inline_password: None,
+                    inline_password_touched: false,
+                    inline_private_key_path,
+                    inline_private_key_passphrase: None,
+                    inline_private_key_passphrase_touched: false,
+                    prompt_auth_kind,
+                    proxy: ConnectionProxyConfig::default(),
+                    jump: ConnectionJumpConfig::default(),
+                    advanced: ConnectionAdvancedConfig::default(),
+                    rdp: None,
+                    vnc: None,
+                    telnet: None,
+                    serial: None,
+                    notes: Some("Imported from MobaXterm".to_string()),
+                    is_favorite: Some(false),
+                    last_connected_at: None,
+                    remote_os_id: None,
+                    remote_os_name: None,
+                    remote_os_version: None,
+                    auth_kind: None,
+                    password: None,
+                    private_key_path: None,
+                    private_key_passphrase: None,
+                },
+                &now_timestamp()?,
+            )?;
+            result.created += 1;
+        }
+
+        Ok(result)
+    })();
+
+    match apply_result {
+        Ok(result) => {
+            repository
+                .sqlite_connection()
+                .execute_batch("COMMIT;")
+                .map_err(mobaxterm_import_apply_failed)?;
+            Ok(result)
+        }
+        Err(error) => {
+            let _ = repository.sqlite_connection().execute_batch("ROLLBACK;");
+            Err(error)
+        }
+    }
+}
+
+fn now_timestamp() -> Result<String, AppError> {
+    let duration = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|error| AppError::new("connection_clock_invalid", "系统时间异常。", error, false))?;
+    Ok(duration.as_secs().to_string())
+}
+
+fn mobaxterm_import_invalid_selection(raw: impl ToString) -> AppError {
+    AppError::new(
+        "mobaxterm_import_invalid_selection",
+        "MobaXterm 导入选择无效，请重新预览。",
+        raw,
+        true,
+    )
+}
+
+fn mobaxterm_import_name_conflict(name: &str) -> AppError {
+    AppError::new(
+        "mobaxterm_import_name_conflict",
+        "导入项名称与现有连接冲突，请使用预览中的建议名称。",
+        format!("MobaXterm import name conflict: {name}"),
+        true,
+    )
+}
+
+fn mobaxterm_import_apply_failed(raw: impl ToString) -> AppError {
+    AppError::new(
+        "mobaxterm_import_apply_failed",
+        "MobaXterm 会话导入失败，本地连接未修改。",
+        raw,
+        true,
+    )
 }
 
 fn session_kind(type_code: &str, icon_code: &str) -> MobaXtermSessionKind {
