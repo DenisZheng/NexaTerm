@@ -1,7 +1,7 @@
 # NexaTerm 当前路线图
 
 > 更新：2026-09-29  
-> 基线：GitHub `main` @ `141b3b34`  
+> 基线：GitHub `main` @ `35f8e813`  
 > 本文件是当前项目级执行顺序的唯一入口。需求范围仍以 `NEXATERM_REQUIREMENTS.md` 为准；交互规则仍以 `docs/WORKFLOW_SPEC.md` 为准。旧阶段计划、差距分析和工作流交付计划保留用于追溯，不再覆盖本文件的当前优先级。
 
 ## 当前评审整改状态

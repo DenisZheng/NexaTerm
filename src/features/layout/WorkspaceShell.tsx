@@ -391,6 +391,8 @@ import { AppTitlebar } from "./AppTitlebar";
 import { buildTitlebarItems } from "./titlebarItems";
 import { useI18n } from "../../shared/i18n";
 import { buildSshRemoteFilePanelStack } from "./remoteFilePanelStrategy";
+import { closeConfirmationCopy } from "./closeConfirmationText";
+import { useCloseRequest } from "../workspace/sessionTabs/useCloseRequest";
 import {
   LocalTerminalIcon,
   localTerminalTitle,
@@ -431,7 +433,14 @@ import {
   selectActiveItemId,
   selectWorkspaceItems,
 } from "../workspace/sessionTabs/instances";
-import { closeScopeItemIds, planItemClose, type CloseScope } from "../workspace/sessionTabs/itemClose";
+import {
+  closeRequestFromItems,
+  closeScopeItemIds,
+  planClose,
+  type ClosePlan,
+  type CloseContext,
+  type CloseScope,
+} from "../workspace/sessionTabs/itemClose";
 import {
   groupByConnection,
   selectActiveConnectedTerminalTab,
@@ -1047,8 +1056,11 @@ export function WorkspaceShell() {
   const [remoteFileRefreshRequest, setRemoteFileRefreshRequest] =
     useState<RemoteFileRefreshRequest | null>(null);
   const [pendingRemoteFileCloseId, setPendingRemoteFileCloseId] = useState<string | null>(null);
-  const [pendingConnectionSessionCloseIds, setPendingConnectionSessionCloseIds] =
-    useState<string[] | null>(null);
+  // 顶栏关闭请求的统一确认状态（WS-F08 未保存编辑的关闭确认）：整次操作至多一次确认，确认后按当时状态重算一次执行。
+  const closeRequestController = useCloseRequest({
+    execute: executeClosePlan,
+    plan: (request) => planClose(request, buildCloseContext()),
+  });
   const [pendingRemoteFileConflictId, setPendingRemoteFileConflictId] = useState<string | null>(null);
   const [remoteFileDeleteTarget, setRemoteFileDeleteTarget] =
     useState<RemoteFileDeleteTarget | null>(null);
@@ -2044,14 +2056,9 @@ export function WorkspaceShell() {
   const pendingRemoteFileCloseTab = pendingRemoteFileCloseId
     ? remoteFileTabs.find((tab) => tab.id === pendingRemoteFileCloseId) || null
     : null;
-  const pendingConnectionSessionCloseSet = pendingConnectionSessionCloseIds
-    ? new Set(pendingConnectionSessionCloseIds)
+  const closeConfirmCopy = closeRequestController.pending
+    ? closeConfirmationCopy(closeRequestController.pending.confirmation, t)
     : null;
-  const pendingConnectionSessionDirtyTabs = pendingConnectionSessionCloseSet
-    ? remoteFileTabs.filter(
-        (tab) => pendingConnectionSessionCloseSet.has(tab.connectionId) && tab.dirty,
-      )
-    : [];
   const pendingRemoteFileConflictTab = pendingRemoteFileConflictId
     ? remoteFileTabs.find((tab) => tab.id === pendingRemoteFileConflictId) || null
     : null;
@@ -2076,7 +2083,7 @@ export function WorkspaceShell() {
     Boolean(pendingCommandHistoryDelete) ||
     commandHistoryClearOpen ||
     Boolean(pendingRemoteFileCloseTab) ||
-    Boolean(pendingConnectionSessionCloseSet) ||
+    Boolean(closeRequestController.pending) ||
     Boolean(remoteFileDeleteTarget) ||
     Boolean(pendingRemoteFileConflictTab) ||
     Boolean(remoteFileTextAction) ||
@@ -4767,13 +4774,8 @@ export function WorkspaceShell() {
     closeTerminalSplitGroup();
   }
 
-  function closeTerminalSplitGroup() {
-    const sshTabIds = terminalSplitPanes.flatMap((pane) =>
-      pane.binding?.kind === "ssh" ? [pane.binding.tabId] : [],
-    );
-    const localTabIds = terminalSplitPanes.flatMap((pane) =>
-      pane.binding?.kind === "local" ? [pane.binding.tabId] : [],
-    );
+  /** 只重置分屏布局与同步状态，不关闭任何终端标签（标签关闭由调用方按实例 / 连接 id 负责）。 */
+  function resetTerminalSplitState() {
     setTerminalSplitLayout(null);
     setTerminalSplitHost(null);
     setTerminalSplitTabActive(false);
@@ -4783,6 +4785,16 @@ export function WorkspaceShell() {
     setTerminalSplitSyncEnabled(false);
     setTerminalSplitSyncParticipantKeys(new Set());
     setTerminalSplitSyncError(null);
+  }
+
+  function closeTerminalSplitGroup() {
+    const sshTabIds = terminalSplitPanes.flatMap((pane) =>
+      pane.binding?.kind === "ssh" ? [pane.binding.tabId] : [],
+    );
+    const localTabIds = terminalSplitPanes.flatMap((pane) =>
+      pane.binding?.kind === "local" ? [pane.binding.tabId] : [],
+    );
+    resetTerminalSplitState();
     if (sshTabIds.length > 0) {
       closeTerminalTabs(sshTabIds);
     }
@@ -7237,17 +7249,31 @@ export function WorkspaceShell() {
     }
   }
 
+  /** 按当前实例状态组装关闭计划所需上下文；分屏成员用当前 pane 绑定映射成实例 id。 */
+  function buildCloseContext(): CloseContext {
+    return {
+      localTerminalTabs: localTerminalTabsRef.current.map((tab) => ({ id: tab.id })),
+      rdpSessions: rdpSessionsRef.current.map((session) => ({ id: session.id })),
+      remoteFileTabs: remoteFileTabs.map((tab) => ({
+        connectionId: tab.connectionId,
+        dirty: tab.dirty,
+        name: tab.name,
+      })),
+      splitMemberIds: terminalSplitPanes.flatMap((pane) =>
+        pane.binding ? [terminalPaneBindingKey(pane.binding)] : [],
+      ),
+      terminalTabs: terminalTabsRef.current.map((tab) => ({ connectionId: tab.connectionId, id: tab.id })),
+      vncSessions: vncSessionsRef.current.map((session) => ({ id: session.id })),
+    };
+  }
+
   /**
-   * 顶栏实例标签关闭（关闭 / 关闭其他 / 关闭右侧 / 全部关闭）：按 `planItemClose` 分派到 WF-00B 的现有关闭路径。
-   * 分屏组先关（多 pane 时弹确认），再按连接 / 实例关；各路径都以 ref 为准，已关掉的 id 自然跳过。
+   * 执行关闭计划：分屏组只重置布局（其终端已由 connectionIds / sshTabIds / localTabIds 覆盖），
+   * 连接级关闭连带远程文件，其余按实例类型分派到 WF-00B 现有关闭路径。
    */
-  function closeWorkspaceItems(targetId: string, scope: CloseScope) {
-    const plan = planItemClose(closeScopeItemIds(workspaceItems, targetId, scope), workspaceItems, {
-      remoteFileConnectionIds: new Set(remoteFileTabs.map((tab) => tab.connectionId)),
-      terminalTabs: terminalTabsRef.current,
-    });
+  function executeClosePlan(plan: ClosePlan) {
     if (plan.splitGroup) {
-      requestCloseTerminalSplitGroup();
+      resetTerminalSplitState();
     }
     if (plan.connectionIds.length > 0) {
       closeConnectionSessions(plan.connectionIds);
@@ -7262,19 +7288,17 @@ export function WorkspaceShell() {
     closeVncSessions(plan.vncSessionIds);
   }
 
-  function closeConnectionSessions(
-    connectionIds: string[],
-    options: { discardDirtyRemoteFiles?: boolean } = {},
-  ) {
+  /**
+   * 顶栏实例标签关闭（关闭 / 关闭其他 / 关闭右侧 / 全部关闭）：把选中项翻译成关闭请求，
+   * 交给 `closeRequestController` 计算计划——需要确认时先弹一次统一确认，确认后按当时状态重算再一次执行（未保存确认见 WS-F08）。
+   */
+  function closeWorkspaceItems(targetId: string, scope: CloseScope) {
+    const request = closeRequestFromItems(closeScopeItemIds(workspaceItems, targetId, scope), workspaceItems);
+    closeRequestController.request(request);
+  }
+
+  function closeConnectionSessions(connectionIds: string[]) {
     const closingConnectionIds = new Set(connectionIds);
-    const dirtyRemoteFileTabs = remoteFileTabs.filter(
-      (tab) => closingConnectionIds.has(tab.connectionId) && tab.dirty,
-    );
-    if (dirtyRemoteFileTabs.length > 0 && !options.discardDirtyRemoteFiles) {
-      setPendingConnectionSessionCloseIds(connectionIds);
-      return;
-    }
-    setPendingConnectionSessionCloseIds(null);
     const remainingRemoteFileTabs = clearRemoteFileSessionStateForConnections(closingConnectionIds);
     connectionIds.forEach((connectionId) => {
       invalidateDockerExecConnection(connectionId);
@@ -9605,26 +9629,15 @@ export function WorkspaceShell() {
       />
 
       <ConfirmDialog
-        confirmLabel="放弃并关闭"
-        description={
-          pendingConnectionSessionDirtyTabs.length > 1
-            ? `关闭会话会丢弃 ${pendingConnectionSessionDirtyTabs.length.toString()} 个已修改文件。`
-            : pendingConnectionSessionDirtyTabs[0]
-              ? `关闭会话会丢弃“${pendingConnectionSessionDirtyTabs[0].name}”尚未保存的修改。`
-              : "关闭会话会丢弃尚未保存的文件修改。"
-        }
-        open={Boolean(pendingConnectionSessionCloseIds)}
-        title="关闭包含已修改文件的会话"
-        onConfirm={() => {
-          if (pendingConnectionSessionCloseIds) {
-            closeConnectionSessions(pendingConnectionSessionCloseIds, {
-              discardDirtyRemoteFiles: true,
-            });
-          }
-        }}
+        cancelLabel={t("common.cancel")}
+        confirmLabel={closeConfirmCopy?.confirmLabel ?? ""}
+        description={closeConfirmCopy?.description ?? ""}
+        open={Boolean(closeRequestController.pending)}
+        title={closeConfirmCopy?.title ?? ""}
+        onConfirm={closeRequestController.confirm}
         onOpenChange={(open) => {
           if (!open) {
-            setPendingConnectionSessionCloseIds(null);
+            closeRequestController.cancel();
           }
         }}
       />
