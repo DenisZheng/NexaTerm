@@ -819,6 +819,7 @@ mod tests {
             put_operations,
             vec![
                 "PUT mxterm-sync/v2/default/data.enc",
+                "PUT mxterm-sync/v2/default/secrets.enc",
                 "PUT mxterm-sync/v2/default/manifest.json",
             ]
         );
