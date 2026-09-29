@@ -204,10 +204,29 @@ jobs:
         with:
           node-version: 24
 
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
       - name: Install fixture host dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y openssh-client xauth xvfb
+          sudo apt-get install -y \
+            build-essential \
+            curl \
+            file \
+            libayatana-appindicator3-dev \
+            libudev-dev \
+            librsvg2-dev \
+            libssl-dev \
+            libwebkit2gtk-4.1-dev \
+            libxdo-dev \
+            openssh-client \
+            patchelf \
+            pkg-config \
+            rpm \
+            wget \
+            xauth \
+            xvfb
 
       - name: Bring up fixtures
         run: node tests/fixtures/fixtures.mjs up
