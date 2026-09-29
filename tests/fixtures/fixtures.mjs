@@ -51,7 +51,7 @@ function requireTool(name, probeArgs) {
 
 function cmdUp() {
   requireTool("docker", ["compose", "version"]);
-  requireTool("ssh-keygen", ["-?"]);
+  requireTool("ssh-keygen", ["-Q", "key"]);
   if (!existsSync(privateKey)) {
     mkdirSync(keysDir, { recursive: true });
     console.log("generating throwaway fixture keypair in tests/fixtures/keys/");
