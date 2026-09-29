@@ -3,7 +3,7 @@ use std::fs;
 use std::path::Path;
 
 use encoding_rs::WINDOWS_1252;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::app_error::AppError;
 use crate::sync_snapshot::sha256_hex;
@@ -61,6 +61,18 @@ pub struct MobaXtermImportPreviewResult {
     pub fingerprint: String,
     pub summary: MobaXtermImportSummary,
     pub items: Vec<MobaXtermImportItem>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct MobaXtermImportPreviewRequest {
+    pub path: String,
+}
+
+#[tauri::command]
+pub async fn mobaxterm_import_preview(
+    request: MobaXtermImportPreviewRequest,
+) -> Result<MobaXtermImportPreviewResult, AppError> {
+    preview_file(Path::new(&request.path))
 }
 
 pub fn preview_file(path: &Path) -> Result<MobaXtermImportPreviewResult, AppError> {
