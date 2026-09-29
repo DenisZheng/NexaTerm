@@ -32,7 +32,8 @@
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "check:line-budget": "node scripts/check-line-budget.mjs",
-    "hooks:install": "node scripts/install-git-hooks.mjs"
+    "hooks:install": "node scripts/install-git-hooks.mjs",
+    "check:licenses": "node scripts/license-inventory.mjs --check --out-dir logs/licenses"
   },
   "dependencies": {
     "@novnc/novnc": "^1.7.0",

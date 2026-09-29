@@ -88,6 +88,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Check third-party licenses
+        run: pnpm run check:licenses
+
       - name: Validate release version
         if: startsWith(github.ref, 'refs/tags/v')
         shell: bash
@@ -251,6 +254,11 @@ jobs:
             --out-dir release-assets \
             --artifact "${{ matrix.target }}"
 
+          cp logs/licenses/THIRD_PARTY_LICENSES.generated.md \
+            "release-assets/THIRD_PARTY_LICENSES-${{ matrix.target }}.generated.md"
+          cp logs/licenses/license-inventory.json \
+            "release-assets/license-inventory-${{ matrix.target }}.json"
+
           if [ "${{ matrix.target }}" = "windows-x64" ]; then
             portable_root="release-assets/NexaTerm-portable"
             mkdir -p "$portable_root"
@@ -266,6 +274,7 @@ jobs:
               cp -R src-tauri/target/release/_up_ "$portable_root/_up_"
             fi
 
+            cp LICENSE THIRD_PARTY_LICENSES.md "$portable_root/"
             printf "portable\n" > "$portable_root/portable.marker"
             powershell -NoProfile -Command "Compress-Archive -Path 'release-assets/NexaTerm-portable/*' -DestinationPath 'release-assets/NexaTerm-portable-windows-x64.zip' -Force"
             rm -rf "$portable_root"
@@ -322,6 +331,7 @@ jobs:
 
           mkdir -p release-assets
           find downloaded-assets -maxdepth 1 -type f -exec cp {} release-assets/ \;
+          cp LICENSE THIRD_PARTY_LICENSES.md release-assets/
 
           git archive --format=zip --prefix="$prefix" -o "release-assets/nexaterm-${version}-source.zip" HEAD
           git archive --format=tar --prefix="$prefix" HEAD | gzip -9 > "release-assets/nexaterm-${version}-source.tar.gz"
