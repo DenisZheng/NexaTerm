@@ -19,7 +19,7 @@ if (!process.env.DISPLAY || !process.env.DBUS_SESSION_BUS_ADDRESS) {
   process.exit(2);
 }
 
-const captureUrl = "http://127.0.0.1:5520/__nexaterm_ime_capture";
+const captureUrl = "http://localhost:5520/__nexaterm_ime_capture";
 const expected = "你好";
 const phrase = "nihao";
 const logs = [];
