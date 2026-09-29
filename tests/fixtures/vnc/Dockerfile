@@ -2,7 +2,7 @@ FROM ubuntu:24.04
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends tigervnc-standalone-server xterm \
+  && apt-get install -y --no-install-recommends tigervnc-standalone-server tigervnc-tools xterm \
   && rm -rf /var/lib/apt/lists/* \
   && useradd -m -s /bin/bash testuser \
   && mkdir -p /home/testuser/.vnc \

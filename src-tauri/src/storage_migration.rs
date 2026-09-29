@@ -33,6 +33,14 @@ impl StorageMigrator {
     /// 目录级版本门：缺失则盖戳（全新或历史遗留目录），过新则拒绝（降级保护），
     /// 过旧则留给未来的逐级迁移（当前 v1 无需迁移，直接盖戳）。
     fn ensure_data_dir_version(&self) -> Result<(), AppError> {
+        fs::create_dir_all(&self.root).map_err(|e| {
+            AppError::new(
+                "storage_data_dir_create_failed",
+                "数据目录创建失败。",
+                e,
+                false,
+            )
+        })?;
         let path = self.root.join(DATA_VERSION_FILE);
         let current = match fs::read_to_string(&path) {
             Ok(content) => content.trim().parse::<u32>().map_err(|_| {
