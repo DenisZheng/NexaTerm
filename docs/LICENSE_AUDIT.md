@@ -1,46 +1,95 @@
-# 许可证审计基线
+# 许可证审计与发布基线
 
-> 本文记录当前可见元数据和缺口；Rust crate 元数据已通过 `cargo metadata --locked --offline` 获取，bundled binary 和平台安装器仍需复核。
+> 状态：P2-5 自动化闭环已实现；真实 tagged installer 的人工抽查仍属于发布验收。
 
-## 1. 项目许可证
+## 1. 项目许可证与唯一依赖来源
 
-- 顶层 `LICENSE` 为 MIT，需求文档也将主许可证定为 MIT。
-- 当前未发现 `THIRD_PARTY_LICENSES.md`，发布产物没有可复核的第三方 notices 基线。
-- package.json、Tauri 配置和品牌元数据仍出现 m-xterm/MXterm；改名任务必须保留许可证、更新和数据目录兼容。
+- 顶层 `LICENSE` 为项目 MIT 许可证。
+- JavaScript 包管理器固定为 `pnpm@11.22.0`，唯一 lockfile 为 `pnpm-lock.yaml`。
+- Rust 依赖固定由 `src-tauri/Cargo.lock` 驱动。
+- 仓库提交 `THIRD_PARTY_LICENSES.md` 作为随发行物分发的人工 notice。
+- CI / Release 从实际安装的 pnpm graph 与 `cargo metadata --locked` 生成精确 transitive inventory。
 
-## 2. npm 依赖初查
+旧审计中关于 `package-lock.json` 的统计属于历史状态；当前主线不存在 package-lock，不再把它作为发布许可证来源。
 
-package-lock v3 共约 192 个包。按 lock metadata 统计：MIT 159、MPL-2.0 1、Apache-2.0 OR MIT 13、MIT OR Apache-2.0 5、Apache-2.0 2、CC-BY-4.0 1、MPL-2.0 OR Apache-2.0 1、ISC 6、CC0-1.0 1、BSD-3-Clause 1、0BSD 1。
+## 2. 自动化许可证门禁
 
-重点直接依赖：
+`scripts/license-inventory.mjs`：
 
-| 依赖 | 版本/许可证 | 义务 |
-| --- | --- | --- |
-| @novnc/novnc | 1.7.0 / MPL-2.0 | 保留版权和许可证；修改文件需遵守 MPL 文件级 copyleft |
-| dompurify | lock 中双许可证 MPL-2.0 OR Apache-2.0 | 记录选用条款和版本，结合安全升级复核 |
-| React、Radix、Tauri JS、xterm、Monaco、zustand、lucide | 主要 MIT/Apache-2.0/ISC | 归档版权/许可证文本 |
-| simple-icons | CC0-1.0 | 记录公共领域声明及图标来源 |
-| vitest、jsdom、@testing-library/react、@testing-library/dom | devDependencies（2026-09-19 新增）：^4.1.11 / ^29.1.1 / ^16.3.3 / ^10.4.2，均为 MIT | 仅开发与 CI 使用，不进入发布产物；归档许可证文本 |
-| 其它 transitive | 见 package-lock | 生成完整清单，不只列 direct deps |
+1. 枚举 `node_modules/.pnpm` 内实际安装的 npm package manifests；
+2. 调用 `cargo metadata --locked` 获取 Cargo package 的 name/version/license/source；
+3. 输出：
+   - `logs/licenses/license-inventory.json`
+   - `logs/licenses/THIRD_PARTY_LICENSES.generated.md`
+4. 按 `scripts/license-policy.json` fail closed。
 
-package-lock 与 pnpm lock 同时存在，需决定唯一发布安装来源，避免两套解析结果产生 license/SBOM 漂移。
+当前策略：
 
-## 3. Rust、资源和二进制缺口
+- 无 license metadata：阻断；
+- 只有无法自动判定的 license-file 引用：需要 package-specific review；
+- AGPL / GPL / SSPL / BUSL / Commons-Clause：阻断；
+- MPL / LGPL / EPL / CDDL：必须有 package-specific manual review；
+- 已人工审批 package 的 license expression 发生变化：阻断，要求重新审查。
 
-- Cargo.lock 不含完整 license metadata；当前已生成 708 个 crate 的 Cargo metadata，1 个 crate 未声明许可证。`cargo-deny` 无 `deny.toml` 时不能直接作为许可证合规结论，需后续配置策略。
-- 审计 `src-tauri/tauri.conf.json` 的 icons、SQLite bundled、`mxterm-mcp` sidecar、FreeRDP/外部 RDP、noVNC/websocket runner、串口平台库和 installer toolchain。
-- 盘点字体、图标、图片、prototype 资产、下载/打包进程和平台 runner 的版权及再分发条款。
-- 对 MPL 依赖保留原始文件边界、版权头和许可证文本；不能把协议不清晰或 GPL/AGPL/LGPL 代码直接复制到仓库。
+MPL 不作为全局豁免。当前明确审批仅覆盖实际已知的 noVNC 与 serialport；新增 MPL 包仍会失败。
 
-## 4. 执行计划
+## 3. 重点发行组件
 
-1. 选定 lockfile/包管理器，使用固定 registry 和 lockfile 安装。
-2. 运行 `cargo deny check licenses bans advisories sources`、npm license scanner/SBOM 和构建产物清单。
-3. 建立 `THIRD_PARTY_LICENSES.md`：包名、版本、许可证、来源、修改状态、归档路径和再分发限制。
-4. 对 bundled binary/platform runner 记录来源、版本、hash、许可证和是否由用户单独安装。
-5. 在 CI 中检查新依赖必须有许可证和许可证文本；高 copyleft/未知协议阻断发布。
-6. 重新打包并人工抽查安装器、sidecar、icons/fonts 和 notices 是否随产物提供。
+机器可读的 bundled/external inventory 位于：
 
-## 当前限制
+`docs/legal/bundled-components.json`
 
-本轮没有复制第三方代码、没有新增依赖，也没有生成最终 notices；上述内容属于审计基线。cargo license、binary hash、签名/公证和完整 SBOM 需在后续任务中取得工具和平台环境后补齐。
+重点：
+
+| 组件 | 分发方式 | 许可证/状态 | 处理 |
+| --- | --- | --- | --- |
+| @novnc/novnc | frontend bundle | MPL-2.0 | package-specific review；保留 MPL/source notice |
+| serialport-rs | compiled Rust dependency | MPL-2.0 | package-specific review；保留 MPL/source notice |
+| SQLite via rusqlite bundled | compiled | Public Domain | 在 THIRD_PARTY notice 记录 upstream |
+| mxterm-mcp | bundled sidecar | 项目 MIT | first-party source |
+| FreeRDP/xfreerdp | external runner | 外部安装 | NexaTerm 不重分发其 binary |
+| XQuartz | external X server | 外部安装 | NexaTerm 不重分发 |
+| Linux X11/XWayland | system/user component | 外部安装 | NexaTerm 不重分发 |
+
+Simple Icons package 声明 CC0-1.0；品牌标志仍可能受 trademark/brand policy 约束，因此 notice 明确不把 CC0 package license 解读为商标授权。
+
+## 4. Notice 随发行物
+
+`src-tauri/tauri.conf.json` 将以下文件作为 bundle resources：
+
+- `LICENSE`
+- `THIRD_PARTY_LICENSES.md`
+
+Release workflow 同时：
+
+- 在每个平台构建前运行 license gate；
+- 保存每个平台的 generated inventory；
+- Windows portable ZIP 显式放入 LICENSE + THIRD_PARTY_LICENSES；
+- GitHub Release 根目录附带 LICENSE + THIRD_PARTY_LICENSES；
+- source archives 自然包含同一套文件。
+
+因此 notices 不再只存在于源码仓库。
+
+## 5. CI / Release 证据
+
+常规 CI 有独立 `License compliance` job：
+
+- pnpm frozen install；
+- Rust toolchain；
+- exact npm/Cargo inventory；
+- policy gate；
+- 上传 30 天 license evidence artifact。
+
+Tagged/manual release 在打包前运行同一个 gate。License gate 失败时不会继续产出可发布 bundle。
+
+## 6. 仍需发布人工验收
+
+自动门禁不能代替最终安装器抽查。正式 tagged release 时仍需确认：
+
+1. Windows 安装后资源目录/portable ZIP 可找到 notices；
+2. macOS `.app` resource 与 DMG 分发内容可找到 notices；
+3. Linux AppImage/deb/rpm 的资源安装位置可找到 notices；
+4. 平台 packager/runtime 若引入新的 bundled binary，其许可证进入 `docs/legal/bundled-components.json` 或自动 inventory；
+5. 对生成的 inventory diff 做 release review，尤其关注新 copyleft/custom license。
+
+这部分与 Authenticode / notarization 一样，属于真实发行凭据与 installer smoke 阶段，而不是源码层缺口。
