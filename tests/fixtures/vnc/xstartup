@@ -1,0 +1,4 @@
+#!/bin/sh
+# Minimal fixture session: a single xterm is enough to prove the VNC
+# handshake and remote display path work.
+exec xterm

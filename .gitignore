@@ -12,3 +12,6 @@ src-tauri/target/
 .env
 .env.*
 !.env.example
+
+# test fixture throwaway keys (generated at runtime, never committed)
+tests/fixtures/keys/

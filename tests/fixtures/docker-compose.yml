@@ -1,0 +1,41 @@
+name: nexaterm-fixtures
+
+# Real-environment test fixtures for acceptance items A12 (jump-host SSH +
+# tunnels) and A13 (SSH X11). See README.md in this directory.
+#
+# No secrets are committed: the SSH keypair is generated on the host by
+# fixtures.mjs at `up` time and mounted read-only into the sshd containers.
+
+services:
+  ssh-jump:
+    build: ./sshd
+    ports:
+      - "2222:22"
+    volumes:
+      - ./keys:/keys:ro
+
+  # Deliberately no published ports: reachable only through ssh-jump,
+  # which is what makes it a real double-hop chain.
+  ssh-target:
+    build: ./sshd
+    volumes:
+      - ./keys:/keys:ro
+
+  ssh-x11:
+    build: ./sshd
+    ports:
+      - "2223:22"
+    volumes:
+      - ./keys:/keys:ro
+    environment:
+      ENABLE_X11: "yes"
+
+  xrdp:
+    build: ./xrdp
+    ports:
+      - "3389:3389"
+
+  vnc:
+    build: ./vnc
+    ports:
+      - "5901:5901"

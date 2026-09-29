@@ -188,6 +188,32 @@ jobs:
         working-directory: src-tauri
         run: cargo test --workspace --locked
 
+  # 真实环境测试夹具：docker-compose 起 OpenSSH（含双跳链）+ xrdp + VNC，
+  # 验收项 A12/A13 只有对着真实服务器才真正"可验收"。
+  # SSH 密钥由 fixtures.mjs 在运行时生成（gitignored），仓库不提交任何私钥。
+  fixtures:
+    name: Test fixtures smoke
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Bring up fixtures
+        run: node tests/fixtures/fixtures.mjs up
+
+      - name: Smoke test fixtures
+        run: node tests/fixtures/fixtures.mjs smoke
+
+      - name: Tear down fixtures
+        if: always()
+        run: node tests/fixtures/fixtures.mjs down
+
   # 手动触发的 Windows 打包验证通道（build only），用于确认打包链路可用并拿到可安装包试用。
   # 与 release.yml 的关键区别：这里**不设** MXTERM_CREATE_UPDATER_ARTIFACTS，
   # 因此 scripts/build-platform.mjs 不会追加 createUpdaterArtifacts（见其第 77 行），
