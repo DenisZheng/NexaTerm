@@ -247,8 +247,9 @@ fn parse_cli_config() -> Result<CliConfig, nexaterm_lib::app_error::AppError> {
                     true,
                 )
             })?;
+        let host = validate_http_host(&host)?;
         http_config = Some(HttpConfig {
-            host: host.trim().to_string(),
+            host,
             port,
             token_hash,
         });
@@ -269,6 +270,19 @@ fn parse_cli_config() -> Result<CliConfig, nexaterm_lib::app_error::AppError> {
         data_dir,
         transport: http_config.map_or(Transport::Stdio, Transport::Http),
     })
+}
+
+fn validate_http_host(host: &str) -> Result<String, nexaterm_lib::app_error::AppError> {
+    let host = host.trim();
+    if !mcp::is_loopback_host(host) {
+        return Err(nexaterm_lib::app_error::AppError::new(
+            "mcp_remote_host_loopback_only",
+            "remote MCP HTTP may only listen on localhost; use an SSH tunnel for remote access",
+            format!("non-loopback --host rejected: {host}"),
+            true,
+        ));
+    }
+    Ok(host.to_string())
 }
 
 fn required_arg(
@@ -462,6 +476,11 @@ async fn serve_http_async(host: String, port: u16, state: HttpState) -> io::Resu
         // 限流维度取真实来源地址，不能用监听地址：监听在 0.0.0.0 时所有远端请求
         // 都必须按各自来源分别计量。
         let source = peer.ip();
+        if !source.is_loopback() {
+            eprintln!("remote MCP rejected non-loopback peer {peer}");
+            let _ = stream.shutdown().await;
+            continue;
+        }
         // 并发槽位在 spawn 之前取得，超限直接拒绝而不是排队：排队会让远端慢连接
         // 堆积，最终把内存耗尽的代价转嫁给自己。permit 随任务存活，连接结束即释放。
         let Ok(permit) = state.slot_for(source).clone().try_acquire_owned() else {
@@ -1203,6 +1222,18 @@ mod tests {
             }
         })
         .to_string()
+    }
+
+    #[test]
+    fn remote_http_host_is_loopback_only() {
+        assert_eq!(validate_http_host("127.0.0.1").unwrap(), "127.0.0.1");
+        assert_eq!(validate_http_host("localhost").unwrap(), "localhost");
+        assert_eq!(validate_http_host("::1").unwrap(), "::1");
+
+        for host in ["0.0.0.0", "192.168.1.20", "127.0.0.2", "::ffff:127.0.0.1"] {
+            let error = validate_http_host(host).unwrap_err();
+            assert_eq!(error.code, "mcp_remote_host_loopback_only");
+        }
     }
 
     #[test]
