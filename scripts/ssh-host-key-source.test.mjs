@@ -59,6 +59,12 @@ test("terminal SSH handler rejects unknown and changed host keys for target and 
   assert.match(source, /client::connect_stream\(config, channel\.into_stream\(\), handler\)/);
 });
 
+test("sqlite host-trust command path validates key material before persistence", () => {
+  const source = readFileSync("src-tauri/src/storage_repository.rs", "utf8");
+
+  assert.match(source, /pub fn known_host_trust[\s\S]*validate_host_key_info\(&info\)\?/);
+});
+
 test("persisted host trust validates public key material against fingerprint and algorithm", () => {
   const source = readFileSync("src-tauri/src/known_hosts/mod.rs", "utf8");
 
