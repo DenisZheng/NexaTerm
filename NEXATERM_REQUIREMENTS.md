@@ -1790,54 +1790,65 @@ Tools
 
 # 58. P1 — NexaTerm v1
 
-### Branding
+v1 的目标不是把现有全部协议都重做成同等成熟度，而是先交付一条可靠、可公开试用的 SSH 日常工作流。现有非核心协议保留代码和测试，不因范围收敛而删除。
 
-- NexaTerm naming
-- icon
-- package
-- bundle
-- config migration
+### v1 必选范围
 
-### UI
-
-- MobaXterm-like modern layout
-- Menu
-- Toolbar
-- Session Manager
-- Home
-- Quick Connect
-- Tabs
-- Status Bar
-
-### Existing capabilities to integrate
-
-- SSH
-- SFTP
+- SSH + Host Key Verification
+- SFTP / Remote Files
 - Local Shell
 - WSL
 - Serial
+- Session Manager / Quick Connect / Favorites / Folder
+- Tabs / Split
+- MultiExec（Live Input + Command Send）
+- Saved Commands
+- 基础 Credential / Key UX
+- English / zh-CN
+- Light / Dark
+- Windows x64 / macOS ARM64 / Linux x64 build/run 基线
+
+### 首个公开 Preview（WF-01～WF-03）
+
+首个公开试用版以“能完成 SSH 日常流”为门槛：
+
+1. 从统一入口新建或快速连接 SSH；
+2. 正确完成认证与 Host Key 验证；
+3. 终端与 Files/SFTP 联动；
+4. 保存后能在 Sessions 中再次打开；
+5. Local/WSL 基础入口不回归；
+6. 失败、取消、断线不会留下幽灵会话或错误状态。
+
+该 Preview 用真实用户反馈决定 WF-04 之后的优先级，不要求等待全部 v1 功能完成。
+
+### 保留但不作为 v1 发布门禁
+
 - Telnet
 - RDP
 - VNC
-- Tunnel
-- Jump
-- Split
-- Command Library
-- Monitoring
-- Remote Editor
-
-### Major work
-
-- unified MultiExec UX
-- Workspace Restore
 - X11
-- WSL UX enhancement
+- Monitoring
+- Docker Tools
+- Remote Editor
+- Workspace Restore
 - Multi-hop Jump
-- Key / Credential UX
-- Import / Export
-- Command Palette
-- i18n
-- Light / Dark polish
+- AI / MCP
+
+其中 RDP / VNC / X11 在 v1 周期标记为 **Experimental**：可以继续修复、验证和提供入口，但不得阻塞首个公开 Preview 或 v1 核心发布。它们的“跨平台成熟、正式承诺”进入 v2 决策。
+
+### P1 迁移入口（非 v1 发布门禁）
+
+- MobaXterm 会话导入提前到 P1：先交付格式解析、导入预览、冲突/缺失字段提示和 SSH 映射。
+- 导入能力用于降低迁移成本，可以在首个 Preview 前后独立交付，但不阻塞 SSH/SFTP 核心发布。
+- PuTTY / OpenSSH config 导入在 MobaXterm importer 的模型稳定后再评估。
+
+### v1 之后 / v2 方向
+
+- RDP/VNC 跨平台体验统一
+- X11 正式集成（以真实 spike 结果为前提）
+- Workspace Restore 完整持久化
+- Multi-hop Jump
+- 更完整的运维工具与 AI/MCP 能力
 
 ---
 
@@ -1857,27 +1868,21 @@ Tools
 
 # 60. v1 验收标准
 
-NexaTerm v1 至少应满足：
+NexaTerm v1 的发布门禁只覆盖本节的核心范围；“当前已有实现”不等于“必须阻塞 v1”。
+
+### 核心发布门禁
 
 - Windows / macOS / Linux 可构建和运行
-- NexaTerm 品牌完整
+- NexaTerm 品牌与更新通道完整
 - SSH 稳定
 - Host Key 正确验证
 - SFTP 可用并与 SSH 联动
-- Session Tree 可用
-- Favorites / Folder 可用
+- Session Tree / Favorites / Folder / Quick Connect 可用
 - Local Shell 可用
 - WSL 可用
 - Serial 可用
-- Telnet 可用
-- RDP 可用
-- VNC 可用
-- Tunnel 可用
-- Jump Host 可用
 - Split 可用
 - MultiExec 可用
-- Workspace Restore 可用
-- X11 可用
 - Saved Commands 可用
 - Remote Files 可用
 - Secret 不明文持久化
@@ -1888,6 +1893,18 @@ NexaTerm v1 至少应满足：
 - 无明显资源泄漏
 - 无已知 Critical/High dependency vulnerability 未处理
 
+### Experimental，不阻塞 v1
+
+- Telnet
+- RDP
+- VNC
+- X11
+
+这些能力若随 v1 提供，UI/文档必须明确 Experimental 或平台限制；其失败不能被包装成“已完成跨平台正式支持”。真实互操作证据仍应持续积累。
+
+### Preview 门禁
+
+WF-01～WF-03 达到 SSH + SFTP 日常流可用后即可发布公开 Preview，不等待 RDP/VNC/X11、Workspace Restore 或 Multi-hop Jump。Preview 必须保留 CI、真实 SSH/SFTP smoke 与已知限制说明。
 ---
 
 # 61. AskMatt 首先需要做的事情

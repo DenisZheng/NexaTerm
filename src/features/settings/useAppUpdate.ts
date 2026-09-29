@@ -249,7 +249,7 @@ export function useAppUpdate({
     mcpStopConfirmationOpen,
     mcpStopProcessCount,
     message: status === "installing" ? installProgress : message,
-    repositoryUrl: runtimeInfo?.repositoryUrl || "https://github.com/syscryer/mxterm",
+    repositoryUrl: runtimeInfo?.repositoryUrl || "https://github.com/DenisZheng/NexaTerm",
     runtimeInfo,
     status,
     statusLabel,

@@ -6,7 +6,7 @@
 
 ## Overview
 
-mXterm is a desktop-style Tauri application. Frontend UI should feel quiet,
+NexaTerm is a desktop-style Tauri application. Frontend UI should feel quiet,
 compact, and operational rather than decorative. Prefer consistent surfaces,
 small controls, clear labels, and predictable keyboard behavior.
 
@@ -140,7 +140,7 @@ replacing package has shipped.
   `context-menu-content` / `context-menu-item`, `dropdown-menu-content` /
   `dropdown-menu-item`, `select-menu-content` / `select-menu-item`, and
   `popover-content` / `popover-menu-item` for Radix portals, custom dropdowns,
-  right-click menus, upload menus, and tooltips. The mXterm version should stay
+  right-click menus, upload menus, and tooltips. The NexaTerm version should stay
   tighter and calmer than codem's large popovers: light blur, fine borders,
   modest shadow, and 7-10px radii.
 - Titlebar overflow menus should reuse the existing connection-search dialog
@@ -188,7 +188,7 @@ replacing package has shipped.
   prevent the browser's default scroll behavior.
 - UI structure, visual style, color, layout, state, modal, menu, or form changes
   must be checked with the `ui-ux-pro-max` skill before implementation or final
-  review. Apply its guidance through the existing mXterm desktop-tool style and
+  review. Apply its guidance through the existing NexaTerm desktop-tool style and
   global token system; do not introduce a separate visual system for one feature.
 - Window material styling is chrome-focused. Keep the material source on the
   root `.app-shell` layer and let `.custom-titlebar` plus every left navigation

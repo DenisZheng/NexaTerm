@@ -103,7 +103,7 @@ Rust 事件常量在 `src-tauri/src/events.rs`：`terminal:output`、`terminal:s
 - Tunnel：bind/forward/SOCKS 任一失败应可停止并释放资源，日志需脱敏。
 - RDP/VNC：runner 缺失、退出码、窗口关闭和网络断开需映射到 session 状态；不得让外部进程错误崩溃主窗口。
 - Restore：快照格式错误、单连接凭据不可用、host key 未信任时，仅该项失败并保留其它 workspace。
-- MCP：远程监听、token、危险命令开关和 sidecar 生命周期是独立安全边界。
+- MCP：远程监听、token 和 sidecar 生命周期是独立安全边界；危险命令开关是策略控制，其检测只是启发式子串匹配（能绕过、会误报），不视为安全边界。
 
 ## 7. 当前架构结论
 

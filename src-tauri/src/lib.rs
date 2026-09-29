@@ -9,6 +9,7 @@ mod credentials;
 mod docker_tools;
 mod events;
 mod known_hosts;
+mod mobaxterm_import;
 pub mod mcp;
 mod network_tools;
 mod rdp;
@@ -20,6 +21,7 @@ mod secure_bundle;
 mod ssh_config;
 mod storage;
 pub mod storage_migration;
+mod storage_local_key;
 pub mod storage_repository;
 pub mod storage_sqlite;
 pub mod storage_vault;
@@ -29,6 +31,7 @@ mod tunnels;
 mod vnc;
 mod webdav;
 mod webdav_sync;
+mod x11_forward;
 use storage_vault::VaultState;
 use tauri::Manager;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -81,6 +84,8 @@ pub fn run() {
             commands::connection_transfer_export,
             commands::connection_transfer_preview,
             commands::connection_transfer_import,
+            mobaxterm_import::mobaxterm_import_preview,
+            mobaxterm_import::mobaxterm_import_apply,
             commands::connection_list,
             commands::connection_upsert,
             commands::connection_set_favorite,

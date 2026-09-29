@@ -7,7 +7,7 @@ import {
 } from "./commands";
 import { hasTauriRuntime } from "./runtime";
 
-const repositoryUrl = "https://github.com/syscryer/mxterm";
+const repositoryUrl = "https://github.com/DenisZheng/NexaTerm";
 const fallbackVersion = "0.1.0";
 
 export type AppUpdateCheckStatus = "available" | "latest" | "failed" | "unsupported";

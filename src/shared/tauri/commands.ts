@@ -30,6 +30,11 @@ import type {
   ConnectionTransferPreviewResult,
 } from "../../features/connections/connectionTransferTypes";
 import type {
+  MobaXtermImportApplyResult,
+  MobaXtermImportPreviewResult,
+  MobaXtermImportSelection,
+} from "../../features/connections/mobaxtermImportTypes";
+import type {
   AiChatSession,
   AiChatSessionSummary,
   AiChatStreamStartRequest,
@@ -206,6 +211,31 @@ export function connectionTransferImport(
 ) {
   return invoke<ConnectionTransferImportResult>("connection_transfer_import", {
     request: { path, password, fingerprint, strategy },
+  });
+}
+
+export function mobaxtermImportPreview(path: string, defaultUsername?: string) {
+  return invoke<MobaXtermImportPreviewResult>("mobaxterm_import_preview", {
+    request: {
+      path,
+      default_username: defaultUsername?.trim() || undefined,
+    },
+  });
+}
+
+export function mobaxtermImportApply(
+  path: string,
+  fingerprint: string,
+  defaultUsername: string | undefined,
+  selections: MobaXtermImportSelection[],
+) {
+  return invoke<MobaXtermImportApplyResult>("mobaxterm_import_apply", {
+    request: {
+      path,
+      fingerprint,
+      default_username: defaultUsername?.trim() || undefined,
+      selections,
+    },
   });
 }
 

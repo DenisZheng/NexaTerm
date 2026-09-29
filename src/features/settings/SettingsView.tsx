@@ -65,7 +65,6 @@ import {
   credentialRevealSecret,
   localTerminalListProfiles,
   mcpExecutablePath,
-  mcpLocalNetworkInfo,
   mcpRemoteLogClear,
   mcpRemoteLogRead,
   mcpRemoteServiceRestart,
@@ -135,8 +134,6 @@ import { WebDavSyncSettingsSection } from "./WebDavSyncSettingsSection";
 import { ShortcutSettingsSection } from "./ShortcutSettingsSection";
 import {
   defaultMcpSettings,
-  isLoopbackHost,
-  type McpLocalNetworkInfo,
   type McpRemoteLogOutput,
   type McpSettings,
 } from "./mcpSettingsTypes";
@@ -949,10 +946,8 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
   const [tokenCopied, setTokenCopied] = useState(false);
   const [remoteActionBusy, setRemoteActionBusy] = useState<string | null>(null);
   const [remoteLog, setRemoteLog] = useState<McpRemoteLogOutput | null>(null);
-  const [remoteHostDraft, setRemoteHostDraft] = useState(defaultMcpSettings.remote_host);
   const [remotePortDraft, setRemotePortDraft] = useState(defaultMcpSettings.remote_port.toString());
   const [remoteTokenDraft, setRemoteTokenDraft] = useState("");
-  const [localNetworkInfo, setLocalNetworkInfo] = useState<McpLocalNetworkInfo | null>(null);
   const desktopRuntime = hasTauriRuntime();
   const [executablePath, setExecutablePath] = useState("mxterm-mcp.exe");
   const [connectionExposureQuery, setConnectionExposureQuery] = useState("");
@@ -1003,15 +998,8 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
   const connectionExposureBatchDisabled =
     connectionExposureDisabled || filteredConnectionIds.length === 0;
   const remoteStatus = settings.remote_status;
-  const suggestedRemoteHost = localNetworkInfo?.primary_ip || null;
-  // 当前草稿地址是否为非 loopback——决定是否展示暴露风险确认入口。
-  const remoteHostRequiresAcknowledgement = !isLoopbackHost(remoteHostDraft.trim());
-  const remoteDisplayHost =
-    settings.remote_host === "0.0.0.0"
-      ? suggestedRemoteHost || "<本机局域网 IP>"
-      : settings.remote_host;
-  const remoteMcpUrl = `http://${remoteDisplayHost}:${settings.remote_port.toString()}/mcp`;
-  const remoteSseUrl = `http://${remoteDisplayHost}:${settings.remote_port.toString()}/sse`;
+  const remoteMcpUrl = `http://127.0.0.1:${settings.remote_port.toString()}/mcp`;
+  const remoteSseUrl = `http://127.0.0.1:${settings.remote_port.toString()}/sse`;
   const remoteToken = settings.remote_token || settings.generated_remote_token || null;
   const remoteTokenForSnippet = remoteToken || "<你的 token>";
   const configSnippet = useMemo(
@@ -1073,7 +1061,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
       id: "stdio" as const,
       label: "stdio client",
       title: "stdio client 配置",
-      description: "发布包中 sidecar 会随 MXterm 一起提供；开发期可替换为本地绝对路径。",
+      description: "发布包中 sidecar 会随 NexaTerm 一起提供；开发期可替换为本地绝对路径。",
       snippet: configSnippet,
       copied,
       setCopied,
@@ -1083,9 +1071,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
       label: "远程 HTTP client",
       title: "远程 HTTP client 配置",
       description:
-        settings.remote_host === "0.0.0.0" && suggestedRemoteHost
-          ? "主入口使用 Streamable HTTP；已自动填入当前本机 IP。"
-          : "主入口使用 Streamable HTTP；监听 0.0.0.0 时会优先填入本机 IP。",
+        "主入口使用 Streamable HTTP，但服务只监听 127.0.0.1。跨机器访问必须先建立 SSH 隧道，再让客户端连接隧道本地端口。",
       snippet: remoteConfigSnippet,
       copied: remoteConfigCopied,
       setCopied: setRemoteConfigCopied,
@@ -1103,11 +1089,9 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
   const activeConfig = configTabs.find((tab) => tab.id === activeConfigTab) ?? configTabs[0];
 
   useEffect(() => {
-    // 表单绑定存储值，不绑定生效值：否则会把降级结果当成用户输入回显并回写。
-    setRemoteHostDraft(settings.remote_host_stored);
     setRemotePortDraft(settings.remote_port.toString());
     setRemoteTokenDraft(remoteToken || "");
-  }, [remoteToken, settings.remote_host_stored, settings.remote_port]);
+  }, [remoteToken, settings.remote_port]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1124,12 +1108,10 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
           mcpRemoteLogRead().catch(() => null),
         ]);
         const nextExecutablePath = await mcpExecutablePath().catch(() => executablePath);
-        const nextLocalNetworkInfo = await mcpLocalNetworkInfo().catch(() => null);
         if (!cancelled) {
           setSettings(next);
           setRemoteLog(nextRemoteLog);
           setExecutablePath(nextExecutablePath);
-          setLocalNetworkInfo(nextLocalNetworkInfo);
           setError(null);
         }
       } catch (error) {
@@ -1159,12 +1141,12 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
     setSaving(true);
     setError(null);
     try {
-      // 后端返回的 remote_host 是「生效值」：未确认暴露风险时已被降级为 loopback。
-      // 除非本次确实要改监听地址，否则一律回传用户存储的原始值，否则任何一次无关保存
-      // （比如只切一个开关）都会把用户保存的 0.0.0.0 静默改写掉，且此后再也无法恢复。
       const payload: McpSettings = {
         ...next,
-        remote_host: update.remote_host ?? next.remote_host_stored,
+        remote_host: "127.0.0.1",
+        remote_host_stored: "127.0.0.1",
+        remote_host_downgraded: false,
+        remote_exposure_acknowledged: false,
       };
       const saved = await mcpSettingsSave(payload);
       setSettings(saved);
@@ -1229,27 +1211,22 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
     }
   }
 
-  async function saveRemoteEndpoint(acknowledgedOverride?: boolean) {
-    const remote_host = remoteHostDraft.trim();
+  async function saveRemoteEndpoint() {
     const remote_port = Number(remotePortDraft);
-    const remote_exposure_acknowledged =
-      acknowledgedOverride ?? settings.remote_exposure_acknowledged;
-    if (!remote_host) {
-      setError("请输入远程 MCP 监听地址。");
-      return;
-    }
     if (!Number.isInteger(remote_port) || remote_port < 1 || remote_port > 65535) {
       setError("远程 MCP 端口必须在 1 到 65535 之间。");
       return;
     }
-    if (
-      remote_host === settings.remote_host_stored &&
-      remote_port === settings.remote_port &&
-      remote_exposure_acknowledged === settings.remote_exposure_acknowledged
-    ) {
+    if (remote_port === settings.remote_port) {
       return;
     }
-    await saveUpdate({ remote_host, remote_port, remote_exposure_acknowledged });
+    await saveUpdate({
+      remote_host: "127.0.0.1",
+      remote_host_stored: "127.0.0.1",
+      remote_host_downgraded: false,
+      remote_exposure_acknowledged: false,
+      remote_port,
+    });
   }
 
   async function saveRemoteToken() {
@@ -1359,7 +1336,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
     <section className="settings-page-section">
       <header className="settings-section-head">
         <h1>MCP</h1>
-        <p>把 MXterm 保存的连接提供给本机 AI Agent；SSH 操作必须单独开启。</p>
+        <p>把 NexaTerm 保存的连接提供给 AI Agent；网络模式固定 loopback，跨机器访问需使用 SSH 隧道。</p>
       </header>
 
       <div className="settings-panel mcp-settings-panel">
@@ -1405,7 +1382,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
         <SettingsRow
           icon={ShieldCheck}
           title="允许危险命令确认"
-          description="关闭时直接拒绝危险命令；开启后仍需要 MCP 工具参数显式确认。"
+          description="关闭时拒绝命中启发式规则的命令（子串匹配，可能漏报/误报，不是安全边界）；开启后仍需要 MCP 工具参数显式确认。"
         >
           <SettingsToggle
             checked={settings.allow_dangerous_commands}
@@ -1426,7 +1403,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
         <SettingsRow
           icon={Globe2}
           title="远程 MCP 服务"
-          description="开启后监听局域网地址，供其它机器上的 Agent 通过 HTTP/SSE 调用。"
+          description="服务固定监听 127.0.0.1；跨机器访问只允许通过 SSH 隧道转发。"
         >
           <SettingsToggle
             checked={settings.remote_enabled}
@@ -1442,15 +1419,9 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
               <span>监听地址</span>
               <input
                 className="settings-input"
-                value={remoteHostDraft}
-                disabled={loading || saving || !desktopRuntime}
-                onBlur={() => void saveRemoteEndpoint()}
-                onChange={(event) => setRemoteHostDraft(event.currentTarget.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    event.currentTarget.blur();
-                  }
-                }}
+                value="127.0.0.1"
+                disabled
+                readOnly
               />
             </label>
             <label className="mcp-remote-field">
@@ -1473,41 +1444,10 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
             </label>
           </div>
 
-          {settings.remote_host === "0.0.0.0" ? (
-            <p className="settings-note">
-              {suggestedRemoteHost
-                ? `客户端配置已使用本机 IP ${suggestedRemoteHost}；监听地址仍保持 0.0.0.0 以允许局域网访问。`
-                : "暂未检测到可用于局域网访问的本机 IP，客户端配置中仍会显示占位符。"}
-            </p>
-          ) : null}
-
-          {/* 监听地址为非本机地址时必须显式确认暴露风险，否则保存会被后端拒绝。
-              降级提示与确认入口成对出现：只提示不给入口，用户无法恢复自己保存的地址。 */}
-          {remoteHostRequiresAcknowledgement && !settings.remote_exposure_acknowledged ? (
-            <p className="settings-note settings-note-warning">
-              该地址会监听非本机网卡，同网段的其它设备都能访问 MCP 服务。请先确认风险再保存。
-            </p>
-          ) : null}
-
-          {settings.remote_host_downgraded ? (
-            <p className="settings-note settings-note-warning">
-              {`已保存的监听地址 ${settings.remote_host_stored} 因未确认暴露风险而临时降级为 ${settings.remote_host}，`}
-              服务当前只监听本机。确认风险后即可恢复原地址。
-            </p>
-          ) : null}
-
-          {remoteHostRequiresAcknowledgement ||
-          settings.remote_exposure_acknowledged ||
-          settings.remote_host_downgraded ? (
-            <SettingsToggle
-              checked={settings.remote_exposure_acknowledged}
-              disabled={loading || saving || !desktopRuntime || !settings.enabled}
-              label="我了解暴露风险，允许 MCP 服务监听非本机地址"
-              onChange={(remote_exposure_acknowledged) =>
-                void saveRemoteEndpoint(remote_exposure_acknowledged)
-              }
-            />
-          ) : null}
+          <p className="settings-note">
+            本服务使用本机 HTTP，仅接受回环连接。跨机器使用时请建立 SSH 隧道，例如：
+            <code>{`ssh -N -L ${settings.remote_port.toString()}:127.0.0.1:${settings.remote_port.toString()} <user>@<nexaterm-host>`}</code>
+          </p>
 
           <div className="mcp-remote-actions">
             <span
@@ -1908,7 +1848,7 @@ function SecuritySettingsSection({
           description={
             settings.masterPasswordEnabled
               ? "已开启。vault 使用安全密码加密，启动后必须解锁。"
-              : "默认关闭，适合个人使用；密码仍会加密保存到本机 vault。"
+              : "默认关闭；macOS/Windows 的本机解锁 key 存入系统凭据存储，Linux 使用 0600 权限本地 key。"
           }
         >
           <SettingsToggle
@@ -2083,7 +2023,7 @@ function SecuritySettingsSection({
         ) : null}
 
         <p className="settings-note">
-          高级保护关闭时不会明文保存密码；开启后如果忘记安全密码，已保存的密码和口令无法恢复。
+          密码与口令始终保存在加密 vault；高级保护关闭时仅由本机解锁 key 自动打开。开启后如果忘记安全密码，已保存的密码和口令无法恢复。
         </p>
 
         {localError || error ? (

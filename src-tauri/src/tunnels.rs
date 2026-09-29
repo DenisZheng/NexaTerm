@@ -819,6 +819,17 @@ pub(crate) fn validate_tunnel_rule_input(
                 "请填写本地监听地址。",
                 "local_host is empty",
             )?;
+            // §19 安全要求：本地监听仅允许本机地址。非 loopback 监听会把隧道
+            // 暴露给同网段的其他设备，显式拒绝而不是静默接受；将来如需 LAN
+            // 绑定，走 MCP 式的"确认暴露风险"流程再开放。
+            if !crate::mcp::is_loopback_host(&local_host) {
+                return Err(AppError::new(
+                    "tunnel_local_host_not_loopback",
+                    "本地监听地址仅支持本机地址（localhost / 127.0.0.1 / ::1）。绑定到非本机地址会把隧道暴露给同网段的其他设备。",
+                    format!("local_host={local_host} is not loopback"),
+                    true,
+                ));
+            }
             let remote_host = trim_required(
                 input.remote_host,
                 "tunnel_remote_host_missing",
@@ -844,6 +855,16 @@ pub(crate) fn validate_tunnel_rule_input(
                 "请填写本地 SOCKS 监听地址。",
                 "local_host is empty",
             )?;
+            // Dynamic 是无认证的 SOCKS5 代理，绑到非本机地址等于向同网段开放
+            // 代理入口：必须限制在本机，与 Local 转发同理。
+            if !crate::mcp::is_loopback_host(&local_host) {
+                return Err(AppError::new(
+                    "tunnel_local_host_not_loopback",
+                    "SOCKS 监听地址仅支持本机地址（localhost / 127.0.0.1 / ::1）。无认证的 SOCKS5 代理绑定到非本机地址会把代理入口暴露给同网段的其他设备。",
+                    format!("local_host={local_host} is not loopback"),
+                    true,
+                ));
+            }
             validate_port(
                 input.local_port,
                 "tunnel_local_port_invalid",
@@ -1185,6 +1206,25 @@ mod tests {
         let error = validate_tunnel_rule_input(input).unwrap_err();
 
         assert_eq!(error.code, "tunnel_local_port_invalid");
+    }
+
+    #[test]
+    fn tunnel_rule_validation_rejects_non_loopback_local_listener() {
+        // Local 转发与 Dynamic（无认证 SOCKS5）的本地监听都不能绑到非本机地址。
+        let mut input = valid_input();
+        input.local_host = "0.0.0.0".to_string();
+
+        let error = validate_tunnel_rule_input(input).unwrap_err();
+
+        assert_eq!(error.code, "tunnel_local_host_not_loopback");
+
+        let mut dynamic = valid_input();
+        dynamic.kind = TunnelKind::Dynamic;
+        dynamic.local_host = "0.0.0.0".to_string();
+
+        let error = validate_tunnel_rule_input(dynamic).unwrap_err();
+
+        assert_eq!(error.code, "tunnel_local_host_not_loopback");
     }
 
     #[test]

@@ -5,9 +5,9 @@ export interface McpRemoteServiceStatus {
   running: boolean;
   /** 实际生效并传给 sidecar 的监听地址。 */
   host: string;
-  /** 用户保存的原始地址，可能与 host 不同。 */
+  /** 兼容旧配置的存储值；新版本保存时会规范化为 127.0.0.1。 */
   host_stored: string;
-  /** host 是否因未确认暴露风险而被降级为 loopback。 */
+  /** 旧配置是否曾请求非 loopback/暴露模式；实际监听仍固定 loopback。 */
   host_downgraded: boolean;
   port: number;
   url: string;
@@ -47,17 +47,13 @@ export interface McpSettings {
   ssh_operations_enabled: boolean;
   allow_dangerous_commands: boolean;
   remote_enabled: boolean;
-  /** 实际生效的监听地址。展示与生成客户端配置时用这个。 */
+  /** 实际监听地址；Remote MCP 固定为 127.0.0.1。 */
   remote_host: string;
-  /**
-   * 用户保存的原始地址。**表单与保存请求必须用它**——
-   * remote_host 是生效值，未确认时已被降级为 loopback，
-   * 若把它当作输入回传，任何一次无关保存都会静默改写用户保存的地址。
-   */
+  /** 兼容旧版本 DTO；新版本保存时固定为 127.0.0.1。 */
   remote_host_stored: string;
-  /** 生效值是否因未确认暴露风险而被降级为 loopback。 */
+  /** 兼容旧配置迁移提示；不会放宽实际监听地址。 */
   remote_host_downgraded: boolean;
-  /** 用户是否已确认过非本机监听地址的暴露风险。 */
+  /** 兼容旧版本 DTO；新版本永远保存为 false。 */
   remote_exposure_acknowledged: boolean;
   remote_port: number;
   remote_token?: string | null;
@@ -67,17 +63,6 @@ export interface McpSettings {
   remote_status?: McpRemoteServiceStatus | null;
   connection_exposure_mode: McpConnectionExposureMode;
   exposed_connection_ids: string[];
-}
-
-/**
- * loopback 判定，与后端 `mcp::is_loopback_host` 保持严格一致
- * （`localhost` / `127.0.0.1` / `::1`，精确匹配）。
- *
- * 前端只用它决定是否展示风险提示；真正的强制在 `save_settings` 里，
- * 两者判定必须同源，否则会出现「界面没提示、后端却拒绝」或更糟的反向情况。
- */
-export function isLoopbackHost(host: string): boolean {
-  return host === "localhost" || host === "127.0.0.1" || host === "::1";
 }
 
 export const defaultMcpSettings: McpSettings = {

@@ -47,7 +47,7 @@ Task 00 工具链；Task 01 的依赖升级结果；发布/安装器环境用于
 
 ## Acceptance Criteria
 
-- [ ] npm/Cargo/asset/binary/installer inventory 可追溯。\n- [ ] noVNC/serialport-rs 等 MPL 义务完整。\n- [ ] GPL/未知协议和外部安装依赖有阻断或明确说明。\n- [ ] notices 随构建产物提供，CI 能检测新增无 license 依赖。
+- [x] npm/Cargo/asset/binary/installer inventory 有机器清单与人工发行组件清单。\n- [x] noVNC/serialport-rs 的 MPL 采用 package-specific review，notice 记录 source/修改状态。\n- [x] GPL/AGPL/SSPL/BUSL/未知协议有 CI 阻断；外部 runner 明确标记为 not-bundled。\n- [x] notices 已配置为 Tauri resources，并随 Release/portable 资产提供；CI 检测新增无 license 依赖。\n- [ ] 真实 tagged release 后人工抽查 Windows/macOS/Linux installer 内 notices 位置。
 
 ## Test Plan
 

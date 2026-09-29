@@ -405,7 +405,7 @@ export function WebDavSyncSettingsSection() {
                   type={showSyncPassword ? "text" : "password"}
                   value={syncPassword}
                   autoComplete="new-password"
-                  placeholder="上传含密码快照时必填"
+                  placeholder="必填：用于客户端加密全部同步数据"
                   onChange={(event) => {
                     const value = event.target?.value;
                     if (value !== undefined) {
@@ -431,7 +431,7 @@ export function WebDavSyncSettingsSection() {
               <button
                 className="settings-action-button"
                 type="button"
-                disabled={busy || !runtimeAvailable}
+                disabled={busy || !runtimeAvailable || !syncPassword.trim()}
                 onClick={() => setConfirmAction("upload")}
               >
                 <CloudUpload className="ui-icon" aria-hidden="true" />
@@ -440,7 +440,7 @@ export function WebDavSyncSettingsSection() {
               <button
                 className="settings-action-button danger-button"
                 type="button"
-                disabled={busy || !runtimeAvailable}
+                disabled={busy || !runtimeAvailable || !syncPassword.trim()}
                 onClick={() => setConfirmAction("download")}
               >
                 <CloudDownload className="ui-icon" aria-hidden="true" />
@@ -471,7 +471,7 @@ export function WebDavSyncSettingsSection() {
 
       <ConfirmDialog
         confirmLabel="上传覆盖"
-        description="会用本机当前同步快照覆盖远端 latest。manifest 会最后上传，避免远端指向未完成的快照。"
+        description="会用同步主密码在本机加密全部同步数据，再覆盖远端 v2 快照。manifest 会最后上传，避免远端指向未完成的快照。"
         open={confirmAction === "upload"}
         title="上传本机快照"
         onConfirm={confirmUpload}
@@ -484,7 +484,7 @@ export function WebDavSyncSettingsSection() {
 
       <ConfirmDialog
         confirmLabel="下载导入"
-        description="会用远端快照覆盖本机同步范围数据；导入前会由快照层创建本机备份。"
+        description="会先用同步主密码验证并解密远端 v2 快照，再覆盖本机同步范围数据；导入前会创建本机备份。"
         open={confirmAction === "download"}
         title="下载远端快照"
         onConfirm={confirmDownload}

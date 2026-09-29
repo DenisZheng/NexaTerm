@@ -82,7 +82,7 @@ pub struct WebDavTestResult {
 #[derive(Clone, Debug)]
 pub struct PreparedWebDavUpload {
     pub manifest_json: Vec<u8>,
-    pub data_json: Vec<u8>,
+    pub remote_data_enc: Vec<u8>,
     pub remote_secrets_enc: Option<Vec<u8>>,
     pub result: WebDavSyncResult,
 }
@@ -310,11 +310,11 @@ pub fn prepare_upload_snapshot(
     now: &str,
 ) -> Result<PreparedWebDavUpload, AppError> {
     let sync_password = trim_optional_owned(request.sync_password);
-    if sync_password.is_none() && repository.sync_secret_count()? > 0 {
+    if sync_password.is_none() {
         return Err(AppError::new(
             "webdav_sync_password_missing",
-            "同步包含已保存 SSH 密码或口令，请输入同步主密码。",
-            "sync password is required when exporting secrets",
+            "请输入同步主密码；WebDAV v2 会在客户端加密全部同步数据。",
+            "sync password is required for encrypted WebDAV snapshot v2",
             true,
         ));
     }
@@ -343,7 +343,7 @@ pub fn prepare_upload_snapshot(
             secrets_skipped: false,
         },
         manifest_json: bundle.manifest_json,
-        data_json: bundle.data_json,
+        remote_data_enc: bundle.remote_data_enc,
         remote_secrets_enc: bundle.remote_secrets_enc,
     })
 }
@@ -360,8 +360,8 @@ pub async fn upload_prepared_snapshot_with_transport<T: WebDavTransport>(
         transport,
         settings,
         DATA_ARTIFACT,
-        prepared.data_json,
-        "application/json",
+        prepared.remote_data_enc,
+        "application/octet-stream",
     )
     .await?;
     if let Some(secrets) = prepared.remote_secrets_enc {
@@ -417,7 +417,7 @@ pub async fn download_bundle_with_transport<T: WebDavTransport>(
         .map(|meta| meta.size as usize)
         .unwrap_or(DEFAULT_DATA_MAX_BYTES)
         .min(DEFAULT_DATA_MAX_BYTES);
-    let data_json = transport
+    let remote_data_enc = transport
         .get(&artifact_segments(settings, DATA_ARTIFACT), data_size)
         .await?
         .ok_or_else(webdav_remote_empty)?;
@@ -436,7 +436,7 @@ pub async fn download_bundle_with_transport<T: WebDavTransport>(
     Ok(SyncSnapshotBundle {
         manifest,
         manifest_json,
-        data_json,
+        remote_data_enc,
         remote_secrets_enc,
     })
 }
@@ -622,7 +622,7 @@ async fn put_artifact<T: WebDavTransport>(
 
 pub(crate) fn remote_dir_segments(settings: &WebDavSettings) -> Vec<String> {
     let mut segments = normalize_path_segments(&[settings.remote_root.as_str()]);
-    segments.push("v1".to_string());
+    segments.push("v2".to_string());
     segments.push(settings.profile.trim().to_string());
     segments
 }
@@ -806,7 +806,7 @@ mod tests {
             &transport,
             &settings(),
             WebDavUploadRequest {
-                sync_password: None,
+                sync_password: Some("sync-password".to_string()),
                 device_id: Some("device-a".to_string()),
                 device_name: Some("Desk A".to_string()),
             },
@@ -818,8 +818,9 @@ mod tests {
         assert_eq!(
             put_operations,
             vec![
-                "PUT mxterm-sync/v1/default/data.json",
-                "PUT mxterm-sync/v1/default/manifest.json",
+                "PUT mxterm-sync/v2/default/data.enc",
+                "PUT mxterm-sync/v2/default/secrets.enc",
+                "PUT mxterm-sync/v2/default/manifest.json",
             ]
         );
     }
@@ -836,9 +837,11 @@ mod tests {
             "created_at": "2026-06-21T10:00:00+08:00",
             "db_schema_version": 1,
             "artifacts": {
-                "data.json": { "sha256": "00", "size": 2 }
+                "data.enc": { "sha256": "00", "size": 2 }
             },
             "encryption": {
+                "data_cipher": "aes-256-gcm",
+                "data_kdf": "argon2id",
                 "secrets_cipher": "aes-256-gcm",
                 "secrets_kdf": "argon2id"
             }
@@ -858,7 +861,7 @@ mod tests {
         assert_eq!(error.code, "sync_snapshot_incompatible");
         assert_eq!(
             transport.operations(),
-            vec!["GET mxterm-sync/v1/default/manifest.json"]
+            vec!["GET mxterm-sync/v2/default/manifest.json"]
         );
     }
 

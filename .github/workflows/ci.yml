@@ -37,6 +37,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # 大文件行数门禁：预算见 scripts/line-budget.json，只许减少不许增加。
+      - name: File line budget
+        run: node scripts/check-line-budget.mjs
+
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
         with:
@@ -133,6 +137,45 @@ jobs:
           retention-days: 14
           if-no-files-found: error
 
+  license:
+    name: License compliance
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.22.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install npm dependency graph
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Check dependency licenses
+        run: pnpm run check:licenses
+
+      - name: Upload license evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: license-evidence-${{ github.sha }}
+          path: |
+            logs/licenses/license-inventory.json
+            logs/licenses/THIRD_PARTY_LICENSES.generated.md
+          retention-days: 30
+          if-no-files-found: error
+
   # Rust 侧：三平台矩阵，独立看结果（fail-fast: false）。
   # cargo check 确认编译通过；cargo test 驱动 src-tauri 内 250+ 个单元/集成测试。
   # 这是本机 Windows 一直无法执行的验收项，改由 CI 承担。
@@ -183,6 +226,62 @@ jobs:
       - name: Cargo test
         working-directory: src-tauri
         run: cargo test --workspace --locked
+
+  # 真实环境测试夹具：docker-compose 起 OpenSSH（含双跳链）+ xrdp + VNC，
+  # 验收项 A12/A13 只有对着真实服务器才真正"可验收"。
+  # SSH 密钥由 fixtures.mjs 在运行时生成（gitignored），仓库不提交任何私钥。
+  fixtures:
+    name: Test fixtures smoke
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install fixture host dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            curl \
+            file \
+            libayatana-appindicator3-dev \
+            libudev-dev \
+            librsvg2-dev \
+            libssl-dev \
+            libwebkit2gtk-4.1-dev \
+            libxdo-dev \
+            openssh-client \
+            patchelf \
+            pkg-config \
+            rpm \
+            wget \
+            xauth \
+            xvfb
+
+      - name: Bring up fixtures
+        run: node tests/fixtures/fixtures.mjs up
+
+      - name: Smoke test fixtures
+        run: xvfb-run -a node tests/fixtures/fixtures.mjs smoke
+
+      - name: Dump fixture diagnostics
+        if: failure()
+        run: |
+          docker compose -f tests/fixtures/docker-compose.yml ps -a
+          docker compose -f tests/fixtures/docker-compose.yml logs --no-color --tail=200
+
+      - name: Tear down fixtures
+        if: always()
+        run: node tests/fixtures/fixtures.mjs down
 
   # 手动触发的 Windows 打包验证通道（build only），用于确认打包链路可用并拿到可安装包试用。
   # 与 release.yml 的关键区别：这里**不设** MXTERM_CREATE_UPDATER_ARTIFACTS，

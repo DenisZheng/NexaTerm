@@ -1,11 +1,19 @@
-# mXterm
+# NexaTerm
 
-[![Release](https://img.shields.io/github/v/release/syscryer/mxterm?label=release)](https://github.com/syscryer/mxterm/releases)
-[![GitHub Release](https://img.shields.io/github/actions/workflow/status/syscryer/mxterm/release.yml?label=release)](https://github.com/syscryer/mxterm/actions/workflows/release.yml)
+[![Release](https://img.shields.io/github/v/release/DenisZheng/NexaTerm?label=release)](https://github.com/DenisZheng/NexaTerm/releases)
+[![GitHub Release](https://img.shields.io/github/actions/workflow/status/DenisZheng/NexaTerm/release.yml?label=release)](https://github.com/DenisZheng/NexaTerm/actions/workflows/release.yml)
 
-mXterm 是一个基于 Tauri v2、React 和 Rust 的本地优先、跨平台终端与远程运维工作区，面向需要同时管理本地 Shell、SSH、RDP、VNC、Telnet、串口和服务器工具的开发者与运维人员。
+NexaTerm 是一个基于 Tauri v2、React 和 Rust 的本地优先、跨平台终端与远程运维工作区，面向需要同时管理本地 Shell、SSH、RDP、VNC、Telnet、串口和服务器工具的开发者与运维人员。
 
 项目把终端、远程桌面、SFTP 文件管理、Docker、端口隧道、主机监控、远程任务、AI 助手和 MCP 能力整合在一个轻量桌面应用中。运行时不依赖 Node/Express 本地服务；前端负责桌面交互，连接协议、本地存储和跨平台能力由 Rust/Tauri 承载。
+
+## Fork 声明
+
+NexaTerm 是 [syscryer/mxterm](https://github.com/syscryer/mxterm) 的 **hard fork**（MIT License，版权与许可见 [LICENSE](LICENSE)）。
+
+- 独立演进：不再以合并回上游为目标；上游的安全修复会定期评估 cherry-pick，功能不再跟进。
+- 独立发布：自有 bundle ID（`com.nexaterm.app`）、自有更新签名密钥与更新通道，更新只从本仓库的 GitHub Release 获取。
+- 方向差异：详见 [差异化一页纸](docs/DIFFERENTIATION.md)。
 
 ## 截图
 
@@ -29,6 +37,18 @@ mXterm 是一个基于 Tauri v2、React 和 Rust 的本地优先、跨平台终�
 
 ![外观设置](docs/assets/readme/appearance-settings.png)
 
+## 当前发布范围
+
+NexaTerm 当前按 **SSH/SFTP 优先**推进 v1。
+
+- **首个公开 Preview**：先打通 SSH + Host Key + SFTP/Files + Session/Quick Connect 的完整日常流。
+- **v1 核心**：SSH、SFTP、Local Shell、WSL、Serial、会话管理、Split、MultiExec、Saved Commands，以及三平台基础可用性。
+- **Experimental**：Telnet、RDP、VNC、X11。现有能力不会删除，但它们的跨平台成熟度不作为 v1 发布门禁。
+- **迁移入口**：MobaXterm 会话导入作为 P1 优先项提前推进，但不作为 v1 发布门禁。
+- 更完整的远程桌面、X11、Workspace Restore 与 Multi-hop 在真实运行证据和用户反馈基础上继续推进。
+
+这一区分描述的是发布承诺，不代表 Experimental 功能当前不可用。
+
 ## 功能概览
 
 - 连接管理：统一管理 SSH、RDP、VNC、Telnet 和串口连接，支持分组、最近连接、收藏、搜索、复制配置和快速启动。
@@ -47,8 +67,8 @@ mXterm 是一个基于 Tauri v2、React 和 Rust 的本地优先、跨平台终�
 
 正式发布只走 GitHub Release：
 
-- [GitHub Releases](https://github.com/syscryer/mxterm/releases)
-- [最新版本](https://github.com/syscryer/mxterm/releases/latest)
+- [GitHub Releases](https://github.com/DenisZheng/NexaTerm/releases)
+- [最新版本](https://github.com/DenisZheng/NexaTerm/releases/latest)
 
 当前发布主线：
 
@@ -87,7 +107,7 @@ pnpm package:all
 
 ## 发布流程
 
-本仓库只配置 GitHub Release 发布渠道，目标仓库为 `syscryer/mxterm`。正式发布由 `v*` tag 触发，`workflow_dispatch` 手动触发只做完整构建、资产整理、`latest.json` 和校验文件验证，不创建 GitHub Release。
+本仓库只配置 GitHub Release 发布渠道，目标仓库为 `DenisZheng/NexaTerm`。正式发布由 `v*` tag 触发，`workflow_dispatch` 手动触发只做完整构建、资产整理、`latest.json` 和校验文件验证，不创建 GitHub Release。
 
 发布前需要保证三个版本号一致：
 

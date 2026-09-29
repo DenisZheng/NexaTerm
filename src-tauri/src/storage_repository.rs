@@ -19,7 +19,7 @@ use crate::connections::{
     ConnectionProfileInput, ConnectionProtocol, ConnectionRemoteSystemInfo,
 };
 use crate::credentials::{validate_credential_input, CredentialProfile, CredentialProfileInput};
-use crate::known_hosts::{HostKeyInfo, KnownHostCheck, KnownHostEntry};
+use crate::known_hosts::{validate_host_key_info, HostKeyInfo, KnownHostCheck, KnownHostEntry};
 use crate::ssh_config::{ResolvedSshConfig, RuntimeCredentialInput};
 use crate::storage_migration::StorageMigrator;
 use crate::storage_sqlite::{normalize_known_host_host, SqliteStore};
@@ -1880,6 +1880,7 @@ impl StorageRepository {
         info: HostKeyInfo,
         now: &str,
     ) -> Result<KnownHostEntry, AppError> {
+        validate_host_key_info(&info)?;
         let host = normalize_known_host_host(&info.host);
         let existing = self
             .connection
@@ -1938,7 +1939,9 @@ impl StorageRepository {
                 "SELECT host, port, key_algorithm, fingerprint_sha256, public_key,
                         first_trusted_at, last_seen_at
                    FROM known_hosts
-                  WHERE host = ?1 AND port = ?2 AND key_algorithm = ?3",
+                  WHERE host = ?1 AND port = ?2
+                  ORDER BY CASE WHEN key_algorithm = ?3 THEN 0 ELSE 1 END, key_algorithm ASC
+                  LIMIT 1",
                 params![host, port, info.key_algorithm],
                 |row| {
                     Ok(KnownHostEntry {
@@ -2887,13 +2890,9 @@ mod tests {
     use crate::terminal::telnet::{TelnetBackspaceMode, TelnetEnterMode};
 
     fn sample_host_key(host: &str, fingerprint: &str) -> crate::known_hosts::HostKeyInfo {
-        crate::known_hosts::HostKeyInfo {
-            host: host.to_string(),
-            port: 22,
-            key_algorithm: "ssh-ed25519".to_string(),
-            fingerprint_sha256: fingerprint.to_string(),
-            public_key: format!("ssh-ed25519 {fingerprint}"),
-        }
+        use russh::keys::ssh_key::PublicKey;
+        let openssh = if fingerprint == "SHA256:first" { "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f" } else { "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIB8eHRwbGhkYFxYVFBMSERAPDg0MCwoJCAcGBQQDAgEA" };
+        crate::known_hosts::host_key_info(host, 22, &PublicKey::from_openssh(openssh).unwrap())
     }
 
     /// 生产路径（`session.rs` 的 `check_server_key`）只走 SQLite 仓储，不走旧 JSON store，
@@ -2941,8 +2940,8 @@ mod tests {
         let KnownHostCheck::Changed { current, host_key } = changed else {
             panic!("指纹变化必须报 Changed，而不是静默信任或当作 Unknown");
         };
-        assert_eq!(current.fingerprint_sha256, "SHA256:first");
-        assert_eq!(host_key.fingerprint_sha256, "SHA256:second");
+        assert_eq!(current.fingerprint_sha256, sample_host_key("example.com", "SHA256:first").fingerprint_sha256);
+        assert_eq!(host_key.fingerprint_sha256, sample_host_key("example.com", "SHA256:second").fingerprint_sha256);
 
         // 未经 trust 的 Changed 不得改写存储：再次用旧指纹检查仍为 Trusted。
         assert!(matches!(
@@ -2979,15 +2978,11 @@ mod tests {
             .unwrap(),
             KnownHostCheck::Changed { .. }
         ));
-        // 不同端口是独立条目，不应被误判为 Changed。
+        // 已知 host:port 切换到未记录算法也必须是 Changed，不能降级成 Unknown/TOFU。
         assert!(matches!(
-            repo.known_host_check(
-                "example.com",
-                2222,
-                sample_host_key("example.com", "SHA256:second")
-            )
-            .unwrap(),
-            KnownHostCheck::Unknown { .. }
+            repo.known_host_check("example.com", 22, crate::known_hosts::HostKeyInfo { key_algorithm: "ssh-rsa".to_string(), ..sample_host_key("example.com", "SHA256:second") })
+                .unwrap(),
+            KnownHostCheck::Changed { .. }
         ));
 
         let _ = std::fs::remove_dir_all(db_path.parent().unwrap());
@@ -3013,7 +3008,7 @@ mod tests {
         assert_eq!(first.id, second.id);
         assert_eq!(second.trusted_at, "2026-09-18T10:00:00+08:00");
         assert_eq!(second.updated_at, "2026-09-18T11:00:00+08:00");
-        assert_eq!(second.fingerprint_sha256, "SHA256:second");
+        assert_eq!(second.fingerprint_sha256, sample_host_key("example.com", "SHA256:second").fingerprint_sha256);
         let rows = Connection::open(&db_path)
             .unwrap()
             .query_row("SELECT COUNT(*) FROM known_hosts", [], |row| {
@@ -3056,8 +3051,8 @@ mod tests {
                 host_key,
                 old_fingerprint_sha256,
             }) => {
-                assert_eq!(old_fingerprint_sha256, "SHA256:first");
-                assert_eq!(host_key.fingerprint_sha256, "SHA256:second");
+                assert_eq!(old_fingerprint_sha256, sample_host_key("example.com", "SHA256:first").fingerprint_sha256);
+                assert_eq!(host_key.fingerprint_sha256, sample_host_key("example.com", "SHA256:second").fingerprint_sha256);
             }
             other => panic!("host_key_changed 必须携带 HostKeyChanged details，实际：{other:?}"),
         }

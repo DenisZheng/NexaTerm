@@ -81,3 +81,17 @@ export async function selectConnectionTransferExportPath() {
     title: "导出连接",
   });
 }
+
+export async function selectMobaXtermSessionsImportPath() {
+  const selected = await open({
+    multiple: false,
+    filters: [
+      {
+        extensions: ["mxtsessions"],
+        name: "MobaXterm 会话导出",
+      },
+    ],
+    title: "选择 MobaXterm 会话文件",
+  });
+  return normalizeSelectedPaths(selected)[0] || null;
+}

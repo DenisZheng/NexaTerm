@@ -5584,6 +5584,91 @@ button {
   white-space: nowrap;
 }
 
+.connection-transfer-source-button {
+  min-height: 36px;
+  border: 1px dashed var(--mx-line-strong, var(--mx-line));
+  border-radius: 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 12px;
+  color: var(--mx-primary);
+  background: var(--mx-panel-soft);
+  font-size: 12px;
+  font-weight: 560;
+  cursor: pointer;
+}
+
+.connection-transfer-source-button:hover {
+  border-color: color-mix(in srgb, var(--mx-primary) 55%, var(--mx-line));
+  background: color-mix(in srgb, var(--mx-primary) 6%, var(--mx-panel));
+}
+
+.mobaxterm-import-list {
+  max-height: 320px;
+  border: 1px solid var(--mx-line);
+  border-radius: 7px;
+  overflow: auto;
+  background: var(--mx-panel);
+}
+
+.mobaxterm-import-row {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 122px minmax(0, 1fr);
+  gap: 9px;
+  padding: 9px 10px;
+}
+
+.mobaxterm-import-row + .mobaxterm-import-row {
+  border-top: 1px solid var(--mx-line);
+}
+
+.mobaxterm-import-row[data-selectable="false"] {
+  background: var(--mx-panel-soft);
+}
+
+.mobaxterm-import-check {
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  color: var(--mx-muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.mobaxterm-import-check input {
+  margin: 1px 0 0;
+}
+
+.mobaxterm-import-detail {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.mobaxterm-import-detail > input {
+  min-width: 0;
+  height: 28px;
+  border: 1px solid var(--mx-line);
+  border-radius: 5px;
+  padding: 0 7px;
+  color: var(--mx-text);
+  background: var(--mx-panel);
+  font-size: 11px;
+}
+
+.mobaxterm-import-detail > small {
+  overflow: hidden;
+  color: var(--mx-muted);
+  font-size: 10px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .connection-transfer-note,
 .connection-transfer-error {
   margin: 0;
@@ -5774,6 +5859,10 @@ button {
   }
 
   .connection-transfer-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .mobaxterm-import-row {
     grid-template-columns: 1fr;
   }
 

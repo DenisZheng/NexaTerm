@@ -13,6 +13,13 @@ use crate::storage_sqlite::{normalize_known_host_host, SqliteStore};
 use crate::storage_vault::{SecretKind, SecretReference, SecretStore, VAULT_SERVICE};
 use crate::tunnels::TunnelStore;
 
+/// 数据目录格式版本。SQLite（`SQLITE_SCHEMA_VERSION`）和 Vault（`VAULT_VERSION`）
+/// 各自有版本号，这是在它们之上的目录级标记：
+/// - 新版 App 打开旧目录时，在此按版本逐级迁移；
+/// - 旧版 App 遇到新版写出的目录时拒绝打开（降级保护），而不是静默损坏数据。
+pub const DATA_DIR_VERSION: u32 = 1;
+const DATA_VERSION_FILE: &str = ".data-version";
+
 pub struct StorageMigrator {
     root: PathBuf,
     secret_store: Arc<dyn SecretStore>,
@@ -23,7 +30,65 @@ impl StorageMigrator {
         Self { root, secret_store }
     }
 
+    /// 目录级版本门：缺失则盖戳（全新或历史遗留目录），过新则拒绝（降级保护），
+    /// 过旧则留给未来的逐级迁移（当前 v1 无需迁移，直接盖戳）。
+    fn ensure_data_dir_version(&self) -> Result<(), AppError> {
+        fs::create_dir_all(&self.root).map_err(|e| {
+            AppError::new(
+                "storage_data_dir_create_failed",
+                "数据目录创建失败。",
+                e,
+                false,
+            )
+        })?;
+        let path = self.root.join(DATA_VERSION_FILE);
+        let current = match fs::read_to_string(&path) {
+            Ok(content) => content.trim().parse::<u32>().map_err(|_| {
+                AppError::new(
+                    "storage_data_version_invalid",
+                    "数据目录版本标记损坏，无法启动。",
+                    format!(
+                        "{}: 内容不是有效的版本号",
+                        path.display()
+                    ),
+                    false,
+                )
+            })?,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => 0,
+            Err(e) => {
+                return Err(AppError::new(
+                    "storage_data_version_read_failed",
+                    "数据目录版本标记读取失败。",
+                    e,
+                    false,
+                ));
+            }
+        };
+        if current > DATA_DIR_VERSION {
+            return Err(AppError::new(
+                "storage_data_version_too_new",
+                "数据目录由更新版本的 NexaTerm 创建，当前版本无法打开。",
+                format!(
+                    "目录版本 v{current}，当前版本最高支持 v{DATA_DIR_VERSION}；请升级应用后重试"
+                ),
+                false,
+            ));
+        }
+        // current < DATA_DIR_VERSION 时在此逐级迁移；v1 尚无跨版本迁移项。
+        fs::write(&path, format!("{DATA_DIR_VERSION}\n")).map_err(|e| {
+            AppError::new(
+                "storage_data_version_write_failed",
+                "数据目录版本标记写入失败。",
+                e,
+                false,
+            )
+        })?;
+        Ok(())
+    }
+
     pub fn migrate(&self) -> Result<(), AppError> {
+        self.ensure_data_dir_version()?;
+
         let db_path = self.root.join("mxterm.db");
         let store = SqliteStore::open(&db_path)?;
         store.initialize()?;
@@ -732,5 +797,46 @@ mod tests {
 }"#,
         )
         .unwrap();
+    }
+
+    #[test]
+    fn data_dir_version_stamped_on_fresh_dir() {
+        let (root, secrets) = temp_root("version-fresh");
+
+        StorageMigrator::new(root.clone(), secrets.clone())
+            .migrate()
+            .unwrap();
+
+        let content = fs::read_to_string(root.join(".data-version")).unwrap();
+        assert_eq!(content.trim(), "1");
+
+        // 幂等：第二次 migrate 不报错、不改写。
+        StorageMigrator::new(root.clone(), secrets).migrate().unwrap();
+        let content = fs::read_to_string(root.join(".data-version")).unwrap();
+        assert_eq!(content.trim(), "1");
+    }
+
+    #[test]
+    fn data_dir_version_rejects_newer_dir() {
+        let (root, secrets) = temp_root("version-newer");
+        fs::write(root.join(".data-version"), "999\n").unwrap();
+
+        let error = StorageMigrator::new(root.clone(), secrets)
+            .migrate()
+            .unwrap_err();
+
+        assert_eq!(error.code, "storage_data_version_too_new");
+    }
+
+    #[test]
+    fn data_dir_version_rejects_corrupt_marker() {
+        let (root, secrets) = temp_root("version-corrupt");
+        fs::write(root.join(".data-version"), "not-a-version\n").unwrap();
+
+        let error = StorageMigrator::new(root.clone(), secrets)
+            .migrate()
+            .unwrap_err();
+
+        assert_eq!(error.code, "storage_data_version_invalid");
     }
 }
