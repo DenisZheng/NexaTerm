@@ -1,7 +1,7 @@
 # 任务：将「凭据库」升级为「账号」模型
 
 ## 背景
-当前 mXterm 把 SSH 登录身份拆成两处管理：
+当前 NexaTerm 把 SSH 登录身份拆成两处管理：
 - **用户名**：存在每个 Connection 里（`username` 字段）
 - **凭据**：独立的凭据库（CredentialProfile），只存密码/私钥，不含用户名
 

@@ -2,7 +2,7 @@
 
 ## Goal
 
-建立 English/zh-CN i18n 契约，统一 mXterm/NexaTerm 品牌和数据/更新兼容，并把三平台构建发布纳入可复核矩阵。
+建立 English/zh-CN i18n 契约，统一 NexaTerm 品牌和数据/更新兼容，并把三平台构建发布纳入可复核矩阵。
 
 ## Background
 

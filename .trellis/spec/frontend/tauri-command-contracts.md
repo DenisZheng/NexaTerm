@@ -1257,7 +1257,7 @@ useAppUpdate({ autoCheckEnabled }: { autoCheckEnabled: boolean }): UseAppUpdateR
 ### 3. Contracts
 
 - Components must call `getAppRuntimeInfoCommand()` or the higher-level helpers in `src/shared/tauri/appUpdate.ts`; do not call `invoke("get_app_runtime_info")` directly from UI components.
-- Update checks are GitHub Release only. Frontend repository links and fallback URLs must point to `https://github.com/syscryer/mxterm`.
+- Update checks are GitHub Release only. Frontend repository links and fallback URLs must point to `https://github.com/DenisZheng/NexaTerm`.
 - `settings.basic.autoCheckAppUpdate` defaults to `true`, is normalized through `normalizeSettings`, and controls only startup/background checks. Manual `立即检查` must remain available when the environment supports updater checks.
 - Automatic checks must never download, install, relaunch, or interrupt terminal/file operations. They may only set an available-update state and show a dismissible titlebar notice.
 - `desktop-portable` and `desktop-package` are unsupported for automatic install. Windows portable zip and Linux deb/rpm users must be sent to GitHub Release manually.

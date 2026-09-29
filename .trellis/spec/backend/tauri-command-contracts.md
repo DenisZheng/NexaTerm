@@ -1599,11 +1599,11 @@ TAURI_SIGNING_PRIVATE_KEY_PASSWORD=<GitHub Secret, optional>
 - `get_app_runtime_info` must be registered in `src-tauri/src/lib.rs` through `tauri::generate_handler!` and exposed through the typed frontend wrapper.
 - The serialized `AppRuntimeInfo` uses camelCase. React may also normalize snake_case for compatibility, but Rust should keep `#[serde(rename_all = "camelCase")]`.
 - `version` must come from `env!("CARGO_PKG_VERSION")`; do not hard-code it in Rust.
-- `repository_url` must be `https://github.com/syscryer/mxterm`. No mirror or alternate release channel should be part of updater runtime metadata.
+- `repository_url` must be `https://github.com/DenisZheng/NexaTerm`. No mirror or alternate release channel should be part of updater runtime metadata.
 - Windows checks for `portable.marker` in the executable directory and returns `desktop-portable` when present. Portable builds must not be treated as updater-installable.
 - Linux checks the `APPIMAGE` environment variable. A non-empty value returns `desktop-appimage`; otherwise Linux returns `desktop-package`.
 - macOS and ordinary Windows installer builds return `desktop-installer`.
-- Tauri config must include the GitHub latest endpoint `https://github.com/syscryer/mxterm/releases/latest/download/latest.json` and the updater public key only. Private keys and key passwords must stay in GitHub Secrets or ignored runtime paths.
+- Tauri config must include the GitHub latest endpoint `https://github.com/DenisZheng/NexaTerm/releases/latest/download/latest.json` and the updater public key only. Private keys and key passwords must stay in GitHub Secrets or ignored runtime paths.
 - GitHub Release workflow may build Windows x64, macOS Apple Silicon, and Linux x64 only. Do not add macOS Intel artifacts or updater metadata without a new task and spec update.
 - Release builds must set `NODE_OPTIONS=--max-old-space-size=4096` so the Vite/TypeScript build does not hit the default Node heap limit on GitHub-hosted macOS Apple Silicon runners.
 - `latest.json` must include only signed updater-installable artifacts: Windows NSIS `.exe`, macOS Apple Silicon `.app.tar.gz`, and Linux `.AppImage`. Windows portable zip, Linux deb, and Linux rpm are manual-download assets only.
@@ -1627,7 +1627,7 @@ TAURI_SIGNING_PRIVATE_KEY_PASSWORD=<GitHub Secret, optional>
 
 - Good: a Windows NSIS install returns `desktop-installer`, updater check is enabled in React, and `latest.json` points to the signed `.exe`.
 - Good: a Windows portable zip contains `portable.marker`, returns `desktop-portable`, and the UI directs the user to GitHub Release manual download.
-- Good: a Linux AppImage launch has `APPIMAGE=/path/to/mXterm.AppImage`, returns `desktop-appimage`, and `latest.json` points to the signed AppImage.
+- Good: a Linux AppImage launch has `APPIMAGE=/path/to/NexaTerm.AppImage`, returns `desktop-appimage`, and `latest.json` points to the signed AppImage.
 - Base: a Linux deb/rpm install returns `desktop-package`, so the UI keeps manual update copy visible.
 - Bad: Rust infers updater support from OS alone, workflow writes portable zip/deb/rpm into `latest.json`, a private updater key is committed, or release URLs point outside GitHub.
 
@@ -2734,8 +2734,8 @@ mxterm-mcp serve --host <host> --port <port> --token-sha256 <sha256> [--data-dir
 
 ### 3. Contracts
 
-- `src-tauri/Cargo.toml` must register `mxterm-mcp` as a standalone binary and keep `default-run = "m-xterm"` so `tauri dev` still launches the desktop app without an explicit `--bin`.
-- `mxterm-mcp` speaks JSON-RPC/MCP over stdio as newline-delimited JSON: one JSON-RPC message per line, no `Content-Length` header. It must work while the mXterm desktop app is not running.
+- `src-tauri/Cargo.toml` must register `mxterm-mcp` as a standalone binary and keep `default-run = "nexaterm"` so `tauri dev` still launches the desktop app without an explicit `--bin`.
+- `mxterm-mcp` speaks JSON-RPC/MCP over stdio as newline-delimited JSON: one JSON-RPC message per line, no `Content-Length` header. It must work while the NexaTerm desktop app is not running.
 - Remote MCP is served by the same sidecar in `serve` mode. The desktop app manages the child process through `McpRemoteServiceManager`; stdio mode remains independent.
 - The remote HTTP transport exposes Streamable HTTP at `/mcp`: `POST /mcp` handles one JSON-RPC message per request and `GET /mcp` returns `text/event-stream`.
 - The remote HTTP transport keeps legacy SSE compatibility with `GET /sse` returning an endpoint event and `POST /messages?session_id=...` delivering JSON-RPC responses to that SSE session.
