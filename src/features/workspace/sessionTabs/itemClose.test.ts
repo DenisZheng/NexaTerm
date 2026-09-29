@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildCloseContext,
   closePlanIsEmpty,
   closeRequestFromItems,
   closeScopeItemIds,
@@ -89,6 +90,32 @@ const baseContext: CloseContext = {
   vncSessions: [{ id: "v1" }],
 };
 const file = (connectionId: string, name: string, dirty = false) => ({ connectionId, dirty, name });
+
+describe("buildCloseContext", () => {
+  it("只提取关闭计划需要的字段，并把分屏绑定映射成实例 id", () => {
+    expect(
+      buildCloseContext(
+        [{ id: "l1" }],
+        [{ id: "r1" }],
+        [{ connectionId: "a", dirty: true, name: "draft.txt" }],
+        [
+          { binding: { kind: "ssh", tabId: "t1" } },
+          { binding: undefined },
+          { binding: { kind: "local", tabId: "l1" } },
+        ],
+        [{ connectionId: "a", id: "t1" }],
+        [{ id: "v1" }],
+      ),
+    ).toEqual({
+      localTerminalTabs: [{ id: "l1" }],
+      rdpSessions: [{ id: "r1" }],
+      remoteFileTabs: [{ connectionId: "a", dirty: true, name: "draft.txt" }],
+      splitMemberIds: ["ssh:t1", "local:l1"],
+      terminalTabs: [{ connectionId: "a", id: "t1" }],
+      vncSessions: [{ id: "v1" }],
+    });
+  });
+});
 
 describe("planClose（WS-E05 连带 / WS-F08 确认）", () => {
   it("按实例类型分组到各自的关闭路径；不需要确认", () => {

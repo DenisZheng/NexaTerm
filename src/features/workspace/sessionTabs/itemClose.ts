@@ -1,3 +1,4 @@
+import { terminalPaneBindingKey, type TerminalSplitPane } from "../../terminal/terminalSplitLayout";
 import type { WorkspaceItem } from "./instances";
 
 /**
@@ -67,6 +68,27 @@ export interface CloseContext {
   splitMemberIds: readonly string[];
   terminalTabs: readonly { connectionId: string; id: string }[];
   vncSessions: readonly { id: string }[];
+}
+
+/** 从 shell 当前集合组装纯关闭上下文；只提取 planClose 需要的字段，不持有 UI 状态。 */
+export function buildCloseContext(
+  localTerminalTabs: readonly { id: string }[],
+  rdpSessions: readonly { id: string }[],
+  remoteFileTabs: readonly { connectionId: string; dirty: boolean; name: string }[],
+  terminalSplitPanes: readonly Pick<TerminalSplitPane, "binding">[],
+  terminalTabs: readonly { connectionId: string; id: string }[],
+  vncSessions: readonly { id: string }[],
+): CloseContext {
+  return {
+    localTerminalTabs: localTerminalTabs.map(({ id }) => ({ id })),
+    rdpSessions: rdpSessions.map(({ id }) => ({ id })),
+    remoteFileTabs: remoteFileTabs.map(({ connectionId, dirty, name }) => ({ connectionId, dirty, name })),
+    splitMemberIds: terminalSplitPanes.flatMap((pane) =>
+      pane.binding ? [terminalPaneBindingKey(pane.binding)] : [],
+    ),
+    terminalTabs: terminalTabs.map(({ connectionId, id }) => ({ connectionId, id })),
+    vncSessions: vncSessions.map(({ id }) => ({ id })),
+  };
 }
 
 /** 需要确认时给对话框的摘要。 */
