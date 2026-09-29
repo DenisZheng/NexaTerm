@@ -864,8 +864,16 @@ fn mobaxterm_import_file_too_large(size: u64) -> AppError {
 #[cfg(test)]
 mod tests {
     use std::fs;
+    use std::sync::Arc;
 
-    use super::{parse_bytes, preview_file, MobaXtermImportStatus, MobaXtermSessionKind};
+    use crate::storage_repository::StorageRepository;
+    use crate::storage_vault::InMemorySecretStore;
+
+    use super::{
+        import_from_file, parse_bytes, preview_file, preview_for_repository,
+        MobaXtermImportApplyRequest, MobaXtermImportConflict, MobaXtermImportSelection,
+        MobaXtermImportStatus, MobaXtermSessionKind,
+    };
 
     const SSH_WITH_KEY: &str = "Prod=#109#0%host.example.com%2222%deploy%%-1%-1%%%%%0%0%0%C:\\Keys\\prod.ppk%%-1%0%0%0%%1080%%0%0%1#MobaFont%10%0%0%-1%15%236,236,236%30,30,30%180,180,192%0%-1%0%%xterm%-1%0%_Std_Colors_0_%80%24%0%1%-1%<none>%%0%0%-1%-1#0# #-1";
     const SSH_MISSING_USER: &str = "Legacy=#109#0%legacy.example.com%22%%%-1%-1%%%%%0%-1%0%%%-1%0%0%0%%1080%%0%0%1#MobaFont%10%0%0%-1%15%236,236,236%30,30,30%180,180,192%0%-1%0%%xterm%-1%0%_Std_Colors_0_%80%24%0%1%-1%<none>%%0%0%-1%-1#0# #-1";
@@ -921,6 +929,115 @@ mod tests {
     }
 
     #[test]
+    fn import_creates_ssh_and_second_preview_marks_exact_duplicate() {
+        let mut repository = temp_repository("apply");
+        let path = write_sessions(
+            "apply",
+            &format!("[Bookmarks]\r\nSubRep=Production\\Web\r\nImgNum=42\r\n{SSH_WITH_KEY}\r\n"),
+        );
+        let preview = preview_for_repository(&repository, &path, None).unwrap();
+        let result = import_from_file(
+            &mut repository,
+            MobaXtermImportApplyRequest {
+                path: path.to_string_lossy().to_string(),
+                fingerprint: preview.fingerprint,
+                default_username: None,
+                selections: vec![MobaXtermImportSelection {
+                    source_index: 0,
+                    name: "Prod".to_string(),
+                }],
+            },
+        )
+        .unwrap();
+
+        assert_eq!(result.created, 1);
+        let connections = repository.connection_list().unwrap();
+        assert_eq!(connections.len(), 1);
+        assert_eq!(connections[0].name, "Prod");
+        assert_eq!(connections[0].host, "host.example.com");
+        assert_eq!(connections[0].port, 2222);
+        assert_eq!(connections[0].username, "deploy");
+        assert_eq!(
+            connections[0].inline_private_key_path.as_deref(),
+            Some("C:\\Keys\\prod.ppk")
+        );
+
+        let second = preview_for_repository(&repository, &path, None).unwrap();
+        assert_eq!(
+            second.items[0].conflict,
+            MobaXtermImportConflict::ExactDuplicate
+        );
+        assert!(!second.items[0].selectable);
+        assert_eq!(second.summary.exact_duplicates, 1);
+    }
+
+    #[test]
+    fn preview_suggests_rename_for_same_name_with_different_target() {
+        let mut repository = temp_repository("name-conflict");
+        let first_path = write_sessions(
+            "name-conflict-first",
+            &format!("[Bookmarks]\r\nSubRep=\r\nImgNum=42\r\n{SSH_WITH_KEY}\r\n"),
+        );
+        let first = preview_for_repository(&repository, &first_path, None).unwrap();
+        import_from_file(
+            &mut repository,
+            MobaXtermImportApplyRequest {
+                path: first_path.to_string_lossy().to_string(),
+                fingerprint: first.fingerprint,
+                default_username: None,
+                selections: vec![MobaXtermImportSelection {
+                    source_index: 0,
+                    name: "Prod".to_string(),
+                }],
+            },
+        )
+        .unwrap();
+
+        let second_record = SSH_WITH_KEY.replace("host.example.com", "other.example.com");
+        let second_path = write_sessions(
+            "name-conflict-second",
+            &format!("[Bookmarks]\r\nSubRep=\r\nImgNum=42\r\n{second_record}\r\n"),
+        );
+        let preview = preview_for_repository(&repository, &second_path, None).unwrap();
+        assert_eq!(preview.items[0].conflict, MobaXtermImportConflict::NameConflict);
+        assert_eq!(
+            preview.items[0].suggested_name.as_deref(),
+            Some("Prod (MobaXterm)")
+        );
+    }
+
+    #[test]
+    fn import_rejects_file_changed_after_preview() {
+        let mut repository = temp_repository("fingerprint");
+        let path = write_sessions(
+            "fingerprint",
+            &format!("[Bookmarks]\r\nSubRep=\r\nImgNum=42\r\n{SSH_WITH_KEY}\r\n"),
+        );
+        let preview = preview_for_repository(&repository, &path, None).unwrap();
+        fs::write(
+            &path,
+            format!("[Bookmarks]\r\nSubRep=\r\nImgNum=42\r\n{SSH_MISSING_USER}\r\n"),
+        )
+        .unwrap();
+
+        let error = import_from_file(
+            &mut repository,
+            MobaXtermImportApplyRequest {
+                path: path.to_string_lossy().to_string(),
+                fingerprint: preview.fingerprint,
+                default_username: Some("deploy".to_string()),
+                selections: vec![MobaXtermImportSelection {
+                    source_index: 0,
+                    name: "Prod".to_string(),
+                }],
+            },
+        )
+        .unwrap_err();
+        assert_eq!(error.code, "mobaxterm_import_file_changed");
+        assert!(repository.connection_list().unwrap().is_empty());
+    }
+
+    #[test]
     fn preview_file_returns_summary_and_stable_fingerprint() {
         let root = std::env::temp_dir().join(format!(
             "nexaterm-mobaxterm-preview-{}",
@@ -944,4 +1061,24 @@ mod tests {
         assert_eq!(first.summary.unsupported, 1);
         assert_eq!(first.summary.invalid, 0);
     }
+    fn temp_repository(name: &str) -> StorageRepository {
+        let root = std::env::temp_dir().join(format!(
+            "nexaterm-mobaxterm-import-{name}-{}",
+            uuid::Uuid::new_v4()
+        ));
+        StorageRepository::open(root.join("nexaterm.db"), Arc::new(InMemorySecretStore::default()))
+            .unwrap()
+    }
+
+    fn write_sessions(name: &str, content: &str) -> std::path::PathBuf {
+        let root = std::env::temp_dir().join(format!(
+            "nexaterm-mobaxterm-source-{name}-{}",
+            uuid::Uuid::new_v4()
+        ));
+        fs::create_dir_all(&root).unwrap();
+        let path = root.join("sessions.mxtsessions");
+        fs::write(&path, content).unwrap();
+        path
+    }
+
 }
