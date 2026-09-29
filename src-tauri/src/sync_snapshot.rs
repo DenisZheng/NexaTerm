@@ -9,7 +9,7 @@ use crate::connections::{
     ConnectionProtocol, ConnectionProxyConfig, RdpConnectionConfig, SerialConnectionConfig,
     TelnetConnectionConfig, VncConnectionConfig,
 };
-use crate::known_hosts::KnownHostEntry;
+use crate::known_hosts::{validate_host_key_info, HostKeyInfo, KnownHostEntry};
 use crate::secure_bundle::{
     decrypt_json, encrypt_json, EncryptedJsonEnvelope, PASSWORD_CIPHER, PASSWORD_KDF,
 };
@@ -196,12 +196,16 @@ impl SyncSnapshotService {
             version: SYNC_PROTOCOL_VERSION,
             secrets: repository.export_sync_secrets()?,
         };
-        let remote_secrets_enc = Some(encrypt_remote_secrets(
-            &snapshot_id,
-            &data_hash,
-            password,
-            &secrets,
-        )?);
+        let remote_secrets_enc = if secrets.secrets.is_empty() {
+            None
+        } else {
+            Some(encrypt_remote_secrets(
+                &snapshot_id,
+                &data_hash,
+                password,
+                &secrets,
+            )?)
+        };
         let manifest = build_manifest(
             snapshot_id,
             options.device_id,
@@ -333,6 +337,17 @@ pub fn validate_bundle_artifacts(
 }
 
 fn validate_sync_data_document(data: &SyncDataDocument) -> Result<(), AppError> {
+    for entry in &data.known_hosts {
+        validate_host_key_info(&HostKeyInfo {
+            host: entry.host.clone(),
+            port: entry.port,
+            key_algorithm: entry.key_algorithm.clone(),
+            fingerprint_sha256: entry.fingerprint_sha256.clone(),
+            public_key: entry.public_key.clone(),
+        })
+        .map_err(|error| sync_snapshot_import_failed(error.raw_message))?;
+    }
+
     let mut group_ids = BTreeSet::new();
     for group in &data.connection_groups {
         if !group_ids.insert(group.id.as_str()) {
