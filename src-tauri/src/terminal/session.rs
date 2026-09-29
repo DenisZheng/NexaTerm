@@ -95,12 +95,13 @@ type SshHandle = client::Handle<KnownHostClient>;
 type ChannelWriter = ChannelWriteHalf<client::Msg>;
 
 #[derive(Clone)]
-struct KnownHostClient {
-    host: String,
-    port: u16,
-    app_data_dir: std::path::PathBuf,
-    secret_store: Arc<dyn SecretStore>,
-    remote_forward: RemoteForwardState,
+pub(super) struct KnownHostClient {
+    pub(super) host: String,
+    pub(super) port: u16,
+    pub(super) app_data_dir: std::path::PathBuf,
+    pub(super) secret_store: Arc<dyn SecretStore>,
+    pub(super) remote_forward: RemoteForwardState,
+    pub(super) x11_forward: X11ForwardState,
 }
 
 impl client::Handler for KnownHostClient {
@@ -125,6 +126,22 @@ impl client::Handler for KnownHostClient {
             KnownHostCheck::Changed { current, host_key } => Err(to_russh_error(
                 app_error_for_host_key_changed(&current.fingerprint_sha256, &host_key),
             )),
+        }
+    }
+
+    fn server_channel_open_x11(
+        &mut self,
+        channel: Channel<client::Msg>,
+        _originator_address: &str,
+        _originator_port: u32,
+        _session: &mut client::Session,
+    ) -> impl Future<Output = Result<(), Self::Error>> + Send {
+        let x11_forward = self.x11_forward.clone();
+        async move {
+            tauri::async_runtime::spawn(async move {
+                x11_forward.handle_server_channel(channel).await;
+            });
+            Ok(())
         }
     }
 
@@ -185,7 +202,7 @@ impl SshConnectionContext {
         }
     }
 }
-enum AuthMethod {
+pub(super) enum AuthMethod {
     Password(String),
     PrivateKey {
         path: String,
@@ -285,6 +302,7 @@ impl TerminalSession {
             app_data_dir: context.app_data_dir.clone(),
             secret_store: Arc::clone(&context.secret_store),
             remote_forward: RemoteForwardState::default(),
+            x11_forward: X11ForwardState::default(),
         };
 
         emit_progress(&progress, "tcp_connecting", "正在建立 SSH TCP 连接...");
@@ -467,6 +485,7 @@ impl ReusableExecSession {
             app_data_dir: context.app_data_dir.clone(),
             secret_store: Arc::clone(&context.secret_store),
             remote_forward: RemoteForwardState::default(),
+            x11_forward: X11ForwardState::default(),
         };
 
         let (mut client, jump_client) = run_with_timeout(
@@ -807,6 +826,7 @@ impl ReusableForwardSession {
             app_data_dir: context.app_data_dir.clone(),
             secret_store: Arc::clone(&context.secret_store),
             remote_forward: remote_forward.clone(),
+            x11_forward: X11ForwardState::default(),
         };
 
         let (mut client, jump_client) = run_with_timeout(
@@ -1010,6 +1030,7 @@ impl ReusableSftpSession {
             app_data_dir: context.app_data_dir.clone(),
             secret_store: Arc::clone(&context.secret_store),
             remote_forward: RemoteForwardState::default(),
+            x11_forward: X11ForwardState::default(),
         };
 
         let (mut client, jump_client) = run_with_timeout(
@@ -1235,6 +1256,7 @@ async fn connect_target_client(
                 app_data_dir: context.app_data_dir.clone(),
                 secret_store: Arc::clone(&context.secret_store),
                 remote_forward: RemoteForwardState::default(),
+            x11_forward: X11ForwardState::default(),
             };
 
             let mut jump_client = run_with_timeout(
@@ -1861,7 +1883,7 @@ fn base64_simple(value: &str) -> String {
     output
 }
 
-async fn authenticate(
+pub(super) async fn authenticate(
     client: &mut SshHandle,
     username: &str,
     auth_method: AuthMethod,
