@@ -83,11 +83,12 @@ export function mountLinuxImeSmoke() {
     });
   });
   textarea.addEventListener("input", (event) => {
+    const inputEvent = event as InputEvent;
     report({
       kind: "input",
-      data: event.data,
-      inputType: event.inputType,
-      isComposing: event.isComposing,
+      data: inputEvent.data,
+      inputType: inputEvent.inputType,
+      isComposing: inputEvent.isComposing,
       value: textarea.value,
     });
   });
