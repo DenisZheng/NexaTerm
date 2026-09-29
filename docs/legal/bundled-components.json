@@ -56,6 +56,22 @@
       "license": "external",
       "source": "operating system/user installation",
       "notes": "Not redistributed by NexaTerm."
+    },
+    {
+      "name": "NSIS installer runtime/tooling",
+      "category": "installer-runtime",
+      "distribution": "bundled-in-windows-installer",
+      "license": "zlib/libpng; bzip2; CPL-1.0 for LZMA module with NSIS documented exception",
+      "source": "https://nsis.sourceforge.io/License",
+      "notes": "Generated through the Tauri NSIS target; NexaTerm does not maintain an NSIS fork."
+    },
+    {
+      "name": "AppImageKit runtime",
+      "category": "installer-runtime",
+      "distribution": "bundled-in-appimage",
+      "license": "MIT",
+      "source": "https://github.com/AppImage/AppImageKit",
+      "notes": "Runtime header used by generated AppImage; application payload licenses remain independently applicable."
     }
   ]
 }
