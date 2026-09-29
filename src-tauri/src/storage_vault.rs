@@ -987,8 +987,9 @@ fn vault_unlock_raw_failed(raw: impl ToString) -> AppError {
 #[cfg(test)]
 mod tests {
     use super::{
-        InMemorySecretStore, SecretKind, SecretReference, SecretStore, SecretStoreFailure,
-        VaultSecretStore, VaultState,
+        validate_envelope, InMemorySecretStore, SecretKind, SecretReference, SecretStore,
+        SecretStoreFailure, VaultEnvelope, VaultKdf, VaultSecretStore, VaultState,
+        VAULT_CIPHER, VAULT_MEMORY_COST_KIB, VAULT_TIME_COST,
     };
 
     #[test]
@@ -1023,6 +1024,42 @@ mod tests {
         let error = store.set_secret(&reference, "secret").unwrap_err();
 
         assert_eq!(error.code, "secret_store_write_failed");
+    }
+
+    #[test]
+    fn vault_envelope_accepts_current_argon2id_minimum() {
+        let envelope = test_envelope(VaultKdf::default());
+        validate_envelope(&envelope).unwrap();
+    }
+
+    #[test]
+    fn vault_envelope_rejects_weaker_or_unbounded_kdf_parameters() {
+        let mut weak = VaultKdf::default();
+        weak.memory_cost_kib = VAULT_MEMORY_COST_KIB - 1;
+        assert_eq!(
+            validate_envelope(&test_envelope(weak)).unwrap_err().code,
+            "vault_kdf_parameters_invalid"
+        );
+
+        let mut too_expensive = VaultKdf::default();
+        too_expensive.time_cost = 11;
+        assert_eq!(
+            validate_envelope(&test_envelope(too_expensive))
+                .unwrap_err()
+                .code,
+            "vault_kdf_parameters_invalid"
+        );
+    }
+
+    fn test_envelope(kdf: VaultKdf) -> VaultEnvelope {
+        VaultEnvelope {
+            version: 1,
+            kdf,
+            cipher: VAULT_CIPHER.to_string(),
+            salt: String::new(),
+            nonce: String::new(),
+            ciphertext: String::new(),
+        }
     }
 
     #[test]
