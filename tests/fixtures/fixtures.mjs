@@ -111,8 +111,8 @@ async function cmdSmoke() {
       name: "double-hop ssh via jump to ssh-target",
       args: [
         ...sshBase,
-        "-J",
-        "testuser@127.0.0.1:2222",
+        "-o",
+        `ProxyCommand=ssh -i ${privateKey} -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=15 -p 2222 -W %h:%p testuser@127.0.0.1`,
         "testuser@ssh-target",
         "echo ssh-target-ok",
       ],
@@ -132,7 +132,10 @@ async function cmdSmoke() {
       if (!ok) console.error(`unexpected output for '${c.name}': ${JSON.stringify(out)}`);
     } catch (e) {
       results.push([c.name, false]);
-      console.error(`check '${c.name}' failed: ${e.message.split("\n")[0]}`);
+      const stderr = typeof e.stderr === "string" ? e.stderr.trim() : "";
+      console.error(
+        `check '${c.name}' failed: ${stderr || e.message.split("\n")[0]}`,
+      );
     }
   }
 
