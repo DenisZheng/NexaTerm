@@ -9,6 +9,9 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 pub(crate) const PASSWORD_MEMORY_COST_KIB: u32 = 19 * 1024;
 pub(crate) const PASSWORD_TIME_COST: u32 = 2;
 pub(crate) const PASSWORD_PARALLELISM: u32 = 1;
+const PASSWORD_MAX_MEMORY_COST_KIB: u32 = 512 * 1024;
+const PASSWORD_MAX_TIME_COST: u32 = 10;
+const PASSWORD_MAX_PARALLELISM: u32 = 16;
 
 pub(crate) const PASSWORD_CIPHER: &str = "aes-256-gcm";
 pub(crate) const PASSWORD_KDF: &str = "argon2id";
@@ -116,6 +119,19 @@ fn validate_envelope(envelope: &EncryptedJsonEnvelope) -> Result<(), SecureBundl
     if envelope.cipher != PASSWORD_CIPHER || envelope.kdf.name != PASSWORD_KDF {
         return Err(secure_bundle_error("unsupported encrypted JSON envelope"));
     }
+    let kdf = &envelope.kdf;
+    let minimum_ok = kdf.memory_cost_kib >= PASSWORD_MEMORY_COST_KIB
+        && kdf.time_cost >= PASSWORD_TIME_COST
+        && kdf.parallelism >= PASSWORD_PARALLELISM;
+    let maximum_ok = kdf.memory_cost_kib <= PASSWORD_MAX_MEMORY_COST_KIB
+        && kdf.time_cost <= PASSWORD_MAX_TIME_COST
+        && kdf.parallelism <= PASSWORD_MAX_PARALLELISM;
+    if !minimum_ok || !maximum_ok {
+        return Err(secure_bundle_error(format!(
+            "argon2id parameters rejected: memory_kib={}, time={}, parallelism={}",
+            kdf.memory_cost_kib, kdf.time_cost, kdf.parallelism
+        )));
+    }
     Ok(())
 }
 
@@ -165,7 +181,9 @@ fn secure_bundle_error(error: impl ToString) -> SecureBundleError {
 mod tests {
     use serde::{Deserialize, Serialize};
 
-    use super::{decrypt_json, encrypt_json};
+    use super::{
+        decrypt_json, encrypt_json, PASSWORD_MEMORY_COST_KIB,
+    };
 
     #[derive(Debug, Deserialize, PartialEq, Eq, Serialize)]
     struct TestSecret {
@@ -187,6 +205,26 @@ mod tests {
             decrypt_json(b"mxterm-test:v1:data-hash", "password", &encrypted).unwrap();
 
         assert_eq!(restored.value, "secret");
+    }
+
+    #[test]
+    fn encrypted_json_rejects_unbounded_or_weakened_kdf_parameters() {
+        let encrypted = encrypt_json(
+            b"mxterm-test:v1:kdf",
+            "password",
+            &TestSecret {
+                value: "secret".to_string(),
+            },
+        )
+        .unwrap();
+
+        let mut weakened = encrypted.clone();
+        weakened.kdf.memory_cost_kib = PASSWORD_MEMORY_COST_KIB - 1;
+        assert!(decrypt_json::<TestSecret>(b"mxterm-test:v1:kdf", "password", &weakened).is_err());
+
+        let mut expensive = encrypted;
+        expensive.kdf.time_cost = 11;
+        assert!(decrypt_json::<TestSecret>(b"mxterm-test:v1:kdf", "password", &expensive).is_err());
     }
 
     #[test]
