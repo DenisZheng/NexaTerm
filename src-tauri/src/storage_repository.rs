@@ -2938,8 +2938,8 @@ mod tests {
         let KnownHostCheck::Changed { current, host_key } = changed else {
             panic!("指纹变化必须报 Changed，而不是静默信任或当作 Unknown");
         };
-        assert_eq!(current.fingerprint_sha256, "SHA256:first");
-        assert_eq!(host_key.fingerprint_sha256, "SHA256:second");
+        assert_eq!(current.fingerprint_sha256, sample_host_key("example.com", "SHA256:first").fingerprint_sha256);
+        assert_eq!(host_key.fingerprint_sha256, sample_host_key("example.com", "SHA256:second").fingerprint_sha256);
 
         // 未经 trust 的 Changed 不得改写存储：再次用旧指纹检查仍为 Trusted。
         assert!(matches!(
@@ -3010,7 +3010,7 @@ mod tests {
         assert_eq!(first.id, second.id);
         assert_eq!(second.trusted_at, "2026-09-18T10:00:00+08:00");
         assert_eq!(second.updated_at, "2026-09-18T11:00:00+08:00");
-        assert_eq!(second.fingerprint_sha256, "SHA256:second");
+        assert_eq!(second.fingerprint_sha256, sample_host_key("example.com", "SHA256:second").fingerprint_sha256);
         let rows = Connection::open(&db_path)
             .unwrap()
             .query_row("SELECT COUNT(*) FROM known_hosts", [], |row| {
@@ -3053,8 +3053,8 @@ mod tests {
                 host_key,
                 old_fingerprint_sha256,
             }) => {
-                assert_eq!(old_fingerprint_sha256, "SHA256:first");
-                assert_eq!(host_key.fingerprint_sha256, "SHA256:second");
+                assert_eq!(old_fingerprint_sha256, sample_host_key("example.com", "SHA256:first").fingerprint_sha256);
+                assert_eq!(host_key.fingerprint_sha256, sample_host_key("example.com", "SHA256:second").fingerprint_sha256);
             }
             other => panic!("host_key_changed 必须携带 HostKeyChanged details，实际：{other:?}"),
         }
