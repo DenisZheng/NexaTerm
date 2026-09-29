@@ -1060,17 +1060,7 @@ export function WorkspaceShell() {
   const closeRequestController = useCloseRequest({
     execute: executeClosePlan,
     plan: (request) =>
-      planClose(
-        request,
-        buildCloseContext(
-          localTerminalTabsRef.current,
-          rdpSessionsRef.current,
-          remoteFileTabs,
-          terminalSplitPanes,
-          terminalTabsRef.current,
-          vncSessionsRef.current,
-        ),
-      ),
+      planClose(request, buildCloseContext(localTerminalTabsRef.current, rdpSessionsRef.current, remoteFileTabs, terminalSplitPanes, terminalTabsRef.current, vncSessionsRef.current)),
   });
   const [pendingRemoteFileConflictId, setPendingRemoteFileConflictId] = useState<string | null>(null);
   const [remoteFileDeleteTarget, setRemoteFileDeleteTarget] =
