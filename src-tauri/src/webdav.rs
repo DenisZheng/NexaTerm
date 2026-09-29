@@ -3,6 +3,7 @@ use std::net::IpAddr;
 #[cfg(test)]
 use base64::engine::{general_purpose::STANDARD, Engine as _};
 use reqwest::header::{HeaderName, CONTENT_TYPE};
+use reqwest::redirect::Policy;
 use reqwest::{Client, Method, StatusCode, Url};
 
 use crate::app_error::AppError;
@@ -62,7 +63,7 @@ impl WebDavClient {
         username: Option<String>,
         password: Option<String>,
     ) -> Result<Self, AppError> {
-        let mut base_url = Url::parse(base_url.trim()).map_err(|error| {
+        let base_url = Url::parse(base_url.trim()).map_err(|error| {
             AppError::new(
                 "webdav_settings_invalid",
                 "WebDAV 服务地址无效。",
@@ -98,9 +99,20 @@ impl WebDavClient {
                 true,
             ));
         }
+        let client = Client::builder()
+            .redirect(Policy::none())
+            .build()
+            .map_err(|error| {
+                AppError::new(
+                    "webdav_connection_failed",
+                    "WebDAV 客户端初始化失败。",
+                    error,
+                    true,
+                )
+            })?;
         Ok(Self {
             base_url,
-            client: Client::new(),
+            client,
             password: trim_optional_owned(password),
             username: trim_optional_owned(username),
         })
