@@ -1,0 +1,106 @@
+# NexaTerm third-party licenses and notices
+
+NexaTerm itself is distributed under the top-level [MIT license](LICENSE).
+
+This file is the curated distribution notice for components that require special
+attention or are relevant to NexaTerm packaging. CI and release builds also
+generate an exact transitive dependency inventory from the installed pnpm graph
+and `cargo metadata --locked`:
+
+- `license-inventory.json`
+- `THIRD_PARTY_LICENSES.generated.md`
+
+Those generated files contain the exact package versions and declared license
+expressions used by the build.
+
+## Bundled / compiled components requiring explicit notice
+
+### noVNC — MPL-2.0
+
+- Component: `@novnc/novnc`
+- Use: browser-side VNC client bundled through the production frontend graph
+- License: Mozilla Public License 2.0
+- Upstream: https://github.com/novnc/noVNC
+- Modification status: NexaTerm imports the npm package; no noVNC source file is
+  copied into this repository.
+
+The MPL-2.0 is file-level copyleft. NexaTerm's original files are not relicensed
+by using noVNC, while the MPL-covered noVNC files remain under MPL-2.0. Source
+for the covered files is available from the upstream project/package release.
+
+### serialport-rs — MPL-2.0
+
+- Component: Rust crate `serialport`
+- Use: serial-port support compiled into the Rust application
+- License: Mozilla Public License 2.0
+- Upstream: https://github.com/serialport/serialport-rs
+- Modification status: consumed as an upstream Cargo dependency; no serialport
+  source file is copied into this repository.
+
+The MPL-covered upstream files remain under MPL-2.0. The exact resolved crate
+version is recorded by the generated Cargo inventory.
+
+### SQLite — public domain
+
+- Component: SQLite, linked through `rusqlite` / `libsqlite3-sys`
+- Use: local application database
+- Distribution: NexaTerm enables rusqlite's `bundled` feature
+- Upstream: https://www.sqlite.org/copyright.html
+- License/status: SQLite is dedicated to the public domain; see the upstream
+  blessing and copyright page.
+
+## Other production dependency notes
+
+### Simple Icons
+
+The npm package `simple-icons` declares CC0-1.0. Individual brand marks may
+still be subject to trademark or other brand-owner rules; package-level CC0
+does not grant trademark rights. NexaTerm should only use marks appropriate to
+the product UI and should not imply endorsement.
+
+### MIT / Apache-2.0 / BSD / ISC / Unicode / CC0 dependencies
+
+NexaTerm uses many dependencies under permissive licenses. Their exact
+name/version/license tuples are generated from the build graph and published
+with release evidence. Required copyright/license notices remain attributable
+to their respective upstream authors.
+
+## External platform software not redistributed by NexaTerm
+
+The following software may be detected, invoked, or required on a user's
+machine, but NexaTerm does not bundle its binaries in the application package:
+
+- FreeRDP / `xfreerdp` when selected as an external RDP runner
+- Windows built-in RDP/system components
+- XQuartz on macOS for X11 forwarding
+- the user's X11/XWayland server on Linux
+- user-installed SSH agents, shells, terminal programs, and platform drivers
+
+Because these are external installations, their redistribution licenses are
+not included as NexaTerm-bundled binary licenses. Their presence and support
+policy are still tracked in the platform/feature documentation.
+
+## First-party bundled components
+
+`mxterm-mcp` is built from this repository as a NexaTerm sidecar. It is
+covered by the project MIT license and is not an independently imported binary.
+
+Application icons and repository-owned UI assets are distributed as part of
+NexaTerm unless a file carries a separate notice.
+
+## Dependency policy
+
+CI fails closed when the build graph contains:
+
+- a dependency with no license metadata;
+- AGPL, GPL, SSPL, BUSL or Commons-Clause license markers not explicitly
+  reviewed;
+- MPL/LGPL/EPL/CDDL dependencies without a package-specific manual review;
+- a manually reviewed package whose declared license changed.
+
+Manual reviews are recorded in `scripts/license-policy.json`. They are
+package-specific rather than global license exceptions.
+
+This policy is a release engineering control, not a substitute for legal
+advice. Any new copyleft, source-available, custom, or unclear license should
+be reviewed before distribution.
