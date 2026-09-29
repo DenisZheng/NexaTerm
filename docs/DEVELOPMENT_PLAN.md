@@ -1,5 +1,7 @@
 # 渐进式开发计划
 
+> **归档说明（2026-09-29）**：本文保留 WF 交付包设计、迁移关系和验收编号，作为产品工作流规划依据；当前项目级执行顺序与评审整改状态以根目录 `ROADMAP.md` 为准。两者冲突时，不得用本文的旧阶段顺序覆盖 `ROADMAP.md` 的当前决定。
+
 > 2026-09-23 修订（WF-00A）：阶段组织方式由"审计 / 加固 / 重构分阶段"改为**以用户能演示的操作流程为单位的交付包（WF）**。依据：维护者授权、`NEXATERM_WORKFLOW_DELIVERY_PLAN.md`、`NEXATERM_REQUIREMENTS.md`。交互规则正文在 `docs/WORKFLOW_SPEC.md`；任务地图与迁移去向在 `.trellis/tasks/09-23-nexaterm-workflow-mainline/prd.md`。2026-09-09 版阶段计划保留在文末作为历史参考。
 
 ## 原则

@@ -2,7 +2,7 @@
 
 ## 产品方向与规范入口（2026-09-23 起）
 
-- 当前开发主线：**以 MobaXterm 操作流程为参照的统一工作流**——统一会话入口与实例标签、左侧 Sessions / Files、SSH 与文件联动、分屏、统一 MultiExec，以及后续 WSL、X11、隧道和工作区恢复。交付包顺序与验收清单（A01–A15）见 `NEXATERM_WORKFLOW_DELIVERY_PLAN.md`，任务地图见 `.trellis/tasks/09-23-nexaterm-workflow-mainline/prd.md`。
+- 当前开发主线：**以 MobaXterm 操作流程为参照的统一工作流**——统一会话入口与实例标签、左侧 Sessions / Files、SSH 与文件联动、分屏、统一 MultiExec，以及后续 WSL、X11、隧道和工作区恢复。**当前项目级执行顺序与评审整改状态以根目录 `ROADMAP.md` 为唯一入口**；A01–A15 的工作流设计与历史拆分依据保留在 `NEXATERM_WORKFLOW_DELIVERY_PLAN.md`，任务地图见 `.trellis/tasks/09-23-nexaterm-workflow-mainline/prd.md`。旧计划不得覆盖 `ROADMAP.md` 中明确标注的当前状态或暂缓决定。
 - **产品交互规则只在 `docs/WORKFLOW_SPEC.md` 维护正文**（规则编号 `WS-xx`，状态分已确认 / 默认值 / 待确认）。AGENTS、spec index、任务 PRD 只按编号引用，不复制正文；`待确认` 的细节实现前必须先对齐，不得写成已批准。产品范围依据仍是 `NEXATERM_REQUIREMENTS.md`。
 - 三个基准问题以 WORKFLOW_SPEC §9 为准：Files 目标在左侧 Sessions / Files 切换并绑定活动 pane；顶层标签代表**会话实例**而非保存配置；MultiExec 以**实例**为目标。"文件固定右侧""顶部只放 SSH 连接""所有任务都不改 UI"**不是**全项目约束：前两条是旧原型说明中已被替代的条目（替代表见 WORKFLOW_SPEC §11），第三条只约束 Task 04（`09-19-workspace-shell-state-seam`）本身。
 - 区分四类材料：**目标规范**（WORKFLOW_SPEC，只对已确认目标生效）、**当前实现说明**（`docs/CURRENT_STATE.md`，"目前 Files 在右侧"是事实不是约束）、**迁移说明**（任务 PRD/implement 中的去向记录）、**历史参考**（归档任务、旧原型说明、journal，不参与当前规则裁决，也不进入新任务默认必读包）。

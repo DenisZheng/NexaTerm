@@ -128,9 +128,11 @@ git tag vX.Y.Z
 git push github vX.Y.Z
 ```
 
-Release workflow 会构建 Windows x64、macOS Apple Silicon 和 Linux x64，并生成平台安装包、源码 zip、源码 tar.gz、`latest.json` 和 `SHA256SUMS.txt`。Windows 代码签名、macOS Developer ID 签名和 notarization 暂未接入，workflow 中保留后续扩展入口。
+Release workflow 会构建 Windows x64、macOS Apple Silicon 和 Linux x64，并生成平台安装包、源码 zip、源码 tar.gz、`latest.json` 和 `SHA256SUMS.txt`。Windows Authenticode、macOS Developer ID 签名与 notarization 已接入 tagged-release workflow 的强制门禁；是否完成真实正式发布仍以带真实凭据的 tag run 验证结果为准。
 
 ## 项目文档
+
+- [当前路线图与评审整改状态](ROADMAP.md)
 
 - [需求文档](docs/requirements/m-xterm-requirements.md)
 - [宽松协议开源项目参考](docs/research/permissive-open-source-references.md)
