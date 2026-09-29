@@ -21,6 +21,7 @@ mod secure_bundle;
 mod ssh_config;
 mod storage;
 pub mod storage_migration;
+mod storage_local_key;
 pub mod storage_repository;
 pub mod storage_sqlite;
 pub mod storage_vault;
