@@ -43,8 +43,8 @@ function sh(cmd, args, opts = {}) {
 
 function requireTool(name, probeArgs) {
   const r = spawnSync(name, probeArgs, { stdio: "ignore" });
-  if (r.error || r.status !== 0) {
-    console.error(`error: required tool '${name}' not found in PATH`);
+  if (r.error) {
+    console.error(`error: required tool '${name}' could not be executed: ${r.error.message}`);
     process.exit(2);
   }
 }
