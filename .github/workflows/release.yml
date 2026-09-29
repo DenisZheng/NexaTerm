@@ -188,6 +188,9 @@ jobs:
             exit 1
           fi
           echo "APPLE_SIGNING_IDENTITY=$signing_identity" >> "$GITHUB_ENV"
+          echo "APPLE_ID=$APPLE_ID" >> "$GITHUB_ENV"
+          echo "APPLE_PASSWORD=$APPLE_PASSWORD" >> "$GITHUB_ENV"
+          echo "APPLE_TEAM_ID=$APPLE_TEAM_ID" >> "$GITHUB_ENV"
           echo "NEXATERM_MACOS_KEYCHAIN_PATH=$keychain_path" >> "$GITHUB_ENV"
           rm -f "$certificate_path"
 
@@ -196,12 +199,6 @@ jobs:
           MXTERM_CREATE_UPDATER_ARTIFACTS: "1"
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          APPLE_ID: ${{ startsWith(github.ref, 'refs/tags/v') && secrets.APPLE_ID || '' }}
-          APPLE_PASSWORD: ${{ startsWith(github.ref, 'refs/tags/v') && secrets.APPLE_PASSWORD || '' }}
-          APPLE_TEAM_ID: ${{ startsWith(github.ref, 'refs/tags/v') && secrets.APPLE_TEAM_ID || '' }}
-          APPLE_SIGNING_IDENTITY: ${{ env.APPLE_SIGNING_IDENTITY }}
-          NEXATERM_WINDOWS_CERTIFICATE_THUMBPRINT: ${{ env.NEXATERM_WINDOWS_CERTIFICATE_THUMBPRINT }}
-          NEXATERM_WINDOWS_TIMESTAMP_URL: ${{ env.NEXATERM_WINDOWS_TIMESTAMP_URL }}
         run: pnpm run ${{ matrix.package_script }}
 
       - name: Verify Windows Authenticode signatures
