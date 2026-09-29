@@ -1,9 +1,18 @@
 use std::fmt;
 use std::path::PathBuf;
+use std::sync::Arc;
+
+use russh::{client, Channel};
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
+use tokio::net::TcpStream;
+#[cfg(unix)]
+use tokio::net::UnixStream;
+use tokio::sync::RwLock;
 
 const X11_TCP_BASE_PORT: u16 = 6000;
 const X11_SETUP_HEADER_BYTES: usize = 12;
 const X11_AUTH_PROTOCOL: &[u8] = b"MIT-MAGIC-COOKIE-1";
+const X11_SETUP_MAX_BYTES: usize = 64 * 1024;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[allow(dead_code)]
@@ -28,6 +37,117 @@ impl fmt::Display for X11SpikeError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str(&self.0)
     }
+}
+
+#[derive(Clone, Debug)]
+pub(crate) struct X11ForwardConfig {
+    pub display: X11DisplaySpec,
+    pub fake_cookie: Vec<u8>,
+    pub real_cookie: Vec<u8>,
+}
+
+#[derive(Clone, Default)]
+pub(crate) struct X11ForwardState {
+    config: Arc<RwLock<Option<X11ForwardConfig>>>,
+}
+
+trait AsyncX11Stream: AsyncRead + AsyncWrite {}
+impl<T: AsyncRead + AsyncWrite + ?Sized> AsyncX11Stream for T {}
+type BoxedX11Stream = Box<dyn AsyncX11Stream + Unpin + Send>;
+
+impl X11ForwardState {
+    pub(crate) async fn configure(&self, config: X11ForwardConfig) -> Result<(), X11SpikeError> {
+        if config.fake_cookie.is_empty() || config.fake_cookie.len() != config.real_cookie.len() {
+            return Err(X11SpikeError(
+                "X11 fake/real cookies must be non-empty and equal length".to_string(),
+            ));
+        }
+        *self.config.write().await = Some(config);
+        Ok(())
+    }
+
+    pub(crate) async fn clear(&self) {
+        *self.config.write().await = None;
+    }
+
+    pub(crate) async fn handle_server_channel(&self, channel: Channel<client::Msg>) {
+        let mut remote = channel.into_stream();
+        let Some(config) = self.config.read().await.clone() else {
+            let _ = remote.shutdown().await;
+            return;
+        };
+        let result = async {
+            let mut local = connect_local_target(&config.display.target).await?;
+            let setup = read_and_rewrite_setup(
+                &mut remote,
+                &config.fake_cookie,
+                &config.real_cookie,
+            )
+            .await?;
+            local
+                .write_all(&setup)
+                .await
+                .map_err(|error| X11SpikeError(format!("X11 local setup write failed: {error}")))?;
+            local
+                .flush()
+                .await
+                .map_err(|error| X11SpikeError(format!("X11 local setup flush failed: {error}")))?;
+            tokio::io::copy_bidirectional(&mut remote, &mut local)
+                .await
+                .map_err(|error| X11SpikeError(format!("X11 stream forwarding failed: {error}")))?;
+            let _ = local.shutdown().await;
+            Ok::<(), X11SpikeError>(())
+        }
+        .await;
+        let _ = remote.shutdown().await;
+        if let Err(error) = result {
+            eprintln!("NexaTerm X11 forwarding channel closed: {error}");
+        }
+    }
+}
+
+async fn connect_local_target(target: &X11LocalTarget) -> Result<BoxedX11Stream, X11SpikeError> {
+    match target {
+        X11LocalTarget::Tcp { host, port } => TcpStream::connect((host.as_str(), *port))
+            .await
+            .map(|stream| Box::new(stream) as BoxedX11Stream)
+            .map_err(|error| {
+                X11SpikeError(format!("local X11 TCP connect to {host}:{port} failed: {error}"))
+            }),
+        #[cfg(unix)]
+        X11LocalTarget::Unix { path } => UnixStream::connect(path)
+            .await
+            .map(|stream| Box::new(stream) as BoxedX11Stream)
+            .map_err(|error| {
+                X11SpikeError(format!("local X11 Unix socket {} failed: {error}", path.display()))
+            }),
+    }
+}
+
+async fn read_and_rewrite_setup<R: AsyncRead + Unpin>(
+    remote: &mut R,
+    fake_cookie: &[u8],
+    real_cookie: &[u8],
+) -> Result<Vec<u8>, X11SpikeError> {
+    let mut header = [0u8; X11_SETUP_HEADER_BYTES];
+    remote
+        .read_exact(&mut header)
+        .await
+        .map_err(|error| X11SpikeError(format!("X11 setup header read failed: {error}")))?;
+    let total = setup_packet_len(&header)?;
+    if total > X11_SETUP_MAX_BYTES {
+        return Err(X11SpikeError(format!(
+            "X11 setup packet exceeds {X11_SETUP_MAX_BYTES} bytes"
+        )));
+    }
+    let mut packet = vec![0u8; total];
+    packet[..X11_SETUP_HEADER_BYTES].copy_from_slice(&header);
+    remote
+        .read_exact(&mut packet[X11_SETUP_HEADER_BYTES..])
+        .await
+        .map_err(|error| X11SpikeError(format!("X11 setup body read failed: {error}")))?;
+    replace_fake_cookie_in_setup(&mut packet, fake_cookie, real_cookie)?;
+    Ok(packet)
 }
 
 #[allow(dead_code)]
@@ -106,10 +226,38 @@ pub(crate) fn replace_fake_cookie_in_setup(
             "fake and real X11 cookies must have the same length".to_string(),
         ));
     }
+    let (auth_name_start, auth_name_end, auth_data_start, auth_data_end, _) =
+        setup_auth_layout(packet)?;
+    if auth_data_end > packet.len() {
+        return Err(X11SpikeError("X11 setup auth fields are truncated".to_string()));
+    }
+    if &packet[auth_name_start..auth_name_end] != X11_AUTH_PROTOCOL {
+        return Err(X11SpikeError(
+            "X11 setup does not use MIT-MAGIC-COOKIE-1".to_string(),
+        ));
+    }
+    if auth_data_end - auth_data_start != fake_cookie.len()
+        || &packet[auth_data_start..auth_data_end] != fake_cookie
+    {
+        return Err(X11SpikeError(
+            "X11 setup cookie does not match the forwarding cookie".to_string(),
+        ));
+    }
+    packet[auth_data_start..auth_data_end].copy_from_slice(real_cookie);
+    Ok(auth_data_end)
+}
+
+fn setup_packet_len(packet: &[u8]) -> Result<usize, X11SpikeError> {
+    let (_, _, _, _, total) = setup_auth_layout(packet)?;
+    Ok(total)
+}
+
+fn setup_auth_layout(
+    packet: &[u8],
+) -> Result<(usize, usize, usize, usize, usize), X11SpikeError> {
     if packet.len() < X11_SETUP_HEADER_BYTES {
         return Err(X11SpikeError("X11 setup packet is truncated".to_string()));
     }
-
     let little_endian = match packet[0] {
         b'l' => true,
         b'B' => false,
@@ -127,7 +275,6 @@ pub(crate) fn replace_fake_cookie_in_setup(
             u16::from_be_bytes(pair)
         }
     };
-
     let auth_name_len = read_u16(&packet[6..8]) as usize;
     let auth_data_len = read_u16(&packet[8..10]) as usize;
     let auth_name_start = X11_SETUP_HEADER_BYTES;
@@ -139,36 +286,47 @@ pub(crate) fn replace_fake_cookie_in_setup(
     let auth_data_end = auth_data_start
         .checked_add(auth_data_len)
         .ok_or_else(|| X11SpikeError("X11 auth cookie length overflow".to_string()))?;
-
-    if auth_data_end > packet.len() {
-        return Err(X11SpikeError("X11 setup auth fields are truncated".to_string()));
-    }
-    if &packet[auth_name_start..auth_name_end] != X11_AUTH_PROTOCOL {
-        return Err(X11SpikeError(
-            "X11 setup does not use MIT-MAGIC-COOKIE-1".to_string(),
-        ));
-    }
-    if auth_data_len != fake_cookie.len()
-        || &packet[auth_data_start..auth_data_end] != fake_cookie
-    {
-        return Err(X11SpikeError(
-            "X11 setup cookie does not match the forwarding cookie".to_string(),
-        ));
-    }
-
-    packet[auth_data_start..auth_data_end].copy_from_slice(real_cookie);
-    Ok(auth_data_end)
+    let total = align4(auth_data_end)
+        .ok_or_else(|| X11SpikeError("X11 auth cookie padding overflow".to_string()))?;
+    Ok((
+        auth_name_start,
+        auth_name_end,
+        auth_data_start,
+        auth_data_end,
+        total,
+    ))
 }
 
 fn align4(value: usize) -> Option<usize> {
     value.checked_add(3).map(|value| value & !3)
 }
 
+pub(crate) fn decode_cookie_hex(value: &str) -> Result<Vec<u8>, X11SpikeError> {
+    let value = value.trim();
+    if value.is_empty() || value.len() % 2 != 0 {
+        return Err(X11SpikeError("X11 cookie hex length is invalid".to_string()));
+    }
+    value
+        .as_bytes()
+        .chunks_exact(2)
+        .map(|pair| {
+            let text = std::str::from_utf8(pair)
+                .map_err(|error| X11SpikeError(format!("X11 cookie hex is invalid: {error}")))?;
+            u8::from_str_radix(text, 16)
+                .map_err(|error| X11SpikeError(format!("X11 cookie hex is invalid: {error}")))
+        })
+        .collect()
+}
+
+pub(crate) fn encode_cookie_hex(value: &[u8]) -> String {
+    value.iter().map(|byte| format!("{byte:02x}")).collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
-        parse_display, replace_fake_cookie_in_setup, X11DisplaySpec, X11LocalTarget,
-        X11_AUTH_PROTOCOL,
+        decode_cookie_hex, encode_cookie_hex, parse_display, replace_fake_cookie_in_setup,
+        X11DisplaySpec, X11LocalTarget, X11_AUTH_PROTOCOL,
     };
 
     #[test]
@@ -209,6 +367,15 @@ mod tests {
                 },
             }
         );
+    }
+
+    #[test]
+    fn x11_cookie_hex_round_trips() {
+        let cookie = [0x01, 0x23, 0xab, 0xcd, 0xef];
+        let encoded = encode_cookie_hex(&cookie);
+        assert_eq!(encoded, "0123abcdef");
+        assert_eq!(decode_cookie_hex(&encoded).unwrap(), cookie);
+        assert!(decode_cookie_hex("abc").is_err());
     }
 
     #[test]

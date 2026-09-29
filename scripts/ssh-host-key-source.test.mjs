@@ -17,8 +17,9 @@ function rustFiles(root) {
   return out;
 }
 
-test("all russh client connections stay behind the known-host handler", () => {
+test("all production russh client connections stay behind the known-host handler", () => {
   const root = "src-tauri/src";
+  const terminalMod = readFileSync("src-tauri/src/terminal/mod.rs", "utf8");
   const offenders = [];
   for (const path of rustFiles(root)) {
     const source = readFileSync(path, "utf8");
@@ -27,7 +28,15 @@ test("all russh client connections stay behind the known-host handler", () => {
       source.includes("client::connect_stream(")
     ) {
       const repoPath = relative(".", path).replaceAll("\\", "/");
-      if (repoPath !== "src-tauri/src/terminal/session.rs") {
+      const isProductionSession = repoPath === "src-tauri/src/terminal/session.rs";
+      const isGuardedX11Fixture =
+        repoPath === "src-tauri/src/terminal/x11_fixture.rs" &&
+        /#\[cfg\(test\)\]\s*mod x11_fixture;/.test(terminalMod) &&
+        source.includes("KnownHostClient") &&
+        source.includes("x11_fixture_russh_path_reaches_host_xvfb") &&
+        source.includes("#[ignore =");
+
+      if (!isProductionSession && !isGuardedX11Fixture) {
         offenders.push(repoPath);
       }
     }
@@ -35,8 +44,19 @@ test("all russh client connections stay behind the known-host handler", () => {
   assert.deepEqual(
     offenders,
     [],
-    `russh connection path bypasses terminal/session.rs: ${offenders.join(", ")}`,
+    `production russh connection path bypasses terminal/session.rs: ${offenders.join(", ")}`,
   );
+});
+
+test("X11 fixture direct connect is test-only and reuses the production known-host handler", () => {
+  const terminalMod = readFileSync("src-tauri/src/terminal/mod.rs", "utf8");
+  const fixture = readFileSync("src-tauri/src/terminal/x11_fixture.rs", "utf8");
+
+  assert.match(terminalMod, /#\[cfg\(test\)\]\s*mod x11_fixture;/);
+  assert.match(fixture, /KnownHostClient/);
+  assert.match(fixture, /client::connect\(/);
+  assert.match(fixture, /x11_fixture_russh_path_reaches_host_xvfb/);
+  assert.match(fixture, /#\[ignore =/);
 });
 
 test("terminal SSH handler rejects unknown and changed host keys for target and jump paths", () => {
