@@ -124,6 +124,74 @@ function hasFragment(license, fragments) {
   return fragments.find((fragment) => normalized.includes(fragment.toUpperCase())) || null;
 }
 
+function stripOuterParens(expression) {
+  let value = expression.trim();
+  while (value.startsWith("(") && value.endsWith(")")) {
+    let depth = 0;
+    let wrapsWhole = true;
+    for (let index = 0; index < value.length; index += 1) {
+      if (value[index] === "(") depth += 1;
+      if (value[index] === ")") depth -= 1;
+      if (depth === 0 && index < value.length - 1) {
+        wrapsWhole = false;
+        break;
+      }
+    }
+    if (!wrapsWhole) break;
+    value = value.slice(1, -1).trim();
+  }
+  return value;
+}
+
+function splitTopLevel(expression, operator) {
+  const parts = [];
+  let depth = 0;
+  let start = 0;
+  const token = ` ${operator} `;
+  for (let index = 0; index <= expression.length - token.length; index += 1) {
+    const char = expression[index];
+    if (char === "(") depth += 1;
+    if (char === ")") depth -= 1;
+    if (depth === 0 && expression.slice(index, index + token.length) === token) {
+      parts.push(expression.slice(start, index).trim());
+      start = index + token.length;
+      index = start - 1;
+    }
+  }
+  if (parts.length === 0) return [expression.trim()];
+  parts.push(expression.slice(start).trim());
+  return parts;
+}
+
+function classifyLicenseExpression(expression, policy) {
+  const value = stripOuterParens(expression);
+  const orParts = splitTopLevel(value, "OR");
+  if (orParts.length > 1) {
+    const choices = orParts.map((part) => classifyLicenseExpression(part, policy));
+    const ok = choices.find((choice) => choice.kind === "ok");
+    if (ok) return ok;
+    const manual = choices.find((choice) => choice.kind === "manual");
+    return manual || choices[0];
+  }
+
+  const andParts = splitTopLevel(value, "AND");
+  if (andParts.length > 1) {
+    const requirements = andParts.map((part) =>
+      classifyLicenseExpression(part, policy),
+    );
+    const blocked = requirements.find((item) => item.kind === "blocked");
+    if (blocked) return blocked;
+    const manual = requirements.find((item) => item.kind === "manual");
+    return manual || { kind: "ok" };
+  }
+
+  const blocked = hasFragment(value, policy.blockedLicenseFragments || []);
+  if (blocked) return { kind: "blocked", fragment: blocked };
+  const manual = hasFragment(value, policy.manualReviewLicenseFragments || []);
+  if (manual) return { kind: "manual", fragment: manual };
+  return { kind: "ok" };
+}
+
 export function evaluateInventory(packages, policy) {
   const issues = [];
   for (const pkg of packages) {
@@ -146,33 +214,6 @@ export function evaluateInventory(packages, policy) {
       }
     }
 
-    const blocked = hasFragment(license, policy.blockedLicenseFragments || []);
-    if (blocked) {
-      issues.push({
-        key,
-        type: "blocked-license",
-        fragment: blocked,
-        license,
-        version: pkg.version,
-      });
-      continue;
-    }
-
-    const manualFragment = hasFragment(
-      license,
-      policy.manualReviewLicenseFragments || [],
-    );
-    if (manualFragment && !review) {
-      issues.push({
-        key,
-        type: "manual-review-required",
-        fragment: manualFragment,
-        license,
-        version: pkg.version,
-      });
-      continue;
-    }
-
     if (
       review?.allowedLicenses?.length &&
       !review.allowedLicenses.includes(license)
@@ -182,6 +223,28 @@ export function evaluateInventory(packages, policy) {
         type: "review-license-changed",
         license,
         expected: review.allowedLicenses,
+        version: pkg.version,
+      });
+      continue;
+    }
+
+    const classification = classifyLicenseExpression(license, policy);
+    if (classification.kind === "blocked") {
+      issues.push({
+        key,
+        type: "blocked-license",
+        fragment: classification.fragment,
+        license,
+        version: pkg.version,
+      });
+      continue;
+    }
+    if (classification.kind === "manual" && !review) {
+      issues.push({
+        key,
+        type: "manual-review-required",
+        fragment: classification.fragment,
+        license,
         version: pkg.version,
       });
     }
