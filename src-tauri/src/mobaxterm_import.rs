@@ -97,6 +97,8 @@ pub struct MobaXtermImportPreviewResult {
 #[derive(Debug, Deserialize)]
 pub struct MobaXtermImportPreviewRequest {
     pub path: String,
+    #[serde(default)]
+    pub default_username: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -127,7 +129,11 @@ pub async fn mobaxterm_import_preview(
     request: MobaXtermImportPreviewRequest,
 ) -> Result<MobaXtermImportPreviewResult, AppError> {
     let repository = StorageRepository::open_app(&app)?;
-    preview_for_repository(&repository, Path::new(&request.path), None)
+    preview_for_repository(
+        &repository,
+        Path::new(&request.path),
+        request.default_username.as_deref(),
+    )
 }
 
 #[tauri::command]
@@ -601,11 +607,17 @@ fn import_from_file(
         &existing,
         request.default_username.as_deref(),
     );
+    let selection_count = request.selections.len();
     let selections: BTreeMap<usize, String> = request
         .selections
         .into_iter()
         .map(|selection| (selection.source_index, selection.name.trim().to_string()))
         .collect();
+    if selections.len() != selection_count {
+        return Err(mobaxterm_import_invalid_selection(
+            "duplicate source indexes in selection",
+        ));
+    }
     if selections.values().any(|name| name.is_empty()) {
         return Err(mobaxterm_import_invalid_selection(
             "selected connection name is empty",
@@ -661,6 +673,11 @@ fn import_from_file(
                 .port
                 .ok_or_else(|| mobaxterm_import_invalid_selection("SSH port is invalid"))?;
 
+            if item.conflict == MobaXtermImportConflict::NameConflict
+                && selected_name == &item.name
+            {
+                return Err(mobaxterm_import_name_conflict(selected_name));
+            }
             if used_names.contains(selected_name) && selected_name != &item.name {
                 return Err(mobaxterm_import_name_conflict(selected_name));
             }
