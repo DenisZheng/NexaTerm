@@ -6,6 +6,7 @@ import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
+import { activateInputMethod, inputMethodReady } from "./linux-ime-control.mjs";
 
 // A cold Cargo build is not a WebView/page-readiness check.
 export const startupTimeouts = Object.freeze({
@@ -143,6 +144,7 @@ export async function main(engine) {
   await mkdir(logDir, { recursive: true });
   const children = [];
   const stages = [];
+  const inputMethodStatus = {};
   let stage = "initializing";
   let lastEvents = [];
   let failure = null;
@@ -189,9 +191,9 @@ export async function main(engine) {
       if (engine === "fcitx5") await configureFcitxProfile();
       const [command, args] = inputMethodCommand(engine);
       children.push(startProcess(command, args, path.join(logDir, "engine.log")));
-      await poll(() => engine === "ibus"
-        ? /\blibpinyin\b/.test(run("ibus", ["list-engine"]))
-        : /^[12]$/.test(run("fcitx5-remote", [])), `${engine} engine ready`, startupTimeouts.engine);
+      inputMethodStatus.ready = await poll(() => inputMethodReady(engine, run),
+        `${engine} daemon ready`, startupTimeouts.engine);
+      console.log(`[${engine}] daemon ready: ${JSON.stringify(inputMethodStatus.ready)}`);
     });
     const env = {
       ...process.env,
@@ -220,10 +222,11 @@ export async function main(engine) {
     }, "IME smoke page ready", startupTimeouts.page));
     await phase("activate-engine", async () => {
       focusTerminal(windowId);
-      if (engine === "ibus") run("ibus", ["engine", "libpinyin"]);
-      else { run("fcitx5-remote", ["-s", "pinyin"]); run("fcitx5-remote", ["-o"]); }
-      await poll(() => engine === "ibus" ? run("ibus", ["engine"]) === "libpinyin"
-        : run("fcitx5-remote", []) === "2", "Chinese engine activation", startupTimeouts.engine);
+      // Retry the activation itself if the native input context is not ready
+      // yet, rather than polling forever after a no-op activation without focus.
+      inputMethodStatus.active = await poll(() => activateInputMethod(engine, run),
+        "Chinese engine activation", startupTimeouts.engine);
+      console.log(`[${engine}] active engine: ${JSON.stringify(inputMethodStatus.active)}`);
       await sleep(500);
       await fetchCapture("DELETE");
       focusTerminal(windowId);
@@ -250,7 +253,7 @@ export async function main(engine) {
     console.error(`Captured events: ${JSON.stringify(lastEvents).slice(-12_000)}`);
   } finally {
     await stopProcesses(children);
-    const summary = { engine, stage, success: !failure, error: failure?.message, captureUrl: activeCaptureUrl, stages, events: lastEvents };
+    const summary = { engine, stage, success: !failure, error: failure?.message, captureUrl: activeCaptureUrl, inputMethodStatus, stages, events: lastEvents };
     await writeFile(path.join(logDir, "result.json"), JSON.stringify(summary, null, 2));
     if (failure) {
       for (const managed of children) {
