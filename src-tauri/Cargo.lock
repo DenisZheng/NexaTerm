@@ -2997,6 +2997,8 @@ dependencies = [
  "rusqlite",
  "russh",
  "russh-sftp",
+ "security-framework",
+ "security-framework-sys",
  "serde",
  "serde_json",
  "serialport",
@@ -3014,6 +3016,7 @@ dependencies = [
  "uuid",
  "windows 0.61.3",
  "windows-core 0.61.2",
+ "windows-sys 0.61.2",
  "windows-version",
 ]
 
