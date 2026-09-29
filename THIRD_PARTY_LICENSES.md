@@ -139,9 +139,10 @@ NexaTerm unless a file carries a separate notice.
 CI fails closed when the build graph contains:
 
 - a dependency with no license metadata;
-- AGPL, GPL, SSPL, BUSL or Commons-Clause license markers not explicitly
-  reviewed;
-- MPL/LGPL/EPL/CDDL dependencies without a package-specific manual review;
+- SPDX expressions for which every available alternative is blocked by AGPL,
+  GPL, SSPL, BUSL or Commons-Clause policy;
+- MPL/LGPL/EPL/CDDL requirements when no permissive `OR` alternative exists
+  and the package lacks a package-specific manual review;
 - a manually reviewed package whose declared license changed.
 
 Manual reviews are recorded in `scripts/license-policy.json`. They are
