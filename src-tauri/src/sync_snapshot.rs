@@ -196,16 +196,12 @@ impl SyncSnapshotService {
             version: SYNC_PROTOCOL_VERSION,
             secrets: repository.export_sync_secrets()?,
         };
-        let remote_secrets_enc = if secrets.secrets.is_empty() {
-            None
-        } else {
-            Some(encrypt_remote_secrets(
-                &snapshot_id,
-                &data_hash,
-                password,
-                &secrets,
-            )?)
-        };
+        let remote_secrets_enc = Some(encrypt_remote_secrets(
+            &snapshot_id,
+            &data_hash,
+            password,
+            &secrets,
+        )?);
         let manifest = build_manifest(
             snapshot_id,
             options.device_id,
