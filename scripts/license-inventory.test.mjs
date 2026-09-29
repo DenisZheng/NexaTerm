@@ -34,13 +34,14 @@ test("license policy blocks missing/strong-copyleft and requires explicit MPL re
     { ecosystem: "npm", name: "missing", version: "1", license: "" },
     { ecosystem: "cargo", name: "bad", version: "1", license: "GPL-3.0-only" },
     { ecosystem: "cargo", name: "needs-review", version: "1", license: "MPL-2.0" },
+    { ecosystem: "cargo", name: "license-file-only", version: "1", license: "LicenseRef-File:LICENSE" },
     { ecosystem: "npm", name: "@novnc/novnc", version: "1.7.0", license: "MPL-2.0" },
   ];
 
   const issues = evaluateInventory(packages, policy);
   assert.deepEqual(
     issues.map((issue) => issue.type),
-    ["missing-license", "blocked-license", "manual-review-required"],
+    ["missing-license", "blocked-license", "manual-review-required", "unknown-license"],
   );
 });
 
