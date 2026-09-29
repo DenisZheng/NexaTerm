@@ -4,7 +4,7 @@
 set -eu
 
 mkdir -p "$HOME/.vnc"
-printf '%s' "testpass" | vncpasswd -f > "$HOME/.vnc/passwd"
+printf '%s' "testpass" | tigervncpasswd -f > "$HOME/.vnc/passwd"
 chmod 600 "$HOME/.vnc/passwd"
 
 Xtigervnc :1 \

@@ -215,6 +215,12 @@ jobs:
       - name: Smoke test fixtures
         run: xvfb-run -a node tests/fixtures/fixtures.mjs smoke
 
+      - name: Dump fixture diagnostics
+        if: failure()
+        run: |
+          docker compose -f tests/fixtures/docker-compose.yml ps -a
+          docker compose -f tests/fixtures/docker-compose.yml logs --no-color --tail=200
+
       - name: Tear down fixtures
         if: always()
         run: node tests/fixtures/fixtures.mjs down
