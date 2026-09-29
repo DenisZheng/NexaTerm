@@ -9,7 +9,7 @@ use crate::connections::{
     ConnectionProtocol, ConnectionProxyConfig, RdpConnectionConfig, SerialConnectionConfig,
     TelnetConnectionConfig, VncConnectionConfig,
 };
-use crate::known_hosts::KnownHostEntry;
+use crate::known_hosts::{validate_host_key_info, HostKeyInfo, KnownHostEntry};
 use crate::secure_bundle::{
     decrypt_json, encrypt_json, EncryptedJsonEnvelope, PASSWORD_CIPHER, PASSWORD_KDF,
 };
@@ -18,8 +18,8 @@ use crate::storage_sqlite::SQLITE_SCHEMA_VERSION;
 use crate::tunnels::TunnelRule;
 
 pub const SYNC_FORMAT: &str = "mxterm-sync";
-pub const SYNC_PROTOCOL_VERSION: u16 = 1;
-pub const DATA_ARTIFACT: &str = "data.json";
+pub const SYNC_PROTOCOL_VERSION: u16 = 2;
+pub const DATA_ARTIFACT: &str = "data.enc";
 pub const SECRETS_ARTIFACT: &str = "secrets.enc";
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
@@ -43,6 +43,8 @@ pub struct ArtifactMeta {
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
 pub struct SyncEncryptionInfo {
+    pub data_cipher: String,
+    pub data_kdf: String,
     pub secrets_cipher: String,
     pub secrets_kdf: String,
 }
@@ -135,7 +137,7 @@ pub struct SyncSecretEntry {
 pub struct SyncSnapshotBundle {
     pub manifest: SyncManifest,
     pub manifest_json: Vec<u8>,
-    pub data_json: Vec<u8>,
+    pub remote_data_enc: Vec<u8>,
     pub remote_secrets_enc: Option<Vec<u8>>,
 }
 
@@ -163,6 +165,14 @@ pub struct SyncImportResult {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
+struct RemoteDataEnvelope {
+    format: String,
+    protocol_version: u16,
+    #[serde(flatten)]
+    encrypted: EncryptedJsonEnvelope,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
 struct RemoteSecretsEnvelope {
     format: String,
     protocol_version: u16,
@@ -177,31 +187,27 @@ impl SyncSnapshotService {
         repository: &StorageRepository,
         options: SyncExportOptions,
     ) -> Result<SyncSnapshotBundle, AppError> {
+        let password = required_sync_password(options.sync_password.as_deref())?;
         let data = repository.export_sync_data()?;
-        let data_json = serde_json::to_vec_pretty(&data).map_err(sync_snapshot_serialize_failed)?;
         let snapshot_id = uuid::Uuid::new_v4().to_string();
-        let data_hash = sha256_hex(&data_json);
-        let remote_secrets_enc = match options.sync_password.as_deref() {
-            Some(password) if !password.trim().is_empty() => {
-                let secrets = SyncSecretsPlaintext {
-                    version: SYNC_PROTOCOL_VERSION,
-                    secrets: repository.export_sync_secrets()?,
-                };
-                Some(encrypt_remote_secrets(
-                    &snapshot_id,
-                    &data_hash,
-                    password,
-                    &secrets,
-                )?)
-            }
-            _ => None,
+        let remote_data_enc = encrypt_remote_data(&snapshot_id, password, &data)?;
+        let data_hash = sha256_hex(&remote_data_enc);
+        let secrets = SyncSecretsPlaintext {
+            version: SYNC_PROTOCOL_VERSION,
+            secrets: repository.export_sync_secrets()?,
         };
+        let remote_secrets_enc = Some(encrypt_remote_secrets(
+            &snapshot_id,
+            &data_hash,
+            password,
+            &secrets,
+        )?);
         let manifest = build_manifest(
             snapshot_id,
             options.device_id,
             options.device_name,
             options.created_at,
-            &data_json,
+            &remote_data_enc,
             remote_secrets_enc.as_deref(),
         );
         let manifest_json =
@@ -209,7 +215,7 @@ impl SyncSnapshotService {
         Ok(SyncSnapshotBundle {
             manifest,
             manifest_json,
-            data_json,
+            remote_data_enc,
             remote_secrets_enc,
         })
     }
@@ -221,35 +227,34 @@ impl SyncSnapshotService {
     ) -> Result<SyncImportResult, AppError> {
         validate_bundle_artifacts(
             &bundle.manifest,
-            &bundle.data_json,
+            &bundle.remote_data_enc,
             bundle.remote_secrets_enc.as_deref(),
         )?;
-        let data: SyncDataDocument = serde_json::from_slice(&bundle.data_json)
-            .map_err(|error| sync_snapshot_incompatible(error))?;
+        let password = required_sync_password(options.sync_password.as_deref())?;
+        let data = Self::decrypt_remote_data(
+            &bundle.manifest,
+            &bundle.remote_data_enc,
+            password,
+        )?;
         if data.version != SYNC_PROTOCOL_VERSION {
             return Err(sync_snapshot_incompatible(format!(
                 "unsupported data version {}",
                 data.version
             )));
         }
-
         repository.create_sync_backup()?;
         validate_sync_data_document(&data)?;
 
-        let secrets = match (
-            options.sync_password.as_deref(),
-            bundle.remote_secrets_enc.as_deref(),
-        ) {
-            (Some(password), Some(encrypted)) if !password.trim().is_empty() => {
-                Some(Self::decrypt_remote_secrets(
-                    &bundle.manifest,
-                    &bundle.data_json,
-                    encrypted,
-                    password,
-                )?)
-            }
-            _ => None,
+        let secrets = match bundle.remote_secrets_enc.as_deref() {
+            Some(encrypted) => Some(Self::decrypt_remote_secrets(
+                &bundle.manifest,
+                &bundle.remote_data_enc,
+                encrypted,
+                password,
+            )?),
+            None => None,
         };
+
         if let Some(secrets) = secrets.as_ref() {
             repository.import_sync_secrets(secrets)?;
         }
@@ -260,13 +265,31 @@ impl SyncSnapshotService {
             known_hosts: stats.known_hosts,
             tunnels: stats.tunnels,
             secrets: secrets.as_ref().map_or(0, |item| item.secrets.len()),
-            secrets_skipped: bundle.remote_secrets_enc.is_some() && secrets.is_none(),
+            secrets_skipped: false,
         })
+    }
+
+    pub fn decrypt_remote_data(
+        manifest: &SyncManifest,
+        encrypted: &[u8],
+        sync_password: &str,
+    ) -> Result<SyncDataDocument, AppError> {
+        validate_manifest_summary(manifest)?;
+        let envelope: RemoteDataEnvelope = serde_json::from_slice(encrypted)
+            .map_err(sync_snapshot_data_decrypt_failed)?;
+        validate_remote_data_envelope(&envelope)?;
+        let plaintext: SyncDataDocument = decrypt_json(
+            &remote_data_aad(&manifest.snapshot_id),
+            sync_password,
+            &envelope.encrypted,
+        )
+        .map_err(sync_snapshot_data_decrypt_failed)?;
+        Ok(plaintext)
     }
 
     pub fn decrypt_remote_secrets(
         manifest: &SyncManifest,
-        data_json: &[u8],
+        remote_data_enc: &[u8],
         encrypted: &[u8],
         sync_password: &str,
     ) -> Result<SyncSecretsPlaintext, AppError> {
@@ -275,7 +298,7 @@ impl SyncSnapshotService {
             .map_err(|error| sync_snapshot_secret_decrypt_failed(error))?;
         validate_remote_secret_envelope(&envelope)?;
         let plaintext: SyncSecretsPlaintext = decrypt_json(
-            &remote_secret_aad(&manifest.snapshot_id, &sha256_hex(data_json)),
+            &remote_secret_aad(&manifest.snapshot_id, &sha256_hex(remote_data_enc)),
             sync_password,
             &envelope.encrypted,
         )
@@ -292,11 +315,11 @@ impl SyncSnapshotService {
 
 pub fn validate_bundle_artifacts(
     manifest: &SyncManifest,
-    data_json: &[u8],
+    remote_data_enc: &[u8],
     remote_secrets_enc: Option<&[u8]>,
 ) -> Result<(), AppError> {
     validate_manifest_summary(manifest)?;
-    validate_artifact(manifest, DATA_ARTIFACT, data_json)?;
+    validate_artifact(manifest, DATA_ARTIFACT, remote_data_enc)?;
     match remote_secrets_enc {
         Some(bytes) => validate_artifact(manifest, SECRETS_ARTIFACT, bytes),
         None if manifest.artifacts.contains_key(SECRETS_ARTIFACT) => Err(AppError::new(
@@ -310,6 +333,17 @@ pub fn validate_bundle_artifacts(
 }
 
 fn validate_sync_data_document(data: &SyncDataDocument) -> Result<(), AppError> {
+    for entry in &data.known_hosts {
+        validate_host_key_info(&HostKeyInfo {
+            host: entry.host.clone(),
+            port: entry.port,
+            key_algorithm: entry.key_algorithm.clone(),
+            fingerprint_sha256: entry.fingerprint_sha256.clone(),
+            public_key: entry.public_key.clone(),
+        })
+        .map_err(|error| sync_snapshot_import_failed(error.raw_message))?;
+    }
+
     let mut group_ids = BTreeSet::new();
     for group in &data.connection_groups {
         if !group_ids.insert(group.id.as_str()) {
@@ -385,11 +419,11 @@ fn build_manifest(
     device_id: String,
     device_name: String,
     created_at: String,
-    data_json: &[u8],
+    remote_data_enc: &[u8],
     remote_secrets_enc: Option<&[u8]>,
 ) -> SyncManifest {
     let mut artifacts = BTreeMap::new();
-    artifacts.insert(DATA_ARTIFACT.to_string(), artifact_meta(data_json));
+    artifacts.insert(DATA_ARTIFACT.to_string(), artifact_meta(remote_data_enc));
     if let Some(secrets) = remote_secrets_enc {
         artifacts.insert(SECRETS_ARTIFACT.to_string(), artifact_meta(secrets));
     }
@@ -403,6 +437,8 @@ fn build_manifest(
         db_schema_version: SQLITE_SCHEMA_VERSION as u32,
         artifacts,
         encryption: SyncEncryptionInfo {
+            data_cipher: PASSWORD_CIPHER.to_string(),
+            data_kdf: PASSWORD_KDF.to_string(),
             secrets_cipher: PASSWORD_CIPHER.to_string(),
             secrets_kdf: PASSWORD_KDF.to_string(),
         },
@@ -429,7 +465,19 @@ pub fn validate_manifest_summary(manifest: &SyncManifest) -> Result<(), AppError
         )));
     }
     if !manifest.artifacts.contains_key(DATA_ARTIFACT) {
-        return Err(sync_snapshot_incompatible("manifest missing data.json"));
+        return Err(sync_snapshot_incompatible("manifest missing data.enc"));
+    }
+    if !manifest.artifacts.contains_key(SECRETS_ARTIFACT) {
+        return Err(sync_snapshot_incompatible("manifest missing secrets.enc"));
+    }
+    if manifest.encryption.data_cipher != PASSWORD_CIPHER
+        || manifest.encryption.data_kdf != PASSWORD_KDF
+        || manifest.encryption.secrets_cipher != PASSWORD_CIPHER
+        || manifest.encryption.secrets_kdf != PASSWORD_KDF
+    {
+        return Err(sync_snapshot_incompatible(
+            "manifest declares unsupported encryption",
+        ));
     }
     Ok(())
 }
@@ -467,6 +515,45 @@ fn artifact_meta(bytes: &[u8]) -> ArtifactMeta {
     }
 }
 
+fn encrypt_remote_data(
+    snapshot_id: &str,
+    sync_password: &str,
+    plaintext: &SyncDataDocument,
+) -> Result<Vec<u8>, AppError> {
+    let encrypted = encrypt_json(
+        &remote_data_aad(snapshot_id),
+        sync_password,
+        plaintext,
+    )
+    .map_err(sync_snapshot_serialize_failed)?;
+    let envelope = RemoteDataEnvelope {
+        format: SYNC_FORMAT.to_string(),
+        protocol_version: SYNC_PROTOCOL_VERSION,
+        encrypted,
+    };
+    serde_json::to_vec_pretty(&envelope).map_err(sync_snapshot_serialize_failed)
+}
+
+fn validate_remote_data_envelope(envelope: &RemoteDataEnvelope) -> Result<(), AppError> {
+    if envelope.format != SYNC_FORMAT || envelope.protocol_version != SYNC_PROTOCOL_VERSION {
+        return Err(sync_snapshot_data_decrypt_failed(
+            "unsupported remote data envelope",
+        ));
+    }
+    Ok(())
+}
+
+fn remote_data_aad(snapshot_id: &str) -> Vec<u8> {
+    format!("{SYNC_FORMAT}|{SYNC_PROTOCOL_VERSION}|{snapshot_id}|data").into_bytes()
+}
+
+fn required_sync_password(password: Option<&str>) -> Result<&str, AppError> {
+    password
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .ok_or_else(sync_snapshot_password_required)
+}
+
 fn encrypt_remote_secrets(
     snapshot_id: &str,
     data_hash: &str,
@@ -497,7 +584,7 @@ fn validate_remote_secret_envelope(envelope: &RemoteSecretsEnvelope) -> Result<(
 }
 
 fn remote_secret_aad(snapshot_id: &str, data_hash: &str) -> Vec<u8> {
-    format!("{SYNC_FORMAT}|{SYNC_PROTOCOL_VERSION}|{snapshot_id}|{data_hash}").into_bytes()
+    format!("{SYNC_FORMAT}|{SYNC_PROTOCOL_VERSION}|{snapshot_id}|{data_hash}|secrets").into_bytes()
 }
 
 pub fn sha256_hex(bytes: &[u8]) -> String {
@@ -521,6 +608,24 @@ fn sync_snapshot_incompatible(raw: impl ToString) -> AppError {
     AppError::new(
         "sync_snapshot_incompatible",
         "同步快照格式不兼容。",
+        raw,
+        true,
+    )
+}
+
+fn sync_snapshot_password_required() -> AppError {
+    AppError::new(
+        "sync_snapshot_password_required",
+        "同步主密码必填，用于客户端加密和验证全部同步数据。",
+        "sync password is required for encrypted snapshot v2",
+        true,
+    )
+}
+
+fn sync_snapshot_data_decrypt_failed(raw: impl ToString) -> AppError {
+    AppError::new(
+        "sync_snapshot_data_decrypt_failed",
+        "同步主密码不正确或 data.enc 已损坏。",
         raw,
         true,
     )
@@ -568,20 +673,36 @@ impl SyncImportOptions {
 #[cfg(test)]
 impl SyncSnapshotBundle {
     fn from_data_for_test(data_json: Vec<u8>) -> Self {
+        let snapshot_id = uuid::Uuid::new_v4().to_string();
+        let data: SyncDataDocument = serde_json::from_slice(&data_json).unwrap();
+        let remote_data_enc = encrypt_remote_data(&snapshot_id, "test-password", &data).unwrap();
+        let empty_secrets = SyncSecretsPlaintext {
+            version: SYNC_PROTOCOL_VERSION,
+            secrets: Vec::new(),
+        };
+        let remote_secrets_enc = Some(
+            encrypt_remote_secrets(
+                &snapshot_id,
+                &sha256_hex(&remote_data_enc),
+                "test-password",
+                &empty_secrets,
+            )
+            .unwrap(),
+        );
         let manifest = build_manifest(
-            uuid::Uuid::new_v4().to_string(),
+            snapshot_id,
             "test-device".to_string(),
             "Test Device".to_string(),
             "2026-06-20T00:00:00+08:00".to_string(),
-            &data_json,
-            None,
+            &remote_data_enc,
+            remote_secrets_enc.as_deref(),
         );
         let manifest_json = serde_json::to_vec_pretty(&manifest).unwrap();
         Self {
             manifest,
             manifest_json,
-            data_json,
-            remote_secrets_enc: None,
+            remote_data_enc,
+            remote_secrets_enc,
         }
     }
 }
@@ -599,13 +720,13 @@ mod tests {
     use crate::storage_vault::InMemorySecretStore;
 
     use super::{
-        validate_bundle_artifacts, SyncExportOptions, SyncImportOptions, SyncSnapshotBundle,
-        SyncSnapshotService,
+        encrypt_remote_data, validate_bundle_artifacts, SyncDataDocument, SyncExportOptions,
+        SyncImportOptions, SyncSnapshotBundle, SyncSnapshotService,
     };
 
     #[test]
-    fn export_data_excludes_local_secret_references_and_plaintext_secrets() {
-        let (repo, _secrets) = temp_repository("export-sanitizes");
+    fn remote_data_is_encrypted_and_hides_connection_and_trust_metadata() {
+        let (repo, _secrets) = temp_repository("export-encrypts-data");
         seed_secret_profiles(&repo);
 
         let bundle = SyncSnapshotService::export_bundle(
@@ -614,13 +735,20 @@ mod tests {
         )
         .unwrap();
 
-        let data_text = std::str::from_utf8(&bundle.data_json).unwrap();
-        assert!(!data_text.contains("secret_ref"));
-        assert!(!data_text.contains("\"inline_password\""));
-        assert!(!data_text.contains("\"private_key_passphrase\""));
-        assert!(!data_text.contains("inline-secret"));
-        assert!(!data_text.contains("credential-secret"));
-        assert!(!data_text.contains("account="));
+        let encrypted_text = std::str::from_utf8(&bundle.remote_data_enc).unwrap();
+        assert!(!encrypted_text.contains("example.com"));
+        assert!(!encrypted_text.contains("root"));
+        assert!(!encrypted_text.contains("inline-secret"));
+        assert!(!encrypted_text.contains("credential-secret"));
+
+        let data = SyncSnapshotService::decrypt_remote_data(
+            &bundle.manifest,
+            &bundle.remote_data_enc,
+            "sync-password",
+        )
+        .unwrap();
+        assert_eq!(data.connections.len(), 1);
+        assert_eq!(data.connections[0].host, "example.com");
     }
 
     #[test]
@@ -641,7 +769,7 @@ mod tests {
 
         let wrong_password = SyncSnapshotService::decrypt_remote_secrets(
             &bundle.manifest,
-            &bundle.data_json,
+            &bundle.remote_data_enc,
             bundle.remote_secrets_enc.as_ref().unwrap(),
             "wrong-password",
         )
@@ -650,7 +778,7 @@ mod tests {
 
         let plaintext = SyncSnapshotService::decrypt_remote_secrets(
             &bundle.manifest,
-            &bundle.data_json,
+            &bundle.remote_data_enc,
             bundle.remote_secrets_enc.as_ref().unwrap(),
             "sync-password",
         )
@@ -671,7 +799,7 @@ mod tests {
         )
         .unwrap();
 
-        let mut tampered_data = bundle.data_json.clone();
+        let mut tampered_data = bundle.remote_data_enc.clone();
         tampered_data.push(b'\n');
         let error = validate_bundle_artifacts(
             &bundle.manifest,
@@ -681,7 +809,7 @@ mod tests {
         .unwrap_err();
         assert_eq!(error.code, "sync_snapshot_size_mismatch");
 
-        let same_size_tampered = vec![b'x'; bundle.data_json.len()];
+        let same_size_tampered = vec![b'x'; bundle.remote_data_enc.len()];
         let error = validate_bundle_artifacts(
             &bundle.manifest,
             &same_size_tampered,
@@ -692,29 +820,40 @@ mod tests {
     }
 
     #[test]
-    fn import_without_sync_password_imports_data_and_skips_secrets() {
-        let (source, _source_secrets) = temp_repository("import-skip-source");
+    fn manifest_cannot_downgrade_v2_by_stripping_secrets_artifact() {
+        let (repo, _secrets) = temp_repository("manifest-strip-secrets");
+        seed_secret_profiles(&repo);
+        let mut bundle = SyncSnapshotService::export_bundle(
+            &repo,
+            SyncExportOptions::test("device-a", "Desk A", Some("sync-password")),
+        )
+        .unwrap();
+        bundle.manifest.artifacts.remove(super::SECRETS_ARTIFACT);
+        bundle.remote_secrets_enc = None;
+
+        let error = validate_bundle_artifacts(&bundle.manifest, &bundle.remote_data_enc, None)
+            .unwrap_err();
+
+        assert_eq!(error.code, "sync_snapshot_incompatible");
+    }
+
+    #[test]
+    fn import_without_sync_password_is_rejected_before_local_mutation() {
+        let (source, _source_secrets) = temp_repository("import-password-source");
         seed_secret_profiles(&source);
         let bundle = SyncSnapshotService::export_bundle(
             &source,
             SyncExportOptions::test("device-a", "Desk A", Some("sync-password")),
         )
         .unwrap();
-        let (mut target, _target_secrets) = temp_repository("import-skip-target");
+        let (mut target, _target_secrets) = temp_repository("import-password-target");
 
-        let result =
+        let error =
             SyncSnapshotService::import_bundle(&mut target, &bundle, SyncImportOptions::test(None))
-                .unwrap();
+                .unwrap_err();
 
-        assert!(result.secrets_skipped);
-        assert_eq!(target.connection_list().unwrap().len(), 1);
-        assert_eq!(
-            target
-                .resolve_saved_connection("conn-inline", None)
-                .unwrap_err()
-                .code,
-            "secret_missing"
-        );
+        assert_eq!(error.code, "sync_snapshot_password_required");
+        assert!(target.connection_list().unwrap().is_empty());
     }
 
     #[test]
@@ -747,7 +886,7 @@ mod tests {
         let (mut target, _target_secrets) = temp_repository("import-failure-target");
         seed_secret_profiles(&target);
         let invalid_data = br#"{
-  "version": 1,
+  "version": 2,
   "connections": [],
   "credentials": [],
   "known_hosts": [],
@@ -769,9 +908,12 @@ mod tests {
 }"#;
         let bundle = SyncSnapshotBundle::from_data_for_test(invalid_data.to_vec());
 
-        let error =
-            SyncSnapshotService::import_bundle(&mut target, &bundle, SyncImportOptions::test(None))
-                .unwrap_err();
+        let error = SyncSnapshotService::import_bundle(
+            &mut target,
+            &bundle,
+            SyncImportOptions::test(Some("test-password")),
+        )
+        .unwrap_err();
 
         assert_eq!(error.code, "sync_snapshot_import_failed");
         assert_eq!(target.connection_list().unwrap().len(), 1);

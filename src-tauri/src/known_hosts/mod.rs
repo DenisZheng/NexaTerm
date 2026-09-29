@@ -105,6 +105,7 @@ impl KnownHostStore {
     }
 
     pub fn trust(&mut self, info: HostKeyInfo, now: &str) -> Result<KnownHostEntry, AppError> {
+        validate_host_key_info(&info)?;
         let existing_index = self
             .document
             .entries
@@ -153,6 +154,43 @@ impl KnownHostStore {
     }
 }
 
+pub(crate) fn validate_host_key_info(info: &HostKeyInfo) -> Result<(), AppError> {
+    if info.host.trim().is_empty() || info.port == 0 {
+        return Err(AppError::new(
+            "known_host_trust_invalid",
+            "主机密钥确认信息无效。",
+            "host is empty or port is zero",
+            true,
+        ));
+    }
+    let parsed = PublicKey::from_openssh(info.public_key.trim()).map_err(|error| {
+        AppError::new(
+            "known_host_trust_invalid",
+            "主机密钥确认信息无效。",
+            format!("public key parse failed: {error}"),
+            true,
+        )
+    })?;
+    let expected = host_key_info(&info.host, info.port, &parsed);
+    if expected.fingerprint_sha256 != info.fingerprint_sha256
+        || expected.key_algorithm != info.key_algorithm
+    {
+        return Err(AppError::new(
+            "known_host_trust_invalid",
+            "主机密钥确认信息不一致，已拒绝保存。",
+            format!(
+                "expected algorithm={} fingerprint={} but got algorithm={} fingerprint={}",
+                expected.key_algorithm,
+                expected.fingerprint_sha256,
+                info.key_algorithm,
+                info.fingerprint_sha256
+            ),
+            true,
+        ));
+    }
+    Ok(())
+}
+
 pub fn host_key_info(host: &str, port: u16, public_key: &PublicKey) -> HostKeyInfo {
     let fingerprint_sha256 = public_key.fingerprint(HashAlg::Sha256).to_string();
     let public_key = public_key
@@ -178,16 +216,18 @@ mod tests {
     use std::fs;
     use std::path::PathBuf;
 
-    use super::{HostKeyInfo, KnownHostCheck, KnownHostStore};
+    use russh::keys::ssh_key::PublicKey;
 
-    fn host_key(fingerprint: &str) -> HostKeyInfo {
-        HostKeyInfo {
-            host: "example.com".to_string(),
-            port: 22,
-            key_algorithm: "ssh-ed25519".to_string(),
-            fingerprint_sha256: fingerprint.to_string(),
-            public_key: format!("ssh-ed25519 {fingerprint}"),
-        }
+    use super::{host_key_info, HostKeyInfo, KnownHostCheck, KnownHostStore};
+
+    const KEY_A: &str =
+        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f";
+    const KEY_B: &str =
+        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIB8eHRwbGhkYFxYVFBMSERAPDg0MCwoJCAcGBQQDAgEA";
+
+    fn host_key(openssh: &str) -> HostKeyInfo {
+        let key = PublicKey::from_openssh(openssh).unwrap();
+        host_key_info("example.com", 22, &key)
     }
 
     #[test]
@@ -197,20 +237,20 @@ mod tests {
         let mut store = KnownHostStore::load(path.clone()).unwrap();
 
         assert!(matches!(
-            store.check("example.com", 22, host_key("SHA256:first")),
+            store.check("example.com", 22, host_key(KEY_A)),
             KnownHostCheck::Unknown { .. }
         ));
 
         store
-            .trust(host_key("SHA256:first"), "2026-06-05T09:30:00+08:00")
+            .trust(host_key(KEY_A), "2026-06-05T09:30:00+08:00")
             .unwrap();
 
         assert!(matches!(
-            store.check("example.com", 22, host_key("SHA256:first")),
+            store.check("example.com", 22, host_key(KEY_A)),
             KnownHostCheck::Trusted { .. }
         ));
         assert!(matches!(
-            store.check("example.com", 22, host_key("SHA256:second")),
+            store.check("example.com", 22, host_key(KEY_B)),
             KnownHostCheck::Changed { .. }
         ));
 
@@ -224,16 +264,46 @@ mod tests {
         let mut store = KnownHostStore::load(path.clone()).unwrap();
 
         let first = store
-            .trust(host_key("SHA256:first"), "2026-06-05T09:30:00+08:00")
+            .trust(host_key(KEY_A), "2026-06-05T09:30:00+08:00")
             .unwrap();
         let second = store
-            .trust(host_key("SHA256:second"), "2026-06-05T09:40:00+08:00")
+            .trust(host_key(KEY_B), "2026-06-05T09:40:00+08:00")
             .unwrap();
 
         assert_eq!(first.id, second.id);
         assert_eq!(second.trusted_at, "2026-06-05T09:30:00+08:00");
         assert_eq!(second.updated_at, "2026-06-05T09:40:00+08:00");
         assert_eq!(KnownHostStore::load(path.clone()).unwrap().list().len(), 1);
+
+        let _ = fs::remove_file(path);
+    }
+
+    #[test]
+    fn trust_rejects_mismatched_fingerprint_and_algorithm() {
+        let path = temp_store_path("invalid");
+        let _ = fs::remove_file(&path);
+        let mut store = KnownHostStore::load(path.clone()).unwrap();
+
+        let mut fingerprint_mismatch = host_key(KEY_A);
+        fingerprint_mismatch.fingerprint_sha256 = "SHA256:not-the-key".to_string();
+        assert_eq!(
+            store
+                .trust(fingerprint_mismatch, "2026-06-05T09:30:00+08:00")
+                .unwrap_err()
+                .code,
+            "known_host_trust_invalid"
+        );
+
+        let mut algorithm_mismatch = host_key(KEY_A);
+        algorithm_mismatch.key_algorithm = "ssh-rsa".to_string();
+        assert_eq!(
+            store
+                .trust(algorithm_mismatch, "2026-06-05T09:30:00+08:00")
+                .unwrap_err()
+                .code,
+            "known_host_trust_invalid"
+        );
+        assert!(store.list().is_empty());
 
         let _ = fs::remove_file(path);
     }
