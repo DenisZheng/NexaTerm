@@ -1836,13 +1836,18 @@ v1 的目标不是把现有全部协议都重做成同等成熟度，而是先�
 
 其中 RDP / VNC / X11 在 v1 周期标记为 **Experimental**：可以继续修复、验证和提供入口，但不得阻塞首个公开 Preview 或 v1 核心发布。它们的“跨平台成熟、正式承诺”进入 v2 决策。
 
+### P1 迁移入口（非 v1 发布门禁）
+
+- MobaXterm 会话导入提前到 P1：先交付格式解析、导入预览、冲突/缺失字段提示和 SSH 映射。
+- 导入能力用于降低迁移成本，可以在首个 Preview 前后独立交付，但不阻塞 SSH/SFTP 核心发布。
+- PuTTY / OpenSSH config 导入在 MobaXterm importer 的模型稳定后再评估。
+
 ### v1 之后 / v2 方向
 
 - RDP/VNC 跨平台体验统一
 - X11 正式集成（以真实 spike 结果为前提）
 - Workspace Restore 完整持久化
 - Multi-hop Jump
-- MobaXterm / PuTTY / OpenSSH 会话导入
 - 更完整的运维工具与 AI/MCP 能力
 
 ---
