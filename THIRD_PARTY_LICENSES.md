@@ -40,6 +40,27 @@ for the covered files is available from the upstream project/package release.
 The MPL-covered upstream files remain under MPL-2.0. The exact resolved crate
 version is recorded by the generated Cargo inventory.
 
+### Servo/CSS transitive crates — MPL-2.0
+
+The resolved Rust graph also contains five MPL-2.0-only crates:
+
+- `cssparser 0.36.0`
+- `cssparser-macros 0.6.1`
+- `dtoa-short 0.3.5`
+- `option-ext 0.2.0`
+- `selectors 0.36.1`
+
+They are consumed as unmodified Cargo dependencies. The MPL-2.0 obligations
+remain file-level for the covered upstream files; NexaTerm's independently
+authored files remain under the project MIT license. Their exact source
+locations are recorded by Cargo metadata / crates.io, and the generated release
+inventory records the resolved versions and license expression.
+
+`cssparser` and `cssparser-macros` are from Servo's rust-cssparser project;
+`selectors` is from the Servo selector stack. `option-ext` publishes
+MPL-2.0 metadata and its license file with the crate. CI keeps each package as
+an individual manual-review entry so a future license change fails closed.
+
 ### SQLite — public domain
 
 - Component: SQLite, linked through `rusqlite` / `libsqlite3-sys`
