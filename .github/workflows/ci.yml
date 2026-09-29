@@ -37,6 +37,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # 大文件行数门禁：预算见 scripts/line-budget.json，只许减少不许增加。
+      - name: File line budget
+        run: node scripts/check-line-budget.mjs
+
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
         with:

@@ -30,7 +30,9 @@
     "prototype:ironrdp-viewer": "node scripts/prototype-ironrdp-viewer.mjs",
     "preview": "vite preview",
     "tauri": "tauri",
-    "tauri:dev": "tauri dev"
+    "tauri:dev": "tauri dev",
+    "check:line-budget": "node scripts/check-line-budget.mjs",
+    "hooks:install": "node scripts/install-git-hooks.mjs"
   },
   "dependencies": {
     "@novnc/novnc": "^1.7.0",

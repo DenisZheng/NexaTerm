@@ -1,0 +1,24 @@
+#!/usr/bin/env node
+// Git commit-msg hook：强制提交信息使用英文（AGENTS.md 约定）。
+// 含 CJK 字符即拒绝。安装：npm run hooks:install
+import { readFileSync } from "node:fs";
+
+const msgFile = process.argv[2];
+if (!msgFile) process.exit(0);
+
+const raw = readFileSync(msgFile, "utf8");
+const body = raw
+  .split("\n")
+  .filter((line) => !line.startsWith("#"))
+  .join("\n")
+  .trim();
+
+if (body === "") process.exit(0); // 空信息交给 git 自己处理
+
+// CJK 统一表意文字及扩展区
+const CJK = /[㐀-䶿一-鿿豈-﫿]/u;
+if (CJK.test(body)) {
+  console.error("提交信息必须使用英文（见 AGENTS.md），检测到中文字符，提交已中止。");
+  console.error("Commit messages must be in English (see AGENTS.md). Chinese characters detected; commit aborted.");
+  process.exit(1);
+}
