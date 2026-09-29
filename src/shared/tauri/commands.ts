@@ -29,6 +29,7 @@ import type {
   ConnectionTransferImportResult,
   ConnectionTransferPreviewResult,
 } from "../../features/connections/connectionTransferTypes";
+import type { MobaXtermImportPreviewResult } from "../../features/connections/mobaxtermImportTypes";
 import type {
   AiChatSession,
   AiChatSessionSummary,
@@ -206,6 +207,12 @@ export function connectionTransferImport(
 ) {
   return invoke<ConnectionTransferImportResult>("connection_transfer_import", {
     request: { path, password, fingerprint, strategy },
+  });
+}
+
+export function mobaxtermImportPreview(path: string) {
+  return invoke<MobaXtermImportPreviewResult>("mobaxterm_import_preview", {
+    request: { path },
   });
 }
 
