@@ -9,6 +9,7 @@ mod credentials;
 mod docker_tools;
 mod events;
 mod known_hosts;
+mod mobaxterm_import;
 pub mod mcp;
 mod network_tools;
 mod rdp;
@@ -81,6 +82,7 @@ pub fn run() {
             commands::connection_transfer_export,
             commands::connection_transfer_preview,
             commands::connection_transfer_import,
+            mobaxterm_import::mobaxterm_import_preview,
             commands::connection_list,
             commands::connection_upsert,
             commands::connection_set_favorite,
