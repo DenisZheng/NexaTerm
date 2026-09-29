@@ -73,9 +73,25 @@ export function getBuildPlan(target) {
   return plan;
 }
 
-export function updaterArtifactsArgs(runtime = process) {
-  return runtime.env?.[createUpdaterArtifactsEnv] === "1"
-    ? ["--config", createUpdaterArtifactsConfig]
+export function updaterArtifactsArgs(runtime = process, target) {
+  const bundle = {};
+  if (runtime.env?.[createUpdaterArtifactsEnv] === "1") {
+    bundle.createUpdaterArtifacts = true;
+  }
+
+  const certificateThumbprint = runtime.env?.NEXATERM_WINDOWS_CERTIFICATE_THUMBPRINT?.trim();
+  if (target === "win-x64" && certificateThumbprint) {
+    bundle.windows = {
+      certificateThumbprint,
+      digestAlgorithm: "sha256",
+      timestampUrl:
+        runtime.env?.NEXATERM_WINDOWS_TIMESTAMP_URL?.trim() ||
+        "http://timestamp.digicert.com",
+    };
+  }
+
+  return Object.keys(bundle).length > 0
+    ? ["--config", JSON.stringify({ bundle })]
     : [];
 }
 
@@ -101,7 +117,7 @@ export function resolveSpawnInvocation(command, args, runtime = process) {
 export function runPlan(target, { runtime = process, spawn = spawnSync } = {}) {
   const plan = getBuildPlan(target);
   const [command, args] = plan.command;
-  const buildArgs = [...args, ...updaterArtifactsArgs(runtime)];
+  const buildArgs = [...args, ...updaterArtifactsArgs(runtime, target)];
   const invocation = resolveSpawnInvocation(command, buildArgs, runtime);
 
   console.log(`\nBuilding ${plan.label}...`);
