@@ -45,6 +45,21 @@ test("license policy blocks missing/strong-copyleft and requires explicit MPL re
   );
 });
 
+test("SPDX OR chooses an acceptable branch while AND remains strict", () => {
+  const packages = [
+    { ecosystem: "cargo", name: "mit-or-gpl", version: "1", license: "MIT OR GPL-3.0-only" },
+    { ecosystem: "npm", name: "mpl-or-apache", version: "1", license: "(MPL-2.0 OR Apache-2.0)" },
+    { ecosystem: "cargo", name: "lgpl-option", version: "1", license: "MIT OR Apache-2.0 OR LGPL-2.1-or-later" },
+    { ecosystem: "cargo", name: "mit-and-gpl", version: "1", license: "MIT AND GPL-3.0-only" },
+  ];
+
+  const issues = evaluateInventory(packages, policy);
+  assert.deepEqual(
+    issues.map((issue) => [issue.key, issue.type]),
+    [["cargo:mit-and-gpl", "blocked-license"]],
+  );
+});
+
 test("manual review fails closed when the package license changes", () => {
   const issues = evaluateInventory(
     [{ ecosystem: "npm", name: "@novnc/novnc", version: "2", license: "LGPL-3.0-only" }],
