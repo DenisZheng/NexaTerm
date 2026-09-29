@@ -17,12 +17,46 @@
   ],
   "manualReviews": {
     "npm:@novnc/novnc": {
-      "allowedLicenses": ["MPL-2.0"],
+      "allowedLicenses": [
+        "MPL-2.0"
+      ],
       "distribution": "Bundled through the frontend dependency graph; keep noVNC files under MPL-2.0 and preserve upstream source availability."
     },
     "cargo:serialport": {
-      "allowedLicenses": ["MPL-2.0"],
+      "allowedLicenses": [
+        "MPL-2.0"
+      ],
       "distribution": "Compiled Rust dependency; keep upstream MPL-2.0 covered files unmodified and preserve license/source notice."
+    },
+    "cargo:cssparser": {
+      "allowedLicenses": [
+        "MPL-2.0"
+      ],
+      "distribution": "MPL-2.0-only transitive webview/CSS dependency; consumed unmodified. Preserve MPL-2.0 notice and upstream source availability."
+    },
+    "cargo:cssparser-macros": {
+      "allowedLicenses": [
+        "MPL-2.0"
+      ],
+      "distribution": "MPL-2.0-only cssparser procedural-macro dependency; consumed unmodified. Preserve MPL-2.0 notice and upstream source availability."
+    },
+    "cargo:dtoa-short": {
+      "allowedLicenses": [
+        "MPL-2.0"
+      ],
+      "distribution": "MPL-2.0-only CSS formatting dependency; consumed unmodified. Preserve MPL-2.0 notice and upstream source availability."
+    },
+    "cargo:option-ext": {
+      "allowedLicenses": [
+        "MPL-2.0"
+      ],
+      "distribution": "MPL-2.0-only transitive utility dependency; consumed unmodified. Preserve MPL-2.0 notice and upstream source availability."
+    },
+    "cargo:selectors": {
+      "allowedLicenses": [
+        "MPL-2.0"
+      ],
+      "distribution": "MPL-2.0-only Servo selector dependency; consumed unmodified. Preserve MPL-2.0 notice and upstream source availability."
     }
   }
 }
