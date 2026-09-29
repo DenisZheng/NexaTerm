@@ -467,6 +467,9 @@ pub fn validate_manifest_summary(manifest: &SyncManifest) -> Result<(), AppError
     if !manifest.artifacts.contains_key(DATA_ARTIFACT) {
         return Err(sync_snapshot_incompatible("manifest missing data.enc"));
     }
+    if !manifest.artifacts.contains_key(SECRETS_ARTIFACT) {
+        return Err(sync_snapshot_incompatible("manifest missing secrets.enc"));
+    }
     if manifest.encryption.data_cipher != PASSWORD_CIPHER
         || manifest.encryption.data_kdf != PASSWORD_KDF
         || manifest.encryption.secrets_cipher != PASSWORD_CIPHER
@@ -801,6 +804,24 @@ mod tests {
         )
         .unwrap_err();
         assert_eq!(error.code, "sync_snapshot_hash_mismatch");
+    }
+
+    #[test]
+    fn manifest_cannot_downgrade_v2_by_stripping_secrets_artifact() {
+        let (repo, _secrets) = temp_repository("manifest-strip-secrets");
+        seed_secret_profiles(&repo);
+        let mut bundle = SyncSnapshotService::export_bundle(
+            &repo,
+            SyncExportOptions::test("device-a", "Desk A", Some("sync-password")),
+        )
+        .unwrap();
+        bundle.manifest.artifacts.remove(super::SECRETS_ARTIFACT);
+        bundle.remote_secrets_enc = None;
+
+        let error = validate_bundle_artifacts(&bundle.manifest, &bundle.remote_data_enc, None)
+            .unwrap_err();
+
+        assert_eq!(error.code, "sync_snapshot_incompatible");
     }
 
     #[test]
