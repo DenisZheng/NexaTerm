@@ -135,7 +135,11 @@ export function evaluateInventory(packages, policy) {
       issues.push({ key, type: "missing-license", license: "", version: pkg.version });
       continue;
     }
-    if (/\b(UNKNOWN|UNLICENSED)\b/i.test(license) || /^SEE LICENSE/i.test(license)) {
+    if (
+      /\b(UNKNOWN|UNLICENSED)\b/i.test(license) ||
+      /^SEE LICENSE/i.test(license) ||
+      /^LicenseRef-File:/i.test(license)
+    ) {
       if (!review) {
         issues.push({ key, type: "unknown-license", license, version: pkg.version });
         continue;
