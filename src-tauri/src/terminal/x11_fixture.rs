@@ -100,7 +100,7 @@ async fn x11_fixture_russh_path_reaches_host_xvfb() {
     channel
         .exec(
             true,
-            "test -n \"$DISPLAY\" && xauth list \"$DISPLAY\" | grep -q MIT-MAGIC-COOKIE-1 && xdpyinfo >/dev/null 2>&1 && echo nexaterm-x11-ok",
+            "test -n \"$DISPLAY\" && xauth list | grep -q MIT-MAGIC-COOKIE-1 && xdpyinfo >/dev/null 2>&1 && echo nexaterm-x11-ok",
         )
         .await
         .expect("start remote X11 probe");
