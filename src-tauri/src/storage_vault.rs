@@ -632,6 +632,9 @@ fn random_array<const N: usize>() -> Result<[u8; N], AppError> {
 fn local_master_password(root: &Path, create_if_missing: bool) -> Result<String, AppError> {
     let path = root.join(LOCAL_KEY_FILE_NAME);
     if path.exists() {
+        // 存量密钥文件可能是旧版本以宽松权限创建的：读到就顺手收紧，
+        // 失败不阻断（避免把老用户锁在 vault 外面）。
+        let _ = restrict_local_key_permissions(&path);
         return fs::read_to_string(&path)
             .map(|value| value.trim().to_string())
             .map_err(|error| secret_store_read_failed(LOCAL_KEY_FILE_NAME, error));
@@ -648,7 +651,26 @@ fn local_master_password(root: &Path, create_if_missing: bool) -> Result<String,
     let key = STANDARD.encode(random_array::<VAULT_KEY_BYTES>()?);
     fs::write(&path, &key)
         .map_err(|error| secret_store_write_failed(LOCAL_KEY_FILE_NAME, error))?;
+    // 本地密钥与 vault 文件落在同一目录：权限必须是 0600，否则同机其他用户
+    // 可直接读走密钥，vault 只防"拿不到 key 文件"的人。写入后立刻收紧，
+    // 失败则直接报错（fail-closed），避免"以为安全、实际裸奔"。
+    restrict_local_key_permissions(&path)?;
     Ok(key)
+}
+
+/// 把本地密钥文件权限收紧为仅所有者可读写（Unix 0600）。
+///
+/// Windows 上新文件默认继承父目录 ACL，此处不做额外处理。
+#[cfg(unix)]
+fn restrict_local_key_permissions(path: &Path) -> Result<(), AppError> {
+    use std::os::unix::fs::PermissionsExt;
+    fs::set_permissions(path, fs::Permissions::from_mode(0o600))
+        .map_err(|error| secret_store_write_failed(LOCAL_KEY_FILE_NAME, error))
+}
+
+#[cfg(not(unix))]
+fn restrict_local_key_permissions(_path: &Path) -> Result<(), AppError> {
+    Ok(())
 }
 
 fn local_recovery_allowed(root: &Path, error: &AppError) -> bool {
