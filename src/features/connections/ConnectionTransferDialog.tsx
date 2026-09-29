@@ -31,6 +31,7 @@ import type {
   ConnectionTransferMode,
   ConnectionTransferPreviewResult,
 } from "./connectionTransferTypes";
+import { MobaXtermImportPanel } from "./MobaXtermImportPanel";
 
 interface ConnectionTransferDialogProps {
   mode: ConnectionTransferMode;
@@ -60,6 +61,7 @@ export function ConnectionTransferDialog({
   const [importResult, setImportResult] = useState<ConnectionTransferImportResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mobaxtermMode, setMobaXtermMode] = useState(false);
 
   useEffect(() => {
     if (!open) {
@@ -75,6 +77,7 @@ export function ConnectionTransferDialog({
     setImportResult(null);
     setBusy(false);
     setError(null);
+    setMobaXtermMode(false);
   }, [mode, open]);
 
   function changePassword(value: string) {
@@ -260,8 +263,31 @@ export function ConnectionTransferDialog({
                   </button>
                 </footer>
               </form>
+            ) : mobaxtermMode ? (
+              <MobaXtermImportPanel
+                onBack={() => {
+                  if (!busy) {
+                    setMobaXtermMode(false);
+                    setError(null);
+                  }
+                }}
+                onBusyChange={setBusy}
+                onImported={onImported}
+              />
             ) : (
               <form className="connection-transfer-form" onSubmit={(event) => void runPreview(event)}>
+                <button
+                  className="connection-transfer-source-button"
+                  disabled={busy}
+                  type="button"
+                  onClick={() => {
+                    setMobaXtermMode(true);
+                    setError(null);
+                  }}
+                >
+                  <Upload className="ui-icon" aria-hidden="true" />
+                  从 MobaXterm .mxtsessions 导入
+                </button>
                 <FilePicker path={path} busy={busy} label="迁移文件" onChoose={() => void choosePath()} />
                 <PasswordField
                   id="connection-transfer-import-password"
