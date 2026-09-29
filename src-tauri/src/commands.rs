@@ -37,6 +37,9 @@ use crate::docker_tools::{
 };
 use crate::events::RemoteFileTransferProgressEvent;
 use crate::known_hosts::HostKeyInfo;
+use crate::mobaxterm_import::{
+    preview_file as preview_mobaxterm_file, MobaXtermImportPreviewResult,
+};
 use crate::network_tools::{
     NetworkDiagnosticRequest, NetworkDiagnosticResult, NetworkDiagnosticSessionManager,
 };
@@ -134,6 +137,11 @@ pub struct ConnectionTransferImportRequest {
     pub password: String,
     pub fingerprint: String,
     pub strategy: ConnectionTransferConflictStrategy,
+}
+
+#[derive(Deserialize)]
+pub struct MobaXtermImportPreviewRequest {
+    pub path: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -1845,6 +1853,13 @@ pub async fn connection_transfer_import(
         request.fingerprint.trim(),
         request.strategy,
     )
+}
+
+#[tauri::command]
+pub async fn mobaxterm_import_preview(
+    request: MobaXtermImportPreviewRequest,
+) -> Result<MobaXtermImportPreviewResult, AppError> {
+    preview_mobaxterm_file(Path::new(&request.path))
 }
 
 #[tauri::command]
