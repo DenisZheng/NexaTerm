@@ -83,7 +83,7 @@ async fn x11_fixture_russh_path_reaches_host_xvfb() {
     .await
     .expect("fixture public-key authentication succeeds");
 
-    let channel = client
+    let mut channel = client
         .channel_open_session()
         .await
         .expect("open fixture session channel");
