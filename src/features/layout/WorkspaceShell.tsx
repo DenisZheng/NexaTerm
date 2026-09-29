@@ -434,11 +434,11 @@ import {
   selectWorkspaceItems,
 } from "../workspace/sessionTabs/instances";
 import {
+  buildCloseContext,
   closeRequestFromItems,
   closeScopeItemIds,
   planClose,
   type ClosePlan,
-  type CloseContext,
   type CloseScope,
 } from "../workspace/sessionTabs/itemClose";
 import {
@@ -1059,7 +1059,18 @@ export function WorkspaceShell() {
   // 顶栏关闭请求的统一确认状态（WS-F08 未保存编辑的关闭确认）：整次操作至多一次确认，确认后按当时状态重算一次执行。
   const closeRequestController = useCloseRequest({
     execute: executeClosePlan,
-    plan: (request) => planClose(request, buildCloseContext()),
+    plan: (request) =>
+      planClose(
+        request,
+        buildCloseContext(
+          localTerminalTabsRef.current,
+          rdpSessionsRef.current,
+          remoteFileTabs,
+          terminalSplitPanes,
+          terminalTabsRef.current,
+          vncSessionsRef.current,
+        ),
+      ),
   });
   const [pendingRemoteFileConflictId, setPendingRemoteFileConflictId] = useState<string | null>(null);
   const [remoteFileDeleteTarget, setRemoteFileDeleteTarget] =
@@ -7247,24 +7258,6 @@ export function WorkspaceShell() {
       case undefined:
         return;
     }
-  }
-
-  /** 按当前实例状态组装关闭计划所需上下文；分屏成员用当前 pane 绑定映射成实例 id。 */
-  function buildCloseContext(): CloseContext {
-    return {
-      localTerminalTabs: localTerminalTabsRef.current.map((tab) => ({ id: tab.id })),
-      rdpSessions: rdpSessionsRef.current.map((session) => ({ id: session.id })),
-      remoteFileTabs: remoteFileTabs.map((tab) => ({
-        connectionId: tab.connectionId,
-        dirty: tab.dirty,
-        name: tab.name,
-      })),
-      splitMemberIds: terminalSplitPanes.flatMap((pane) =>
-        pane.binding ? [terminalPaneBindingKey(pane.binding)] : [],
-      ),
-      terminalTabs: terminalTabsRef.current.map((tab) => ({ connectionId: tab.connectionId, id: tab.id })),
-      vncSessions: vncSessionsRef.current.map((session) => ({ id: session.id })),
-    };
   }
 
   /**
