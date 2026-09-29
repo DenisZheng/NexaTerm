@@ -40,8 +40,8 @@ use crate::webdav_sync::WebDavSyncService;
 use std::os::windows::process::CommandExt;
 
 pub const MCP_SETTINGS_KEY: &str = "mcp.default";
-/// 默认只监听本机回环地址。监听 0.0.0.0 会把 MCP 服务暴露到整个局域网，
-/// 必须由用户显式确认风险（`remote_exposure_acknowledged`）后才生效。
+/// Remote MCP is intentionally loopback-only. Access from another machine must
+/// arrive through an authenticated tunnel (for example SSH local forwarding).
 pub const DEFAULT_REMOTE_HOST: &str = "127.0.0.1";
 pub const DEFAULT_REMOTE_PORT: u16 = 8765;
 const DEFAULT_TIMEOUT_SECONDS: u64 = 30;
@@ -363,29 +363,12 @@ pub fn save_settings(
     now: &str,
 ) -> Result<(McpSettings, Option<String>), AppError> {
     let existing = load_settings(repository).unwrap_or_default();
-    let remote_host = normalize_remote_host(input.remote_host)?;
-    let remote_host_is_loopback = is_loopback_host(&remote_host);
-    // 写入侧 fail-fast：只拦「本次请求把监听地址改成非 loopback、却没有确认风险」这一个动作，
-    // 让用户填了不会生效的地址时立刻看到失败，而不是静默降级。
-    //
-    // 但不能顺手把「存量非 loopback 地址 + 未确认」也拒掉：那是 resolve_effective_remote_host
-    // 认可的已降级状态，生效地址本就是 loopback，不产生任何暴露。一并拒绝会导致存量用户改任何
-    // 一项 MCP 设置都失败，而且永远无法取消勾选确认。
-    if !remote_host_is_loopback
-        && remote_host != existing.remote_host
-        && !input.remote_exposure_acknowledged
-    {
-        return Err(AppError::new(
-            "mcp_remote_host_not_acknowledged",
-            "监听非本机地址会把 MCP 服务暴露给同网段的其他设备，请先确认该风险再保存。",
-            format!("remote_host={remote_host} without acknowledgement"),
-            true,
-        ));
-    }
-    // 监听 loopback 时没有需要确认的暴露，确认位不得粘滞留存：否则用户改回本机地址后旧勾选
-    // 仍在存储里，下次填入非 loopback 地址会跳过确认直接生效，等于绕过了整个确认机制。
-    let remote_exposure_acknowledged =
-        input.remote_exposure_acknowledged && !remote_host_is_loopback;
+    // Compatibility note: older clients still send remote_host and
+    // remote_exposure_acknowledged. They are intentionally ignored. Persisting
+    // the canonical loopback value migrates legacy 0.0.0.0/LAN configurations
+    // the next time any MCP setting is saved.
+    let remote_host = DEFAULT_REMOTE_HOST.to_string();
+    let remote_exposure_acknowledged = false;
     let remote_port = validate_remote_port(input.remote_port)?;
     let (remote_token, remote_token_hash, remote_token_preview, generated_token) =
         next_remote_token_state(&existing, input.remote_enabled, input.remote_token)?;
@@ -420,19 +403,6 @@ fn default_remote_port() -> u16 {
     DEFAULT_REMOTE_PORT
 }
 
-fn normalize_remote_host(host: String) -> Result<String, AppError> {
-    let trimmed = host.trim();
-    if trimmed.is_empty() {
-        return Err(AppError::new(
-            "mcp_remote_host_missing",
-            "请输入远程 MCP 监听地址。",
-            "remote_host is empty",
-            true,
-        ));
-    }
-    Ok(trimmed.to_string())
-}
-
 /// loopback 判定。与 sidecar（`bin/mxterm_mcp.rs` 的 Origin 校验）共用同一实现，
 /// 避免出现「设置页认为安全、sidecar 认为不安全」这类判定分叉。
 ///
@@ -442,19 +412,13 @@ pub fn is_loopback_host(host: &str) -> bool {
     matches!(host, "localhost" | "127.0.0.1" | "::1")
 }
 
-/// 解析实际生效的监听地址，返回 `(生效 host, 是否因未确认而降级)`。
-///
-/// 这是生效值的**唯一** seam：sidecar 启动参数与所有状态 DTO 都必须经由它，
-/// 不允许各自去读 `settings.remote_host`——否则会出现「界面显示 loopback、实际监听 0.0.0.0」
-/// 这种最危险的不一致。
-///
-/// 该函数**不回写存储**。静默改写用户保存的地址不可审计，降级只体现在生效值与标志位上，
-/// 用户重新确认后原地址即可恢复生效。
+/// The managed HTTP sidecar is always loopback-only. The boolean reports
+/// whether a stored legacy host was downgraded; it never changes the bind host.
 pub fn resolve_effective_remote_host(settings: &McpSettings) -> (String, bool) {
-    if is_loopback_host(&settings.remote_host) || settings.remote_exposure_acknowledged {
-        return (settings.remote_host.clone(), false);
-    }
-    (DEFAULT_REMOTE_HOST.to_string(), true)
+    (
+        DEFAULT_REMOTE_HOST.to_string(),
+        settings.remote_host != DEFAULT_REMOTE_HOST || settings.remote_exposure_acknowledged,
+    )
 }
 
 fn validate_remote_port(port: u16) -> Result<u16, AppError> {
@@ -2012,8 +1976,8 @@ fn spawn_remote_child(
         )
     })?;
     let mut command = Command::new(&executable);
-    // 只有一处把 host 交给 sidecar：走 seam 取生效值，绝不能用 settings.remote_host 原值，
-    // 否则未确认的 0.0.0.0 会被真的监听出去。
+    // Defense in depth: the parent always passes the canonical loopback host,
+    // and the sidecar independently rejects non-loopback --host values.
     let (effective_host, _) = resolve_effective_remote_host(settings);
     command
         .arg("serve")
@@ -2943,183 +2907,71 @@ mod tests {
     }
 
     #[test]
-    fn effective_host_keeps_loopback_and_acknowledged_exposure() {
-        let loopback = McpSettings {
-            remote_host: "127.0.0.1".to_string(),
-            ..Default::default()
-        };
-        assert_eq!(
-            resolve_effective_remote_host(&loopback),
-            ("127.0.0.1".to_string(), false)
-        );
-
-        // 非 loopback 但已确认：按存储值生效，不降级。
-        let acknowledged = McpSettings {
-            remote_host: "0.0.0.0".to_string(),
-            remote_exposure_acknowledged: true,
-            ..Default::default()
-        };
-        assert_eq!(
-            resolve_effective_remote_host(&acknowledged),
-            ("0.0.0.0".to_string(), false)
-        );
+    fn effective_host_is_always_canonical_loopback() {
+        for stored in [
+            McpSettings {
+                remote_host: "127.0.0.1".to_string(),
+                ..Default::default()
+            },
+            McpSettings {
+                remote_host: "0.0.0.0".to_string(),
+                remote_exposure_acknowledged: true,
+                ..Default::default()
+            },
+            McpSettings {
+                remote_host: "192.168.1.20".to_string(),
+                ..Default::default()
+            },
+        ] {
+            let (effective, downgraded) = resolve_effective_remote_host(&stored);
+            assert_eq!(effective, DEFAULT_REMOTE_HOST);
+            assert_eq!(
+                downgraded,
+                stored.remote_host != DEFAULT_REMOTE_HOST
+                    || stored.remote_exposure_acknowledged
+            );
+        }
     }
 
     #[test]
-    fn unacknowledged_non_loopback_host_downgrades_without_rewriting_storage() {
-        let (root, repository) = test_repository("mxterm-mcp-migration");
-        let legacy = legacy_exposed_settings();
-        assert!(!legacy.remote_exposure_acknowledged);
-        repository
-            .app_setting_set(MCP_SETTINGS_KEY, &legacy, "1")
-            .unwrap();
-
-        let loaded = load_settings(&repository).unwrap();
-        let (effective, downgraded) = resolve_effective_remote_host(&loaded);
-        assert_eq!(effective, DEFAULT_REMOTE_HOST);
-        assert!(downgraded);
-
-        // DTO 同时暴露存储值与生效值，供设置页提示"已降级"并支持重新确认。
-        let output = mcp_settings_output(
-            loaded.clone(),
-            None,
-            remote_service_status(&loaded, &Default::default()),
-        );
-        assert_eq!(output.remote_host, DEFAULT_REMOTE_HOST);
-        assert_eq!(output.remote_host_stored, "0.0.0.0");
-        assert!(output.remote_host_downgraded);
-
-        // 加载不得回写存储：用户原值必须原样保留，否则重新确认后无法恢复。
-        let reloaded = load_settings(&repository).unwrap();
-        assert_eq!(reloaded.remote_host, "0.0.0.0");
-        assert!(!reloaded.remote_exposure_acknowledged);
-
-        drop(repository);
-        let _ = fs::remove_dir_all(root);
-    }
-
-    #[test]
-    fn acknowledged_exposure_survives_save_and_restores_stored_host() {
-        let (root, repository) = test_repository("mxterm-mcp-ack");
-
-        let (saved, _) = save_settings(&repository, settings_input("0.0.0.0", true), "1").unwrap();
-        assert_eq!(saved.remote_host, "0.0.0.0");
-        assert!(saved.remote_exposure_acknowledged);
-
-        let loaded = load_settings(&repository).unwrap();
-        let (effective, downgraded) = resolve_effective_remote_host(&loaded);
-        assert_eq!(effective, "0.0.0.0");
-        assert!(!downgraded);
-
-        drop(repository);
-        let _ = fs::remove_dir_all(root);
-    }
-
-    #[test]
-    fn saving_unacknowledged_non_loopback_host_fails_fast() {
-        let (root, repository) = test_repository("mxterm-mcp-reject");
-
-        // 把地址「改成」非 loopback 却没有确认：必须立刻失败，而不是静默降级成 loopback 保存。
-        let error = save_settings(&repository, settings_input("0.0.0.0", false), "1").unwrap_err();
-        assert_eq!(error.code, "mcp_remote_host_not_acknowledged");
-
-        // 拒绝必须发生在写入之前：存储中不能留下任何痕迹。
-        let stored = repository
-            .app_setting_get::<McpSettings>(MCP_SETTINGS_KEY)
-            .unwrap();
-        assert!(stored.is_none());
-
-        // loopback 无需确认即可保存。
-        let (saved, _) =
-            save_settings(&repository, settings_input("127.0.0.1", false), "2").unwrap();
-        assert_eq!(saved.remote_host, "127.0.0.1");
-
-        drop(repository);
-        let _ = fs::remove_dir_all(root);
-    }
-
-    /// 存量「非 loopback + 未确认」是合法的已降级状态，写入侧不得把它一并拒绝，
-    /// 否则这类用户改任何一项 MCP 设置都会失败。
-    #[test]
-    fn stored_unacknowledged_exposure_does_not_block_unrelated_saves() {
-        let (root, repository) = test_repository("mxterm-mcp-legacy-save");
+    fn saving_any_settings_migrates_legacy_exposed_host_to_loopback() {
+        let (root, repository) = test_repository("mxterm-mcp-loopback-migration");
         repository
             .app_setting_set(MCP_SETTINGS_KEY, &legacy_exposed_settings(), "1")
             .unwrap();
 
-        // 只改一个无关开关，监听地址按存储值原样回传（设置页 saveUpdate 就是这么发的）。
-        let mut input = settings_input("0.0.0.0", false);
+        let mut input = settings_input("0.0.0.0", true);
         input.allow_dangerous_commands = true;
         let (saved, _) = save_settings(&repository, input, "2").unwrap();
+
         assert!(saved.allow_dangerous_commands);
-        assert_eq!(saved.remote_host, "0.0.0.0");
+        assert_eq!(saved.remote_host, DEFAULT_REMOTE_HOST);
         assert!(!saved.remote_exposure_acknowledged);
-
-        // 保存成功不等于放行暴露：生效值仍然是降级后的 loopback。
-        let (effective, downgraded) = resolve_effective_remote_host(&saved);
-        assert_eq!(effective, DEFAULT_REMOTE_HOST);
-        assert!(downgraded);
-
-        drop(repository);
-        let _ = fs::remove_dir_all(root);
-    }
-
-    /// 取消勾选确认是「降低暴露」，必须允许；被 fail-fast 挡死会让用户无法收回授权。
-    #[test]
-    fn revoking_acknowledgement_is_savable_and_downgrades_effective_host() {
-        let (root, repository) = test_repository("mxterm-mcp-revoke");
-
-        save_settings(&repository, settings_input("0.0.0.0", true), "1").unwrap();
-        let (revoked, _) =
-            save_settings(&repository, settings_input("0.0.0.0", false), "2").unwrap();
-        assert_eq!(revoked.remote_host, "0.0.0.0");
-        assert!(!revoked.remote_exposure_acknowledged);
-
-        let (effective, downgraded) = resolve_effective_remote_host(&revoked);
-        assert_eq!(effective, DEFAULT_REMOTE_HOST);
-        assert!(downgraded);
-
-        drop(repository);
-        let _ = fs::remove_dir_all(root);
-    }
-
-    /// 确认位不得粘滞：改回 loopback 后必须清零，否则下次填入暴露地址会免于确认。
-    #[test]
-    fn acknowledgement_does_not_stick_after_returning_to_loopback() {
-        let (root, repository) = test_repository("mxterm-mcp-sticky");
-
-        save_settings(&repository, settings_input("0.0.0.0", true), "1").unwrap();
-        let (loopback, _) =
-            save_settings(&repository, settings_input("127.0.0.1", true), "2").unwrap();
-        assert_eq!(loopback.remote_host, "127.0.0.1");
-        assert!(!loopback.remote_exposure_acknowledged);
-
-        let error = save_settings(&repository, settings_input("0.0.0.0", false), "3").unwrap_err();
-        assert_eq!(error.code, "mcp_remote_host_not_acknowledged");
-
-        drop(repository);
-        let _ = fs::remove_dir_all(root);
-    }
-
-    #[test]
-    fn remote_service_signature_changes_when_acknowledgement_changes() {
-        let stored = McpSettings {
-            remote_host: "0.0.0.0".to_string(),
-            remote_port: 8765,
-            remote_exposure_acknowledged: false,
-            ..Default::default()
-        };
-        let acknowledged = McpSettings {
-            remote_exposure_acknowledged: true,
-            ..stored.clone()
-        };
-
-        // 确认状态翻转会改变生效 host，签名必须随之变化，否则 supervisor 不会重启 sidecar，
-        // 导致界面显示新地址而进程仍监听旧地址。
-        assert_ne!(
-            remote_service_signature_for(&stored, "hash", "data-dir"),
-            remote_service_signature_for(&acknowledged, "hash", "data-dir")
+        assert_eq!(
+            resolve_effective_remote_host(&saved),
+            (DEFAULT_REMOTE_HOST.to_string(), false)
         );
+
+        drop(repository);
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn direct_non_loopback_input_cannot_change_the_bind_host() {
+        let (root, repository) = test_repository("mxterm-mcp-loopback-only");
+
+        let (saved, _) =
+            save_settings(&repository, settings_input("0.0.0.0", true), "1").unwrap();
+
+        assert_eq!(saved.remote_host, DEFAULT_REMOTE_HOST);
+        assert!(!saved.remote_exposure_acknowledged);
+        assert_eq!(
+            remote_service_signature_for(&saved, "hash", "data-dir"),
+            format!("{DEFAULT_REMOTE_HOST}:8765:hash:data-dir")
+        );
+
+        drop(repository);
+        let _ = fs::remove_dir_all(root);
     }
 
     /// 连接暴露白名单是 MCP 的访问边界：custom 模式下未列入的连接必须以稳定 code 拒绝，
