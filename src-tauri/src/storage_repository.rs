@@ -1939,7 +1939,9 @@ impl StorageRepository {
                 "SELECT host, port, key_algorithm, fingerprint_sha256, public_key,
                         first_trusted_at, last_seen_at
                    FROM known_hosts
-                  WHERE host = ?1 AND port = ?2 AND key_algorithm = ?3",
+                  WHERE host = ?1 AND port = ?2
+                  ORDER BY CASE WHEN key_algorithm = ?3 THEN 0 ELSE 1 END, key_algorithm ASC
+                  LIMIT 1",
                 params![host, port, info.key_algorithm],
                 |row| {
                     Ok(KnownHostEntry {
@@ -2976,15 +2978,11 @@ mod tests {
             .unwrap(),
             KnownHostCheck::Changed { .. }
         ));
-        // 不同端口是独立条目，不应被误判为 Changed。
+        // 已知 host:port 切换到未记录算法也必须是 Changed，不能降级成 Unknown/TOFU。
         assert!(matches!(
-            repo.known_host_check(
-                "example.com",
-                2222,
-                sample_host_key("example.com", "SHA256:second")
-            )
-            .unwrap(),
-            KnownHostCheck::Unknown { .. }
+            repo.known_host_check("example.com", 22, crate::known_hosts::HostKeyInfo { key_algorithm: "ssh-rsa".to_string(), ..sample_host_key("example.com", "SHA256:second") })
+                .unwrap(),
+            KnownHostCheck::Changed { .. }
         ));
 
         let _ = std::fs::remove_dir_all(db_path.parent().unwrap());
