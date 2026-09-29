@@ -30,11 +30,12 @@ function imeSmokeCapturePlugin(): Plugin | null {
           next();
           return;
         }
-        const chunks: Buffer[] = [];
-        request.on("data", (chunk: Buffer) => chunks.push(chunk));
+        const chunks: string[] = [];
+        request.setEncoding("utf8");
+        request.on("data", (chunk: string) => chunks.push(chunk));
         request.on("end", () => {
           try {
-            events.push(JSON.parse(Buffer.concat(chunks).toString("utf8")));
+            events.push(JSON.parse(chunks.join("")));
             response.statusCode = 204;
             response.end();
           } catch {
