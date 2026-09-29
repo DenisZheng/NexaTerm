@@ -12,7 +12,7 @@ use std::future::Future;
 use tauri::{AppHandle, Manager};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
-use tokio::sync::{Mutex, RwLock};
+use tokio::sync::Mutex;
 use tokio::time::Instant;
 use uuid::Uuid;
 
@@ -28,6 +28,10 @@ use crate::ssh_config::{
 };
 use crate::storage_repository::StorageRepository;
 use crate::storage_vault::{SecretStore, VaultState};
+use crate::x11_forward::X11ForwardState;
+
+pub use super::forwarding::{RemoteForwardEvent, RemoteForwardEventHandler};
+use super::forwarding::RemoteForwardState;
 
 const REMOTE_EXEC_TRANSFER_CHUNK_BYTES: usize = 256 * 1024;
 const TERMINAL_OUTPUT_BATCH_MAX_BYTES: usize = 32 * 1024;
@@ -99,26 +103,6 @@ struct KnownHostClient {
     remote_forward: RemoteForwardState,
 }
 
-#[derive(Clone, Debug)]
-struct RemoteForwardTarget {
-    host: String,
-    port: u16,
-}
-
-#[derive(Clone)]
-pub enum RemoteForwardEvent {
-    Started,
-    Finished { error: Option<AppError> },
-}
-
-pub type RemoteForwardEventHandler = Arc<dyn Fn(RemoteForwardEvent) + Send + Sync + 'static>;
-
-#[derive(Clone, Default)]
-struct RemoteForwardState {
-    target: Arc<RwLock<Option<RemoteForwardTarget>>>,
-    event_handler: Arc<RwLock<Option<RemoteForwardEventHandler>>>,
-}
-
 impl client::Handler for KnownHostClient {
     type Error = russh::Error;
 
@@ -162,76 +146,6 @@ impl client::Handler for KnownHostClient {
         }
     }
 }
-
-impl RemoteForwardState {
-    async fn set_target(
-        &self,
-        host: String,
-        port: u16,
-        event_handler: Option<RemoteForwardEventHandler>,
-    ) {
-        *self.target.write().await = Some(RemoteForwardTarget { host, port });
-        *self.event_handler.write().await = event_handler;
-    }
-
-    async fn clear_target(&self) {
-        *self.target.write().await = None;
-        *self.event_handler.write().await = None;
-    }
-
-    async fn emit(&self, event: RemoteForwardEvent) {
-        if let Some(handler) = self.event_handler.read().await.as_ref().cloned() {
-            handler(event);
-        }
-    }
-
-    async fn handle_forwarded_tcpip(&self, channel: Channel<client::Msg>) {
-        let target = self.target.read().await.clone();
-        let Some(target) = target else {
-            let mut remote_stream = channel.into_stream();
-            let _ = remote_stream.shutdown().await;
-            return;
-        };
-
-        self.emit(RemoteForwardEvent::Started).await;
-        let result = forward_channel_to_local_target(channel, &target).await;
-        self.emit(RemoteForwardEvent::Finished {
-            error: result.err(),
-        })
-        .await;
-    }
-}
-
-async fn forward_channel_to_local_target(
-    channel: Channel<client::Msg>,
-    target: &RemoteForwardTarget,
-) -> Result<(), AppError> {
-    let mut remote_stream = channel.into_stream();
-    let mut local_stream = TcpStream::connect((target.host.as_str(), target.port))
-        .await
-        .map_err(|error| {
-            AppError::new(
-                "tunnel_remote_target_connect_failed",
-                "远程转发回连本机目标失败。",
-                format!("{}:{}: {error}", target.host, target.port),
-                true,
-            )
-        })?;
-    tokio::io::copy_bidirectional(&mut local_stream, &mut remote_stream)
-        .await
-        .map_err(|error| {
-            AppError::new(
-                "tunnel_stream_copy_failed",
-                "SSH 隧道数据转发失败。",
-                error,
-                true,
-            )
-        })?;
-    let _ = remote_stream.shutdown().await;
-    let _ = local_stream.shutdown().await;
-    Ok(())
-}
-
 fn vault_secret_store(app: &AppHandle) -> Result<Arc<dyn SecretStore>, AppError> {
     app.state::<VaultState>().secret_store()
 }
