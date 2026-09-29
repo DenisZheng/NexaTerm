@@ -242,6 +242,7 @@ impl SyncSnapshotService {
                 data.version
             )));
         }
+        repository.create_sync_backup()?;
         validate_sync_data_document(&data)?;
 
         let secrets = match bundle.remote_secrets_enc.as_deref() {
@@ -254,7 +255,6 @@ impl SyncSnapshotService {
             None => None,
         };
 
-        repository.create_sync_backup()?;
         if let Some(secrets) = secrets.as_ref() {
             repository.import_sync_secrets(secrets)?;
         }
@@ -804,12 +804,8 @@ mod tests {
         let (mut target, _target_secrets) = temp_repository("import-password-target");
 
         let error =
-            SyncSnapshotService::import_bundle(
-                &mut target,
-                &bundle,
-                SyncImportOptions::test(Some("test-password")),
-            )
-            .unwrap_err();
+            SyncSnapshotService::import_bundle(&mut target, &bundle, SyncImportOptions::test(None))
+                .unwrap_err();
 
         assert_eq!(error.code, "sync_snapshot_password_required");
         assert!(target.connection_list().unwrap().is_empty());
@@ -845,7 +841,7 @@ mod tests {
         let (mut target, _target_secrets) = temp_repository("import-failure-target");
         seed_secret_profiles(&target);
         let invalid_data = br#"{
-  "version": 1,
+  "version": 2,
   "connections": [],
   "credentials": [],
   "known_hosts": [],
@@ -867,9 +863,12 @@ mod tests {
 }"#;
         let bundle = SyncSnapshotBundle::from_data_for_test(invalid_data.to_vec());
 
-        let error =
-            SyncSnapshotService::import_bundle(&mut target, &bundle, SyncImportOptions::test(None))
-                .unwrap_err();
+        let error = SyncSnapshotService::import_bundle(
+            &mut target,
+            &bundle,
+            SyncImportOptions::test(Some("test-password")),
+        )
+        .unwrap_err();
 
         assert_eq!(error.code, "sync_snapshot_import_failed");
         assert_eq!(target.connection_list().unwrap().len(), 1);
