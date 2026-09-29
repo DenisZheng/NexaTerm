@@ -16,6 +16,11 @@ use crate::connection_transfer_recovery::recover_pending_connection_transfer;
 use crate::connections::{ConnectionAuthKind, ConnectionStore};
 use crate::credentials::CredentialStore;
 use crate::storage::{write_json_document, JsonStoreErrorLabels};
+use crate::storage_local_key::{
+    delete_local_master_key as delete_native_local_master_key, native_keychain_expected,
+    read_local_master_key as read_native_local_master_key,
+    write_local_master_key as write_native_local_master_key,
+};
 
 pub const VAULT_SERVICE: &str = "mxterm";
 pub const VAULT_FILE_NAME: &str = "secrets.enc";
@@ -30,6 +35,12 @@ const VAULT_KEY_BYTES: usize = 32;
 const VAULT_MEMORY_COST_KIB: u32 = 19 * 1024;
 const VAULT_TIME_COST: u32 = 2;
 const VAULT_PARALLELISM: u32 = 1;
+// Defaults match the current OWASP Argon2id minimum. These upper bounds are
+// defensive: KDF parameters come from the unauthenticated envelope and must
+// not be allowed to request unbounded memory/CPU before decryption.
+const VAULT_MAX_MEMORY_COST_KIB: u32 = 512 * 1024;
+const VAULT_MAX_TIME_COST: u32 = 10;
+const VAULT_MAX_PARALLELISM: u32 = 16;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum SecretKind {
@@ -269,7 +280,14 @@ impl VaultState {
                 true,
             ));
         }
-        self.rekey(root, master_password)
+        let root = root.as_ref();
+        let status = self.rekey(root, master_password)?;
+        // The local auto-unlock key no longer decrypts the re-keyed vault. Remove it
+        // from both native storage and the legacy file so master-password mode does
+        // not leave stale local unlock material behind.
+        let _ = delete_native_local_master_key();
+        let _ = fs::remove_file(root.join(LOCAL_KEY_FILE_NAME));
+        Ok(status)
     }
 
     pub fn disable_master_password(&self, root: impl AsRef<Path>) -> Result<VaultStatus, AppError> {
@@ -568,7 +586,29 @@ fn validate_envelope(envelope: &VaultEnvelope) -> Result<(), AppError> {
             format!("unsupported vault kdf {}", envelope.kdf.name),
         ));
     }
+    validate_kdf_parameters(&envelope.kdf)?;
     Ok(())
+}
+
+fn validate_kdf_parameters(kdf: &VaultKdf) -> Result<(), AppError> {
+    let minimum_ok = kdf.memory_cost_kib >= VAULT_MEMORY_COST_KIB
+        && kdf.time_cost >= VAULT_TIME_COST
+        && kdf.parallelism >= VAULT_PARALLELISM;
+    let maximum_ok = kdf.memory_cost_kib <= VAULT_MAX_MEMORY_COST_KIB
+        && kdf.time_cost <= VAULT_MAX_TIME_COST
+        && kdf.parallelism <= VAULT_MAX_PARALLELISM;
+    if minimum_ok && maximum_ok {
+        return Ok(());
+    }
+    Err(AppError::new(
+        "vault_kdf_parameters_invalid",
+        "加密保险库的密钥派生参数异常，已拒绝解锁。",
+        format!(
+            "argon2id parameters rejected: memory_kib={}, time={}, parallelism={}",
+            kdf.memory_cost_kib, kdf.time_cost, kdf.parallelism
+        ),
+        true,
+    ))
 }
 
 fn derive_key(
@@ -631,29 +671,68 @@ fn random_array<const N: usize>() -> Result<[u8; N], AppError> {
 
 fn local_master_password(root: &Path, create_if_missing: bool) -> Result<String, AppError> {
     let path = root.join(LOCAL_KEY_FILE_NAME);
+    let native_result = read_native_local_master_key();
+
+    match &native_result {
+        Ok(Some(key)) if !key.trim().is_empty() => {
+            // A successful native read proves migration completed. Best-effort remove
+            // the legacy plaintext key file if an older build left one behind.
+            let _ = fs::remove_file(&path);
+            return Ok(key.trim().to_string());
+        }
+        Ok(Some(_)) => {
+            return Err(vault_local_key_invalid(
+                "native credential store returned an empty local key",
+            ));
+        }
+        Ok(None) | Err(_) => {}
+    }
+
     if path.exists() {
-        // 存量密钥文件可能是旧版本以宽松权限创建的：读到就顺手收紧，
-        // 失败不阻断（避免把老用户锁在 vault 外面）。
+        // Existing installs may still have the 0600 fallback key. Read it, then
+        // opportunistically migrate it into the OS credential store on macOS/Windows.
+        // Migration is only considered complete after the native write succeeds.
         let _ = restrict_local_key_permissions(&path);
-        return fs::read_to_string(&path)
+        let key = fs::read_to_string(&path)
             .map(|value| value.trim().to_string())
-            .map_err(|error| secret_store_read_failed(LOCAL_KEY_FILE_NAME, error));
+            .map_err(|error| secret_store_read_failed(LOCAL_KEY_FILE_NAME, error))?;
+        if key.is_empty() {
+            return Err(vault_local_key_invalid("legacy local key file is empty"));
+        }
+        if write_native_local_master_key(&key).is_ok() {
+            let _ = fs::remove_file(&path);
+        }
+        return Ok(key);
     }
 
     if !create_if_missing {
+        if native_keychain_expected() {
+            if let Err(error) = native_result {
+                return Err(vault_local_keychain_unavailable(error));
+            }
+        }
         return Err(vault_local_key_missing());
+    }
+
+    let key = STANDARD.encode(random_array::<VAULT_KEY_BYTES>()?);
+    match write_native_local_master_key(&key) {
+        Ok(()) => return Ok(key),
+        Err(error) if native_keychain_expected() => {
+            // New macOS/Windows vaults fail closed rather than creating another
+            // plaintext local-key file when the OS credential store is unavailable.
+            return Err(vault_local_keychain_unavailable(error));
+        }
+        Err(_) => {
+            // Linux/headless environments retain the hardened 0600 file fallback.
+        }
     }
 
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)
             .map_err(|error| secret_store_write_failed(LOCAL_KEY_FILE_NAME, error))?;
     }
-    let key = STANDARD.encode(random_array::<VAULT_KEY_BYTES>()?);
     fs::write(&path, &key)
         .map_err(|error| secret_store_write_failed(LOCAL_KEY_FILE_NAME, error))?;
-    // 本地密钥与 vault 文件落在同一目录：权限必须是 0600，否则同机其他用户
-    // 可直接读走密钥，vault 只防"拿不到 key 文件"的人。写入后立刻收紧，
-    // 失败则直接报错（fail-closed），避免"以为安全、实际裸奔"。
     restrict_local_key_permissions(&path)?;
     Ok(key)
 }
@@ -881,6 +960,24 @@ fn vault_local_key_missing() -> AppError {
     )
 }
 
+fn vault_local_keychain_unavailable(raw: impl ToString) -> AppError {
+    AppError::new(
+        "vault_local_keychain_unavailable",
+        "系统凭据存储当前不可用，无法自动解锁保险库。",
+        raw,
+        true,
+    )
+}
+
+fn vault_local_key_invalid(raw: impl ToString) -> AppError {
+    AppError::new(
+        "vault_local_key_invalid",
+        "本机加密 key 无效，无法自动解锁保险库。",
+        raw,
+        true,
+    )
+}
+
 fn vault_unlock_raw_failed(raw: impl ToString) -> AppError {
     AppError::new(
         "vault_unlock_failed",
@@ -893,8 +990,9 @@ fn vault_unlock_raw_failed(raw: impl ToString) -> AppError {
 #[cfg(test)]
 mod tests {
     use super::{
-        InMemorySecretStore, SecretKind, SecretReference, SecretStore, SecretStoreFailure,
-        VaultSecretStore, VaultState,
+        validate_envelope, InMemorySecretStore, SecretKind, SecretReference, SecretStore,
+        SecretStoreFailure, VaultEnvelope, VaultKdf, VaultSecretStore, VaultState,
+        VAULT_CIPHER, VAULT_MEMORY_COST_KIB, VAULT_TIME_COST,
     };
 
     #[test]
@@ -929,6 +1027,42 @@ mod tests {
         let error = store.set_secret(&reference, "secret").unwrap_err();
 
         assert_eq!(error.code, "secret_store_write_failed");
+    }
+
+    #[test]
+    fn vault_envelope_accepts_current_argon2id_minimum() {
+        let envelope = test_envelope(VaultKdf::default());
+        validate_envelope(&envelope).unwrap();
+    }
+
+    #[test]
+    fn vault_envelope_rejects_weaker_or_unbounded_kdf_parameters() {
+        let mut weak = VaultKdf::default();
+        weak.memory_cost_kib = VAULT_MEMORY_COST_KIB - 1;
+        assert_eq!(
+            validate_envelope(&test_envelope(weak)).unwrap_err().code,
+            "vault_kdf_parameters_invalid"
+        );
+
+        let mut too_expensive = VaultKdf::default();
+        too_expensive.time_cost = 11;
+        assert_eq!(
+            validate_envelope(&test_envelope(too_expensive))
+                .unwrap_err()
+                .code,
+            "vault_kdf_parameters_invalid"
+        );
+    }
+
+    fn test_envelope(kdf: VaultKdf) -> VaultEnvelope {
+        VaultEnvelope {
+            version: 1,
+            kdf,
+            cipher: VAULT_CIPHER.to_string(),
+            salt: String::new(),
+            nonce: String::new(),
+            ciphertext: String::new(),
+        }
     }
 
     #[test]
