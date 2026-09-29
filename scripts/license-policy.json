@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "blockedLicenseFragments": [
+    "AGPL-",
+    "GPL-1.0",
+    "GPL-2.0",
+    "GPL-3.0",
+    "SSPL-",
+    "BUSL-",
+    "Commons-Clause"
+  ],
+  "manualReviewLicenseFragments": [
+    "MPL-",
+    "LGPL-",
+    "EPL-",
+    "CDDL-"
+  ],
+  "manualReviews": {
+    "npm:@novnc/novnc": {
+      "allowedLicenses": ["MPL-2.0"],
+      "distribution": "Bundled through the frontend dependency graph; keep noVNC files under MPL-2.0 and preserve upstream source availability."
+    },
+    "cargo:serialport": {
+      "allowedLicenses": ["MPL-2.0"],
+      "distribution": "Compiled Rust dependency; keep upstream MPL-2.0 covered files unmodified and preserve license/source notice."
+    }
+  }
+}
