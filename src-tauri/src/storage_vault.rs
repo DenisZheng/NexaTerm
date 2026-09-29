@@ -717,10 +717,13 @@ fn local_master_password(root: &Path, create_if_missing: bool) -> Result<String,
     let key = STANDARD.encode(random_array::<VAULT_KEY_BYTES>()?);
     match write_native_local_master_key(&key) {
         Ok(()) => return Ok(key),
+        Err(error) if native_keychain_expected() => {
+            // New macOS/Windows vaults fail closed rather than creating another
+            // plaintext local-key file when the OS credential store is unavailable.
+            return Err(vault_local_keychain_unavailable(error));
+        }
         Err(_) => {
-            // Linux/headless environments keep the hardened file fallback. On
-            // macOS/Windows this also preserves availability if the native store is
-            // temporarily unavailable at first run.
+            // Linux/headless environments retain the hardened 0600 file fallback.
         }
     }
 
