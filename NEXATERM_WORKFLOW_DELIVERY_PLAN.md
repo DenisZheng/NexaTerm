@@ -292,6 +292,7 @@
 - **首个公开 Preview（WF-01～WF-03）**：SSH 连接、认证/Host Key、终端、SFTP/Files、保存/Quick Connect 与失败清理形成完整日常流即可发布。
 - **v1 核心门禁**：在 Preview 基础上加入 Local/WSL/Serial、Session Manager、Split、MultiExec、Saved Commands、基础 i18n/主题与三平台 build/run 基线。
 - **Experimental / 非阻塞**：Telnet、RDP、VNC、X11。保留现有实现与测试，可继续出现在开发版，但不因这些能力未达到跨平台正式质量而阻塞 v1。
+- **P1 迁移入口（非发布门禁）**：MobaXterm 会话导入提前实现，先完成解析、预览、冲突规则与 SSH 映射；它服务迁移体验，但不阻塞 SSH/SFTP 核心发布。
 - **v2/后续决策**：RDP/VNC 的跨平台一致体验、X11 正式支持、Workspace Restore、Multi-hop Jump 等在有真实运行证据后再升级为发布门禁。
 
 范围收敛不允许通过删除现有协议、降低安全检查或跳过回归测试来“变绿”；它只改变发布承诺和任务优先级。
