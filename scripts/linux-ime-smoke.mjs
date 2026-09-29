@@ -19,7 +19,12 @@ if (!process.env.DISPLAY || !process.env.DBUS_SESSION_BUS_ADDRESS) {
   process.exit(2);
 }
 
-const captureUrl = "http://localhost:5520/__nexaterm_ime_capture";
+const captureOrigins = [
+  "http://127.0.0.1:5520",
+  "http://[::1]:5520",
+  "http://localhost:5520",
+];
+let activeCaptureUrl = null;
 const expected = "你好";
 const phrase = "nihao";
 const logs = [];
@@ -117,15 +122,33 @@ function imeEnvironment() {
   };
 }
 
+async function fetchCapture(method = "GET") {
+  const urls = activeCaptureUrl
+    ? [activeCaptureUrl]
+    : captureOrigins.map((origin) => `${origin}/__nexaterm_ime_capture`);
+  let lastError;
+  for (const url of urls) {
+    try {
+      const response = await fetch(url, { method });
+      if (!response.ok) {
+        throw new Error(`${method} ${url} failed: ${response.status}`);
+      }
+      activeCaptureUrl = url;
+      return response;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError || new Error(`capture ${method} failed`);
+}
+
 async function getEvents() {
-  const response = await fetch(captureUrl);
-  if (!response.ok) throw new Error(`capture GET failed: ${response.status}`);
+  const response = await fetchCapture();
   return response.json();
 }
 
 async function clearEvents() {
-  const response = await fetch(captureUrl, { method: "DELETE" });
-  if (!response.ok) throw new Error(`capture DELETE failed: ${response.status}`);
+  await fetchCapture("DELETE");
 }
 
 async function waitFor(predicate, description, timeoutMs = 180_000) {
