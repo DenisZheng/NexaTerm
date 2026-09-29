@@ -57,7 +57,10 @@ function cmdUp() {
     console.log("generating throwaway fixture keypair in tests/fixtures/keys/");
     sh("ssh-keygen", ["-t", "ed25519", "-f", privateKey, "-N", "", "-C", "nexaterm-fixture"]);
   }
-  sh("docker", ["compose", "-f", composeFile, "up", "-d", "--build"]);
+  console.log("building fixture images");
+  sh("docker", ["compose", "-f", composeFile, "build"], { timeout: 10 * 60_000 });
+  console.log("starting fixture containers");
+  sh("docker", ["compose", "-f", composeFile, "up", "-d"], { timeout: 60_000 });
   console.log("fixtures up");
 }
 
