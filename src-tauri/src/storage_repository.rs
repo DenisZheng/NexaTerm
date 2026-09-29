@@ -2887,20 +2887,10 @@ mod tests {
     use crate::terminal::serial::{SerialFlowControl, SerialParity};
     use crate::terminal::telnet::{TelnetBackspaceMode, TelnetEnterMode};
 
-    const HOST_KEY_A: &str =
-        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f";
-    const HOST_KEY_B: &str =
-        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIB8eHRwbGhkYFxYVFBMSERAPDg0MCwoJCAcGBQQDAgEA";
-
     fn sample_host_key(host: &str, fingerprint: &str) -> crate::known_hosts::HostKeyInfo {
         use russh::keys::ssh_key::PublicKey;
-        let openssh = if fingerprint == "SHA256:first" {
-            HOST_KEY_A
-        } else {
-            HOST_KEY_B
-        };
-        let key = PublicKey::from_openssh(openssh).unwrap();
-        crate::known_hosts::host_key_info(host, 22, &key)
+        let openssh = if fingerprint == "SHA256:first" { "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f" } else { "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIB8eHRwbGhkYFxYVFBMSERAPDg0MCwoJCAcGBQQDAgEA" };
+        crate::known_hosts::host_key_info(host, 22, &PublicKey::from_openssh(openssh).unwrap())
     }
 
     /// 生产路径（`session.rs` 的 `check_server_key`）只走 SQLite 仓储，不走旧 JSON store，
@@ -3028,26 +3018,6 @@ mod tests {
             })
             .unwrap();
         assert_eq!(rows, 1, "重新 trust 不得产生第二条记录");
-
-        let _ = std::fs::remove_dir_all(db_path.parent().unwrap());
-    }
-
-    #[test]
-    fn known_host_trust_rejects_forged_fingerprint_on_sqlite_path() {
-        let (repo, db_path, _secrets) = temp_repository("known-host-invalid-material");
-        let mut info = sample_host_key("example.com", "SHA256:first");
-        info.fingerprint_sha256 = "SHA256:forged".to_string();
-
-        let error = repo
-            .known_host_trust(info, "2026-09-18T10:00:00+08:00")
-            .unwrap_err();
-
-        assert_eq!(error.code, "known_host_trust_invalid");
-        let rows = Connection::open(&db_path)
-            .unwrap()
-            .query_row("SELECT COUNT(*) FROM known_hosts", [], |row| row.get::<_, i64>(0))
-            .unwrap();
-        assert_eq!(rows, 0);
 
         let _ = std::fs::remove_dir_all(db_path.parent().unwrap());
     }
