@@ -27,8 +27,10 @@
 
 - 无 license metadata：阻断；
 - 只有无法自动判定的 license-file 引用：需要 package-specific review；
-- AGPL / GPL / SSPL / BUSL / Commons-Clause：阻断；
-- MPL / LGPL / EPL / CDDL：必须有 package-specific manual review；
+- SPDX `OR` 按“可任选其一”处理：存在可接受的宽松分支时不因另一个 GPL/LGPL/MPL 分支误阻断；
+- SPDX `AND` 按“必须同时遵守”处理：任一必需分支触发 blocked/manual-review 即 fail closed；
+- AGPL / GPL / SSPL / BUSL / Commons-Clause：当它们是不可绕开的必需分支时阻断；
+- MPL / LGPL / EPL / CDDL：当它们是不可绕开的必需分支时必须有 package-specific manual review；
 - 已人工审批 package 的 license expression 发生变化：阻断，要求重新审查。
 
 MPL 不作为全局豁免。当前明确审批仅覆盖实际已知的 noVNC 与 serialport；新增 MPL 包仍会失败。
