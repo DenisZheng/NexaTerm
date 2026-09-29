@@ -95,16 +95,16 @@ describe("buildCloseContext", () => {
   it("只提取关闭计划需要的字段，并把分屏绑定映射成实例 id", () => {
     expect(
       buildCloseContext(
-        [{ id: "l1", ignored: true }],
-        [{ id: "r1", ignored: true }],
-        [{ connectionId: "a", dirty: true, name: "draft.txt", ignored: true }],
+        [{ id: "l1" }],
+        [{ id: "r1" }],
+        [{ connectionId: "a", dirty: true, name: "draft.txt" }],
         [
           { binding: { kind: "ssh", tabId: "t1" } },
           { binding: undefined },
           { binding: { kind: "local", tabId: "l1" } },
         ],
-        [{ connectionId: "a", id: "t1", ignored: true }],
-        [{ id: "v1", ignored: true }],
+        [{ connectionId: "a", id: "t1" }],
+        [{ id: "v1" }],
       ),
     ).toEqual({
       localTerminalTabs: [{ id: "l1" }],
