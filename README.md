@@ -7,6 +7,14 @@ NexaTerm 是一个基于 Tauri v2、React 和 Rust 的本地优先、跨平台�
 
 项目把终端、远程桌面、SFTP 文件管理、Docker、端口隧道、主机监控、远程任务、AI 助手和 MCP 能力整合在一个轻量桌面应用中。运行时不依赖 Node/Express 本地服务；前端负责桌面交互，连接协议、本地存储和跨平台能力由 Rust/Tauri 承载。
 
+## Fork 声明
+
+NexaTerm 是 [syscryer/mxterm](https://github.com/syscryer/mxterm) 的 **hard fork**（MIT License，版权与许可见 [LICENSE](LICENSE)）。
+
+- 独立演进：不再以合并回上游为目标；上游的安全修复会定期评估 cherry-pick，功能不再跟进。
+- 独立发布：自有 bundle ID（`com.nexaterm.app`）、自有更新签名密钥与更新通道，更新只从本仓库的 GitHub Release 获取。
+- 方向差异：详见 [差异化一页纸](docs/DIFFERENTIATION.md)。
+
 ## 截图
 
 ### 连接仓库
