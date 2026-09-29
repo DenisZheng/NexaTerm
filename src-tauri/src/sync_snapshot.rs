@@ -676,20 +676,33 @@ impl SyncSnapshotBundle {
         let snapshot_id = uuid::Uuid::new_v4().to_string();
         let data: SyncDataDocument = serde_json::from_slice(&data_json).unwrap();
         let remote_data_enc = encrypt_remote_data(&snapshot_id, "test-password", &data).unwrap();
+        let empty_secrets = SyncSecretsPlaintext {
+            version: SYNC_PROTOCOL_VERSION,
+            secrets: Vec::new(),
+        };
+        let remote_secrets_enc = Some(
+            encrypt_remote_secrets(
+                &snapshot_id,
+                &sha256_hex(&remote_data_enc),
+                "test-password",
+                &empty_secrets,
+            )
+            .unwrap(),
+        );
         let manifest = build_manifest(
             snapshot_id,
             "test-device".to_string(),
             "Test Device".to_string(),
             "2026-06-20T00:00:00+08:00".to_string(),
             &remote_data_enc,
-            None,
+            remote_secrets_enc.as_deref(),
         );
         let manifest_json = serde_json::to_vec_pretty(&manifest).unwrap();
         Self {
             manifest,
             manifest_json,
             remote_data_enc,
-            remote_secrets_enc: None,
+            remote_secrets_enc,
         }
     }
 }
