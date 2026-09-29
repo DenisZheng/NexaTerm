@@ -33,11 +33,50 @@ test("all target expands to the current host platform only", () => {
 });
 
 test("updater artifact config is opt-in through MXTERM_CREATE_UPDATER_ARTIFACTS", () => {
-  assert.deepEqual(updaterArtifactsArgs({ env: {} }), []);
-  assert.deepEqual(updaterArtifactsArgs({ env: { MXTERM_CREATE_UPDATER_ARTIFACTS: "1" } }), [
-    "--config",
-    JSON.stringify({ bundle: { createUpdaterArtifacts: true } }),
-  ]);
+  assert.deepEqual(updaterArtifactsArgs({ env: {} }, "win-x64"), []);
+  assert.deepEqual(
+    updaterArtifactsArgs({ env: { MXTERM_CREATE_UPDATER_ARTIFACTS: "1" } }, "linux-x64"),
+    [
+      "--config",
+      JSON.stringify({ bundle: { createUpdaterArtifacts: true } }),
+    ],
+  );
+});
+
+test("Windows signing config is injected from the imported certificate thumbprint", () => {
+  assert.deepEqual(
+    updaterArtifactsArgs(
+      {
+        env: {
+          MXTERM_CREATE_UPDATER_ARTIFACTS: "1",
+          NEXATERM_WINDOWS_CERTIFICATE_THUMBPRINT: "AABBCCDD",
+          NEXATERM_WINDOWS_TIMESTAMP_URL: "http://timestamp.example.test",
+        },
+      },
+      "win-x64",
+    ),
+    [
+      "--config",
+      JSON.stringify({
+        bundle: {
+          createUpdaterArtifacts: true,
+          windows: {
+            certificateThumbprint: "AABBCCDD",
+            digestAlgorithm: "sha256",
+            timestampUrl: "http://timestamp.example.test",
+          },
+        },
+      }),
+    ],
+  );
+
+  assert.deepEqual(
+    updaterArtifactsArgs(
+      { env: { NEXATERM_WINDOWS_CERTIFICATE_THUMBPRINT: "AABBCCDD" } },
+      "linux-x64",
+    ),
+    [],
+  );
 });
 
 test("Windows pnpm invocation uses the package manager entry point when available", () => {
