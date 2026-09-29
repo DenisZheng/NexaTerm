@@ -1,3 +1,5 @@
+use std::net::IpAddr;
+
 #[cfg(test)]
 use base64::engine::{general_purpose::STANDARD, Engine as _};
 use reqwest::header::{HeaderName, CONTENT_TYPE};
@@ -76,8 +78,26 @@ impl WebDavClient {
                 true,
             ));
         }
-        base_url.set_query(None);
-        base_url.set_fragment(None);
+        if base_url.scheme() == "http" && !is_loopback_url(&base_url) {
+            return Err(AppError::new(
+                "webdav_insecure_transport",
+                "远程 WebDAV 必须使用 HTTPS；HTTP 仅允许本机回环地址。",
+                redact_url(base_url.as_str()),
+                true,
+            ));
+        }
+        if !base_url.username().is_empty()
+            || base_url.password().is_some()
+            || base_url.query().is_some()
+            || base_url.fragment().is_some()
+        {
+            return Err(AppError::new(
+                "webdav_settings_invalid",
+                "WebDAV 服务地址不能包含账号、密码、查询参数或 fragment；凭据请使用独立字段保存。",
+                redact_url(base_url.as_str()),
+                true,
+            ));
+        }
         Ok(Self {
             base_url,
             client: Client::new(),
@@ -268,6 +288,17 @@ impl WebDavTransport for WebDavClient {
     }
 }
 
+fn is_loopback_url(url: &Url) -> bool {
+    let Some(host) = url.host_str() else {
+        return false;
+    };
+    if host.eq_ignore_ascii_case("localhost") {
+        return true;
+    }
+    host.parse::<IpAddr>()
+        .is_ok_and(|address| address.is_loopback())
+}
+
 pub fn join_encoded_path(segments: &[&str]) -> String {
     normalize_path_segments(segments)
         .iter()
@@ -424,7 +455,7 @@ mod tests {
 
         assert_eq!(
             path,
-            "mxterm%20sync/%E7%94%9F%E4%BA%A7/v1/default/manifest.json"
+            "mxterm%20sync/%E7%94%9F%E4%BA%A7/v2/default/manifest.json"
         );
     }
 
@@ -449,25 +480,42 @@ mod tests {
     }
 
     #[test]
-    fn client_rejects_non_http_schemes_and_drops_query_and_fragment() {
+    fn client_requires_https_for_remote_hosts_and_rejects_url_embedded_secrets() {
         let error = match WebDavClient::new("ftp://dav.example.com/root", None, None) {
             Ok(_) => panic!("non-HTTP scheme should be rejected"),
             Err(error) => error,
         };
         assert_eq!(error.code, "webdav_settings_invalid");
 
-        let client = WebDavClient::new(
-            "https://dav.example.com/root?token=secret#fragment",
-            None,
-            None,
-        )
-        .expect("HTTP(S) base URL should be valid");
+        let error = match WebDavClient::new("http://dav.example.com/root", None, None) {
+            Ok(_) => panic!("remote HTTP should be rejected"),
+            Err(error) => error,
+        };
+        assert_eq!(error.code, "webdav_insecure_transport");
+
+        WebDavClient::new("http://127.0.0.1:8080/root", None, None)
+            .expect("loopback HTTP is allowed for local development");
+        WebDavClient::new("http://[::1]:8080/root", None, None)
+            .expect("IPv6 loopback HTTP is allowed for local development");
+
+        for url in [
+            "https://alice:secret@dav.example.com/root",
+            "https://dav.example.com/root?token=secret",
+            "https://dav.example.com/root#fragment",
+        ] {
+            let error = match WebDavClient::new(url, None, None) {
+                Ok(_) => panic!("URL-embedded secrets or metadata should be rejected"),
+                Err(error) => error,
+            };
+            assert_eq!(error.code, "webdav_settings_invalid");
+        }
+
+        let client = WebDavClient::new("https://dav.example.com/root", None, None)
+            .expect("HTTPS base URL should be valid");
         let url = client
             .url_for_segments(&["manifest.json".to_string()])
             .expect("path should build");
         assert_eq!(url.path(), "/root/manifest.json");
-        assert!(url.query().is_none());
-        assert!(url.fragment().is_none());
     }
 
     #[test]
@@ -475,7 +523,7 @@ mod tests {
         let transport = RecordingTransport::new(409, 207);
         let path = vec![
             "mxterm-sync".to_string(),
-            "v1".to_string(),
+            "v2".to_string(),
             "default".to_string(),
         ];
 
@@ -486,10 +534,10 @@ mod tests {
             vec![
                 "MKCOL mxterm-sync",
                 "PROPFIND mxterm-sync depth=0",
-                "MKCOL mxterm-sync/v1",
-                "PROPFIND mxterm-sync/v1 depth=0",
-                "MKCOL mxterm-sync/v1/default",
-                "PROPFIND mxterm-sync/v1/default depth=0",
+                "MKCOL mxterm-sync/v2",
+                "PROPFIND mxterm-sync/v2 depth=0",
+                "MKCOL mxterm-sync/v2/default",
+                "PROPFIND mxterm-sync/v2/default depth=0",
             ]
         );
     }
