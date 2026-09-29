@@ -307,6 +307,10 @@ fn is_loopback_url(url: &Url) -> bool {
     if host.eq_ignore_ascii_case("localhost") {
         return true;
     }
+    let host = host
+        .strip_prefix('[')
+        .and_then(|value| value.strip_suffix(']'))
+        .unwrap_or(host);
     host.parse::<IpAddr>()
         .is_ok_and(|address| address.is_loopback())
 }
@@ -463,7 +467,7 @@ mod tests {
 
     #[test]
     fn path_segments_are_encoded_without_duplicate_slashes() {
-        let path = join_encoded_path(&[" /mxterm sync/生产 ", "v1", "default", "manifest.json"]);
+        let path = join_encoded_path(&[" /mxterm sync/生产 ", "v2", "default", "manifest.json"]);
 
         assert_eq!(
             path,
