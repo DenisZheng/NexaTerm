@@ -285,7 +285,21 @@
 
 **验收**：从一个含三项的组批量打开，其中一项失败；将两个成功实例与另一个 Local 放入分屏；选择目标发送一次；只有所选实例各收到一次。额外覆盖同一主机的两个终端、切焦点不换目标、一个目标断线、Ctrl+C、粘贴与中文输入法。
 
+## 4.1 发布范围约束（P1-2）
+
+本计划从本节起区分“已有能力继续维护”和“v1 发布门禁”。
+
+- **首个公开 Preview（WF-01～WF-03）**：SSH 连接、认证/Host Key、终端、SFTP/Files、保存/Quick Connect 与失败清理形成完整日常流即可发布。
+- **v1 核心门禁**：在 Preview 基础上加入 Local/WSL/Serial、Session Manager、Split、MultiExec、Saved Commands、基础 i18n/主题与三平台 build/run 基线。
+- **Experimental / 非阻塞**：Telnet、RDP、VNC、X11。保留现有实现与测试，可继续出现在开发版，但不因这些能力未达到跨平台正式质量而阻塞 v1。
+- **P1 迁移入口（非发布门禁）**：MobaXterm 会话导入提前实现，先完成解析、预览、冲突规则与 SSH 映射；它服务迁移体验，但不阻塞 SSH/SFTP 核心发布。
+- **v2/后续决策**：RDP/VNC 的跨平台一致体验、X11 正式支持、Workspace Restore、Multi-hop Jump 等在有真实运行证据后再升级为发布门禁。
+
+范围收敛不允许通过删除现有协议、降低安全检查或跳过回归测试来“变绿”；它只改变发布承诺和任务优先级。
+
 ### WF-05：把已有协议带入统一入口
+
+WF-05 分两层交付：Local/WSL/Serial 属于 v1 核心；Telnet/RDP/VNC 继续接入统一入口，但作为 Experimental，不阻塞 v1。
 
 **复用/修改**：现有 `ConnectionProtocol`、`ConnectionDialog` 与运行路径；`src-tauri/src/terminal/local_profiles.rs`；`platformCapabilities.ts`；RDP/VNC 的既有 provider。
 
@@ -297,6 +311,8 @@
 **验收**：Windows 验证 WSL 与 embedded RDP；macOS/Linux 验证各自 local profile、external RDP 和 VNC runner；关闭标签后进程和桥接连接正常清理。跨平台支持结论必须有对应运行证据。
 
 ### WF-06：隧道、跳板与 X11 分开交付
+
+WF-06 不再整体作为 v1 发布门禁。已有 Tunnel/Jump 能力继续维护和真实测试；X11 保留 spike 与实验性验证，正式跨平台承诺进入 v2 决策。
 
 **WF-06A 隧道管理**：复用 `TunnelPanel.tsx` 与 local/remote/dynamic 隧道实现及 stopped/starting/running/failed/credential_required 状态。补齐顶部入口、配置与启动状态的关联、端口冲突和凭据缺失处理，以及连接关闭时的资源生命周期。不要重做已存在的状态枚举。
 
@@ -333,7 +349,7 @@
 
 当前 CI 成功是有价值的工程证据，但 Windows 包装 job 在本次 push 被跳过，不能推导安装包已通过。npm/Rust advisory 审计为 report-only，也不能由 CI 绿灯推导无漏洞；保留现有受控接受记录，随依赖变化复核，不把已经处理的全部事项再开成前置项目。
 
-**最终验收**：原需求中 v1 必选项逐项关联可复现证据，三平台 build/run/安装、更新、数据升级、许可证、基础性能都有结果。无法满足的项明确标记缺口；若要改变 v1 范围，需要产品层明确变更，不让开发计划静默删除。
+**最终验收**：以 `NEXATERM_REQUIREMENTS.md` §58/§60 的收敛范围为准逐项关联可复现证据，三平台 build/run/安装、更新、数据升级、许可证、基础性能都有结果。RDP/VNC/X11 等 Experimental 项记录真实状态与限制但不阻塞 v1；任何再次扩大或缩小发布门禁都需要产品层明确变更，不让开发计划静默漂移。
 
 ## 5. 现有 Task 00—09 如何迁移
 

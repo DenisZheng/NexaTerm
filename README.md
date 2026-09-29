@@ -37,6 +37,18 @@ NexaTerm 是 [syscryer/mxterm](https://github.com/syscryer/mxterm) 的 **hard fo
 
 ![外观设置](docs/assets/readme/appearance-settings.png)
 
+## 当前发布范围
+
+NexaTerm 当前按 **SSH/SFTP 优先**推进 v1。
+
+- **首个公开 Preview**：先打通 SSH + Host Key + SFTP/Files + Session/Quick Connect 的完整日常流。
+- **v1 核心**：SSH、SFTP、Local Shell、WSL、Serial、会话管理、Split、MultiExec、Saved Commands，以及三平台基础可用性。
+- **Experimental**：Telnet、RDP、VNC、X11。现有能力不会删除，但它们的跨平台成熟度不作为 v1 发布门禁。
+- **迁移入口**：MobaXterm 会话导入作为 P1 优先项提前推进，但不作为 v1 发布门禁。
+- 更完整的远程桌面、X11、Workspace Restore 与 Multi-hop 在真实运行证据和用户反馈基础上继续推进。
+
+这一区分描述的是发布承诺，不代表 Experimental 功能当前不可用。
+
 ## 功能概览
 
 - 连接管理：统一管理 SSH、RDP、VNC、Telnet 和串口连接，支持分组、最近连接、收藏、搜索、复制配置和快速启动。
