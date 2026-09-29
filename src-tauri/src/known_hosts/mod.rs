@@ -154,7 +154,7 @@ impl KnownHostStore {
     }
 }
 
-fn validate_host_key_info(info: &HostKeyInfo) -> Result<(), AppError> {
+pub(crate) fn validate_host_key_info(info: &HostKeyInfo) -> Result<(), AppError> {
     if info.host.trim().is_empty() || info.port == 0 {
         return Err(AppError::new(
             "known_host_trust_invalid",
