@@ -1,0 +1,276 @@
+use std::fmt;
+use std::path::PathBuf;
+
+const X11_TCP_BASE_PORT: u16 = 6000;
+const X11_SETUP_HEADER_BYTES: usize = 12;
+const X11_AUTH_PROTOCOL: &[u8] = b"MIT-MAGIC-COOKIE-1";
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[allow(dead_code)]
+pub(crate) enum X11LocalTarget {
+    Tcp { host: String, port: u16 },
+    #[cfg(unix)]
+    Unix { path: PathBuf },
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[allow(dead_code)]
+pub(crate) struct X11DisplaySpec {
+    pub display_number: u16,
+    pub screen_number: u32,
+    pub target: X11LocalTarget,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct X11SpikeError(String);
+
+impl fmt::Display for X11SpikeError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(&self.0)
+    }
+}
+
+#[allow(dead_code)]
+pub(crate) fn parse_display(value: &str) -> Result<X11DisplaySpec, X11SpikeError> {
+    let value = value.trim();
+    let (host, display_and_screen) = value
+        .rsplit_once(':')
+        .ok_or_else(|| X11SpikeError("DISPLAY must contain ':'".to_string()))?;
+    let (display_text, screen_text) = match display_and_screen.split_once('.') {
+        Some((display, screen)) => (display, Some(screen)),
+        None => (display_and_screen, None),
+    };
+    let display_number = display_text
+        .parse::<u16>()
+        .map_err(|_| X11SpikeError("DISPLAY number is invalid".to_string()))?;
+    let screen_number = screen_text
+        .unwrap_or("0")
+        .parse::<u32>()
+        .map_err(|_| X11SpikeError("DISPLAY screen is invalid".to_string()))?;
+    let port = X11_TCP_BASE_PORT
+        .checked_add(display_number)
+        .ok_or_else(|| X11SpikeError("DISPLAY number exceeds TCP port range".to_string()))?;
+
+    #[cfg(unix)]
+    let target = {
+        if host.is_empty() || host.eq_ignore_ascii_case("unix") {
+            X11LocalTarget::Unix {
+                path: PathBuf::from(format!("/tmp/.X11-unix/X{display_number}")),
+            }
+        } else if host.starts_with('/') {
+            // XQuartz launchd DISPLAY values look like:
+            // /private/tmp/com.apple.launchd.<id>/org.xquartz:0
+            X11LocalTarget::Unix {
+                path: PathBuf::from(format!("{host}:{display_number}")),
+            }
+        } else {
+            X11LocalTarget::Tcp {
+                host: normalize_tcp_host(host),
+                port,
+            }
+        }
+    };
+
+    #[cfg(not(unix))]
+    let target = X11LocalTarget::Tcp {
+        host: if host.is_empty() || host.eq_ignore_ascii_case("unix") {
+            "127.0.0.1".to_string()
+        } else {
+            normalize_tcp_host(host)
+        },
+        port,
+    };
+
+    Ok(X11DisplaySpec {
+        display_number,
+        screen_number,
+        target,
+    })
+}
+
+fn normalize_tcp_host(host: &str) -> String {
+    host.strip_prefix('[')
+        .and_then(|value| value.strip_suffix(']'))
+        .unwrap_or(host)
+        .to_string()
+}
+
+#[allow(dead_code)]
+pub(crate) fn replace_fake_cookie_in_setup(
+    packet: &mut [u8],
+    fake_cookie: &[u8],
+    real_cookie: &[u8],
+) -> Result<usize, X11SpikeError> {
+    if fake_cookie.len() != real_cookie.len() {
+        return Err(X11SpikeError(
+            "fake and real X11 cookies must have the same length".to_string(),
+        ));
+    }
+    if packet.len() < X11_SETUP_HEADER_BYTES {
+        return Err(X11SpikeError("X11 setup packet is truncated".to_string()));
+    }
+
+    let little_endian = match packet[0] {
+        b'l' => true,
+        b'B' => false,
+        other => {
+            return Err(X11SpikeError(format!(
+                "unsupported X11 byte-order marker {other:#x}"
+            )));
+        }
+    };
+    let read_u16 = |bytes: &[u8]| -> u16 {
+        let pair = [bytes[0], bytes[1]];
+        if little_endian {
+            u16::from_le_bytes(pair)
+        } else {
+            u16::from_be_bytes(pair)
+        }
+    };
+
+    let auth_name_len = read_u16(&packet[6..8]) as usize;
+    let auth_data_len = read_u16(&packet[8..10]) as usize;
+    let auth_name_start = X11_SETUP_HEADER_BYTES;
+    let auth_name_end = auth_name_start
+        .checked_add(auth_name_len)
+        .ok_or_else(|| X11SpikeError("X11 auth protocol length overflow".to_string()))?;
+    let auth_data_start = align4(auth_name_end)
+        .ok_or_else(|| X11SpikeError("X11 auth protocol padding overflow".to_string()))?;
+    let auth_data_end = auth_data_start
+        .checked_add(auth_data_len)
+        .ok_or_else(|| X11SpikeError("X11 auth cookie length overflow".to_string()))?;
+
+    if auth_data_end > packet.len() {
+        return Err(X11SpikeError("X11 setup auth fields are truncated".to_string()));
+    }
+    if &packet[auth_name_start..auth_name_end] != X11_AUTH_PROTOCOL {
+        return Err(X11SpikeError(
+            "X11 setup does not use MIT-MAGIC-COOKIE-1".to_string(),
+        ));
+    }
+    if auth_data_len != fake_cookie.len()
+        || &packet[auth_data_start..auth_data_end] != fake_cookie
+    {
+        return Err(X11SpikeError(
+            "X11 setup cookie does not match the forwarding cookie".to_string(),
+        ));
+    }
+
+    packet[auth_data_start..auth_data_end].copy_from_slice(real_cookie);
+    Ok(auth_data_end)
+}
+
+fn align4(value: usize) -> Option<usize> {
+    value.checked_add(3).map(|value| value & !3)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        parse_display, replace_fake_cookie_in_setup, X11DisplaySpec, X11LocalTarget,
+        X11_AUTH_PROTOCOL,
+    };
+
+    #[test]
+    #[cfg(unix)]
+    fn parses_local_unix_and_xquartz_launchd_displays() {
+        assert_eq!(
+            parse_display(":0").unwrap(),
+            X11DisplaySpec {
+                display_number: 0,
+                screen_number: 0,
+                target: X11LocalTarget::Unix {
+                    path: "/tmp/.X11-unix/X0".into(),
+                },
+            }
+        );
+        assert_eq!(
+            parse_display("/private/tmp/com.apple.launchd.demo/org.xquartz:0").unwrap(),
+            X11DisplaySpec {
+                display_number: 0,
+                screen_number: 0,
+                target: X11LocalTarget::Unix {
+                    path: "/private/tmp/com.apple.launchd.demo/org.xquartz:0".into(),
+                },
+            }
+        );
+    }
+
+    #[test]
+    fn parses_tcp_display_and_screen() {
+        assert_eq!(
+            parse_display("localhost:10.2").unwrap(),
+            X11DisplaySpec {
+                display_number: 10,
+                screen_number: 2,
+                target: X11LocalTarget::Tcp {
+                    host: "localhost".to_string(),
+                    port: 6010,
+                },
+            }
+        );
+    }
+
+    #[test]
+    fn swaps_fake_cookie_in_little_endian_setup_packet() {
+        let fake = [0x11; 16];
+        let real = [0x22; 16];
+        let mut packet = setup_packet(true, &fake);
+
+        let consumed = replace_fake_cookie_in_setup(&mut packet, &fake, &real).unwrap();
+
+        assert_eq!(consumed, 48);
+        assert_eq!(&packet[32..48], &real);
+    }
+
+    #[test]
+    fn swaps_fake_cookie_in_big_endian_setup_packet() {
+        let fake = [0x33; 16];
+        let real = [0x44; 16];
+        let mut packet = setup_packet(false, &fake);
+
+        replace_fake_cookie_in_setup(&mut packet, &fake, &real).unwrap();
+
+        assert_eq!(&packet[32..48], &real);
+    }
+
+    #[test]
+    fn rejects_wrong_cookie_protocol_and_truncated_setup() {
+        let fake = [0x55; 16];
+        let real = [0x66; 16];
+        let mut wrong_cookie = setup_packet(true, &[0x77; 16]);
+        assert!(replace_fake_cookie_in_setup(&mut wrong_cookie, &fake, &real).is_err());
+
+        let mut wrong_protocol = setup_packet(true, &fake);
+        wrong_protocol[12] = b'X';
+        assert!(replace_fake_cookie_in_setup(&mut wrong_protocol, &fake, &real).is_err());
+
+        let mut truncated = vec![b'l'; 11];
+        assert!(replace_fake_cookie_in_setup(&mut truncated, &fake, &real).is_err());
+    }
+
+    fn setup_packet(little_endian: bool, cookie: &[u8; 16]) -> Vec<u8> {
+        let mut packet = vec![0u8; 48];
+        packet[0] = if little_endian { b'l' } else { b'B' };
+        write_u16(&mut packet[2..4], 11, little_endian);
+        write_u16(&mut packet[4..6], 0, little_endian);
+        write_u16(
+            &mut packet[6..8],
+            X11_AUTH_PROTOCOL.len() as u16,
+            little_endian,
+        );
+        write_u16(&mut packet[8..10], cookie.len() as u16, little_endian);
+        packet[12..30].copy_from_slice(X11_AUTH_PROTOCOL);
+        packet[32..48].copy_from_slice(cookie);
+        packet
+    }
+
+    fn write_u16(target: &mut [u8], value: u16, little_endian: bool) {
+        let bytes = if little_endian {
+            value.to_le_bytes()
+        } else {
+            value.to_be_bytes()
+        };
+        target.copy_from_slice(&bytes);
+    }
+}

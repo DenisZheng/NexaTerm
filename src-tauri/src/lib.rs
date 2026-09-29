@@ -31,6 +31,7 @@ mod tunnels;
 mod vnc;
 mod webdav;
 mod webdav_sync;
+mod x11_forward;
 use storage_vault::VaultState;
 use tauri::Manager;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
