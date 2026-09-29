@@ -1908,7 +1908,7 @@ function SecuritySettingsSection({
           description={
             settings.masterPasswordEnabled
               ? "已开启。vault 使用安全密码加密，启动后必须解锁。"
-              : "默认关闭，适合个人使用；密码仍会加密保存到本机 vault。"
+              : "默认关闭；macOS/Windows 的本机解锁 key 存入系统凭据存储，Linux 使用 0600 权限本地 key。"
           }
         >
           <SettingsToggle
@@ -2083,7 +2083,7 @@ function SecuritySettingsSection({
         ) : null}
 
         <p className="settings-note">
-          高级保护关闭时不会明文保存密码；开启后如果忘记安全密码，已保存的密码和口令无法恢复。
+          密码与口令始终保存在加密 vault；高级保护关闭时仅由本机解锁 key 自动打开。开启后如果忘记安全密码，已保存的密码和口令无法恢复。
         </p>
 
         {localError || error ? (
