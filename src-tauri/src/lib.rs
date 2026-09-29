@@ -83,6 +83,7 @@ pub fn run() {
             commands::connection_transfer_preview,
             commands::connection_transfer_import,
             mobaxterm_import::mobaxterm_import_preview,
+            mobaxterm_import::mobaxterm_import_apply,
             commands::connection_list,
             commands::connection_upsert,
             commands::connection_set_favorite,
