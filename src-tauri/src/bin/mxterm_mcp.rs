@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use m_xterm_lib::mcp;
+use nexaterm_lib::mcp;
 use serde_json::{json, Value};
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
@@ -188,7 +188,7 @@ struct HttpConfig {
     token_hash: String,
 }
 
-fn parse_cli_config() -> Result<CliConfig, m_xterm_lib::app_error::AppError> {
+fn parse_cli_config() -> Result<CliConfig, nexaterm_lib::app_error::AppError> {
     let mut args = env::args().skip(1);
     let mut data_dir: Option<PathBuf> = None;
     let mut http_config: Option<HttpConfig> = None;
@@ -212,7 +212,7 @@ fn parse_cli_config() -> Result<CliConfig, m_xterm_lib::app_error::AppError> {
             "--port" => {
                 let value = required_arg("--port", args.next())?;
                 port = value.parse::<u16>().map_err(|error| {
-                    m_xterm_lib::app_error::AppError::new(
+                    nexaterm_lib::app_error::AppError::new(
                         "mcp_remote_port_invalid",
                         "remote MCP port is invalid",
                         error,
@@ -220,7 +220,7 @@ fn parse_cli_config() -> Result<CliConfig, m_xterm_lib::app_error::AppError> {
                     )
                 })?;
                 if port == 0 {
-                    return Err(m_xterm_lib::app_error::AppError::new(
+                    return Err(nexaterm_lib::app_error::AppError::new(
                         "mcp_remote_port_invalid",
                         "remote MCP port is invalid",
                         "port is 0",
@@ -240,7 +240,7 @@ fn parse_cli_config() -> Result<CliConfig, m_xterm_lib::app_error::AppError> {
             .map(|value| value.trim().to_string())
             .filter(|value| !value.is_empty())
             .ok_or_else(|| {
-                m_xterm_lib::app_error::AppError::new(
+                nexaterm_lib::app_error::AppError::new(
                     "mcp_remote_token_missing",
                     "remote MCP token hash is required",
                     "--token-sha256 missing",
@@ -257,7 +257,7 @@ fn parse_cli_config() -> Result<CliConfig, m_xterm_lib::app_error::AppError> {
     let data_dir = data_dir
         .or_else(|| mcp::default_app_data_dir().ok())
         .ok_or_else(|| {
-            m_xterm_lib::app_error::AppError::new(
+            nexaterm_lib::app_error::AppError::new(
                 "mcp_data_dir_missing",
                 "data dir not provided",
                 "--data-dir absent",
@@ -274,7 +274,7 @@ fn parse_cli_config() -> Result<CliConfig, m_xterm_lib::app_error::AppError> {
 fn required_arg(
     flag: &str,
     value: Option<String>,
-) -> Result<String, m_xterm_lib::app_error::AppError> {
+) -> Result<String, nexaterm_lib::app_error::AppError> {
     value.ok_or_else(|| {
         let code = if flag == "--data-dir" {
             "mcp_data_dir_missing"
@@ -282,7 +282,7 @@ fn required_arg(
             "mcp_argument_missing"
         };
         let message = format!("{flag} requires a value");
-        m_xterm_lib::app_error::AppError::new(code, &message, flag, true)
+        nexaterm_lib::app_error::AppError::new(code, &message, flag, true)
     })
 }
 
@@ -1025,7 +1025,7 @@ async fn call_tool(
     data_dir: &Path,
     name: &str,
     arguments: Value,
-) -> Result<Value, m_xterm_lib::app_error::AppError> {
+) -> Result<Value, nexaterm_lib::app_error::AppError> {
     mcp::reject_plaintext_credential_args(&arguments)?;
     let metadata_repository = mcp::repository_for_metadata(data_dir)?;
     let settings = mcp::load_settings(&metadata_repository)?;
@@ -1072,7 +1072,7 @@ async fn call_tool(
                 .filter(mcp::connection_is_supported)
                 .map(mcp::redacted_connection)
                 .ok_or_else(|| {
-                    m_xterm_lib::app_error::AppError::new(
+                    nexaterm_lib::app_error::AppError::new(
                         "connection_missing",
                         "连接不存在。",
                         format!("connection_id={connection_id}"),
@@ -1162,7 +1162,7 @@ async fn call_tool(
             )
             .await?
         )),
-        _ => Err(m_xterm_lib::app_error::AppError::new(
+        _ => Err(nexaterm_lib::app_error::AppError::new(
             "mcp_tool_unknown",
             "未知 MCP 工具。",
             name,

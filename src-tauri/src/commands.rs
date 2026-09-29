@@ -639,7 +639,7 @@ pub fn get_app_runtime_info() -> Result<AppRuntimeInfo, AppError> {
 
     Ok(AppRuntimeInfo {
         version: env!("CARGO_PKG_VERSION").to_string(),
-        repository_url: "https://github.com/syscryer/mxterm".to_string(),
+        repository_url: "https://github.com/DenisZheng/NexaTerm".to_string(),
         distribution_mode: distribution_mode.to_string(),
         is_tauri: true,
     })
