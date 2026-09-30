@@ -6139,10 +6139,6 @@ export function WorkspaceShell() {
     };
   }
 
-  function closeLocalTerminal(tabId: string) {
-    closeLocalTerminalTabs([tabId]);
-  }
-
   function closeLocalTerminalTabs(tabIds: string[]) {
     const closingIds = new Set(tabIds);
     tabIds.forEach(stopTerminalWarmupCapture);
