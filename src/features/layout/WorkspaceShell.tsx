@@ -387,8 +387,10 @@ import {
 import { syncCurrentWebviewBackground } from "../../shared/tauri/webviewBackground";
 import { initializeWindowStatePersistence } from "../../shared/tauri/windowState";
 import { Tooltip } from "../../shared/ui/Tooltip";
+import { AppActionBar } from "./AppActionBar";
 import { AppTitlebar } from "./AppTitlebar";
 import { buildTitlebarItems } from "./titlebarItems";
+import { useWorkspaceActionRuntime } from "./useWorkspaceActionRuntime";
 import { useI18n } from "../../shared/i18n";
 import { buildSshRemoteFilePanelStack } from "./remoteFilePanelStrategy";
 import { closeConfirmationCopy } from "./closeConfirmationText";
@@ -429,6 +431,7 @@ import {
 import {
   displayOrdinal,
   HOME_ITEM_ID,
+  SPLIT_ITEM_ID,
   nextOrdinal,
   selectActiveItemId,
   selectWorkspaceItems,
@@ -1484,67 +1487,34 @@ export function WorkspaceShell() {
   );
   const shortcutHandlers = useMemo<Partial<Record<string, ShortcutHandler>>>(
     () => ({
-      "commandSender.toggle": {
-        enabled: () => commandSenderTargets.length > 0,
-        run: openCommandSender,
-      },
-      "connection.quickOpen": {
-        run: () => {
-          setConnectionSearchOpen(true);
-        },
-      },
-      "settings.open": {
-        run: () => {
-          openSettingsSection();
-        },
-      },
+      "commandSender.toggle": { enabled: () => commandSenderTargets.length > 0, run: openCommandSender },
+      "connection.quickOpen": { run: () => setConnectionSearchOpen(true) },
+      "settings.open": { run: () => openSettingsSection() },
       "terminal.closeTab": {
         enabled: () =>
-          activeWorkspaceMode === "local"
-            ? Boolean(activeLocalTerminalTab)
-            : activeWorkspaceMode === "rdp"
-              ? Boolean(activeRdpSession)
-              : activeWorkspaceMode === "vnc"
-                ? Boolean(activeVncSession)
-              : Boolean(activeTerminalTab),
+          activeWorkspaceMode === "local" ? Boolean(activeLocalTerminalTab)
+          : activeWorkspaceMode === "rdp" ? Boolean(activeRdpSession)
+          : activeWorkspaceMode === "vnc" ? Boolean(activeVncSession)
+          : Boolean(activeTerminalTab),
         run: () => {
-          if (activeWorkspaceMode === "local" && activeLocalTerminalTab) {
-            closeLocalTerminal(activeLocalTerminalTab.id);
-            return;
-          }
-          if (activeWorkspaceMode === "rdp" && activeRdpSession) {
-            closeRdpSession(activeRdpSession.id);
-            return;
-          }
-          if (activeWorkspaceMode === "vnc" && activeVncSession) {
-            closeVncSession(activeVncSession.id);
-            return;
-          }
-          if (activeTerminalTab) {
-            closeTerminal(activeTerminalTab.id);
-          }
+          if (activeWorkspaceMode === "local" && activeLocalTerminalTab) closeLocalTerminal(activeLocalTerminalTab.id);
+          else if (activeWorkspaceMode === "rdp" && activeRdpSession) closeRdpSession(activeRdpSession.id);
+          else if (activeWorkspaceMode === "vnc" && activeVncSession) closeVncSession(activeVncSession.id);
+          else if (activeTerminalTab) closeTerminal(activeTerminalTab.id);
         },
       },
       "terminal.newTab": {
-        enabled: () =>
-          activeWorkspaceMode === "local" ||
-          (activeWorkspaceMode === "ssh" && isSshConnection(activeConnection)),
-        run: () => {
-          if (activeWorkspaceMode === "local") {
-            void openLocalTerminalByProfile(resolveDefaultLocalTerminalProfile());
-            return;
-          }
-          openTerminalInActiveConnection();
-        },
+        enabled: () => activeWorkspaceMode === "local" || (activeWorkspaceMode === "ssh" && isSshConnection(activeConnection)),
+        run: () => activeWorkspaceMode === "local"
+          ? void openLocalTerminalByProfile(resolveDefaultLocalTerminalProfile())
+          : openTerminalInActiveConnection(),
       },
       "terminal.search.next": {
-        enabled: () =>
-          Boolean(activeShortcutTerminalTabId && activeShortcutTerminalSearch?.query.trim()),
+        enabled: () => Boolean(activeShortcutTerminalTabId && activeShortcutTerminalSearch?.query.trim()),
         run: () => requestTerminalSearchNavigation("next"),
       },
       "terminal.search.previous": {
-        enabled: () =>
-          Boolean(activeShortcutTerminalTabId && activeShortcutTerminalSearch?.query.trim()),
+        enabled: () => Boolean(activeShortcutTerminalTabId && activeShortcutTerminalSearch?.query.trim()),
         run: () => requestTerminalSearchNavigation("previous"),
       },
       "terminal.search.toggle": {
@@ -1553,16 +1523,9 @@ export function WorkspaceShell() {
       },
     }),
     [
-      activeConnectedTerminalTab,
-      activeConnection,
-      activeLocalTerminalTab,
-      activeRdpSession,
-      activeVncSession,
-      activeShortcutTerminalSearch,
-      activeShortcutTerminalTabId,
-      activeTerminalTab,
-      activeWorkspaceMode,
-      commandSenderTargets.length,
+      activeConnection, activeLocalTerminalTab, activeRdpSession, activeVncSession,
+      activeShortcutTerminalSearch, activeShortcutTerminalTabId, activeTerminalTab,
+      activeWorkspaceMode, commandSenderTargets.length,
     ],
   );
 
@@ -1795,6 +1758,47 @@ export function WorkspaceShell() {
     },
     workspaceItems,
   );
+  const actionExecutor = useWorkspaceActionRuntime({
+    workspaceVisible: activeView !== "settings", activeItemId: activeWorkspaceItemId,
+    activePaneId: activeWorkspaceItemId === SPLIT_ITEM_ID ? focusedTerminalPaneId : null,
+    workspaceItems, terminalTabs, localTerminalTabs, rdpSessions, vncSessions,
+    splitPanes: terminalSplitPanes, terminalSearchByTabId,
+    commandSenderTargetCount: commandSenderTargets.length,
+    canSplitTerminal: Boolean(fallbackTerminalSplitBinding()) &&
+      (!terminalSplitLayout || terminalSplitCanAddPane),
+  }, settings.shortcuts.bindings, {
+    quickOpen: () => setConnectionSearchOpen(true),
+    openSettings: () => openSettingsSection(),
+    toggleSidebar: () => setLeftPaneCollapsed((collapsed) => !collapsed),
+    toggleTools: () => setRightPaneCollapsed((collapsed) => !collapsed),
+    toggleCommandSender: openCommandSender,
+    closeInstance: (target) =>
+      closeRequestController.request({ instanceIds: [target.instanceId], splitGroup: false }),
+    newTerminal: (target, tabId) => {
+      if (target.instanceKind === "local") {
+        void openLocalTerminalByProfile(resolveDefaultLocalTerminalProfile());
+        return;
+      }
+      const tab = terminalTabsRef.current.find((candidate) => candidate.id === tabId);
+      const connection = tab ? connectionById.get(tab.connectionId) : null;
+      if (connection && isSshConnection(connection)) openTerminalInConnection(connection);
+    },
+    toggleSearch: (_, tabId) => toggleTerminalSearch(tabId),
+    searchNext: (_, tabId) => requestTerminalSearchNavigation("next", tabId),
+    searchPrevious: (_, tabId) => requestTerminalSearchNavigation("previous", tabId),
+    splitRight: (target, tabId) =>
+      startTerminalSplitForBinding({ kind: target.instanceKind, tabId }, "row"),
+    splitDown: (target, tabId) =>
+      startTerminalSplitForBinding({ kind: target.instanceKind, tabId }, "column"),
+    splitFour: (target, tabId) =>
+      startTerminalFourPaneForBinding({ kind: target.instanceKind, tabId }),
+  });
+  const newSessionEntry = {
+    localProfiles: localTerminalProfiles, localProfilesLoading: localTerminalProfilesLoading,
+    onCreateConnection: () => createConnection(),
+    onOpenLocalProfile: (profile: LocalTerminalProfile) => void openLocalTerminalByProfile(profile),
+    onQuickOpen: () => setConnectionSearchOpen(true),
+  };
   const titlebarItems = useMemo(
     () =>
       buildTitlebarItems(
@@ -5393,30 +5397,16 @@ export function WorkspaceShell() {
     });
   }
 
-  function requestTerminalSearchNavigation(direction: TerminalSearchNavigationRequest["direction"]) {
-    if (!activeShortcutTerminalTabId) {
-      return;
-    }
-
+  function requestTerminalSearchNavigation(
+    direction: TerminalSearchNavigationRequest["direction"],
+    tabId = activeShortcutTerminalTabId,
+  ) {
+    if (!tabId) return;
     setTerminalSearchByTabId((states) => {
-      const current = states[activeShortcutTerminalTabId] || {
-        caseSensitive: false,
-        open: true,
-        query: "",
-      };
-      return {
-        ...states,
-        [activeShortcutTerminalTabId]: {
-          ...current,
-          open: true,
-        },
-      };
+      const current = states[tabId] || { caseSensitive: false, open: true, query: "" };
+      return { ...states, [tabId]: { ...current, open: true } };
     });
-    setTerminalSearchNavigationRequest({
-      direction,
-      id: Date.now(),
-      tabId: activeShortcutTerminalTabId,
-    });
+    setTerminalSearchNavigationRequest({ direction, id: Date.now(), tabId });
   }
 
   function closeTerminalSearch(tabId: string) {
@@ -8251,13 +8241,7 @@ export function WorkspaceShell() {
         }
         items={titlebarItems}
         leftPaneCollapsed={leftPaneCollapsed}
-        newSession={{
-          localProfiles: localTerminalProfiles,
-          localProfilesLoading: localTerminalProfilesLoading,
-          onCreateConnection: () => createConnection(),
-          onOpenLocalProfile: (profile) => void openLocalTerminalByProfile(profile),
-          onQuickOpen: () => setConnectionSearchOpen(true),
-        }}
+        newSession={newSessionEntry}
         onCloseAll={() => closeWorkspaceItems(HOME_ITEM_ID, "all")}
         onCloseItem={(itemId) => closeWorkspaceItems(itemId, "self")}
         onCloseOthers={(itemId) => closeWorkspaceItems(itemId, "others")}
@@ -8265,6 +8249,7 @@ export function WorkspaceShell() {
         onSelectItem={selectWorkspaceItem}
         onToggleLeftPane={() => setLeftPaneCollapsed((collapsed) => !collapsed)}
       />
+      <AppActionBar executor={actionExecutor} newSession={newSessionEntry} />
 
       <main className="workspace-shell" ref={workspaceShellRef} hidden={activeView === "settings"}>
         <ConnectionPane
