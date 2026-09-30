@@ -37,6 +37,8 @@ export function closeScopeItemIds(
 export interface CloseRequest {
   /** 要关闭的实例 id（`ssh:` / `local:` / `rdp:` / `vnc:`）；分屏成员也可直接指定。 */
   instanceIds: readonly string[];
+  /** 删除指定 pane；计划时按当前 pane 重新解析 binding，空 pane 只改布局。 */
+  splitPaneIds?: readonly string[];
   /** 拆除分屏组：其当前成员（`CloseContext.splitMemberIds`）一并关闭。 */
   splitGroup: boolean;
 }
@@ -66,6 +68,8 @@ export interface CloseContext {
   remoteFileTabs: readonly { connectionId: string; dirty: boolean; name: string }[];
   /** 当前分屏组成员实例 id（按 pane 顺序）；没有分屏时为空。 */
   splitMemberIds: readonly string[];
+  /** 当前 pane 与实例的映射；用于确认后重算单 pane 关闭。 */
+  splitPanes?: readonly { id: string; instanceId: string | null }[];
   terminalTabs: readonly { connectionId: string; id: string }[];
   vncSessions: readonly { id: string }[];
 }
@@ -75,7 +79,7 @@ export function buildCloseContext(
   localTerminalTabs: readonly { id: string }[],
   rdpSessions: readonly { id: string }[],
   remoteFileTabs: readonly { connectionId: string; dirty: boolean; name: string }[],
-  terminalSplitPanes: readonly Pick<TerminalSplitPane, "binding">[],
+  terminalSplitPanes: readonly Pick<TerminalSplitPane, "binding" | "id">[],
   terminalTabs: readonly { connectionId: string; id: string }[],
   vncSessions: readonly { id: string }[],
 ): CloseContext {
@@ -86,6 +90,10 @@ export function buildCloseContext(
     splitMemberIds: terminalSplitPanes.flatMap((pane) =>
       pane.binding ? [terminalPaneBindingKey(pane.binding)] : [],
     ),
+    splitPanes: terminalSplitPanes.map((pane) => ({
+      id: pane.id,
+      instanceId: pane.binding ? terminalPaneBindingKey(pane.binding) : null,
+    })),
     terminalTabs: terminalTabs.map(({ connectionId, id }) => ({ connectionId, id })),
     vncSessions: vncSessions.map(({ id }) => ({ id })),
   };
@@ -111,6 +119,8 @@ export interface ClosePlan {
   localTabIds: string[];
   rdpSessionIds: string[];
   splitGroup: boolean;
+  /** 单 pane 关闭时，执行阶段先删除这些 pane 的布局节点。 */
+  splitPaneIds?: string[];
   /** 实例级关闭的 SSH 终端（不含已由连接级关闭覆盖的）。 */
   sshTabIds: string[];
   vncSessionIds: string[];
@@ -124,7 +134,15 @@ export interface ClosePlan {
  * - 确认：会丢弃未保存修改，或拆除含两个及以上成员的分屏组时需要确认；一次操作只确认一次。
  */
 export function planClose(request: CloseRequest, context: CloseContext): ClosePlan {
-  const closing = new Set([...request.instanceIds, ...(request.splitGroup ? context.splitMemberIds : [])]);
+  const requestedPaneIds = new Set(request.splitPaneIds ?? []);
+  const splitPanes = (context.splitPanes ?? []).filter((pane) => requestedPaneIds.has(pane.id));
+  const splitPaneIds = splitPanes.map((pane) => pane.id);
+  const paneInstanceIds = splitPanes.flatMap((pane) => pane.instanceId ? [pane.instanceId] : []);
+  const closing = new Set([
+    ...request.instanceIds,
+    ...paneInstanceIds,
+    ...(request.splitGroup ? context.splitMemberIds : []),
+  ]);
   const closingSsh = context.terminalTabs.filter((tab) => closing.has(`ssh:${tab.id}`));
   const closingSshIds = new Set(closingSsh.map((tab) => tab.id));
   const filesByConnection = new Set(context.remoteFileTabs.map((tab) => tab.connectionId));
@@ -165,6 +183,7 @@ export function planClose(request: CloseRequest, context: CloseContext): ClosePl
     localTabIds,
     rdpSessionIds,
     splitGroup: request.splitGroup,
+    ...(splitPaneIds.length > 0 ? { splitPaneIds } : {}),
     sshTabIds: closingSsh.filter((tab) => !cascading.has(tab.connectionId)).map((tab) => tab.id),
     vncSessionIds,
   };
@@ -174,6 +193,7 @@ export function planClose(request: CloseRequest, context: CloseContext): ClosePl
 export function closePlanIsEmpty(plan: ClosePlan): boolean {
   return (
     !plan.splitGroup &&
+    !(plan.splitPaneIds?.length) &&
     plan.connectionIds.length === 0 &&
     plan.sshTabIds.length === 0 &&
     plan.localTabIds.length === 0 &&

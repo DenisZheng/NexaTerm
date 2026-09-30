@@ -36,6 +36,7 @@ interface AppTitlebarProps {
     | null;
   /** 顶层工作区项（WS-M02）：首页 + 会话实例 + 分屏组，已按顺序表排好。 */
   items: TitlebarItem[];
+  closeShortcutBinding?: string | null;
   leftPaneCollapsed: boolean;
   newSession: NewSessionMenuProps;
   onCloseAll: () => void;
@@ -50,6 +51,7 @@ export function AppTitlebar({
   activeItemId,
   appUpdateNotice,
   items,
+  closeShortcutBinding,
   leftPaneCollapsed,
   newSession,
   onCloseAll,
@@ -166,7 +168,7 @@ export function AppTitlebar({
               key={item.id}
               actions={[
                 {
-                  hint: "Ctrl+F4",
+                  hint: closeShortcutBinding || undefined,
                   label: t("titlebar.close"),
                   onSelect: () => onCloseItem(item.id),
                 },
@@ -181,7 +183,6 @@ export function AppTitlebar({
                   onSelect: () => onCloseToRight(item.id),
                 },
                 {
-                  hint: "Ctrl+K W",
                   label: t("titlebar.closeAll"),
                   onSelect: onCloseAll,
                 },

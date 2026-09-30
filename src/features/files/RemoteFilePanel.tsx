@@ -16,6 +16,7 @@ import {
   FolderPlus,
   Info,
   ListTree,
+  Network,
   PanelRightClose,
   Pencil,
   RefreshCw,
@@ -55,7 +56,7 @@ import {
 } from "./remoteFilePaths";
 import type { RemoteFileEntry, RemoteFileEntryMetadata } from "./remoteFileTypes";
 
-export type RemoteFileTool = "files" | "monitor" | "commands" | "tools" | "ai";
+export type RemoteFileTool = "files" | "monitor" | "commands" | "tools" | "ai" | "tunnels";
 
 export interface RemoteFileUploadItem {
   file: File;
@@ -75,6 +76,7 @@ interface RemoteFilePanelProps {
   monitorPanel?: ReactNode;
   aiPanel?: ReactNode;
   commandPanel?: ReactNode;
+  tunnelPanel?: ReactNode;
   onCopyPath?: (path: string) => void;
   onCreateDirectory?: (parentPath: string) => void;
   onCreateFile?: (parentPath: string) => void;
@@ -171,7 +173,7 @@ const defaultRemotePath = "/";
 const loadingIndicatorDelayMs = 180;
 const remoteFileInfoDelayMs = 2000;
 const remoteFileInfoTooltipId = "remote-file-info-tooltip";
-const defaultRemoteFileTools: RemoteFileTool[] = ["files", "monitor", "commands", "tools", "ai"];
+const defaultRemoteFileTools: RemoteFileTool[] = ["files", "monitor", "commands", "tools", "tunnels", "ai"];
 
 interface RemoteFilePanelStateSnapshot {
   activeDirectoryPath: string;
@@ -197,6 +199,7 @@ function RemoteFilePanelComponent({
   monitorPanel,
   aiPanel,
   commandPanel,
+  tunnelPanel,
   onCopyPath,
   onCreateDirectory,
   onCreateFile,
@@ -447,6 +450,9 @@ function RemoteFilePanelComponent({
       />
       <div className="tool-panel-slot" hidden={effectiveActiveTool !== "tools"}>
         {toolsPanel || <p className="file-panel-empty">打开一个 SSH 会话后显示工具。</p>}
+      </div>
+      <div className="tool-panel-slot" hidden={effectiveActiveTool !== "tunnels"}>
+        {tunnelPanel || <p className="file-panel-empty">打开一个 SSH 会话后管理隧道。</p>}
       </div>
       <div className="tool-panel-slot" hidden={effectiveActiveTool !== "ai"}>
         {aiPanel || <p className="file-panel-empty">正在加载 AI 面板...</p>}
@@ -1304,6 +1310,12 @@ function FilePanelTabs({
         <button className={activeTool === "tools" ? "active" : ""} type="button" onClick={() => onToolChange?.("tools")}>
           <Wrench className="ui-icon" aria-hidden="true" />
           工具
+        </button>
+      ) : null}
+      {availableTools.includes("tunnels") ? (
+        <button className={activeTool === "tunnels" ? "active" : ""} type="button" onClick={() => onToolChange?.("tunnels")}>
+          <Network className="ui-icon" aria-hidden="true" />
+          隧道
         </button>
       ) : null}
       {availableTools.includes("ai") ? (
