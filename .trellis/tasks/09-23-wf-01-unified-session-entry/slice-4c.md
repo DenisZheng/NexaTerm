@@ -1,6 +1,6 @@
 # WF-01 slice 4C: menu and toolbar presentation checkpoint
 
-Status: SOURCE DRAFT authorized for publication in a Draft PR. Not merge-ready; dependency and real UI verification remain pending.
+Status: AUTOMATED CHECKS GREEN. Manual visual/window smoke remains pending; it does not block subsequent non-dependent development, but it blocks final 4C/A02 acceptance.
 Base: `2825de9b6555c12cce786c0a9556b0360dd16131` (main, merge of PR #16).
 Parent: existing `09-23-wf-01-unified-session-entry`; no duplicate task was created.
 Rules: WS-E01, WS-E02, WS-E03, WS-E08, WS-E09, WS-E10. A02 is not accepted.
@@ -24,35 +24,25 @@ AppActionBar is NOT mounted in WorkspaceShell. NewSession callbacks still use th
 
 ## Actual verification
 
-- Strict TypeScript 5.8.3 / ES2020 checking passed for the pure production module graph (actionPresentation and actionExecutor entry points). This does not type-check React components.
-- Transpile/syntax checking passed for 18 TS/TSX files in this partial snapshot. Cross-module React/Radix type checking remains unrun.
-- Twelve new pure tests and the existing thirty 4B tests passed through the real Node runner: 42 passed, 0 failed, 0 skipped.
-- For that offline run, a temporary TypeScript AST adapter replaced Vitest registration with node:test and toBe/toStrictEqual with strictEqual/deepStrictEqual from Node. There are 114 assertion sites. The test inputs, expected values and production logic were unchanged. This is not a standard Vitest run.
-- The first offline adapter run omitted the zh-CN JSON copy. The harness was corrected; the failed-run log is retained separately. No production assertion was relaxed to fix it.
-- Thirteen React/Radix interaction tests are authored, but NOT EXECUTED. They cover keyboard menus, Escape focus, toolbar navigation, overflow, actual/cleared bindings, disabled explanations, Command Sender, shared profile choices, stale target rejection, safe failures, locale updates, and observer cleanup.
-- PostCSS parsing, matching locale key sets, UTF-8/NUL/whitespace checks, baseline blob hashes for modified files, and patch reconstruction were checked. No light/dark/system-dark visual validation was performed.
-- Pure tests were written before their production implementation; the pre-implementation file-presence log is NOT a red runtime test result. No executed TDD red phase is claimed.
+- CI #131 on head `0150aaeab088fb5d24415e119044eda5e7157ebf` completed successfully.
+- `pnpm install --frozen-lockfile`, full TypeScript check, production build, script tests, Tauri capability/CSP checks, startup module boundary and line budget all passed.
+- Standard Vitest: 24 files passed, 345 passed / 1 existing todo. The new `AppActionBar.test.tsx` passed 13/13; `AppTitlebar.test.tsx` passed 3/3.
+- License compliance, Security evidence, Rust Windows/Linux/macOS and test-fixtures smoke all passed. The Windows package job was skipped by its existing PR trigger policy.
+- The approved `@radix-ui/react-dropdown-menu@^2.1.24` and `@radix-ui/react-menubar@^1.1.24` dependencies plus matching pnpm lock records are committed on this branch.
+- The earlier offline Node-adapter evidence remains historical only; real project CI is now the authoritative automated result.
 
-## Remaining blockers before merge
+## Manual smoke backlog (non-blocking for subsequent development)
 
-The approved Radix imports are used by this draft, but package.json and pnpm-lock.yaml have not been updated. The container cannot reach GitHub/npm directly and has no full project checkout, pnpm, React, Radix, Vitest or jsdom installation. Do not apply this patch alone and represent it as a buildable, frozen-lockfile-ready change.
+The following checks require a real Tauri window / visual inspection and are recorded rather than used to stop unrelated engineering work:
 
-In the maintainer worktree, inspect the preserved dependency stash by description and contents (not a fixed index), then apply it without dropping it until verified. If that stash cannot be used, generate the manifest and lockfile with the real package manager for the already approved ranges:
+- [ ] Light theme: menu portal surface, border, hover, disabled copy and shortcut hints are visually consistent.
+- [ ] Explicit dark theme: the same portal/menu states remain readable and use the shared theme tokens.
+- [ ] System-dark: body-ported Radix surfaces follow the system theme instead of remaining light.
+- [ ] Narrow real window: all six menu groups remain visible while lower-priority toolbar actions fold into `...`; no overlap, clipping or fake horizontal scrollbar.
+- [ ] Real keyboard/focus smoke: menu traversal and Escape focus restoration behave correctly in the Tauri window.
+- [ ] Windows/macOS material smoke when available: actionbar/portal surfaces do not break the existing native material/chrome contract.
 
-```sh
-pnpm add '@radix-ui/react-dropdown-menu@^2.1.24' '@radix-ui/react-menubar@^1.1.24'
-pnpm install --frozen-lockfile
-pnpm run check
-pnpm exec vitest run src/features/shortcuts/actionPresentation.test.ts src/features/shortcuts/actionRegistry.test.ts src/features/layout/AppActionBar.test.tsx src/features/layout/AppTitlebar.test.tsx
-pnpm test
-pnpm run test:scripts
-pnpm run build
-node scripts/check-startup-module-boundary-source.mjs
-pnpm run check:line-budget
-pnpm run check:licenses
-```
-
-Then verify the actual menu portals in light, explicit dark and system-dark themes, keyboard traversal and focus restoration, and narrow window behavior. Resolve real test/type/build findings before any claim that 4C is complete. Do not manufacture lock integrity values or increase the line budget.
+These items **do not block 4D or other work that does not depend on a visual acceptance decision**. They **do block declaring 4C/A02 finally accepted**. Any visual finding that changes product rules must be fixed before final acceptance; otherwise it may be handled as a focused follow-up without rolling back already-green automated work.
 
 ## Process and exclusions
 
