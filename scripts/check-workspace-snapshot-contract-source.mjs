@@ -27,10 +27,12 @@ if (forbiddenFieldDeclaration.test(source)) {
   throw new Error("workspace snapshot contract declares a forbidden runtime or secret field");
 }
 
-for (const spread of ["...tab", "...session", "...pointers", "...collections", "...target"]) {
-  if (source.includes(spread)) {
-    throw new Error(`workspace snapshot projection must whitelist fields instead of spreading ${spread}`);
-  }
+const forbiddenObjectSpread = /\.\.\.(tab|session|pointers|collections|target)\b(?!\.)/u;
+const spreadMatch = source.match(forbiddenObjectSpread);
+if (spreadMatch) {
+  throw new Error(
+    `workspace snapshot projection must whitelist fields instead of spreading ...${spreadMatch[1]}`,
+  );
 }
 
 console.log("WF-01 non-sensitive workspace snapshot contract source gate passed");
