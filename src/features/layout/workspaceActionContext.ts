@@ -2,9 +2,12 @@ import type { WorkspaceActionContext } from "../shortcuts/actionContext";
 import type { TerminalPaneBinding } from "../terminal/terminalSplitLayout";
 import { instanceItemId } from "../workspace/sessionTabs/instances";
 
-export type WorkspaceActionItemInput =
-  | { readonly id: string; readonly kind: "home" | "ssh" | "local" | "rdp" | "vnc" }
-  | { readonly id: string; readonly kind: "split"; readonly memberIds: readonly string[] };
+export interface WorkspaceActionItemInput {
+  readonly id: string;
+  readonly kind: "home" | "ssh" | "local" | "rdp" | "vnc" | "split";
+  readonly memberIds?: readonly string[];
+  readonly [key: string]: unknown;
+}
 
 export interface WorkspaceActionContextInput {
   readonly workspaceVisible: boolean;
@@ -43,7 +46,7 @@ export function buildWorkspaceActionContext(input: WorkspaceActionContextInput):
     activeItemId: input.activeItemId,
     activePaneId: input.activePaneId,
     items: input.workspaceItems.map((item) => item.kind === "split"
-      ? { id: item.id, kind: item.kind, memberIds: item.memberIds }
+      ? { id: item.id, kind: item.kind, memberIds: item.memberIds ?? [] }
       : { id: item.id, kind: item.kind }),
     instances: [
       ...input.terminalTabs.map((tab) => terminalInstance("ssh", tab.id)),
