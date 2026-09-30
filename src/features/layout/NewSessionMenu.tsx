@@ -1,8 +1,8 @@
-import { FolderOpen, Plus, SquarePlus } from "lucide-react";
-import { useRef, useState } from "react";
-
+import "../../styles/actionbar.css";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import * as Menubar from "@radix-ui/react-menubar";
+import { ChevronRight, FolderOpen, Plus, SquarePlus } from "lucide-react";
 import { useI18n } from "../../shared/i18n";
-import { AnchoredSurfacePortal } from "../../shared/ui/AnchoredSurfacePortal";
 import { Tooltip } from "../../shared/ui/Tooltip";
 import { LocalTerminalIcon } from "../terminal/LocalTerminalIcons";
 import type { LocalTerminalProfile } from "../terminal/localTerminalTypes";
@@ -14,98 +14,75 @@ export interface NewSessionMenuProps {
   onOpenLocalProfile: (profile: LocalTerminalProfile) => void;
   onQuickOpen: () => void;
 }
+interface NewSessionItemsProps extends NewSessionMenuProps { variant?: "menubar" | "dropdown" }
 
-/**
- * "新建会话"入口（WF-01 切片 3）：本地终端 profile、新建连接、打开已保存连接。
- * 聚合"终端"按钮退役后（WS-E13），本地终端从这里新建实例；切片 4 的工具栏"新建会话"复用本组件。
- */
-export function NewSessionMenu({
-  localProfiles,
-  localProfilesLoading,
-  onCreateConnection,
-  onOpenLocalProfile,
-  onQuickOpen,
-}: NewSessionMenuProps) {
+/** The titlebar, toolbar and Session submenu share these exact choices and callbacks. */
+export function NewSessionMenuItems({ variant = "dropdown", ...props }: NewSessionItemsProps) {
   const { t } = useI18n();
-  const triggerRef = useRef<HTMLButtonElement | null>(null);
-  const [open, setOpen] = useState(false);
-
-  function choose(action: () => void) {
-    setOpen(false);
-    action();
-  }
-
+  const Menu = variant === "menubar" ? Menubar : DropdownMenu;
   return (
     <>
-      <Tooltip label={t("newSession.title")}>
-        <button
-          ref={triggerRef}
-          className="title-tool-button title-new-session"
-          type="button"
-          aria-label={t("newSession.title")}
-          aria-expanded={open}
-          aria-haspopup="menu"
-          onClick={() => setOpen((value) => !value)}
-        >
-          <Plus className="title-tool-icon" aria-hidden="true" />
-        </button>
-      </Tooltip>
-      <AnchoredSurfacePortal
-        anchorRef={triggerRef}
-        ariaLabel={t("newSession.title")}
-        className="title-new-session-menu dropdown-menu-content"
-        desiredHeight={420}
-        minHeight={160}
-        open={open}
-        role="menu"
-        width={300}
-        onOpenChange={setOpen}
-      >
-        <div className="title-new-session-menu-heading">{t("newSession.localTerminals")}</div>
-        {localProfilesLoading ? (
-          <div className="title-new-session-menu-empty">{t("newSession.profilesLoading")}</div>
-        ) : localProfiles.length === 0 ? (
-          <div className="title-new-session-menu-empty">{t("newSession.noProfiles")}</div>
-        ) : (
-          localProfiles.map((profile) => (
-            <button
-              key={profile.id}
-              className="local-terminal-profile-menu-item dropdown-menu-item"
-              type="button"
-              role="menuitem"
-              onClick={() => choose(() => onOpenLocalProfile(profile))}
-            >
-              <span className="local-terminal-menu-label">
-                <LocalTerminalIcon className="ui-icon" kind={profile.kind} title={profile.name} />
-                <span>{profile.name}</span>
-              </span>
-            </button>
-          ))
-        )}
-        <div className="context-menu-separator" role="separator" />
-        <button
-          className="local-terminal-profile-menu-item dropdown-menu-item"
-          type="button"
-          role="menuitem"
-          onClick={() => choose(onCreateConnection)}
-        >
+      <Menu.Label className="title-new-session-menu-heading">{t("newSession.localTerminals")}</Menu.Label>
+      {props.localProfilesLoading || props.localProfiles.length === 0 ? (
+        <Menu.Item disabled className="dropdown-menu-item">
+          {t(props.localProfilesLoading ? "newSession.profilesLoading" : "newSession.noProfiles")}
+        </Menu.Item>
+      ) : props.localProfiles.map((profile) => (
+        <Menu.Item key={profile.id} className="local-terminal-profile-menu-item dropdown-menu-item"
+          textValue={profile.name} onSelect={() => props.onOpenLocalProfile(profile)}>
           <span className="local-terminal-menu-label">
-            <SquarePlus className="ui-icon" aria-hidden="true" />
-            <span>{t("newSession.createConnection")}</span>
+            <LocalTerminalIcon className="ui-icon" kind={profile.kind} title={profile.name} />
+            <span>{profile.name}</span>
           </span>
-        </button>
-        <button
-          className="local-terminal-profile-menu-item dropdown-menu-item"
-          type="button"
-          role="menuitem"
-          onClick={() => choose(onQuickOpen)}
-        >
-          <span className="local-terminal-menu-label">
-            <FolderOpen className="ui-icon" aria-hidden="true" />
-            <span>{t("newSession.quickOpen")}</span>
-          </span>
-        </button>
-      </AnchoredSurfacePortal>
+        </Menu.Item>
+      ))}
+      <Menu.Separator className="context-menu-separator" />
+      <Menu.Item className="dropdown-menu-item" onSelect={props.onCreateConnection}>
+        <SquarePlus className="ui-icon" aria-hidden="true" />{t("newSession.createConnection")}
+      </Menu.Item>
+      <Menu.Item className="dropdown-menu-item" onSelect={props.onQuickOpen}>
+        <FolderOpen className="ui-icon" aria-hidden="true" />{t("newSession.quickOpen")}
+      </Menu.Item>
     </>
+  );
+}
+
+export function NewSessionSubMenu({ variant = "dropdown", ...props }: NewSessionItemsProps) {
+  const { t } = useI18n();
+  const Menu = variant === "menubar" ? Menubar : DropdownMenu;
+  return (
+    <Menu.Sub>
+      <Menu.SubTrigger className="dropdown-menu-item" textValue={t("newSession.title")}>
+        <Plus className="ui-icon" aria-hidden="true" />{t("newSession.title")}
+        <ChevronRight className="ui-icon" aria-hidden="true" />
+      </Menu.SubTrigger>
+      <Menu.Portal><Menu.SubContent className="dropdown-menu-content app-entry-menu" sideOffset={4}>
+        <NewSessionMenuItems {...props} variant={variant} />
+      </Menu.SubContent></Menu.Portal>
+    </Menu.Sub>
+  );
+}
+
+export function NewSessionMenu({ toolbar = false, showLabel = false, ...props }: NewSessionMenuProps & {
+  toolbar?: boolean; showLabel?: boolean;
+}) {
+  const { t } = useI18n();
+  return (
+    <DropdownMenu.Root modal={false}>
+      <Tooltip label={t("newSession.title")}>
+        <DropdownMenu.Trigger asChild>
+          <button type="button" aria-label={t("newSession.title")}
+            data-toolbar-control={toolbar ? "true" : undefined}
+            className={toolbar ? "app-toolbar-button" : "title-tool-button title-new-session"}>
+            <Plus className={toolbar ? "ui-icon" : "title-tool-icon"} aria-hidden="true" />
+            {showLabel ? <span>{t("newSession.title")}</span> : null}
+          </button>
+        </DropdownMenu.Trigger>
+      </Tooltip>
+      <DropdownMenu.Portal><DropdownMenu.Content align="start" sideOffset={4}
+        className="title-new-session-menu dropdown-menu-content app-entry-menu">
+        <NewSessionMenuItems {...props} />
+      </DropdownMenu.Content></DropdownMenu.Portal>
+    </DropdownMenu.Root>
   );
 }
