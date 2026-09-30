@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from "react";
 
-import { resolveShortcutBinding, shortcutActions } from "./shortcutRegistry";
+import { resolveGlobalShortcutBindings } from "./shortcutRegistry";
 import { keyboardEventMatchesShortcut } from "./shortcutKeys";
 import type { ShortcutAction, ShortcutActionId } from "./shortcutTypes";
 
@@ -17,11 +17,7 @@ export function useShortcutManager({
   handlers: Partial<Record<ShortcutActionId, ShortcutHandler>>;
 }) {
   const activeBindings = useMemo(
-    () =>
-      shortcutActions.map((action) => ({
-        action,
-        binding: resolveShortcutBinding(bindings, action),
-      })),
+    () => resolveGlobalShortcutBindings(bindings),
     [bindings],
   );
 

@@ -1,4 +1,8 @@
-import type { ShortcutAction, ShortcutCategory } from "./shortcutTypes";
+import type {
+  RegisteredShortcutAction,
+  ShortcutAction,
+  ShortcutCategory,
+} from "./shortcutTypes";
 
 export const aiSendMessageShortcutActionId = "ai.sendMessage";
 
@@ -9,9 +13,10 @@ export const shortcutCategories: ShortcutCategory[] = [
   { id: "tools", label: "工具" },
 ];
 
-export const shortcutActions: ShortcutAction[] = [
+export const shortcutActions: RegisteredShortcutAction[] = [
   {
     id: "connection.quickOpen",
+    dispatch: "global",
     category: "general",
     label: "快速打开连接",
     description: "打开连接搜索面板。",
@@ -21,6 +26,7 @@ export const shortcutActions: ShortcutAction[] = [
   },
   {
     id: "settings.open",
+    dispatch: "global",
     category: "general",
     label: "打开设置",
     description: "进入设置页面。",
@@ -30,6 +36,7 @@ export const shortcutActions: ShortcutAction[] = [
   },
   {
     id: "terminal.newTab",
+    dispatch: "global",
     category: "terminal",
     label: "新建终端 Tab",
     description: "基于当前上下文新建 SSH 或本地终端 Tab。",
@@ -39,6 +46,7 @@ export const shortcutActions: ShortcutAction[] = [
   },
   {
     id: "terminal.closeTab",
+    dispatch: "global",
     category: "terminal",
     label: "关闭当前终端 Tab",
     description: "关闭当前活动的 SSH 或本地终端 Tab。",
@@ -48,6 +56,7 @@ export const shortcutActions: ShortcutAction[] = [
   },
   {
     id: "terminal.search.toggle",
+    dispatch: "global",
     category: "search",
     label: "打开或关闭终端搜索",
     description: "切换当前终端的搜索条。",
@@ -57,6 +66,7 @@ export const shortcutActions: ShortcutAction[] = [
   },
   {
     id: "terminal.search.next",
+    dispatch: "global",
     category: "search",
     label: "搜索下一个",
     description: "跳转到当前终端搜索的下一个结果。",
@@ -66,6 +76,7 @@ export const shortcutActions: ShortcutAction[] = [
   },
   {
     id: "terminal.search.previous",
+    dispatch: "global",
     category: "search",
     label: "搜索上一个",
     description: "跳转到当前终端搜索的上一个结果。",
@@ -75,6 +86,7 @@ export const shortcutActions: ShortcutAction[] = [
   },
   {
     id: aiSendMessageShortcutActionId,
+    dispatch: "local",
     category: "tools",
     label: "发送 AI 消息",
     description: "在 AI 对话输入框中发送当前问题。",
@@ -84,6 +96,7 @@ export const shortcutActions: ShortcutAction[] = [
   },
   {
     id: "commandSender.toggle",
+    dispatch: "global",
     category: "tools",
     label: "打开或关闭 Command Sender",
     description: "切换命令发送面板。",
@@ -116,4 +129,13 @@ export function resolveShortcutBinding(
   return Object.prototype.hasOwnProperty.call(bindings, action.id)
     ? bindings[action.id] ?? null
     : action.defaultBinding;
+}
+
+/** 从同一动作表派生全局候选；不复制动作定义或用户绑定。 */
+export function resolveGlobalShortcutBindings(
+  bindings: Record<string, string | null | undefined>,
+) {
+  return shortcutActions
+    .filter((action) => action.dispatch === "global")
+    .map((action) => ({ action, binding: resolveShortcutBinding(bindings, action) }));
 }
