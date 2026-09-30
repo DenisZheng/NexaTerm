@@ -23,6 +23,8 @@ export interface TerminalSubtabMenuContext<T extends { id: string }> {
   split: (tab: T, direction: "row" | "column") => void;
   fourPane: (tab: T) => void;
   restoreSplit?: (tab: T) => void;
+  /** Actual user binding for terminal.closeTab; null/undefined means no hint. */
+  closeHint?: string | null;
 }
 
 export interface TerminalSubtabMenuOverrides {
@@ -44,7 +46,7 @@ export function buildTerminalSubtabActions<T extends { id: string }>(
   if (overrides.prepend) out.push(...overrides.prepend);
   if (!overrides.hideClose) {
     out.push({
-      hint: "Ctrl+F4",
+      hint: ctx.closeHint || undefined,
       label: "关闭",
       onSelect: () => {
         if (tab) ctx.close(tab);
@@ -72,7 +74,6 @@ export function buildTerminalSubtabActions<T extends { id: string }>(
   if (!overrides.hideCloseAll) {
     out.push({
       disabled: ctx.tabs.length === 0,
-      hint: "Ctrl+K W",
       label: "全部关闭",
       onSelect: () => ctx.closeAll(),
     });

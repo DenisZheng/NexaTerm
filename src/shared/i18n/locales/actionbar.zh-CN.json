@@ -49,5 +49,6 @@
   "actionBar.reason.noHandler": "此入口尚未接入工作区操作。",
   "actionBar.reason.pending": "此操作正在进行中。",
   "actionBar.reason.capability": "此入口尚未接入 X11 能力判断。",
-  "actionBar.reason.split": "当前终端或布局暂不支持继续分屏。"
+  "actionBar.reason.split": "当前终端或布局暂不支持继续分屏。",
+  "actionBar.reason.tunnels": "请先打开 SSH 工作区再管理隧道。"
 }

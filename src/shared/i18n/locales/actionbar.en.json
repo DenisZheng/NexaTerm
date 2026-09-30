@@ -49,5 +49,6 @@
   "actionBar.reason.noHandler": "This entry is not connected to a workspace handler yet.",
   "actionBar.reason.pending": "This action is already in progress.",
   "actionBar.reason.capability": "X11 capability is not connected to this entry yet.",
-  "actionBar.reason.split": "Splitting is unavailable for this terminal or layout."
+  "actionBar.reason.split": "Splitting is unavailable for this terminal or layout.",
+  "actionBar.reason.tunnels": "Open an SSH workspace to manage tunnels."
 }

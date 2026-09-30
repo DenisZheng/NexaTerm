@@ -32,7 +32,7 @@ export interface WorkspaceActionState {
 }
 interface ActionPolicy {
   readonly target: ActionTargetKind;
-  readonly capability?: "create-terminal" | "search" | "search-result" | "command-targets" | "split";
+  readonly capability?: "create-terminal" | "search" | "search-result" | "command-targets" | "split" | "tunnels";
   readonly deferred?: ActionDisabledReason;
 }
 
@@ -55,7 +55,7 @@ const entryPolicies: Readonly<Record<string, ActionPolicy>> = {
   "terminal.splitRight": { target: "terminal", capability: "split" },
   "terminal.splitDown": { target: "terminal", capability: "split" },
   "terminal.splitFour": { target: "terminal", capability: "split" },
-  "tools.tunnels": { target: "none" },
+  "tools.tunnels": { target: "none", capability: "tunnels" },
   "tools.x11": { target: "none", deferred: "capability-unavailable" },
   "help.shortcuts": { target: "none" },
   "help.about": { target: "none" },
@@ -100,6 +100,7 @@ export function resolveWorkspaceAction(
   if (resolved.reason) return disabled(resolved.reason);
   const { target } = resolved;
   if (policy.capability === "command-targets" && !(context.commandSenderTargetCount > 0)) return disabled("no-command-targets");
+  if (policy.capability === "tunnels" && !context.canOpenTunnels) return disabled("tunnel-unavailable");
   if (target.kind === "instance" && policy.capability) {
     const instance = context.instances.find(({ id }) => id === target.instanceId);
     if (policy.capability === "split") {

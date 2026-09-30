@@ -25,6 +25,7 @@ export interface WorkspaceActionContext {
   readonly instances: readonly ActionInstanceRef[];
   readonly panes: readonly ActionPaneRef[];
   readonly commandSenderTargetCount: number;
+  readonly canOpenTunnels?: boolean;
 }
 
 export type ActionTargetSelector =
@@ -44,7 +45,7 @@ export type ActionDisabledReason =
   | "empty-pane" | "terminal-required" | "terminal-unavailable" | "search-query-empty"
   | "unknown-action" | "local-only" | "deferred-wf04c" | "no-command-targets"
   | "shortcut-unbound" | "input-focus" | "handler-unavailable" | "action-pending"
-  | "capability-unavailable" | "split-unavailable";
+  | "capability-unavailable" | "split-unavailable" | "tunnel-unavailable";
 export type ActionTargetResolution =
   | { readonly target: ActionTarget; readonly reason: null }
   | { readonly target: null; readonly reason: ActionDisabledReason };
