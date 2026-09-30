@@ -6,7 +6,6 @@ export interface WorkspaceActionItemInput {
   readonly id: string;
   readonly kind: "home" | "ssh" | "local" | "rdp" | "vnc" | "split";
   readonly memberIds?: readonly string[];
-  readonly [key: string]: unknown;
 }
 
 export interface WorkspaceActionContextInput {
