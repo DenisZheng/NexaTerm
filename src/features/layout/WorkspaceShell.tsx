@@ -8168,7 +8168,7 @@ export function WorkspaceShell() {
             source: "context-menu",
             target: { kind: "item", itemId },
           });
-        }
+        }}
         onCloseOthers={(itemId) => closeWorkspaceItems(itemId, "others")}
         onCloseToRight={(itemId) => closeWorkspaceItems(itemId, "right")}
         onSelectItem={selectWorkspaceItem}
