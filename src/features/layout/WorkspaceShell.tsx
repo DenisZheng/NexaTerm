@@ -1711,7 +1711,8 @@ export function WorkspaceShell() {
     commandSenderTargetCount: commandSenderTargets.length,
     canSplitTerminal: Boolean(fallbackTerminalSplitBinding()) &&
       (!terminalSplitLayout || terminalSplitCanAddPane),
-    canOpenTunnels: activeWorkspaceMode === "ssh" && isSshConnection(activeConnection),
+    canOpenTunnels:
+      activeView !== "settings" && activeWorkspaceMode === "ssh" && isSshConnection(activeConnection),
   }, settings.shortcuts.bindings, {
     quickOpen: () => setConnectionSearchOpen(true),
     openSettings: () => openSettingsSection(),
@@ -5001,6 +5002,21 @@ export function WorkspaceShell() {
     });
   }
 
+  function requestRelativeTerminalClose(
+    kind: "ssh" | "local",
+    tabs: readonly { id: string }[],
+    tabId: string,
+    scope: "others" | "right",
+  ) {
+    const index = tabs.findIndex((tab) => tab.id === tabId);
+    if (index < 0) return;
+    requestTerminalInstanceClose(
+      kind,
+      (scope === "others" ? tabs.filter((_, itemIndex) => itemIndex !== index) : tabs.slice(index + 1))
+        .map((tab) => tab.id),
+    );
+  }
+
   function renderTerminalSplitGroupSubtab() {
     const boundPaneCount = terminalSplitPanes.filter((pane) => pane.binding).length;
     // 分屏组只保留关闭分屏组动作；通用标签关闭/分屏动作不适用于组本身。
@@ -5071,12 +5087,8 @@ export function WorkspaceShell() {
       index,
       activate: activateTerminalTab,
       close: (t) => runTerminalInstanceAction("terminal.closeTab", "ssh", t.id),
-      closeOthers: (t) => requestTerminalInstanceClose(
-        "ssh", activeConnectionTabs.filter((item) => item.id !== t.id).map((item) => item.id),
-      ),
-      closeRight: (t) => requestTerminalInstanceClose(
-        "ssh", activeConnectionTabs.slice(activeConnectionTabs.findIndex((item) => item.id === t.id) + 1).map((item) => item.id),
-      ),
+      closeOthers: (t) => requestRelativeTerminalClose("ssh", activeConnectionTabs, t.id, "others"),
+      closeRight: (t) => requestRelativeTerminalClose("ssh", activeConnectionTabs, t.id, "right"),
       closeAll: () => requestTerminalInstanceClose("ssh", activeConnectionTabs.map((item) => item.id)),
       split: (t, direction) => runTerminalInstanceAction(
         direction === "row" ? "terminal.splitRight" : "terminal.splitDown", "ssh", t.id,
@@ -5155,12 +5167,8 @@ export function WorkspaceShell() {
       index,
       activate: activateLocalTerminalTab,
       close: (t) => runTerminalInstanceAction("terminal.closeTab", "local", t.id),
-      closeOthers: (t) => requestTerminalInstanceClose(
-        "local", localTerminalTabs.filter((item) => item.id !== t.id).map((item) => item.id),
-      ),
-      closeRight: (t) => requestTerminalInstanceClose(
-        "local", localTerminalTabs.slice(localTerminalTabs.findIndex((item) => item.id === t.id) + 1).map((item) => item.id),
-      ),
+      closeOthers: (t) => requestRelativeTerminalClose("local", localTerminalTabs, t.id, "others"),
+      closeRight: (t) => requestRelativeTerminalClose("local", localTerminalTabs, t.id, "right"),
       closeAll: () => requestTerminalInstanceClose("local", localTerminalTabs.map((item) => item.id)),
       split: (t, direction) => runTerminalInstanceAction(
         direction === "row" ? "terminal.splitRight" : "terminal.splitDown", "local", t.id,
