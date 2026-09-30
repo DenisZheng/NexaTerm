@@ -1,11 +1,14 @@
 import ReactDOM from "react-dom/client";
 import { applyStartupTheme, readStartupSettings } from "./features/settings/startupSettings";
+import { setLocalePreference } from "./shared/i18n";
 import { restoreCurrentWindowState, showCurrentWindow } from "./shared/tauri/windowState";
 
 const startupWindowRestoreTimeoutMs = 1600;
 
 async function bootstrap() {
-  applyStartupTheme(readStartupSettings());
+  const startupSettings = readStartupSettings();
+  applyStartupTheme(startupSettings);
+  setLocalePreference(startupSettings.basic.locale);
 
   const windowStateReady = Promise.race([
     restoreCurrentWindowState(),

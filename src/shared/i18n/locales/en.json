@@ -69,5 +69,10 @@
   "sidebar.filesPath": "Terminal path",
   "sidebar.filesPathUnknown": "Not detected",
   "sidebar.filesUnavailable": "Select an SSH terminal or SSH pane to bind Files.",
-  "sidebar.filesPlaceholder": "WF-03 will move the real remote file browser here; this slice only binds the active SSH context."
+  "sidebar.filesPlaceholder": "WF-03 will move the real remote file browser here; this slice only binds the active SSH context.",
+  "settings.locale.title": "Language",
+  "settings.locale.description": "Language used by the new workspace entry surfaces.",
+  "settings.locale.system": "System",
+  "settings.locale.en": "English",
+  "settings.locale.zhCN": "Simplified Chinese"
 }

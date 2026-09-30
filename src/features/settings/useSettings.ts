@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
+import { setLocalePreference } from "../../shared/i18n";
+
 import {
   defaultSettings,
   normalizeSettings,
@@ -21,6 +23,10 @@ export function useSettings() {
   useEffect(() => {
     writeStoredSettings(settings);
   }, [settings]);
+
+  useEffect(() => {
+    setLocalePreference(settings.basic.locale);
+  }, [settings.basic.locale]);
 
   const updateBasic = useCallback((update: Partial<BasicSettings>) => {
     setSettings((current) =>
