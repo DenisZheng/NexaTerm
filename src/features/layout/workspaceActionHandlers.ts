@@ -37,7 +37,9 @@ function rawInstanceId(instanceId: string) {
 }
 
 /** 4D-1 business adapter. It owns no state and never imports WorkspaceShell. */
-export function createWorkspaceActionHandlers(operations: WorkspaceActionOperations) {
+export function createWorkspaceActionHandlers(
+  operations: WorkspaceActionOperations,
+): Readonly<Record<string, WorkspaceActionHandler>> {
   return {
     "connection.quickOpen": application(operations.quickOpen),
     "settings.open": application(operations.openSettings),
@@ -52,5 +54,5 @@ export function createWorkspaceActionHandlers(operations: WorkspaceActionOperati
     "terminal.splitRight": terminalInstance(operations.splitRight),
     "terminal.splitDown": terminalInstance(operations.splitDown),
     "terminal.splitFour": terminalInstance(operations.splitFour),
-  } satisfies Readonly<Record<string, WorkspaceActionHandler>>;
+  };
 }

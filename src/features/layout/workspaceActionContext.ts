@@ -1,19 +1,23 @@
 import type { WorkspaceActionContext } from "../shortcuts/actionContext";
 import type { TerminalPaneBinding } from "../terminal/terminalSplitLayout";
-import { instanceItemId, type WorkspaceItem } from "../workspace/sessionTabs/instances";
+import { instanceItemId } from "../workspace/sessionTabs/instances";
+
+export type WorkspaceActionItemInput =
+  | { readonly id: string; readonly kind: "home" | "ssh" | "local" | "rdp" | "vnc" }
+  | { readonly id: string; readonly kind: "split"; readonly memberIds: readonly string[] };
 
 export interface WorkspaceActionContextInput {
   readonly workspaceVisible: boolean;
   readonly activeItemId: string | null;
   readonly activePaneId: string | null;
-  readonly workspaceItems: readonly WorkspaceItem[];
+  readonly workspaceItems: readonly WorkspaceActionItemInput[];
   readonly terminalTabs: readonly { readonly id: string }[];
   readonly localTerminalTabs: readonly { readonly id: string }[];
   readonly rdpSessions: readonly { readonly id: string }[];
   readonly vncSessions: readonly { readonly id: string }[];
   readonly splitPanes: readonly {
     readonly id: string;
-    readonly binding: TerminalPaneBinding | null;
+    readonly binding?: TerminalPaneBinding | null;
   }[];
   readonly terminalSearchByTabId: Readonly<Record<string, { readonly query: string } | undefined>>;
   readonly commandSenderTargetCount: number;
