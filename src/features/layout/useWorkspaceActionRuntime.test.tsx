@@ -9,7 +9,7 @@ const context = (workspaceVisible = true): WorkspaceActionContextInput => ({
   workspaceVisible,
   activeItemId: "ssh:tab-a",
   activePaneId: null,
-  workspaceItems: [{ id: "home", kind: "home" }, { id: "ssh:tab-a", kind: "ssh", connectionId: "conn-a", ordinal: 0, tabId: "tab-a" }],
+  workspaceItems: [{ id: "home", kind: "home" }, { id: "ssh:tab-a", kind: "ssh" }],
   terminalTabs: [{ id: "tab-a" }],
   localTerminalTabs: [], rdpSessions: [], vncSessions: [], splitPanes: [],
   terminalSearchByTabId: { "tab-a": { query: "needle" } },
