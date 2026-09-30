@@ -99,9 +99,9 @@ describe("buildCloseContext", () => {
         [{ id: "r1" }],
         [{ connectionId: "a", dirty: true, name: "draft.txt" }],
         [
-          { binding: { kind: "ssh", tabId: "t1" } },
-          { binding: undefined },
-          { binding: { kind: "local", tabId: "l1" } },
+          { id: "pane-ssh", binding: { kind: "ssh", tabId: "t1" } },
+          { id: "pane-empty", binding: undefined },
+          { id: "pane-local", binding: { kind: "local", tabId: "l1" } },
         ],
         [{ connectionId: "a", id: "t1" }],
         [{ id: "v1" }],
@@ -111,6 +111,11 @@ describe("buildCloseContext", () => {
       rdpSessions: [{ id: "r1" }],
       remoteFileTabs: [{ connectionId: "a", dirty: true, name: "draft.txt" }],
       splitMemberIds: ["ssh:t1", "local:l1"],
+      splitPanes: [
+        { id: "pane-ssh", instanceId: "ssh:t1" },
+        { id: "pane-empty", instanceId: null },
+        { id: "pane-local", instanceId: "local:l1" },
+      ],
       terminalTabs: [{ connectionId: "a", id: "t1" }],
       vncSessions: [{ id: "v1" }],
     });
@@ -130,6 +135,32 @@ describe("planClose（WS-E05 连带 / WS-F08 确认）", () => {
       sshTabIds: ["t3"],
       vncSessionIds: ["v1"],
     });
+  });
+
+  it("单 pane 关闭按当前 pane 绑定生成同一原子计划；空 pane 只删除布局", () => {
+    const context: CloseContext = {
+      ...baseContext,
+      splitPanes: [
+        { id: "pane-ssh", instanceId: "ssh:t1" },
+        { id: "pane-empty", instanceId: null },
+      ],
+    };
+    expect(planClose({ instanceIds: [], splitGroup: false, splitPaneIds: ["pane-ssh"] }, context)).toMatchObject({
+      confirmation: null,
+      splitPaneIds: ["pane-ssh"],
+      sshTabIds: ["t1"],
+    });
+    const empty = planClose({ instanceIds: [], splitGroup: false, splitPaneIds: ["pane-empty"] }, context);
+    expect(empty).toMatchObject({ confirmation: null, splitPaneIds: ["pane-empty"], sshTabIds: [] });
+    expect(closePlanIsEmpty(empty)).toBe(false);
+  });
+
+  it("确认前 pane 已消失时重算为空，不回退到兄弟 pane", () => {
+    const plan = planClose(
+      { instanceIds: [], splitGroup: false, splitPaneIds: ["pane-gone"] },
+      { ...baseContext, splitPanes: [{ id: "pane-other", instanceId: "ssh:t1" }] },
+    );
+    expect(closePlanIsEmpty(plan)).toBe(true);
   });
 
   it("已不存在的实例被忽略，计划为空（确认时按当时状态重算用得到）", () => {

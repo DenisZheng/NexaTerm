@@ -47,3 +47,21 @@ The real-window light/dark/system-dark, narrow-window, focus restoration and nat
 - Shell wiring contextual type-check: PASS.
 - Full source transformation checks: actionbar mounted, stable runtime present, close entry uses `closeRequestController`, targeted search explicit, legacy shortcut manager retained, main grid gets a third row while VNC runner stays unchanged: PASS.
 - Full project Vitest/build/CI must be taken from the stacked PR and is not pre-claimed here.
+
+
+## 4D-2 scope
+
+- Global shortcut dispatch now uses the same workspace action executor as menu/toolbar entries; the legacy Shell shortcut handler table is removed.
+- Editable, terminal, terminal-search, menu and IME composition focus policy is preserved; `ai.sendMessage` remains local-only.
+- SSH/local terminal context-menu close/split/four-pane operations use explicit instance targets and the current user `terminal.closeTab` binding.
+- Hard-coded `Ctrl+F4` / `Ctrl+K W` context hints are removed where no matching registered binding exists.
+- `workspace.closeItem`, `terminal.closePane`, and `terminal.closeSplitGroup` are injected through the shared executor.
+- Single-pane close extends the existing close request/plan with pane ids, so layout removal, dirty-file confirmation, and session close remain one atomic operation. Empty panes remove layout only; stale pane ids fail closed on replan.
+- Split-group close uses the existing `closeRequestController`; the old separate split-group confirmation UI path is removed.
+- `tools.tunnels` is enabled only for SSH workspaces and opens the existing right-side tool pane. `TunnelPanel` remains lazy-loaded and no new modal is introduced.
+- SSH default right-side tools expose Tunnels; Local and RDP/VNC explicit tool sets remain unchanged.
+- MultiExec remains deferred to WF-04C.
+
+## 4D-2 validation contract
+
+The stacked PR must pass the normal project TypeScript, build, Vitest, script/source-gate, Rust and fixture jobs. Manual 4C visual smoke remains recorded as non-blocking for this development slice and still blocks final 4C/A02 acceptance.

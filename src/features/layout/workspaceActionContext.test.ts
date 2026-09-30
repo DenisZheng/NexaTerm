@@ -22,6 +22,7 @@ const base = {
   terminalSearchByTabId: { "ssh-1": { query: "needle" }, "local-1": { query: "" } },
   commandSenderTargetCount: 2,
   canSplitTerminal: false,
+  canOpenTunnels: true,
 };
 
 describe("WF-01 4D-1 workspace action context bridge", () => {
@@ -61,6 +62,12 @@ describe("WF-01 4D-1 workspace action context bridge", () => {
     const context = buildWorkspaceActionContext({ ...base, workspaceVisible: false, commandSenderTargetCount: 0 });
     expect(context.workspaceVisible).toBe(false);
     expect(context.commandSenderTargetCount).toBe(0);
+    expect(context.canOpenTunnels).toBe(true);
+  });
+
+  it("projects tunnel capability as a transient workspace flag", () => {
+    expect(buildWorkspaceActionContext({ ...base, canOpenTunnels: false }).canOpenTunnels).toBe(false);
+    expect(buildWorkspaceActionContext({ ...base, canOpenTunnels: true }).canOpenTunnels).toBe(true);
   });
 
   it("does not mutate frozen source collections", () => {

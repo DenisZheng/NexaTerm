@@ -31,12 +31,12 @@ for (const [label, source, binding] of [
   [
     "SSH terminal",
     workspaceSource,
-    /onAuxClick=\{createMiddleClickCloseHandler\(\(\) => closeTerminal\(tab\.id\)\)\}/,
+    /onAuxClick=\{createMiddleClickCloseHandler\(\(\) => runTerminalInstanceAction\("terminal\.closeTab", "ssh", tab\.id\)\)\}/,
   ],
   [
     "local terminal",
     workspaceSource,
-    /onAuxClick=\{createMiddleClickCloseHandler\(\(\) => closeLocalTerminalSession\(tab\)\)\}/,
+    /onAuxClick=\{createMiddleClickCloseHandler\(\(\) => runTerminalInstanceAction\("terminal\.closeTab", "local", tab\.id\)\)\}/,
   ],
   [
     "remote file",
