@@ -1,3 +1,5 @@
+import type { WorkspaceMode } from "../workspace/sessionTabs/types";
+
 export interface WorkspaceSidebarTerminal {
   connectionId: string;
   id: string;
@@ -16,7 +18,7 @@ export interface WorkspaceSidebarResolvedFileContext {
 
 interface ResolveWorkspaceSidebarFileContextInput {
   activeTabId: string | null;
-  activeWorkspaceMode: "ssh" | "local" | "rdp" | "vnc";
+  activeWorkspaceMode: WorkspaceMode;
   focusedBinding: WorkspaceSidebarBinding | null | undefined;
   showingHome: boolean;
   splitActive: boolean;
