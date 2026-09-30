@@ -54,7 +54,7 @@ function setup(overrides: Record<string, WorkspaceActionHandler> = {}, bindings:
   return { ...view, handlers, newSession, updateContext(next: WorkspaceActionContext) { context = next; }, getContext: () => context };
 }
 async function open(name: string, role: "button" | "menuitem" = "menuitem") {
-  const control = screen.getByRole(role, { name, exact: true });
+  const control = screen.getByRole(role, { name });
   act(() => control.focus());
   fireEvent.keyDown(control, { key: "Enter" });
   await screen.findByRole("menu");
@@ -83,7 +83,7 @@ describe("WF-01 4C: real Radix entry interactions", () => {
   it("uses the real binding and dispatches the menu action once", async () => {
     const { handlers } = setup({}, { "terminal.closeTab": "Meta+W" });
     await open("Terminal");
-    const item = screen.getByRole("menuitem", { name: "Close current instance", exact: true });
+    const item = screen.getByRole("menuitem", { name: "Close current instance" });
     expect(item.textContent?.includes("Meta+W")).toBe(true);
     fireEvent.click(item);
     await waitFor(() => expect(handlers["terminal.closeTab"]).toHaveBeenCalledTimes(1));
@@ -91,7 +91,7 @@ describe("WF-01 4C: real Radix entry interactions", () => {
   });
   it("omits an intentionally cleared binding instead of showing a prototype default", async () => {
     setup({}, { "terminal.closeTab": null }); await open("Terminal");
-    expect(screen.getByRole("menuitem", { name: "Close current instance", exact: true }).textContent).toBe("Close current instance");
+    expect(screen.getByRole("menuitem", { name: "Close current instance" }).textContent).toBe("Close current instance");
   });
   it("shows the deferred reason and never invokes MultiExec", async () => {
     const { handlers } = setup(); await open("Terminal");
@@ -101,7 +101,7 @@ describe("WF-01 4C: real Radix entry interactions", () => {
   });
   it("keeps Command Sender available independently in overflow", async () => {
     const { handlers } = setup(); resize(80); await open("More tools", "button");
-    fireEvent.click(screen.getByRole("menuitem", { name: "Command Sender", exact: true }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Command Sender" }));
     await waitFor(() => expect(handlers["commandSender.toggle"]).toHaveBeenCalledTimes(1));
     expect(handlers["terminal.multiExec"]).not.toHaveBeenCalled();
   });
@@ -123,7 +123,7 @@ describe("WF-01 4C: real Radix entry interactions", () => {
   it("does not redirect a stale visible close entry to another session", async () => {
     const state = setup(); await open("Terminal");
     state.updateContext({ ...state.getContext(), instances: [] });
-    fireEvent.click(screen.getByRole("menuitem", { name: "Close current instance", exact: true }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Close current instance" }));
     const alert = await screen.findByRole("alert");
     expect(alert.textContent?.includes("no longer exists")).toBe(true);
     expect(state.handlers["terminal.closeTab"]).not.toHaveBeenCalled();
@@ -131,7 +131,7 @@ describe("WF-01 4C: real Radix entry interactions", () => {
   it("shows a safe failure without exposing raw error details or retrying", async () => {
     const handler = vi.fn(async () => { throw new Error("private-fixture-error-detail"); });
     setup({ "settings.open": handler }); await open("Settings");
-    fireEvent.click(screen.getByRole("menuitem", { name: t("actionBar.action.settings"), exact: true }));
+    fireEvent.click(screen.getByRole("menuitem", { name: t("actionBar.action.settings") }));
     const alert = await screen.findByRole("alert");
     expect(alert.textContent?.includes("could not be completed")).toBe(true);
     expect(alert.textContent?.includes("private-fixture-error-detail")).toBe(false);
@@ -139,7 +139,7 @@ describe("WF-01 4C: real Radix entry interactions", () => {
   });
   it("updates entry labels when the existing locale changes", () => {
     setup(); act(() => setLocalePreference("zh-CN"));
-    expect(screen.getByRole("menuitem", { name: "\u4f1a\u8bdd", exact: true })).toBeDefined();
+    expect(screen.getByRole("menuitem", { name: "\u4f1a\u8bdd" })).toBeDefined();
     expect(screen.getByRole("menubar", { name: "\u4e3b\u83dc\u5355" })).toBeDefined();
   });
   it("disconnects the toolbar measurement observer on unmount", () => {
