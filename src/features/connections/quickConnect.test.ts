@@ -71,7 +71,11 @@ describe("WF-02B Quick Connect address parsing", () => {
       credential_mode: "prompt",
       created_at: "temporary",
     });
-    expect(JSON.stringify(buildTemporaryConnectionProfile("opaque-ref", parsed.target))).not.toContain("password");
+    const profile = buildTemporaryConnectionProfile("opaque-ref", parsed.target);
+    expect(profile.password).toBeUndefined();
+    expect(profile.inline_password).toBeUndefined();
+    expect(profile.inline_private_key_passphrase).toBeUndefined();
+    expect(profile.proxy.password).toBe("");
   });
 
   it("re-prompts only credential failures", () => {
