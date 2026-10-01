@@ -1,4 +1,5 @@
 {
+  "close.activeTransfers": "这些连接有 {count} 个活动文件传输，将在关闭前取消。",
   "close.cascadeFiles": "这些连接不再有终端，其远程文件将一并关闭。",
   "close.confirm": "关闭",
   "close.confirmDiscard": "放弃修改并关闭",
