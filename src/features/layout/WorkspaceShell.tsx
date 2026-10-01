@@ -241,6 +241,7 @@ import {
   getRemoteFileTransfer,
   markTransferCanceled,
   prepareTransferRetry,
+  rebindRemoteFileTransferConnection,
   setTransferProgress,
   updateRemoteFileTransfer,
 } from "../files/remoteFileTransferStore";
@@ -3508,6 +3509,7 @@ export function WorkspaceShell() {
     const localName = localPathName(localPath);
     const uploadPath = joinRemotePath(normalizedParentPath, localName);
     const transferId = options.transferId ?? addRemoteFileTransfer({
+      connectionId: connection.id,
       direction: "upload",
       kind: "file",
       name: localName,
@@ -3577,6 +3579,7 @@ export function WorkspaceShell() {
     const rootName = localPathName(localPath);
     const remotePath = joinRemotePath(normalizedParentPath, rootName);
     const transferId = options.transferId ?? addRemoteFileTransfer({
+      connectionId: connection.id,
       direction: "upload",
       kind: "directory",
       name: rootName,
@@ -3652,6 +3655,7 @@ export function WorkspaceShell() {
     const normalizedParentPath = normalizeRemotePath(parentPath);
     const uploadPath = joinRemotePath(normalizedParentPath, item.file.name);
     const transferId = options.transferId ?? addRemoteFileTransfer({
+      connectionId: connection.id,
       direction: "upload",
       kind: "file",
       name: item.file.name,
@@ -3758,6 +3762,7 @@ export function WorkspaceShell() {
     const normalizedParentPath = normalizeRemotePath(parentPath);
     const remotePath = joinRemotePath(normalizedParentPath, rootName);
     const transferId = options.transferId ?? addRemoteFileTransfer({
+      connectionId: connection.id,
       direction: "upload",
       kind: "directory",
       name: rootName,
@@ -3937,6 +3942,7 @@ export function WorkspaceShell() {
     }
     const isDirectory = entry.type === "directory";
     const transferId = options.transferId ?? addRemoteFileTransfer({
+      connectionId: connection.id,
       direction: "download",
       kind: isDirectory ? "directory" : "file",
       name: entry.name,
@@ -5127,7 +5133,7 @@ export function WorkspaceShell() {
     const ref = tab.temporaryContextRef; if (!ref) return;
     const profile = await saveTemporaryQuickConnectProfile(ref, connectionById.get(tab.connectionId)?.name); await reload(); const rebound = rebindTemporaryTerminalTab(tab, profile);
     const next = terminalTabsRef.current.map((item) => item.id === tab.id ? rebound : item); terminalTabsRef.current = next; setTerminalTabs(next);
-    setRemoteFileTabs((items) => rebindConnectionItems(items, ref, profile.id)); setTemporaryConnections((items) => items.filter((item) => item.id !== ref)); activateTerminalTab(rebound);
+    setRemoteFileTabs((items) => rebindConnectionItems(items, ref, profile.id)); rebindRemoteFileTransferConnection(ref, profile.id); setTemporaryConnections((items) => items.filter((item) => item.id !== ref)); activateTerminalTab(rebound);
   }
   function renderSshTerminalSubtab(tab: TerminalTab, index: number) {
     const sshMenuCtx: TerminalSubtabMenuContext<TerminalTab> = {
