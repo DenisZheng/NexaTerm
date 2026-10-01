@@ -75,14 +75,18 @@ impl StorageMigrator {
             ));
         }
         // current < DATA_DIR_VERSION 时在此逐级迁移；v1 尚无跨版本迁移项。
-        fs::write(&path, format!("{DATA_DIR_VERSION}\n")).map_err(|e| {
-            AppError::new(
-                "storage_data_version_write_failed",
-                "数据目录版本标记写入失败。",
-                e,
-                false,
-            )
-        })?;
+        // 仅在版本缺失或过旧时盖戳，避免每个 command 都重写 `.data-version` 在并发下
+        // 互相截断文件、导致后续读取拿到空串而报 `storage_data_version_invalid`。
+        if current < DATA_DIR_VERSION {
+            fs::write(&path, format!("{DATA_DIR_VERSION}\n")).map_err(|e| {
+                AppError::new(
+                    "storage_data_version_write_failed",
+                    "数据目录版本标记写入失败。",
+                    e,
+                    false,
+                )
+            })?;
+        }
         Ok(())
     }
 

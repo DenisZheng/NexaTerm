@@ -8,6 +8,11 @@ use crate::app_error::AppError;
 
 pub const SQLITE_SCHEMA_VERSION: i64 = 2;
 
+/// 并发打开仓库时（每个 Tauri command 都会重新 open），等待写锁释放而不是立即报
+/// SQLITE_BUSY。此前 journal_mode=delete 且无 busy_timeout，一次用户操作并发触发多个
+/// command 时 initialize() 的无条件写语句会互相撞锁（sqlite_store_init_failed）。
+pub const SQLITE_BUSY_TIMEOUT_MS: std::time::Duration = std::time::Duration::from_millis(5000);
+
 const SCHEMA_SQL: &str = r#"
 PRAGMA foreign_keys = ON;
 
@@ -217,8 +222,11 @@ impl SqliteStore {
                 true,
             )
         })?;
+        connection.busy_timeout(SQLITE_BUSY_TIMEOUT_MS).map_err(sqlite_query_error)?;
+        // WAL 允许读写并行，写事务仍然串行；运行环境也必须允许日志清理和文件替换。
+        // SQLITE_IOERR_DELETE 不能按锁竞争处理，本机曾由启动器沙箱拒绝 unlink 导致。
         connection
-            .execute_batch("PRAGMA foreign_keys = ON;")
+            .execute_batch("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;")
             .map_err(sqlite_query_error)?;
 
         Ok(Self { connection })
