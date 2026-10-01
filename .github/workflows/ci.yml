@@ -83,6 +83,9 @@ jobs:
       - name: WF-01 workspace snapshot contract
         run: pnpm run check:workspace-snapshot
 
+      - name: WF-02A save-and-connect policy
+        run: pnpm run check:wf02a-save-connect
+
   security:
     name: Security evidence
     runs-on: ubuntu-22.04

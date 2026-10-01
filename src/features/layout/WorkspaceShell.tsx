@@ -81,6 +81,7 @@ import type {
   VncRunnerKind,
 } from "../connections/connectionTypes";
 import type { ConnectionTransferMode } from "../connections/connectionTransferTypes";
+import type { ConnectionSaveIntent } from "../connections/connectionDialogSubmit";
 import {
   defaultRdpExternalRunnerForPlatform,
   defaultJumpConfig,
@@ -6457,6 +6458,16 @@ export function WorkspaceShell() {
     startConnectionStep(connection, "terminal");
   }
 
+  function openNewConnectionSession(connection: ConnectionProfile) {
+    if (isRdpConnection(connection)) return void startRdpSession(connection);
+    if (isVncConnection(connection)) return void startVncSession(connection);
+    if (isTelnetConnection(connection) || isSerialConnection(connection)) {
+      openCharacterTerminalInConnection(connection);
+      return;
+    }
+    startConnectionStep(connection, "terminal");
+  }
+
   function openTerminal(connection: ConnectionProfile) {
     if (isRdpConnection(connection)) {
       openRdpConnectionSession(connection);
@@ -6486,13 +6497,6 @@ export function WorkspaceShell() {
   }
 
   function startRdpSession(connection: ConnectionProfile) {
-    const existingSession = preferredRdpSessionForConnection(connection.id);
-    if (existingSession) {
-      activateRdpSession(existingSession);
-      revealNativeRdpHostSession(existingSession);
-      return;
-    }
-
     const session = buildRdpSession(connection);
     setRdpSessions((sessions) => {
       const nextSessions = [...sessions, session];
@@ -6752,12 +6756,6 @@ export function WorkspaceShell() {
   }
 
   function startVncSession(connection: ConnectionProfile) {
-    const existingSession = preferredVncSessionForConnection(connection.id);
-    if (existingSession) {
-      activateVncSession(existingSession);
-      return;
-    }
-
     const session = buildVncSession(connection);
     setVncSessions((sessions) => {
       const nextSessions = [...sessions, session];
@@ -7477,8 +7475,12 @@ export function WorkspaceShell() {
     openSettingsSection("credentials");
   }
 
-  async function saveConnectionFromDialog(input: ConnectionProfileInput) {
-    await saveConnection(input);
+  async function saveConnectionFromDialog(
+    input: ConnectionProfileInput,
+    intent: ConnectionSaveIntent,
+  ) {
+    const saved = await saveConnection(input);
+    if (intent === "save-and-connect") openNewConnectionSession(saved);
   }
 
   async function testConnectionFromDialog(input: ConnectionProfileInput) {

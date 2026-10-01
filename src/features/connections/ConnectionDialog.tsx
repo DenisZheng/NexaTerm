@@ -14,7 +14,7 @@ import {
   TerminalSquare,
   X,
 } from "lucide-react";
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, MouseEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import { AppSelect } from "../../shared/ui/AppSelect";
 import { ConfirmDialog } from "../../shared/ui/ConfirmDialog";
@@ -80,6 +80,7 @@ import {
   connectionNetworkKind,
   errorDiagnosticId,
 } from "./connectionErrorCodes";
+import { connectionDialogSubmitPolicy, validateConnectionNetworkPath, type ConnectionSaveIntent } from "./connectionDialogSubmit";
 import type {
   CharacterBackspaceMode,
   SerialDataBits,
@@ -102,7 +103,7 @@ interface ConnectionDialogProps {
   onClose: () => void;
   onDelete: (connection: ConnectionProfile) => Promise<void>;
   onManageCredentials: () => void;
-  onSave: (input: ConnectionProfileInput) => Promise<void>;
+  onSave: (input: ConnectionProfileInput, intent: ConnectionSaveIntent) => Promise<void>;
   onTest: (input: ConnectionProfileInput) => Promise<void>;
   onTrustHostKey: (hostKey: HostKeyInfo) => Promise<void>;
 }
@@ -383,6 +384,7 @@ export function ConnectionDialog({
   const isTelnet = protocol === "telnet";
   const isSerial = protocol === "serial";
   const isCharacterProtocol = isTelnet || isSerial;
+  const submitPolicy = connectionDialogSubmitPolicy(Boolean(connection && !duplicate));
   const dialogTabs: Array<[ConnectionDialogTab, string]> = isRdp
     ? [
         ["basic", "基本"],
@@ -443,18 +445,26 @@ export function ConnectionDialog({
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const validation = isRdp || isVnc || isCharacterProtocol ? null : validateNetworkPath(form);
+    await submitWithIntent(submitPolicy.primary.intent);
+  }
+
+  async function submitWithIntent(intent: ConnectionSaveIntent) {
+    const validation = isRdp || isVnc || isCharacterProtocol ? null : validateConnectionNetworkPath(form);
     if (validation) {
       setActiveTab("proxy");
       setTestState("error");
       setFeedback(validation);
       return;
     }
-
     await runAction(async () => {
-      await onSave(normalizeForSubmit(form, credentials));
+      await onSave(normalizeForSubmit(form, credentials), intent);
       onClose();
     });
+  }
+
+  function submitSecondary(event: MouseEvent<HTMLButtonElement>) {
+    if (event.currentTarget.form?.reportValidity() === false) return;
+    void submitWithIntent(submitPolicy.secondary.intent);
   }
 
   async function testConnection() {
@@ -481,7 +491,7 @@ export function ConnectionDialog({
       return;
     }
 
-    const validation = validateNetworkPath(form);
+    const validation = validateConnectionNetworkPath(form);
     if (validation) {
       setActiveTab("proxy");
       setTestState("error");
@@ -922,8 +932,9 @@ export function ConnectionDialog({
                       取消
                     </button>
                   </Dialog.Close>
+                  <button disabled={busy} type="button" onClick={submitSecondary}>{submitPolicy.secondary.label}</button>
                   <button className="primary-button" disabled={busy} type="submit">
-                    {duplicate ? "创建副本" : connection ? "保存连接" : "创建连接"}
+                    {submitPolicy.primary.label}
                   </button>
                 </div>
               </footer>
@@ -3106,17 +3117,6 @@ function normalizeForSubmit(
     vnc: undefined,
     telnet: undefined,
     serial: undefined,
-  };
-}
-
-function validateNetworkPath(form: ConnectionProfileInput): DialogFeedback | null {
-  if (form.jump?.kind !== "ssh_jump" || form.jump.jump_connection_id?.trim()) {
-    return null;
-  }
-
-  return {
-    detail: "SSH 跳板机模式需要选择一条已保存连接。",
-    title: "请选择跳板机连接",
   };
 }
 
