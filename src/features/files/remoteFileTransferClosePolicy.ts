@@ -1,5 +1,9 @@
 import type { RemoteFileTransferItem } from "./remoteFileTransferTypes";
-import { activeRemoteFileTransferIdsForConnections } from "./remoteFileTransferStore";
+
+export type RemoteFileTransferCloseCandidate = Pick<
+  RemoteFileTransferItem,
+  "connectionId" | "id" | "status"
+>;
 
 export type RemoteFileTransferCloseBehavior =
   | "keep-running"
@@ -24,14 +28,18 @@ export interface RemoteFileTransferCloseDecision {
 }
 
 export function planRemoteFileTransferClose(
-  items: readonly RemoteFileTransferItem[],
+  items: readonly RemoteFileTransferCloseCandidate[],
   closingConnectionIds: ReadonlySet<string>,
   policy: RemoteFileTransferClosePolicy = currentRemoteFileTransferClosePolicy,
 ): RemoteFileTransferCloseDecision {
-  const activeTransferIds = activeRemoteFileTransferIdsForConnections(
-    items,
-    closingConnectionIds,
-  );
+  const activeTransferIds = items
+    .filter(
+      (item) =>
+        Boolean(item.connectionId) &&
+        closingConnectionIds.has(item.connectionId || "") &&
+        (item.status === "queued" || item.status === "running"),
+    )
+    .map((item) => item.id);
   const cancelActive = policy.behavior === "confirm-cancel-active";
   return {
     activeTransferIds,
