@@ -15,6 +15,7 @@ export interface WorkspaceSidebarFileContext {
 interface WorkspaceSidebarProps {
   activeView: WorkspaceSidebarView;
   fileContext: WorkspaceSidebarFileContext | null;
+  files?: ReactNode;
   onViewChange: (view: WorkspaceSidebarView) => void;
   sessions: ReactNode;
 }
@@ -56,6 +57,7 @@ export function writeStoredWorkspaceSidebarView(
 export function WorkspaceSidebar({
   activeView,
   fileContext,
+  files,
   onViewChange,
   sessions,
 }: WorkspaceSidebarProps) {
@@ -127,7 +129,7 @@ export function WorkspaceSidebar({
           {sessions}
         </div>
       ) : (
-        <WorkspaceSidebarFiles fileContext={fileContext} />
+        <WorkspaceSidebarFiles fileContext={fileContext} files={files} />
       )}
     </section>
   );
@@ -135,45 +137,34 @@ export function WorkspaceSidebar({
 
 function WorkspaceSidebarFiles({
   fileContext,
+  files,
 }: {
   fileContext: WorkspaceSidebarFileContext | null;
+  files?: ReactNode;
 }) {
   const { t } = useI18n();
+  const live = Boolean(fileContext && files);
   return (
     <div
       aria-labelledby="workspace-sidebar-tab-files"
-      className="workspace-sidebar-files"
+      className={`workspace-sidebar-files ${live ? "is-live" : ""}`}
       data-connection-id={fileContext?.connectionId}
       data-terminal-id={fileContext?.tabId}
       id="workspace-sidebar-panel-files"
       role="tabpanel"
     >
-      <header className="workspace-sidebar-files-head">
-        <FileText className="ui-icon" aria-hidden="true" />
-        <div className="workspace-sidebar-files-copy">
-          <strong>{t("sidebar.filesTitle")}</strong>
-          <p>{fileContext ? t("sidebar.filesBound") : t("sidebar.filesUnavailable")}</p>
-        </div>
-      </header>
-
-      {fileContext ? (
-        <dl className="workspace-sidebar-files-context">
-          <div>
-            <dt>{t("sidebar.filesBoundSession")}</dt>
-            <dd>{fileContext.connectionName || fileContext.connectionId}</dd>
-          </div>
-          <div>
-            <dt>{t("sidebar.filesConnectionId")}</dt>
-            <dd>{fileContext.connectionId}</dd>
-          </div>
-          <div>
-            <dt>{t("sidebar.filesPath")}</dt>
-            <dd>{fileContext.path || t("sidebar.filesPathUnknown")}</dd>
-          </div>
-        </dl>
-      ) : null}
-
-      <p className="workspace-sidebar-files-note">{t("sidebar.filesPlaceholder")}</p>
+      {live ? files : (
+        <>
+          <header className="workspace-sidebar-files-head">
+            <FileText className="ui-icon" aria-hidden="true" />
+            <div className="workspace-sidebar-files-copy">
+              <strong>{t("sidebar.filesTitle")}</strong>
+              <p>{fileContext ? t("sidebar.filesBound") : t("sidebar.filesUnavailable")}</p>
+            </div>
+          </header>
+          <p className="workspace-sidebar-files-note">{t("sidebar.filesPlaceholder")}</p>
+        </>
+      )}
     </div>
   );
 }

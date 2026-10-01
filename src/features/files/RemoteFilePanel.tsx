@@ -65,6 +65,7 @@ export interface RemoteFileUploadItem {
 
 interface RemoteFilePanelProps {
   active: boolean;
+  hideToolTabs?: boolean;
   activeTool: RemoteFileTool;
   availableTools?: RemoteFileTool[];
   connection: ConnectionProfile | null;
@@ -188,6 +189,7 @@ const remoteFilePanelStateCache = new Map<string, RemoteFilePanelStateSnapshot>(
 
 function RemoteFilePanelComponent({
   active = true,
+  hideToolTabs = false,
   activeTool,
   availableTools,
   connection,
@@ -432,8 +434,8 @@ function RemoteFilePanelComponent({
   if (!active) {
     return (
       <aside
-        className="tool-pane is-hidden"
-        aria-label="右侧工具面板"
+        className={`tool-pane ${hideToolTabs ? "remote-files-view " : ""}is-hidden`}
+        aria-label={hideToolTabs ? "远程文件" : "右侧工具面板"}
         aria-hidden="true"
         data-remote-file-panel-placeholder="true"
       />
@@ -441,13 +443,15 @@ function RemoteFilePanelComponent({
   }
 
   return (
-    <aside className={`tool-pane ${active ? "" : "is-hidden"}`} aria-label="右侧工具面板" aria-hidden={!active}>
-      <FilePanelTabs
-        activeTool={effectiveActiveTool}
-        availableTools={visibleTools}
-        onToolChange={onToolChange}
-        onToggleRightPane={onToggleRightPane}
-      />
+    <aside className={`tool-pane ${hideToolTabs ? "remote-files-view " : ""}${active ? "" : "is-hidden"}`} aria-label={hideToolTabs ? "远程文件" : "右侧工具面板"} aria-hidden={!active}>
+      {hideToolTabs ? null : (
+        <FilePanelTabs
+          activeTool={effectiveActiveTool}
+          availableTools={visibleTools}
+          onToolChange={onToolChange}
+          onToggleRightPane={onToggleRightPane}
+        />
+      )}
       <div className="tool-panel-slot" hidden={effectiveActiveTool !== "tools"}>
         {toolsPanel || <p className="file-panel-empty">打开一个 SSH 会话后显示工具。</p>}
       </div>
@@ -1267,6 +1271,24 @@ function RemoteFilePanelComponent({
 }
 
 export const RemoteFilePanel = memo(RemoteFilePanelComponent, areRemoteFilePanelPropsEqual);
+
+export type RemoteFilesViewProps = Omit<
+  RemoteFilePanelProps,
+  | "activeTool"
+  | "availableTools"
+  | "aiPanel"
+  | "commandPanel"
+  | "hideToolTabs"
+  | "monitorPanel"
+  | "onToggleRightPane"
+  | "onToolChange"
+  | "toolsPanel"
+  | "tunnelPanel"
+>;
+
+export function RemoteFilesView(props: RemoteFilesViewProps) {
+  return <RemoteFilePanel {...props} activeTool="files" availableTools={["files"]} hideToolTabs />;
+}
 
 function areRemoteFilePanelPropsEqual(previous: RemoteFilePanelProps, next: RemoteFilePanelProps) {
   if (!previous.active && !next.active) {
