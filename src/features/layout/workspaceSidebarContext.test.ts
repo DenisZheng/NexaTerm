@@ -73,6 +73,43 @@ describe("WF-03 Files context binding", () => {
     })).toBeNull();
   });
 
+  it("keeps a disconnected pane owner instead of borrowing a sibling directory", () => {
+    expect(resolveWorkspaceSidebarFileContext({
+      ...base,
+      splitActive: true,
+      focusedBinding: { kind: "ssh", tabId: "ssh-a" },
+      terminalDirectories: { "ssh-b": "/var/log" },
+      terminalTabs: [
+        { id: "ssh-a", connectionId: "conn-shared" },
+        { id: "ssh-b", connectionId: "conn-shared" },
+      ],
+    })).toStrictEqual({
+      connectionId: "conn-shared",
+      path: null,
+      tabId: "ssh-a",
+    });
+  });
+
+  it("keeps reconnect cwd updates on the original logical pane", () => {
+    const reconnect = {
+      ...base,
+      splitActive: true,
+      focusedBinding: { kind: "ssh" as const, tabId: "ssh-a" },
+      terminalTabs: [
+        { id: "ssh-a", connectionId: "conn-shared" },
+        { id: "ssh-b", connectionId: "conn-shared" },
+      ],
+    };
+    expect(resolveWorkspaceSidebarFileContext({
+      ...reconnect,
+      terminalDirectories: { "ssh-a": "/srv/app", "ssh-b": "/var/log" },
+    })).toMatchObject({ tabId: "ssh-a", path: "/srv/app" });
+    expect(resolveWorkspaceSidebarFileContext({
+      ...reconnect,
+      terminalDirectories: { "ssh-a": "/srv/app-next", "ssh-b": "/var/log" },
+    })).toMatchObject({ tabId: "ssh-a", path: "/srv/app-next" });
+  });
+
   it("does not expose the previous SSH context while Home is active", () => {
     expect(resolveWorkspaceSidebarFileContext({ ...base, showingHome: true })).toBeNull();
   });
