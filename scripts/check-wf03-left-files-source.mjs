@@ -1,6 +1,9 @@
 import { readFileSync } from "node:fs";
 
 const remote = readFileSync(new URL("../src/features/files/RemoteFilePanel.tsx", import.meta.url), "utf8");
+const instanceState = readFileSync(new URL("../src/features/files/remoteFileInstanceState.ts", import.meta.url), "utf8");
+const terminal = readFileSync(new URL("../src/features/terminal/TerminalPanel.tsx", import.meta.url), "utf8");
+const terminalScope = readFileSync(new URL("../src/features/terminal/terminalEventScope.ts", import.meta.url), "utf8");
 const sidebar = readFileSync(new URL("../src/features/layout/WorkspaceSidebar.tsx", import.meta.url), "utf8");
 const shell = readFileSync(new URL("../src/features/layout/WorkspaceShell.tsx", import.meta.url), "utf8");
 const css = readFileSync(new URL("../src/styles/app.css", import.meta.url), "utf8");
@@ -10,6 +13,9 @@ for (const needle of [
   'activeTool="files"',
   'availableTools={["files"]}',
   "hideToolTabs",
+  "followTerminalDirectory",
+  "currentRemoteFileFollowPolicy",
+  "canApplyDirectoryResponse",
 ]) {
   if (!remote.includes(needle)) throw new Error(`WF-03 reusable Files view missing: ${needle}`);
 }
@@ -31,6 +37,21 @@ for (const needle of [
 ]) {
   if (!shell.includes(needle)) throw new Error(`WF-03 shell Files wiring missing: ${needle}`);
 }
+for (const needle of [
+  "remoteFileInstanceOwnerKey",
+  "shouldResetRemoteFileNavigation",
+  "canApplyRemoteFileDirectoryResponse",
+  "manualBrowseBehavior",
+]) {
+  if (!instanceState.includes(needle)) throw new Error(`WF-03B instance Files ownership missing: ${needle}`);
+}
+if (!terminal.includes('import { matchesTerminalEvent } from "./terminalEventScope";')) {
+  throw new Error("WF-03B TerminalPanel must reuse the scoped terminal event guard");
+}
+if (!terminalScope.includes("event.request_id === activeRequestId")) {
+  throw new Error("WF-03B reconnect scope must reject stale request output");
+}
+
 if (shell.includes('setRightTool("files")')) {
   throw new Error("WF-03 daily Files entry must no longer reopen the right-side Files tool");
 }
@@ -44,4 +65,4 @@ for (const needle of [
   if (!css.includes(needle)) throw new Error(`WF-03 sidebar Files layout missing: ${needle}`);
 }
 
-console.log("WF-03A left Files source gate passed");
+console.log("WF-03A/03B Files source gate passed");
