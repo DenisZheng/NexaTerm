@@ -8250,7 +8250,7 @@ export function WorkspaceShell() {
           activeView={workspaceSidebarView}
           fileContext={workspaceSidebarFileContext}
           files={workspaceSidebarFileContext ? (
-            <RemoteFilesView active={!leftPaneCollapsed && workspaceSidebarView === "files"} connection={connectionById.get(workspaceSidebarFileContext.connectionId) || null}
+            <RemoteFilesView key={workspaceSidebarFileContext.tabId} active={!leftPaneCollapsed && workspaceSidebarView === "files"} connection={connectionById.get(workspaceSidebarFileContext.connectionId) || null}
               locateRequest={remoteFileLocateRequest} refreshRequest={remoteFileRefreshRequest} nativeDropTargetPath={nativeFileDropTargetPath}
               stateKey={`ssh-file-panel:${workspaceSidebarFileContext.tabId}`} terminalPath={workspaceSidebarFileContext.path}
               transferPanel={<RemoteFileTransferPanel onCancel={requestCancelTransfer} onCopyPath={copyRemotePath} onRemove={removeRemoteFileTransfer} onRetry={retryRemoteFileTransfer} onOpenLocalPath={openLocalTransferPath} onRevealLocalPath={revealLocalTransferPath} />}
