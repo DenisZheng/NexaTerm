@@ -4,6 +4,7 @@ import {
   connectionDialogSubmitPolicy,
   validateConnectionNetworkPath,
 } from "./connectionDialogSubmit";
+import { defaultAdvancedConfig, defaultProxyConfig } from "./connectionTypes";
 
 describe("WF-02A connection dialog submit policy", () => {
   it("makes save-and-connect the primary action for a new or duplicated profile", () => {
@@ -26,7 +27,10 @@ describe("WF-02A connection dialog submit policy", () => {
       host: "target.example",
       port: 22,
       username: "ops",
+      credential_mode: "prompt" as const,
+      proxy: defaultProxyConfig,
       jump: { kind: "ssh_jump" as const, jump_connection_id: "" },
+      advanced: defaultAdvancedConfig,
     };
     expect(validateConnectionNetworkPath(input)).toStrictEqual({
       detail: "SSH 跳板机模式需要选择一条已保存连接。",
