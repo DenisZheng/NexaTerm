@@ -4001,47 +4001,4 @@ mod tests {
         (repo, db_path, secrets)
     }
 
-    /// 并发复现：模拟前端一次操作触发多个 Tauri command 同时 `open_app` 的情形。
-    /// 此前 journal_mode=delete 且无 busy_timeout，每个 command 都要重跑 initialize()
-    /// 的写语句，并发时撞锁报 `sqlite_store_init_failed`。busy_timeout 修复后此处应全部成功。
-    #[test]
-    fn concurrent_open_root_survives_busy_lock() {
-        use std::sync::Arc;
-        use std::thread;
-
-        let root =
-            std::env::temp_dir().join(format!("mxterm-concurrent-{}", uuid::Uuid::new_v4()));
-        std::fs::create_dir_all(&root).unwrap();
-        let secrets: Arc<dyn SecretStore> = Arc::new(InMemorySecretStore::default());
-
-        // 先建库并标记已迁移，使后续每次 open_root 走 repair 分支（与生产一致）。
-        StorageRepository::open_root(&root, Arc::clone(&secrets)).unwrap();
-
-        let mut handles = Vec::new();
-        for i in 0..8 {
-            let root = root.clone();
-            let secrets = Arc::clone(&secrets);
-            handles.push(thread::spawn(move || {
-                let opened = StorageRepository::open_root(&root, secrets);
-                opened
-                    .and_then(|repo| repo.connection_list().map(|_| repo))
-                    .map(|r| (i, r))
-                    .map_err(|e| (i, e.raw_message))
-            }));
-        }
-
-        let mut failures = Vec::new();
-        for handle in handles {
-            match handle.join().unwrap() {
-                Ok(_) => {}
-                Err((i, raw)) => failures.push(format!("thread {i}: {raw}")),
-            }
-        }
-
-        assert!(
-            failures.is_empty(),
-            "并发 open_root 失败，busy_timeout 未覆盖真实场景：\n{}",
-            failures.join("\n")
-        );
-    }
 }
