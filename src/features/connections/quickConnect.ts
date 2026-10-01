@@ -84,6 +84,9 @@ export function isQuickConnectCredentialError(code?: string | null) {
     code &&
       (code.startsWith("terminal_auth") ||
         code.startsWith("terminal_private_key") ||
+        code === "terminal_username_missing" ||
+        code === "connection_password_missing" ||
+        code === "connection_private_key_missing" ||
         code === "credential_prompt_required"),
   );
 }
