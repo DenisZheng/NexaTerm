@@ -44,16 +44,38 @@
 .app-toolbar .app-toolbar-button { flex: 0 0 auto; }
 .app-entry-menu {
   box-sizing: border-box;
+  width: max-content;
   min-width: min(240px, calc(100vw - 16px));
   max-width: min(380px, calc(100vw - 16px));
   max-height: min(460px, var(--radix-menubar-content-available-height, var(--radix-dropdown-menu-content-available-height, calc(100vh - 16px))));
   overflow: auto;
   overscroll-behavior: contain;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  line-height: 1.5;
 }
-.app-entry-menu-item { display: flex; align-items: center; gap: 8px; white-space: normal; }
+/* 同时覆盖普通动作、本地终端和子菜单，避免三元素入口落入共享的两列网格。 */
+.app-entry-menu .dropdown-menu-item {
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  font-size: inherit;
+  white-space: nowrap;
+}
+.app-entry-menu .dropdown-menu-item > .ui-icon { flex: 0 0 auto; }
+/* 文本节点不计入 :last-child，单个前导图标不能当作尾部箭头。 */
+.app-entry-menu .dropdown-menu-item > .ui-icon:last-child:not(:first-child) { margin-left: auto; }
 .app-entry-copy { display: flex; flex: 1; flex-direction: column; gap: 3px; min-width: 0; }
-.app-entry-reason { color: var(--mx-muted); font-size: 11px; line-height: 1.4; overflow-wrap: anywhere; }
-.app-entry-menu-item .keybinding { flex: 0 0 auto; }
+.app-entry-reason {
+  color: var(--mx-muted);
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: normal;
+  overflow-wrap: break-word;
+}
+.app-entry-menu-item .keybinding { flex: 0 0 auto; margin-left: auto; }
 .app-entry-menu-item[data-highlighted] { background: var(--mx-chrome-active); outline: none; }
 .app-action-feedback {
   display: flex;

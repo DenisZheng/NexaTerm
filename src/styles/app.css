@@ -302,7 +302,8 @@ button {
 }
 
 .settings-view {
-  grid-row: 2;
+  /* 标题栏和操作栏之后才是可伸展的内容区。 */
+  grid-row: 3;
   min-width: 0;
   min-height: 0;
   display: grid;
@@ -3570,7 +3571,8 @@ button {
   height: 14px;
 }
 
-.context-menu-content {
+.context-menu-content,
+.dropdown-menu-content {
   position: relative;
   z-index: 50;
   min-width: 156px;
