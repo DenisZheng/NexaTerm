@@ -29,6 +29,11 @@ export function ConfirmDialog({
     try {
       await onConfirm();
       onOpenChange(false);
+    } catch (error) {
+      // [WF-02A 验收修复] onConfirm 抛错时也要关闭 dialog 并暴露错误，
+      // 否则 dialog 卡开 + busy 恢复 = 用户看到「按钮没反应」。
+      console.error("[ConfirmDialog] confirm failed:", error);
+      onOpenChange(false);
     } finally {
       setBusy(false);
     }

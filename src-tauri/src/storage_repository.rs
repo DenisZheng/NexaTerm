@@ -85,7 +85,10 @@ impl StorageRepository {
         drop(store);
         let connection = Connection::open(&db_path).map_err(sqlite_repository_error)?;
         connection
-            .execute_batch("PRAGMA foreign_keys = ON;")
+            .busy_timeout(crate::storage_sqlite::SQLITE_BUSY_TIMEOUT_MS)
+            .map_err(sqlite_repository_error)?;
+        connection
+            .execute_batch("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;")
             .map_err(sqlite_repository_error)?;
         Ok(Self {
             connection,
@@ -3997,4 +4000,5 @@ mod tests {
         let repo = StorageRepository::open(db_path.clone(), secrets.clone()).unwrap();
         (repo, db_path, secrets)
     }
+
 }

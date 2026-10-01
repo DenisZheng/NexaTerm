@@ -358,13 +358,21 @@ export function useConnections(options: { enabled?: boolean } = {}) {
 
   const remove = useCallback(
     async (id: string) => {
-      if (isTauri) {
-        await connectionDelete(id);
-      }
-
+      // [WF-02A 验收修复] 乐观更新：先从 state 移除，再调后端。
+      // 后端失败（如 connection_missing / secret 清理失败）时 reload 重新同步 DB，
+      // 避免幽灵连接（DB 已删但 state 残留）卡住 UI。
       setConnections((items) => items.filter((item) => item.id !== id));
+
+      if (isTauri) {
+        try {
+          await connectionDelete(id);
+        } catch (error) {
+          console.error("[useConnections] connectionDelete failed:", error);
+          void reload();
+        }
+      }
     },
-    [isTauri],
+    [isTauri, reload],
   );
 
   return useMemo(
