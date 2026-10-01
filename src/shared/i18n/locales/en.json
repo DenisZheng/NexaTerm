@@ -57,5 +57,17 @@
   "titlebar.switcher.title": "Switch session",
   "titlebar.tabs": "Workspace tabs",
   "titlebar.windowControls": "Window controls",
-  "titlebar.zoom": "Zoom window"
+  "titlebar.zoom": "Zoom window",
+  "sidebar.workspace": "Workspace sidebar",
+  "sidebar.switcher": "Sidebar view",
+  "sidebar.sessions": "Sessions",
+  "sidebar.files": "Files",
+  "sidebar.filesTitle": "Remote Files",
+  "sidebar.filesBound": "Bound to the active SSH terminal context.",
+  "sidebar.filesBoundSession": "Bound session",
+  "sidebar.filesConnectionId": "Connection ID",
+  "sidebar.filesPath": "Terminal path",
+  "sidebar.filesPathUnknown": "Not detected",
+  "sidebar.filesUnavailable": "Select an SSH terminal or SSH pane to bind Files.",
+  "sidebar.filesPlaceholder": "WF-03 will move the real remote file browser here; this slice only binds the active SSH context."
 }

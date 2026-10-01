@@ -55,6 +55,13 @@ import {
 } from "lucide-react";
 
 import { ConnectionPane } from "../connections/ConnectionPane";
+import {
+  WorkspaceSidebar,
+  readStoredWorkspaceSidebarView,
+  writeStoredWorkspaceSidebarView,
+  type WorkspaceSidebarView,
+} from "./WorkspaceSidebar";
+import { resolveWorkspaceSidebarFileContext } from "./workspaceSidebarContext";
 import { ConnectionSystemLogo } from "../connections/ConnectionSystemLogo";
 import type {
   ConnectionAuthKind,
@@ -1100,6 +1107,8 @@ export function WorkspaceShell() {
   const [transferConflictPrompt, setTransferConflictPrompt] =
     useState<TransferConflictPromptState | null>(null);
   const [leftPaneCollapsed, setLeftPaneCollapsed] = useState(false);
+  const [workspaceSidebarView, setWorkspaceSidebarView] =
+    useState<WorkspaceSidebarView>(readStoredWorkspaceSidebarView);
   const [rightPaneCollapsed, setRightPaneCollapsed] = useState(false);
   const [leftPaneWidth, setLeftPaneWidth] = useState(defaultLeftPaneWidth);
   const [rightPaneWidth, setRightPaneWidth] = useState(defaultRightPaneWidth);
@@ -1122,6 +1131,10 @@ export function WorkspaceShell() {
     () => platformCapabilities.windowMaterials,
   );
   const workspaceShellRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    writeStoredWorkspaceSidebarView(workspaceSidebarView);
+  }, [workspaceSidebarView]);
 
   const loadCommandLibrary = useCallback(async () => {
     if (!storageReady || !hasTauriRuntime()) {
@@ -1864,6 +1877,22 @@ export function WorkspaceShell() {
     settings.shortcuts.bindings,
     aiSendMessageShortcutActionId,
   );
+  const workspaceSidebarFileBinding = resolveWorkspaceSidebarFileContext({
+    activeTabId,
+    activeWorkspaceMode,
+    focusedBinding: focusedTerminalSplitBinding,
+    showingHome,
+    splitActive: terminalSplitActive,
+    terminalDirectories,
+    terminalTabs,
+  });
+  const workspaceSidebarFileContext = workspaceSidebarFileBinding
+    ? {
+        ...workspaceSidebarFileBinding,
+        connectionName:
+          connectionById.get(workspaceSidebarFileBinding.connectionId)?.name || null,
+      }
+    : null;
   const remoteFileConnection =
     showSessionWorkspace && activeConnectedTerminalTab ? activeConnection : null;
   const remoteFilePanelKey = showingRdp
@@ -8181,26 +8210,33 @@ export function WorkspaceShell() {
       <AppActionBar executor={actionExecutor} newSession={newSessionEntry} />
 
       <main className="workspace-shell" ref={workspaceShellRef} hidden={activeView === "settings"}>
-        <ConnectionPane
-          connections={connections}
-          error={error}
-          loading={loading}
-          onConnect={openConnectionSession}
-          onCreate={createConnection}
-          onDelete={deleteConnection}
-          onDuplicate={duplicateConnection}
-          onEdit={editConnection}
-          onGroupCatalogChange={setConnectionGroupCatalog}
-          onMoveConnectionToGroup={moveConnectionToGroup}
-          onOpen={openTerminal}
-          onOpenSearch={() => setConnectionSearchOpen(true)}
-          onOpenSettings={() => openSettingsSection()}
-          onPreloadCreate={preloadCreateConnectionDialog}
-          onRefresh={reload}
-          onSelect={selectConnection}
-          onToggleFavorite={toggleConnectionFavorite}
-          recentConnectionLimit={settings.basic.recentConnectionLimit}
-          selectedId={activeConnectionSelectionId}
+        <WorkspaceSidebar
+          activeView={workspaceSidebarView}
+          fileContext={workspaceSidebarFileContext}
+          onViewChange={setWorkspaceSidebarView}
+          sessions={
+            <ConnectionPane
+              connections={connections}
+              error={error}
+              loading={loading}
+              onConnect={openConnectionSession}
+              onCreate={createConnection}
+              onDelete={deleteConnection}
+              onDuplicate={duplicateConnection}
+              onEdit={editConnection}
+              onGroupCatalogChange={setConnectionGroupCatalog}
+              onMoveConnectionToGroup={moveConnectionToGroup}
+              onOpen={openTerminal}
+              onOpenSearch={() => setConnectionSearchOpen(true)}
+              onOpenSettings={() => openSettingsSection()}
+              onPreloadCreate={preloadCreateConnectionDialog}
+              onRefresh={reload}
+              onSelect={selectConnection}
+              onToggleFavorite={toggleConnectionFavorite}
+              recentConnectionLimit={settings.basic.recentConnectionLimit}
+              selectedId={activeConnectionSelectionId}
+            />
+          }
         />
 
         {!leftPaneCollapsed ? (

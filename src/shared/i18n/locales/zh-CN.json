@@ -57,5 +57,17 @@
   "titlebar.switcher.title": "会话切换",
   "titlebar.tabs": "工作区标签",
   "titlebar.windowControls": "窗口控制",
-  "titlebar.zoom": "缩放窗口"
+  "titlebar.zoom": "缩放窗口",
+  "sidebar.workspace": "工作区侧栏",
+  "sidebar.switcher": "侧栏视图",
+  "sidebar.sessions": "会话",
+  "sidebar.files": "文件",
+  "sidebar.filesTitle": "远程文件",
+  "sidebar.filesBound": "已绑定到当前活动 SSH 终端上下文。",
+  "sidebar.filesBoundSession": "绑定会话",
+  "sidebar.filesConnectionId": "连接 ID",
+  "sidebar.filesPath": "终端目录",
+  "sidebar.filesPathUnknown": "未检测到",
+  "sidebar.filesUnavailable": "请选择 SSH 终端或 SSH 分屏以绑定文件视图。",
+  "sidebar.filesPlaceholder": "WF-03 将把真实远程文件浏览器迁入这里；当前切片只绑定活动 SSH 上下文。"
 }
