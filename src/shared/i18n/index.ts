@@ -1,7 +1,12 @@
 import { useMemo, useSyncExternalStore } from "react";
 
-import en from "./locales/en.json";
-import zhCN from "./locales/zh-CN.json";
+import baseEn from "./locales/en.json";
+import baseZhCN from "./locales/zh-CN.json";
+import actionBarEn from "./locales/actionbar.en.json";
+import actionBarZhCN from "./locales/actionbar.zh-CN.json";
+
+const en = { ...baseEn, ...actionBarEn };
+const zhCN = { ...baseZhCN, ...actionBarZhCN };
 
 /**
  * 最小 i18n 内核（WS-E09，WF-01）：自建 `t(key, params)` + JSON 目录 + `useLocale`，不引入 i18n 依赖。

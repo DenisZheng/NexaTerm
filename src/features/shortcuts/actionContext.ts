@@ -5,6 +5,7 @@ export interface ActionInstanceRef {
   readonly kind: ActionInstanceKind;
   readonly canCreateTerminal?: boolean;
   readonly canSearch?: boolean;
+  readonly canSplit?: boolean;
   readonly searchQuery?: string;
 }
 export type ActionItemRef =
@@ -42,7 +43,8 @@ export type ActionDisabledReason =
   | "workspace-inactive" | "no-active-session" | "target-missing" | "wrong-target-kind"
   | "empty-pane" | "terminal-required" | "terminal-unavailable" | "search-query-empty"
   | "unknown-action" | "local-only" | "deferred-wf04c" | "no-command-targets"
-  | "shortcut-unbound" | "input-focus" | "handler-unavailable" | "action-pending";
+  | "shortcut-unbound" | "input-focus" | "handler-unavailable" | "action-pending"
+  | "capability-unavailable" | "split-unavailable";
 export type ActionTargetResolution =
   | { readonly target: ActionTarget; readonly reason: null }
   | { readonly target: null; readonly reason: ActionDisabledReason };

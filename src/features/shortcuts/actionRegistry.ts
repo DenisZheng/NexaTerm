@@ -32,7 +32,7 @@ export interface WorkspaceActionState {
 }
 interface ActionPolicy {
   readonly target: ActionTargetKind;
-  readonly capability?: "create-terminal" | "search" | "search-result" | "command-targets";
+  readonly capability?: "create-terminal" | "search" | "search-result" | "command-targets" | "split";
   readonly deferred?: ActionDisabledReason;
 }
 
@@ -50,6 +50,15 @@ const shortcutPolicies: Readonly<Record<string, ActionPolicy>> = {
 };
 // Entry-only actions intentionally do not create shortcut preference keys or default bindings.
 const entryPolicies: Readonly<Record<string, ActionPolicy>> = {
+  "view.toggleSidebar": { target: "none" },
+  "view.toggleTools": { target: "none" },
+  "terminal.splitRight": { target: "terminal", capability: "split" },
+  "terminal.splitDown": { target: "terminal", capability: "split" },
+  "terminal.splitFour": { target: "terminal", capability: "split" },
+  "tools.tunnels": { target: "none" },
+  "tools.x11": { target: "none", deferred: "capability-unavailable" },
+  "help.shortcuts": { target: "none" },
+  "help.about": { target: "none" },
   "workspace.closeItem": { target: "item" },
   "terminal.closePane": { target: "pane" },
   "terminal.closeSplitGroup": { target: "split-group" },
@@ -93,7 +102,9 @@ export function resolveWorkspaceAction(
   if (policy.capability === "command-targets" && !(context.commandSenderTargetCount > 0)) return disabled("no-command-targets");
   if (target.kind === "instance" && policy.capability) {
     const instance = context.instances.find(({ id }) => id === target.instanceId);
-    if (policy.capability === "create-terminal") {
+    if (policy.capability === "split") {
+      if (instance?.canSplit !== true) return disabled("split-unavailable");
+    } else if (policy.capability === "create-terminal") {
       if (instance?.canCreateTerminal !== true) return disabled("terminal-unavailable");
     } else if (policy.capability === "search" || policy.capability === "search-result") {
       if (instance?.canSearch !== true) return disabled("terminal-unavailable");

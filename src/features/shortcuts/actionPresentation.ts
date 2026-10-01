@@ -1,0 +1,81 @@
+import type messages from "../../shared/i18n/locales/actionbar.en.json";
+import type { ActionDisabledReason } from "./actionContext";
+
+export type ActionMessageKey = keyof typeof messages;
+export type ActionMenuGroup = "session" | "view" | "terminal" | "tools" | "settings" | "help";
+export type ActionIconName = "terminal" | "close" | "split" | "search" | "send" | "network" | "settings" | "panel" | "info" | "keyboard" | "plus";
+export interface ActionPresentation {
+  readonly group: ActionMenuGroup;
+  readonly labelKey: ActionMessageKey;
+  readonly icon: ActionIconName;
+}
+
+// Presentation only: identity, bindings, availability and execution remain in the existing registries.
+export const menuGroups: readonly { id: ActionMenuGroup; labelKey: ActionMessageKey }[] = [
+  { id: "session", labelKey: "actionBar.menu.session" },
+  { id: "view", labelKey: "actionBar.menu.view" },
+  { id: "terminal", labelKey: "actionBar.menu.terminal" },
+  { id: "tools", labelKey: "actionBar.menu.tools" },
+  { id: "settings", labelKey: "actionBar.menu.settings" },
+  { id: "help", labelKey: "actionBar.menu.help" },
+];
+export const actionPresentation: Readonly<Record<string, ActionPresentation>> = {
+  "connection.quickOpen": { group: "session", labelKey: "actionBar.action.quickOpen", icon: "search" },
+  "workspace.closeItem": { group: "session", labelKey: "actionBar.action.closeItem", icon: "close" },
+  "view.toggleSidebar": { group: "view", labelKey: "actionBar.action.sidebar", icon: "panel" },
+  "view.toggleTools": { group: "view", labelKey: "actionBar.action.tools", icon: "panel" },
+  "terminal.newTab": { group: "terminal", labelKey: "actionBar.action.newTerminal", icon: "plus" },
+  "terminal.closeTab": { group: "terminal", labelKey: "actionBar.action.closeInstance", icon: "close" },
+  "terminal.closePane": { group: "terminal", labelKey: "actionBar.action.closePane", icon: "close" },
+  "terminal.closeSplitGroup": { group: "terminal", labelKey: "actionBar.action.closeGroup", icon: "close" },
+  "terminal.splitRight": { group: "terminal", labelKey: "actionBar.action.splitRight", icon: "split" },
+  "terminal.splitDown": { group: "terminal", labelKey: "actionBar.action.splitDown", icon: "split" },
+  "terminal.splitFour": { group: "terminal", labelKey: "actionBar.action.splitFour", icon: "split" },
+  "terminal.search.toggle": { group: "terminal", labelKey: "actionBar.action.search", icon: "search" },
+  "terminal.search.next": { group: "terminal", labelKey: "actionBar.action.next", icon: "search" },
+  "terminal.search.previous": { group: "terminal", labelKey: "actionBar.action.previous", icon: "search" },
+  "terminal.multiExec": { group: "terminal", labelKey: "actionBar.action.multiExec", icon: "send" },
+  "commandSender.toggle": { group: "tools", labelKey: "actionBar.action.commandSender", icon: "send" },
+  "tools.tunnels": { group: "tools", labelKey: "actionBar.action.tunnels", icon: "network" },
+  "tools.x11": { group: "tools", labelKey: "actionBar.action.x11", icon: "panel" },
+  "settings.open": { group: "settings", labelKey: "actionBar.action.settings", icon: "settings" },
+  "help.shortcuts": { group: "help", labelKey: "actionBar.action.shortcuts", icon: "keyboard" },
+  "help.about": { group: "help", labelKey: "actionBar.action.about", icon: "info" },
+};
+export const actionReasonKeys: Readonly<Record<ActionDisabledReason, ActionMessageKey>> = {
+  "workspace-inactive": "actionBar.reason.workspaceInactive",
+  "no-active-session": "actionBar.reason.noSession",
+  "target-missing": "actionBar.reason.missing",
+  "wrong-target-kind": "actionBar.reason.wrongKind",
+  "empty-pane": "actionBar.reason.emptyPane",
+  "terminal-required": "actionBar.reason.terminalRequired",
+  "terminal-unavailable": "actionBar.reason.terminalUnavailable",
+  "search-query-empty": "actionBar.reason.noQuery",
+  "unknown-action": "actionBar.reason.unknown",
+  "local-only": "actionBar.reason.localOnly",
+  "deferred-wf04c": "actionBar.reason.multiExec",
+  "no-command-targets": "actionBar.reason.noCommandTargets",
+  "shortcut-unbound": "actionBar.reason.unbound",
+  "input-focus": "actionBar.reason.inputFocus",
+  "handler-unavailable": "actionBar.reason.noHandler",
+  "action-pending": "actionBar.reason.pending",
+  "capability-unavailable": "actionBar.reason.capability",
+  "split-unavailable": "actionBar.reason.split",
+};
+export const splitActionIds = ["terminal.splitRight", "terminal.splitDown", "terminal.splitFour"] as const;
+export interface ToolbarEntry { readonly id: string; readonly priority: number }
+export const toolbarEntries: readonly ToolbarEntry[] = [
+  { id: "new-session", priority: 0 }, { id: "split", priority: 1 },
+  { id: "terminal.multiExec", priority: 2 }, { id: "commandSender.toggle", priority: 3 },
+  { id: "tools.tunnels", priority: 4 }, { id: "tools.x11", priority: 5 },
+  { id: "terminal.search.toggle", priority: 6 }, { id: "settings.open", priority: 7 },
+];
+
+/** Width is the toolbar's available space AFTER the menubar, not the viewport width. */
+export function partitionToolbar(availableWidth: number) {
+  const width = Number.isFinite(availableWidth) ? Math.max(0, availableWidth) : 0;
+  const mode = width >= 840 ? "labels" : width >= 360 ? "icons" : width >= 160 ? "reduced" : "overflow";
+  const count = mode === "labels" || mode === "icons" ? toolbarEntries.length : mode === "reduced" ? 3 : 0;
+  const ordered = [...toolbarEntries].sort((a, b) => a.priority - b.priority);
+  return { mode, visible: ordered.slice(0, count), overflow: ordered.slice(count) };
+}

@@ -1,0 +1,73 @@
+/* Global chrome and portal rules use the existing light/dark/system token owners. */
+.app-actionbar-container { min-width: 0; position: relative; }
+.app-actionbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 34px;
+  padding: 0 8px;
+  color: var(--mx-text);
+  background: var(--mx-chrome-fill);
+  border-bottom: 1px solid var(--mx-chrome-line);
+}
+.app-menubar { display: flex; align-items: center; flex: 0 0 auto; gap: 2px; }
+.app-menubar-trigger, .app-toolbar-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 28px;
+  min-width: 30px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 400;
+  white-space: nowrap;
+  color: var(--mx-muted);
+  background: transparent;
+}
+.app-menubar-trigger:hover, .app-menubar-trigger[data-state="open"],
+.app-toolbar-button:not([aria-disabled="true"]):hover {
+  color: var(--mx-text);
+  background: var(--mx-chrome-active);
+}
+.app-menubar-trigger:focus-visible, .app-toolbar-button:focus-visible {
+  outline: 2px solid var(--mx-primary);
+  outline-offset: -2px;
+}
+.app-toolbar-slot { flex: 1 1 0; min-width: 32px; }
+.app-toolbar { display: flex; align-items: center; justify-content: flex-end; gap: 2px; }
+.app-toolbar-button[aria-disabled="true"] { color: var(--mx-subtle); cursor: not-allowed; }
+.app-toolbar .app-toolbar-button { flex: 0 0 auto; }
+.app-entry-menu {
+  box-sizing: border-box;
+  min-width: min(240px, calc(100vw - 16px));
+  max-width: min(380px, calc(100vw - 16px));
+  max-height: min(460px, var(--radix-menubar-content-available-height, var(--radix-dropdown-menu-content-available-height, calc(100vh - 16px))));
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.app-entry-menu-item { display: flex; align-items: center; gap: 8px; white-space: normal; }
+.app-entry-copy { display: flex; flex: 1; flex-direction: column; gap: 3px; min-width: 0; }
+.app-entry-reason { color: var(--mx-muted); font-size: 11px; line-height: 1.4; overflow-wrap: anywhere; }
+.app-entry-menu-item .keybinding { flex: 0 0 auto; }
+.app-entry-menu-item[data-highlighted] { background: var(--mx-chrome-active); outline: none; }
+.app-action-feedback {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 8px;
+  background: var(--mx-panel);
+  color: var(--mx-danger);
+  border-bottom: 1px solid var(--mx-line);
+  font-size: 12px;
+}
+@media (max-width: 480px) {
+  .app-actionbar { gap: 2px; padding: 0 4px; }
+  .app-menubar { gap: 0; }
+  .app-menubar-trigger { padding: 0 5px; font-size: 11px; }
+}
