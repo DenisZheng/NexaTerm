@@ -37,14 +37,15 @@ for (const needle of [
   if (!rust.includes(needle)) throw new Error(`WF-02B Rust context missing: ${needle}`);
 }
 
-for (const forbidden of [
-  "connection_upsert",
-  "connectionUpsert",
-  "INSERT INTO connections",
-]) {
-  if (rust.includes(forbidden)) {
-    throw new Error(`WF-02B temporary context must not create a persisted profile: ${forbidden}`);
-  }
+if (rust.includes("INSERT INTO connections")) {
+  throw new Error("WF-02B temporary context must use the repository save path, not direct SQL persistence");
+}
+const saveCommandStart = rust.indexOf("pub async fn temporary_connection_save");
+const terminalCommandStart = rust.indexOf("pub async fn temporary_connection_terminal_connect");
+const saveCommand = rust.slice(saveCommandStart, terminalCommandStart);
+const persistenceCalls = rust.match(/connection_upsert\(/g) || [];
+if (saveCommandStart < 0 || terminalCommandStart < 0 || persistenceCalls.length !== 1 || !saveCommand.includes("connection_upsert(")) {
+  throw new Error("WF-02B only explicit save-as-session may persist a formal connection");
 }
 
 for (const needle of [
