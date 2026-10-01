@@ -61,11 +61,15 @@ if (!lib.includes("TemporaryConnectionManager::default()")) {
   throw new Error("WF-02B temporary manager is not registered in Tauri state");
 }
 
+if (!commands.includes("resolve_remote_connection_profile")) {
+  throw new Error("WF-02B remote_file commands must import the unified resolver");
+}
 for (const needle of [
   ".state::<TemporaryConnectionManager>()",
   ".resolve_reference(connection_id)",
+  "resolve_saved_connection(app, connection_id, None)",
 ]) {
-  if (!commands.includes(needle)) throw new Error(`WF-02B Files resolver missing: ${needle}`);
+  if (!rust.includes(needle)) throw new Error(`WF-02B Files resolver missing: ${needle}`);
 }
 if ((commands.match(/resolve_remote_connection_profile\(&app, &request\.connection_id\)\.await\?/g) || []).length < 15) {
   throw new Error("WF-02B remote_file commands are not all using the unified async resolver");

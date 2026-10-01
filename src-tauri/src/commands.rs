@@ -71,7 +71,7 @@ use crate::storage_vault::{VaultState, VaultStatus};
 use crate::terminal::local::list_profiles as list_local_profiles;
 pub use crate::terminal::local_profiles::{LocalTerminalProfile, LocalTerminalProfileInput};
 use crate::terminal::manager::TerminalManager;
-use crate::temporary_connections::TemporaryConnectionManager;
+use crate::temporary_connections::resolve_remote_connection_profile;
 pub use crate::terminal::serial::{SerialPortEntry, SerialTerminalOpenRequest};
 use crate::terminal::session::ExecProgressCallback;
 pub use crate::terminal::telnet::TelnetTerminalOpenRequest;
@@ -1853,20 +1853,13 @@ pub async fn connection_list(app: AppHandle) -> Result<Vec<ConnectionProfile>, A
     StorageRepository::open_app(&app)?.connection_list()
 }
 
-pub(crate) async fn persist_connection_profile(
-    app: &AppHandle,
-    request: ConnectionProfileInput,
-) -> Result<ConnectionProfile, AppError> {
-    let _guard = connection_store_lock().lock().await;
-    StorageRepository::open_app(app)?.connection_upsert(request, &now_timestamp()?)
-}
-
 #[tauri::command]
 pub async fn connection_upsert(
     app: AppHandle,
     request: ConnectionProfileInput,
 ) -> Result<ConnectionProfile, AppError> {
-    persist_connection_profile(&app, request).await
+    let _guard = connection_store_lock().lock().await;
+    StorageRepository::open_app(&app)?.connection_upsert(request, &now_timestamp()?)
 }
 
 #[tauri::command]
@@ -2149,31 +2142,6 @@ pub async fn connection_probe_latency(
                 true,
             )
         })
-}
-
-async fn resolve_remote_connection_profile(
-    app: &AppHandle,
-    connection_id: &str,
-) -> Result<ResolvedSshConfig, AppError> {
-    let connection_id = connection_id.trim();
-    if connection_id.is_empty() {
-        return Err(AppError::new(
-            "remote_file_connection_missing",
-            "请选择活动连接。",
-            "connection_id is empty",
-            false,
-        ));
-    }
-
-    if let Some(config) = app
-        .state::<TemporaryConnectionManager>()
-        .resolve_reference(connection_id)
-        .await?
-    {
-        return Ok(config);
-    }
-
-    resolve_saved_connection(app, connection_id, None)
 }
 
 fn resolve_remote_monitor_connection(

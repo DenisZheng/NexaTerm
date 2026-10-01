@@ -2,16 +2,16 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use serde::Deserialize;
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, Manager, State};
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
 use crate::app_error::AppError;
-use crate::commands::{persist_connection_profile, TerminalConnectRequest};
+use crate::commands::{connection_upsert, TerminalConnectRequest};
 use crate::connections::{
     ConnectionAuthKind, ConnectionCredentialMode, ConnectionProfileInput, ConnectionProtocol,
 };
-use crate::ssh_config::{resolve_transient_connection, ResolvedSshConfig};
+use crate::ssh_config::{resolve_saved_connection, resolve_transient_connection, ResolvedSshConfig};
 use crate::terminal::manager::TerminalManager;
 use crate::remote_files::RemoteFileManager;
 
@@ -187,6 +187,29 @@ impl TemporaryConnectionManager {
     }
 }
 
+pub async fn resolve_remote_connection_profile(
+    app: &AppHandle,
+    connection_id: &str,
+) -> Result<ResolvedSshConfig, AppError> {
+    let connection_id = connection_id.trim();
+    if connection_id.is_empty() {
+        return Err(AppError::new(
+            "remote_file_connection_missing",
+            "请选择活动连接。",
+            "connection_id is empty",
+            false,
+        ));
+    }
+    if let Some(config) = app
+        .state::<TemporaryConnectionManager>()
+        .resolve_reference(connection_id)
+        .await?
+    {
+        return Ok(config);
+    }
+    resolve_saved_connection(app, connection_id, None)
+}
+
 #[tauri::command]
 pub async fn temporary_connection_create(
     manager: State<'_, TemporaryConnectionManager>,
@@ -269,7 +292,7 @@ pub async fn temporary_connection_save(
     request: TemporaryConnectionSaveRequest,
 ) -> Result<crate::connections::ConnectionProfile, AppError> {
     let config = manager.resolve(&request.context_ref).await?;
-    let profile = persist_connection_profile(&app, saved_profile_input(&config, request.name)).await?;
+    let profile = connection_upsert(app.clone(), saved_profile_input(&config, request.name)).await?;
     manager.associate_saved(&request.context_ref, &profile.id).await;
     Ok(profile)
 }
