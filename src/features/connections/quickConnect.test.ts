@@ -81,6 +81,9 @@ describe("WF-02B Quick Connect address parsing", () => {
   it("re-prompts only credential failures", () => {
     expect(isQuickConnectCredentialError("terminal_auth_rejected")).toBe(true);
     expect(isQuickConnectCredentialError("terminal_private_key_invalid")).toBe(true);
+    expect(isQuickConnectCredentialError("terminal_username_missing")).toBe(true);
+    expect(isQuickConnectCredentialError("connection_password_missing")).toBe(true);
+    expect(isQuickConnectCredentialError("connection_private_key_missing")).toBe(true);
     expect(isQuickConnectCredentialError("terminal_connect_timeout")).toBe(false);
   });
 });
