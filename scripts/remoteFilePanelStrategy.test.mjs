@@ -127,7 +127,8 @@ test("guards remote file async loads after the active panel unmounts", async () 
 
   assert.match(remoteFilePanelSource, /const mountedRef = useRef\(true\);/);
   assert.match(remoteFilePanelSource, /mountedRef\.current = false;/);
-  assert.match(remoteFilePanelSource, /mountedRef\.current &&/);
+  assert.match(remoteFilePanelSource, /canApplyRemoteFileDirectoryResponse/);
+  assert.match(remoteFilePanelSource, /mounted: mountedRef\.current/);
 });
 
 test("saves remote file state before tab-switch unmounts can occur", async () => {
