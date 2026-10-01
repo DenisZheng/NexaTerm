@@ -24,6 +24,7 @@ const maxErrorTransferHistory = 100;
 const finishedTransferStatuses = new Set<TransferStatus>(["success", "skipped", "canceled"]);
 
 export interface AddRemoteFileTransferInput {
+  connectionId?: string | null;
   direction: TransferDirection;
   kind: TransferKind;
   name: string;
@@ -67,11 +68,57 @@ export function getRemoteFileTransfer(transferId: string) {
   return getRemoteFileTransfers().find((item) => item.id === transferId) || null;
 }
 
+export function activeRemoteFileTransferIdsForConnections(
+  items: readonly RemoteFileTransferItem[],
+  connectionIds: ReadonlySet<string>,
+) {
+  return items
+    .filter(
+      (item) =>
+        Boolean(item.connectionId) &&
+        connectionIds.has(item.connectionId || "") &&
+        (item.status === "queued" || item.status === "running"),
+    )
+    .map((item) => item.id);
+}
+
+export function rebindRemoteFileTransferItem(
+  item: RemoteFileTransferItem,
+  fromConnectionId: string,
+  toConnectionId: string,
+): RemoteFileTransferItem {
+  if (item.connectionId !== fromConnectionId) {
+    return item;
+  }
+  const retry = item.retry
+    ? item.retry.action === "download"
+      ? { ...item.retry, input: { ...item.retry.input, connectionId: toConnectionId } }
+      : { ...item.retry, connectionId: toConnectionId }
+    : item.retry;
+  return { ...item, connectionId: toConnectionId, retry };
+}
+
+export function rebindRemoteFileTransferConnection(
+  fromConnectionId: string,
+  toConnectionId: string,
+) {
+  remoteFileTransferStore.setState((state) => {
+    let changed = false;
+    const items = state.items.map((item) => {
+      const next = rebindRemoteFileTransferItem(item, fromConnectionId, toConnectionId);
+      changed ||= next !== item;
+      return next;
+    });
+    return changed ? { items } : state;
+  });
+}
+
 export function addRemoteFileTransfer(input: AddRemoteFileTransferInput) {
   const id = `transfer-${Date.now().toString()}-${Math.random().toString(36).slice(2, 8)}`;
   const now = Date.now();
   const item: RemoteFileTransferItem = {
     createdAt: now,
+    connectionId: input.connectionId ?? null,
     direction: input.direction,
     error: null,
     id,
@@ -287,6 +334,7 @@ function trimTransferHistory(items: RemoteFileTransferItem[]) {
 
 function isTransferItemEqual(left: RemoteFileTransferItem, right: RemoteFileTransferItem) {
   return (
+    left.connectionId === right.connectionId &&
     left.direction === right.direction &&
     left.error === right.error &&
     left.kind === right.kind &&
