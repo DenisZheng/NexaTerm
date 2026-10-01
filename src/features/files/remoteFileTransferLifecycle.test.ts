@@ -76,8 +76,7 @@ describe("WF-03C remote transfer lifecycle", () => {
           conflictPolicy: "overwrite",
           connectionId: "temp:ctx-a",
           keepArchives: false,
-          localPath: "/tmp/app.log",
-          remotePath: "/var/log/app.log",
+          path: "/var/log/app.log",
         },
       },
     });
