@@ -77,6 +77,9 @@ jobs:
       - name: Startup module boundary
         run: node scripts/check-startup-module-boundary-source.mjs
 
+      - name: WF-01 i18n new-entry policy
+        run: pnpm run check:i18n-new-entry
+
   security:
     name: Security evidence
     runs-on: ubuntu-22.04

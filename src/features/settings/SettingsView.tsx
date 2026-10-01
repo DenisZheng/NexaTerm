@@ -46,6 +46,7 @@ import {
   X,
 } from "lucide-react";
 
+import { useI18n } from "../../shared/i18n";
 import { AppSelect } from "../../shared/ui/AppSelect";
 import { AppCombobox } from "../../shared/ui/AppCombobox";
 import { Tooltip } from "../../shared/ui/Tooltip";
@@ -2677,6 +2678,7 @@ function BasicSettingsSection({
   onUpdate: (update: Partial<BasicSettings>) => void;
   onUpdateFileTransfer: (update: Partial<FileTransferSettings>) => void;
 }) {
+  const { t } = useI18n();
   const [downloadRootError, setDownloadRootError] = useState<string | null>(null);
   const hasCustomDownloadRoot = fileTransferSettings.downloadRoot.trim().length > 0;
 
@@ -2768,6 +2770,23 @@ function BasicSettingsSection({
       </div>
 
       <div className="settings-panel">
+        <SettingsRow
+          icon={Globe2}
+          title={t("settings.locale.title")}
+          description={t("settings.locale.description")}
+        >
+          <AppSelect
+            ariaLabel={t("settings.locale.title")}
+            menuMinWidth={170}
+            value={settings.locale}
+            options={[
+              { label: t("settings.locale.system"), value: "system" },
+              { label: t("settings.locale.en"), value: "en" },
+              { label: t("settings.locale.zhCN"), value: "zh-CN" },
+            ]}
+            onChange={(locale) => onUpdate({ locale })}
+          />
+        </SettingsRow>
         <SettingsRow
           icon={RotateCcw}
           title="启动时恢复布局"

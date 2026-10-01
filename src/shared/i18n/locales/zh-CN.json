@@ -69,5 +69,10 @@
   "sidebar.filesPath": "终端目录",
   "sidebar.filesPathUnknown": "未检测到",
   "sidebar.filesUnavailable": "请选择 SSH 终端或 SSH 分屏以绑定文件视图。",
-  "sidebar.filesPlaceholder": "WF-03 将把真实远程文件浏览器迁入这里；当前切片只绑定活动 SSH 上下文。"
+  "sidebar.filesPlaceholder": "WF-03 将把真实远程文件浏览器迁入这里；当前切片只绑定活动 SSH 上下文。",
+  "settings.locale.title": "语言",
+  "settings.locale.description": "控制新工作区入口界面的显示语言。",
+  "settings.locale.system": "跟随系统",
+  "settings.locale.en": "English",
+  "settings.locale.zhCN": "简体中文"
 }

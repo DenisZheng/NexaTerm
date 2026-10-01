@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import type { LocalePreference } from "../../shared/i18n";
 import type {
   LocalTerminalProfileInput,
   LocalTerminalSettings,
@@ -56,6 +57,7 @@ export interface BasicSettings {
   autoCheckAppUpdate: boolean;
   filePanelFollowsActiveConnection: boolean;
   keepFailedTerminalTabs: boolean;
+  locale: LocalePreference;
   reopenLastTerminal: boolean;
   remoteFileOpenMode: RemoteFileOpenMode;
   restoreWorkspaceOnLaunch: boolean;
@@ -213,6 +215,7 @@ export const defaultSettings: MxtermSettings = {
     autoCheckAppUpdate: true,
     filePanelFollowsActiveConnection: true,
     keepFailedTerminalTabs: true,
+    locale: "system",
     reopenLastTerminal: false,
     remoteFileOpenMode: "split",
     restoreWorkspaceOnLaunch: true,
@@ -294,6 +297,11 @@ export function normalizeSettings(value: unknown): MxtermSettings {
       keepFailedTerminalTabs: normalizeBoolean(
         basic.keepFailedTerminalTabs,
         defaultSettings.basic.keepFailedTerminalTabs,
+      ),
+      locale: normalizeOneOf(
+        basic.locale,
+        ["system", "en", "zh-CN"],
+        defaultSettings.basic.locale,
       ),
       reopenLastTerminal: normalizeBoolean(
         basic.reopenLastTerminal,

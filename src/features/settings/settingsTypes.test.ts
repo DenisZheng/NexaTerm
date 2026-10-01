@@ -25,11 +25,12 @@ describe("normalizeSettings", () => {
 
   it("合法覆盖值保留，同一分区里其它字段仍取默认", () => {
     const normalized = normalizeSettings({
-      basic: { reopenLastTerminal: true, recentConnectionLimit: 20 },
+      basic: { locale: "zh-CN", reopenLastTerminal: true, recentConnectionLimit: 20 },
       appearance: { themeMode: "dark", terminalFontSize: 16 },
       security: { autoLockMinutes: 60 },
     });
 
+    expect(normalized.basic.locale).toBe("zh-CN");
     expect(normalized.basic.reopenLastTerminal).toBe(true);
     expect(normalized.basic.recentConnectionLimit).toBe(20);
     expect(normalized.basic.restoreWorkspaceOnLaunch).toBe(defaultSettings.basic.restoreWorkspaceOnLaunch);
@@ -41,12 +42,13 @@ describe("normalizeSettings", () => {
 
   it("枚举与数值只接受白名单，其它值回落默认而不是原样透传", () => {
     const normalized = normalizeSettings({
-      basic: { recentConnectionLimit: 7, remoteFileOpenMode: "tabs", reopenLastTerminal: "yes" },
+      basic: { locale: "de-DE", recentConnectionLimit: 7, remoteFileOpenMode: "tabs", reopenLastTerminal: "yes" },
       appearance: { themeMode: "midnight", terminalFontSize: 99, cursorStyle: "beam" },
       security: { autoLockMinutes: -1 },
       fileTransfer: { concurrentTransfers: 0, conflictPolicyDefault: "merge" },
     });
 
+    expect(normalized.basic.locale).toBe(defaultSettings.basic.locale);
     expect(normalized.basic.recentConnectionLimit).toBe(defaultSettings.basic.recentConnectionLimit);
     expect(normalized.basic.remoteFileOpenMode).toBe(defaultSettings.basic.remoteFileOpenMode);
     expect(normalized.basic.reopenLastTerminal).toBe(defaultSettings.basic.reopenLastTerminal);
