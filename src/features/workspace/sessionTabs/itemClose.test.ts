@@ -259,6 +259,49 @@ describe("planClose（WS-E05 连带 / WS-F08 确认）", () => {
     });
   });
 
+  it("WS-F09 默认 keep-running：关闭最后 SSH 时活动传输不被擅自取消", () => {
+    const context: CloseContext = {
+      ...baseContext,
+      remoteFileTabs: [file("a", "app.yaml")],
+      remoteFileTransfers: [
+        { connectionId: "a", id: "transfer-a", status: "running" },
+        { connectionId: "b", id: "transfer-b", status: "running" },
+      ],
+    };
+    const plan = planClose(
+      { instanceIds: ["ssh:t1", "ssh:t2"], splitGroup: false },
+      context,
+    );
+    expect(plan.confirmation).toBeNull();
+    expect(plan.transferIdsToCancel).toBeUndefined();
+  });
+
+  it("WS-F09 可切到 confirm-cancel-active，并且只作用于被关闭 connection", () => {
+    const context: CloseContext = {
+      ...baseContext,
+      remoteFileTabs: [file("a", "app.yaml")],
+      remoteFileTransfers: [
+        { connectionId: "a", id: "transfer-a-running", status: "running" },
+        { connectionId: "a", id: "transfer-a-queued", status: "queued" },
+        { connectionId: "a", id: "transfer-a-done", status: "success" },
+        { connectionId: "b", id: "transfer-b", status: "running" },
+      ],
+    };
+    const plan = planClose(
+      { instanceIds: ["ssh:t1", "ssh:t2"], splitGroup: false },
+      context,
+      { behavior: "confirm-cancel-active" },
+    );
+    expect(plan.confirmation).toMatchObject({
+      activeTransferCount: 2,
+      cascadeConnectionCount: 1,
+    });
+    expect(plan.transferIdsToCancel).toEqual([
+      "transfer-a-running",
+      "transfer-a-queued",
+    ]);
+  });
+
   it("不修改输入", () => {
     const request = Object.freeze({ instanceIds: Object.freeze(["ssh:t1", "ssh:t2"]), splitGroup: false });
     const context = Object.freeze({ ...baseContext, remoteFileTabs: Object.freeze([file("a", "x")]) });
