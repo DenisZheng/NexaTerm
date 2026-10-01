@@ -81,5 +81,6 @@
   "quickConnect.usernamePlaceholder": "SSH username",
   "quickConnect.error.password": "Passwords are not allowed in Quick Connect addresses.",
   "quickConnect.error.port": "SSH port must be between 1 and 65535.",
-  "quickConnect.error.address": "Enter user@host or ssh://user@host:port."
+  "quickConnect.error.address": "Enter user@host or ssh://user@host:port.",
+  "quickConnect.saveSession": "Save as session"
 }

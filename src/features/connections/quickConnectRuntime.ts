@@ -6,6 +6,7 @@ import {
 import {
   temporaryConnectionCreate,
   temporaryConnectionRelease,
+  temporaryConnectionSave,
   temporaryConnectionSetCredentials,
   temporaryConnectionTerminalConnect,
 } from "../../shared/tauri/commands";
@@ -64,4 +65,11 @@ export function releaseTemporaryQuickConnectRefs(contextRefs: Iterable<string>) 
   for (const contextRef of contextRefs) {
     void temporaryConnectionRelease(contextRef).catch(() => undefined);
   }
+}
+
+export function saveTemporaryQuickConnectProfile(contextRef: string, name?: string) {
+  if (!hasTauriRuntime()) {
+    return Promise.reject(new Error("Temporary session saving requires the Tauri runtime."));
+  }
+  return temporaryConnectionSave(contextRef, name);
 }

@@ -91,7 +91,8 @@ import {
 } from "../connections/connectionTypes";
 import { connectionTimestampOf, sortConnectionsByRecent } from "../connections/connectionSearch";
 import { isQuickConnectCredentialError, type QuickConnectTarget } from "../connections/quickConnect";
-import { connectTemporaryQuickTerminal, createTemporaryQuickConnectProfile, prepareTemporaryQuickConnectCredentials, releaseTemporaryQuickConnectRefs } from "../connections/quickConnectRuntime";
+import { connectTemporaryQuickTerminal, createTemporaryQuickConnectProfile, prepareTemporaryQuickConnectCredentials, releaseTemporaryQuickConnectRefs, saveTemporaryQuickConnectProfile } from "../connections/quickConnectRuntime";
+import { finalTemporaryContextRefs, rebindConnectionItems, rebindTemporaryTerminalTab } from "../connections/quickConnectSession";
 import { connectionInfoFromVncProfile } from "../connections/vncConnectionInfo";
 import { createMiddleClickCloseHandler } from "../../shared/ui/tabEvents";
 // RemoteFileEditor 内部静态 import 了 monaco-editor（主体约 4MB）及其 5 个 worker
@@ -1321,10 +1322,7 @@ export function WorkspaceShell() {
     settings.localTerminal.hiddenProfileIds,
   ]);
 
-  const connectionById = useMemo(
-    () => new Map([...connections, ...temporaryConnections].map((connection) => [connection.id, connection])),
-    [connections, temporaryConnections],
-  );
+  const connectionById = useMemo(() => new Map([...connections, ...temporaryConnections].map((connection) => [connection.id, connection])), [connections, temporaryConnections]);
 
   const activeConnection = activeConnectionId
     ? connectionById.get(activeConnectionId) || null
@@ -4053,8 +4051,7 @@ export function WorkspaceShell() {
 
   async function openQuickConnect(target: QuickConnectTarget) {
     const connection = await createTemporaryQuickConnectProfile(target);
-    setTemporaryConnections((items) => [...items, connection]);
-    startConnectionStep(connection, "terminal");
+    setTemporaryConnections((items) => [...items, connection]); startConnectionStep(connection, "terminal");
   }
 
   async function createConnection(groupName?: string) {
@@ -4149,6 +4146,7 @@ export function WorkspaceShell() {
       id: `connection-${connection.id}-${step.id.toString()}`,
       ordinal,
       status: connectionStepStatusTitle(step),
+      temporaryContextRef: step.temporaryContextRef || undefined,
       title: step.mode === "terminal" ? "连接准备" : "连接测试",
       type: "connecting",
       warmupOutput: [],
@@ -5124,6 +5122,12 @@ export function WorkspaceShell() {
     );
   }
 
+  async function saveTemporaryQuickConnectTab(tab: TerminalTab) {
+    const ref = tab.temporaryContextRef; if (!ref) return;
+    const profile = await saveTemporaryQuickConnectProfile(ref, connectionById.get(tab.connectionId)?.name); await reload(); const rebound = rebindTemporaryTerminalTab(tab, profile);
+    const next = terminalTabsRef.current.map((item) => item.id === tab.id ? rebound : item); terminalTabsRef.current = next; setTerminalTabs(next);
+    setRemoteFileTabs((items) => rebindConnectionItems(items, ref, profile.id)); setTemporaryConnections((items) => items.filter((item) => item.id !== ref)); activateTerminalTab(rebound);
+  }
   function renderSshTerminalSubtab(tab: TerminalTab, index: number) {
     const sshMenuCtx: TerminalSubtabMenuContext<TerminalTab> = {
       tabs: activeConnectionTabs,
@@ -5147,7 +5151,7 @@ export function WorkspaceShell() {
             })
         : undefined,
     };
-    const actions = buildTerminalSubtabActions(sshMenuCtx, terminalSplitCanAddPane);
+    const actions = buildTerminalSubtabActions(sshMenuCtx, terminalSplitCanAddPane, { prepend: tab.temporaryContextRef ? [{ label: t("quickConnect.saveSession"), onSelect: () => void saveTemporaryQuickConnectTab(tab) }] : undefined });
     return (
       <TabContextMenu key={tab.id} actions={actions}>
         <div
@@ -7144,7 +7148,7 @@ export function WorkspaceShell() {
         .filter((connectionId) => !nextTabs.some((tab) => tab.connectionId === connectionId)),
     );
     finalClosedConnectionIds.forEach(invalidateDockerExecConnection);
-    releaseTemporaryQuickConnectRefs(finalClosedConnectionIds);
+    releaseTemporaryQuickConnectRefs(finalTemporaryContextRefs(closingTabs, nextTabs));
     setTemporaryConnections((items) => items.filter((item) => !finalClosedConnectionIds.has(item.id)));
     terminalTabsRef.current = nextTabs;
     setTerminalTabs(nextTabs);
@@ -8592,9 +8596,7 @@ export function WorkspaceShell() {
                         onEdit={(connection) => {
                           editConnection(connection);
                         }}
-                        onPromptUsernameChange={(username) =>
-                          updateConnectingTabStep(tab.id, { ...tabStep, connection: { ...tabStep.connection, username } })
-                        }
+                        onPromptUsernameChange={(username) => updateConnectingTabStep(tab.id, { ...tabStep, connection: { ...tabStep.connection, username } })}
                         onPromptAuthKindChange={(authKind) =>
                           updateConnectingTabStep(tab.id, {
                             ...tabStep,

@@ -7,7 +7,7 @@ use tokio::sync::Mutex;
 use uuid::Uuid;
 
 use crate::app_error::AppError;
-use crate::commands::TerminalConnectRequest;
+use crate::commands::{persist_connection_profile, TerminalConnectRequest};
 use crate::connections::{
     ConnectionAuthKind, ConnectionCredentialMode, ConnectionProfileInput, ConnectionProtocol,
 };
@@ -27,6 +27,7 @@ struct TemporaryConnectionEntry {
     port: u16,
     username: Option<String>,
     config: Option<ResolvedSshConfig>,
+    saved_connection_id: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -65,6 +66,13 @@ pub struct TemporaryConnectionReleaseRequest {
     pub context_ref: String,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct TemporaryConnectionSaveRequest {
+    pub context_ref: String,
+    #[serde(default)]
+    pub name: Option<String>,
+}
+
 impl TemporaryConnectionManager {
     async fn create(&self, request: TemporaryConnectionCreateRequest) -> Result<String, AppError> {
         let owner_instance_id = require_text(
@@ -98,6 +106,7 @@ impl TemporaryConnectionManager {
                 port: request.port,
                 username,
                 config: None,
+                saved_connection_id: None,
             },
         );
         Ok(context_ref)
@@ -128,17 +137,49 @@ impl TemporaryConnectionManager {
     }
 
     pub async fn resolve(&self, context_ref: &str) -> Result<ResolvedSshConfig, AppError> {
-        self.entry(context_ref)
+        self.resolve_reference(context_ref)
             .await?
-            .config
-            .ok_or_else(|| {
-                AppError::new(
-                    "credential_prompt_required",
-                    "请输入本次连接凭据。",
-                    format!("temporary_context_ref={}", context_ref.trim()),
-                    true,
-                )
+            .ok_or_else(|| temporary_context_missing(context_ref))
+    }
+
+    pub async fn resolve_reference(
+        &self,
+        reference: &str,
+    ) -> Result<Option<ResolvedSshConfig>, AppError> {
+        let reference = reference.trim();
+        let entry = {
+            let entries = self.entries.lock().await;
+            entries.get(reference).cloned().or_else(|| {
+                entries
+                    .values()
+                    .find(|entry| entry.saved_connection_id.as_deref() == Some(reference))
+                    .cloned()
             })
+        };
+        let Some(entry) = entry else {
+            return if is_temporary_connection_ref(reference) {
+                Err(temporary_context_missing(reference))
+            } else {
+                Ok(None)
+            };
+        };
+        entry.config.map(Some).ok_or_else(|| {
+            AppError::new(
+                "credential_prompt_required",
+                "请输入本次连接凭据。",
+                format!("temporary_context_ref={reference}"),
+                true,
+            )
+        })
+    }
+
+    async fn associate_saved(&self, context_ref: &str, connection_id: &str) -> bool {
+        let mut entries = self.entries.lock().await;
+        let Some(entry) = entries.get_mut(context_ref.trim()) else {
+            return false;
+        };
+        entry.saved_connection_id = Some(connection_id.to_string());
+        true
     }
 
     async fn release(&self, context_ref: &str) -> bool {
@@ -222,6 +263,18 @@ pub async fn temporary_connection_set_credentials(
 }
 
 #[tauri::command]
+pub async fn temporary_connection_save(
+    app: AppHandle,
+    manager: State<'_, TemporaryConnectionManager>,
+    request: TemporaryConnectionSaveRequest,
+) -> Result<crate::connections::ConnectionProfile, AppError> {
+    let config = manager.resolve(&request.context_ref).await?;
+    let profile = persist_connection_profile(&app, saved_profile_input(&config, request.name)).await?;
+    manager.associate_saved(&request.context_ref, &profile.id).await;
+    Ok(profile)
+}
+
+#[tauri::command]
 pub async fn temporary_connection_terminal_connect(
     app: AppHandle,
     terminal_manager: State<'_, TerminalManager>,
@@ -268,6 +321,48 @@ fn require_text(value: String, code: &str, message: &str) -> Result<String, AppE
         return Err(AppError::new(code, message, "value is empty", true));
     }
     Ok(trimmed.to_string())
+}
+
+fn saved_profile_input(config: &ResolvedSshConfig, name: Option<String>) -> ConnectionProfileInput {
+    ConnectionProfileInput {
+        id: None,
+        source_connection_id: None,
+        protocol: ConnectionProtocol::Ssh,
+        name: name.and_then(|value| {
+            let value = value.trim().to_string();
+            (!value.is_empty()).then_some(value)
+        }),
+        group: None,
+        host: config.host.clone(),
+        port: config.port,
+        username: config.username.clone(),
+        credential_mode: ConnectionCredentialMode::Prompt,
+        credential_id: None,
+        inline_auth_kind: None,
+        inline_password: None,
+        inline_password_touched: false,
+        inline_private_key_path: None,
+        inline_private_key_passphrase: None,
+        inline_private_key_passphrase_touched: false,
+        prompt_auth_kind: Some(config.auth_kind.clone()),
+        proxy: config.proxy.clone(),
+        jump: config.jump.clone(),
+        advanced: config.advanced.clone(),
+        rdp: None,
+        vnc: None,
+        telnet: None,
+        serial: None,
+        notes: None,
+        is_favorite: Some(false),
+        last_connected_at: None,
+        remote_os_id: None,
+        remote_os_name: None,
+        remote_os_version: None,
+        auth_kind: None,
+        password: None,
+        private_key_path: None,
+        private_key_passphrase: None,
+    }
 }
 
 pub fn is_temporary_connection_ref(value: &str) -> bool {
@@ -350,6 +445,63 @@ mod tests {
         assert_eq!(resolved.connection_id, context_ref);
         assert_eq!(resolved.host, "example.com");
         assert_eq!(resolved.username, "ops");
+    }
+
+    #[test]
+    fn save_projection_keeps_credentials_ephemeral() {
+        let config = ResolvedSshConfig {
+            connection_id: "temp-ssh-1".to_string(),
+            host: "example.com".to_string(),
+            port: 22,
+            username: "ops".to_string(),
+            auth_kind: ConnectionAuthKind::Password,
+            password: Some("secret".to_string()),
+            private_key_path: None,
+            private_key_passphrase: None,
+            proxy: Default::default(),
+            jump: Default::default(),
+            advanced: Default::default(),
+        };
+        let input = saved_profile_input(&config, Some("Example".to_string()));
+        assert_eq!(input.credential_mode, ConnectionCredentialMode::Prompt);
+        assert_eq!(input.prompt_auth_kind, Some(ConnectionAuthKind::Password));
+        assert_eq!(input.inline_password, None);
+        assert_eq!(input.password, None);
+    }
+
+    #[tokio::test]
+    async fn saved_alias_reuses_runtime_context_until_release() {
+        let manager = TemporaryConnectionManager::default();
+        let context_ref = manager
+            .create(TemporaryConnectionCreateRequest {
+                owner_instance_id: "workspace-item-3".to_string(),
+                host: "example.com".to_string(),
+                port: 22,
+                username: Some("ops".to_string()),
+            })
+            .await
+            .unwrap();
+        let config = ResolvedSshConfig {
+            connection_id: context_ref.clone(),
+            host: "example.com".to_string(),
+            port: 22,
+            username: "ops".to_string(),
+            auth_kind: ConnectionAuthKind::Password,
+            password: Some("secret".to_string()),
+            private_key_path: None,
+            private_key_passphrase: None,
+            proxy: Default::default(),
+            jump: Default::default(),
+            advanced: Default::default(),
+        };
+        manager.set_config(&context_ref, "ops".to_string(), config).await.unwrap();
+        assert!(manager.associate_saved(&context_ref, "saved-1").await);
+        assert_eq!(
+            manager.resolve_reference("saved-1").await.unwrap().unwrap().connection_id,
+            context_ref
+        );
+        assert!(manager.release(&context_ref).await);
+        assert!(manager.resolve_reference("saved-1").await.unwrap().is_none());
     }
 
     #[tokio::test]

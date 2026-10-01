@@ -22,7 +22,7 @@
 
 ## B3 保存为会话
 
-- [ ] temporary → 正式 profile。
-- [ ] 当前终端无重复连接地关联新 profile。
-- [ ] 重启后 Sessions 可复用。
+- [x] temporary → 正式 prompt profile；临时认证不永久写入 profile。
+- [x] 当前终端原地关联新 profile，保留原 sessionId/requestId，不调用 terminalConnect。
+- [x] 保存后正式 profile 进入 Sessions；当前实例用内存 alias 延续 Files 认证，关闭实例后释放 alias。
 - [ ] A04 全流程真实 GUI 验收。

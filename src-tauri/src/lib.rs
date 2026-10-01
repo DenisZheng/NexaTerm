@@ -136,6 +136,7 @@ pub fn run() {
             commands::terminal_connect,
             temporary_connections::temporary_connection_create,
             temporary_connections::temporary_connection_set_credentials,
+            temporary_connections::temporary_connection_save,
             temporary_connections::temporary_connection_terminal_connect,
             temporary_connections::temporary_connection_release,
             commands::terminal_write,

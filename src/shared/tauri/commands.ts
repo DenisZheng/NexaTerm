@@ -554,6 +554,12 @@ export function temporaryConnectionSetCredentials(request: {
   return invoke<void>("temporary_connection_set_credentials", { request });
 }
 
+export function temporaryConnectionSave(contextRef: string, name?: string) {
+  return invoke<ConnectionProfile>("temporary_connection_save", {
+    request: { context_ref: contextRef, name },
+  });
+}
+
 export function temporaryConnectionTerminalConnect(request: {
   context_ref: string;
   request_id?: string;

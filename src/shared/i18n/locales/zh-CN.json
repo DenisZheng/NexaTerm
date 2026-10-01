@@ -81,5 +81,6 @@
   "quickConnect.usernamePlaceholder": "SSH 用户名",
   "quickConnect.error.password": "Quick Connect 地址不接受密码。",
   "quickConnect.error.port": "SSH 端口必须在 1 到 65535 之间。",
-  "quickConnect.error.address": "请输入 user@host 或 ssh://user@host:port。"
+  "quickConnect.error.address": "请输入 user@host 或 ssh://user@host:port。",
+  "quickConnect.saveSession": "保存为会话"
 }

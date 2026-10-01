@@ -71,7 +71,7 @@ use crate::storage_vault::{VaultState, VaultStatus};
 use crate::terminal::local::list_profiles as list_local_profiles;
 pub use crate::terminal::local_profiles::{LocalTerminalProfile, LocalTerminalProfileInput};
 use crate::terminal::manager::TerminalManager;
-use crate::temporary_connections::{is_temporary_connection_ref, TemporaryConnectionManager};
+use crate::temporary_connections::TemporaryConnectionManager;
 pub use crate::terminal::serial::{SerialPortEntry, SerialTerminalOpenRequest};
 use crate::terminal::session::ExecProgressCallback;
 pub use crate::terminal::telnet::TelnetTerminalOpenRequest;
@@ -1853,13 +1853,20 @@ pub async fn connection_list(app: AppHandle) -> Result<Vec<ConnectionProfile>, A
     StorageRepository::open_app(&app)?.connection_list()
 }
 
+pub(crate) async fn persist_connection_profile(
+    app: &AppHandle,
+    request: ConnectionProfileInput,
+) -> Result<ConnectionProfile, AppError> {
+    let _guard = connection_store_lock().lock().await;
+    StorageRepository::open_app(app)?.connection_upsert(request, &now_timestamp()?)
+}
+
 #[tauri::command]
 pub async fn connection_upsert(
     app: AppHandle,
     request: ConnectionProfileInput,
 ) -> Result<ConnectionProfile, AppError> {
-    let _guard = connection_store_lock().lock().await;
-    StorageRepository::open_app(&app)?.connection_upsert(request, &now_timestamp()?)
+    persist_connection_profile(&app, request).await
 }
 
 #[tauri::command]
@@ -2158,11 +2165,12 @@ async fn resolve_remote_connection_profile(
         ));
     }
 
-    if is_temporary_connection_ref(connection_id) {
-        return app
-            .state::<TemporaryConnectionManager>()
-            .resolve(connection_id)
-            .await;
+    if let Some(config) = app
+        .state::<TemporaryConnectionManager>()
+        .resolve_reference(connection_id)
+        .await?
+    {
+        return Ok(config);
     }
 
     resolve_saved_connection(app, connection_id, None)

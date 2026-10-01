@@ -62,9 +62,8 @@ if (!lib.includes("TemporaryConnectionManager::default()")) {
 }
 
 for (const needle of [
-  "is_temporary_connection_ref",
   ".state::<TemporaryConnectionManager>()",
-  ".resolve(connection_id)",
+  ".resolve_reference(connection_id)",
 ]) {
   if (!commands.includes(needle)) throw new Error(`WF-02B Files resolver missing: ${needle}`);
 }
@@ -80,6 +79,15 @@ if (!remoteFiles.includes("pub async fn invalidate_connection")) {
 }
 if (!rust.includes("remote_file_manager") || !rust.includes("invalidate_connection(&request.context_ref)")) {
   throw new Error("WF-02B temporary context release must invalidate remote-file sessions");
+}
+for (const needle of ["temporary_connection_save", "saved_profile_input", "ConnectionCredentialMode::Prompt", "saved_connection_id", "resolve_reference"]) {
+  if (!rust.includes(needle)) throw new Error(`WF-02B save migration missing: ${needle}`);
+}
+if (!shell.includes('t("quickConnect.saveSession")') || !shell.includes("rebindTemporaryTerminalTab")) {
+  throw new Error("WF-02B save-as-session UI/rebind wiring missing");
+}
+if (!shell.includes("temporaryContextRef") || !shell.includes("finalTemporaryContextRefs")) {
+  throw new Error("WF-02B saved instance must retain temporary runtime ownership until close");
 }
 
 console.log("WF-02B Quick Connect temporary-context source gate passed");
