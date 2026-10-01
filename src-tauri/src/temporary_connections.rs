@@ -165,13 +165,14 @@ pub async fn temporary_connection_set_credentials(
         "terminal_username_missing",
         "请填写 SSH 用户名。",
     )?;
-    let password = matches!(request.auth_kind, ConnectionAuthKind::Password)
+    let auth_kind = request.auth_kind.clone();
+    let password = matches!(&auth_kind, ConnectionAuthKind::Password)
         .then_some(request.password)
         .flatten();
-    let private_key_path = matches!(request.auth_kind, ConnectionAuthKind::PrivateKey)
+    let private_key_path = matches!(&auth_kind, ConnectionAuthKind::PrivateKey)
         .then_some(request.private_key_path)
         .flatten();
-    let private_key_passphrase = matches!(request.auth_kind, ConnectionAuthKind::PrivateKey)
+    let private_key_passphrase = matches!(&auth_kind, ConnectionAuthKind::PrivateKey)
         .then_some(request.private_key_passphrase)
         .flatten();
     let mut config = resolve_transient_connection(
@@ -187,7 +188,7 @@ pub async fn temporary_connection_set_credentials(
             username: username.clone(),
             credential_mode: ConnectionCredentialMode::Inline,
             credential_id: None,
-            inline_auth_kind: Some(request.auth_kind),
+            inline_auth_kind: Some(auth_kind),
             inline_password: password,
             inline_password_touched: true,
             inline_private_key_path: private_key_path,
