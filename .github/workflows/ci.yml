@@ -89,6 +89,9 @@ jobs:
       - name: WF-02B Quick Connect temporary context
         run: pnpm run check:wf02b-quick-connect
 
+      - name: WF-03A left Files view
+        run: pnpm run check:wf03-left-files
+
   security:
     name: Security evidence
     runs-on: ubuntu-22.04

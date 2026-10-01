@@ -17,7 +17,7 @@ const base = {
   terminalTabs,
 };
 
-describe("WF-01 slice 5 Files context binding", () => {
+describe("WF-03 Files context binding", () => {
   it("binds the active SSH terminal outside split mode", () => {
     expect(resolveWorkspaceSidebarFileContext(base)).toStrictEqual({
       connectionId: "conn-a",
@@ -33,6 +33,23 @@ describe("WF-01 slice 5 Files context binding", () => {
       focusedBinding: { kind: "ssh", tabId: "ssh-b" },
     })).toStrictEqual({
       connectionId: "conn-b",
+      path: "/var/log",
+      tabId: "ssh-b",
+    });
+  });
+
+  it("keeps two panes of the same saved connection isolated by terminal tab", () => {
+    expect(resolveWorkspaceSidebarFileContext({
+      ...base,
+      activeTabId: "ssh-a",
+      splitActive: true,
+      focusedBinding: { kind: "ssh", tabId: "ssh-b" },
+      terminalTabs: [
+        { id: "ssh-a", connectionId: "conn-shared" },
+        { id: "ssh-b", connectionId: "conn-shared" },
+      ],
+    })).toStrictEqual({
+      connectionId: "conn-shared",
       path: "/var/log",
       tabId: "ssh-b",
     });

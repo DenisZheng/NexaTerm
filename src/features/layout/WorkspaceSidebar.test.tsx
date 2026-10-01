@@ -58,7 +58,7 @@ describe("WF-01 slice 5 workspace sidebar shell", () => {
     fireEvent.click(files);
     expect(files.getAttribute("aria-selected")).toBe("true");
     expect(files.tabIndex).toBe(0);
-    expect(screen.getByText("Remote Files")).toBeDefined();
+    expect(screen.getByTestId("live-files")).toBeDefined();
   });
 
   it("supports arrow/Home/End navigation without adding another menu system", () => {
