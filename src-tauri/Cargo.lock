@@ -2982,45 +2982,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4050469837a6ff301cd14c1f8f24f88549e6d548f24f64e2148eb0f72cebc51f"
 
 [[package]]
-name = "nexaterm"
-version = "0.1.17"
-dependencies = [
- "aes-gcm",
- "argon2",
- "base64 0.22.1",
- "encoding_rs",
- "futures-util",
- "getrandom 0.3.4",
- "portable-pty",
- "primefield",
- "reqwest",
- "rusqlite",
- "russh",
- "russh-sftp",
- "security-framework",
- "security-framework-sys",
- "serde",
- "serde_json",
- "serialport",
- "sha2 0.11.0",
- "ssh-key",
- "tauri",
- "tauri-build",
- "tauri-plugin-clipboard-manager",
- "tauri-plugin-dialog",
- "tauri-plugin-opener",
- "tauri-plugin-process",
- "tauri-plugin-updater",
- "tokio",
- "tokio-tungstenite",
- "uuid",
- "windows 0.61.3",
- "windows-core 0.61.2",
- "windows-sys 0.61.2",
- "windows-version",
-]
-
-[[package]]
 name = "mach2"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3216,6 +3177,45 @@ name = "new_debug_unreachable"
 version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "650eef8c711430f1a879fdd01d4745a7deea475becfb90269c06775983bbf086"
+
+[[package]]
+name = "nexaterm"
+version = "0.1.17"
+dependencies = [
+ "aes-gcm",
+ "argon2",
+ "base64 0.22.1",
+ "encoding_rs",
+ "futures-util",
+ "getrandom 0.3.4",
+ "portable-pty",
+ "primefield",
+ "reqwest",
+ "rusqlite",
+ "russh",
+ "russh-sftp",
+ "security-framework",
+ "security-framework-sys",
+ "serde",
+ "serde_json",
+ "serialport",
+ "sha2 0.11.0",
+ "ssh-key",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-clipboard-manager",
+ "tauri-plugin-dialog",
+ "tauri-plugin-opener",
+ "tauri-plugin-process",
+ "tauri-plugin-updater",
+ "tokio",
+ "tokio-tungstenite",
+ "uuid",
+ "windows 0.61.3",
+ "windows-core 0.61.2",
+ "windows-sys 0.61.2",
+ "windows-version",
+]
 
 [[package]]
 name = "nix"

@@ -80,6 +80,9 @@ jobs:
       - name: WF-01 i18n new-entry policy
         run: pnpm run check:i18n-new-entry
 
+      - name: WF-01 workspace snapshot contract
+        run: pnpm run check:workspace-snapshot
+
   security:
     name: Security evidence
     runs-on: ubuntu-22.04
