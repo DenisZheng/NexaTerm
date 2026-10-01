@@ -19,6 +19,9 @@ export function closeConfirmationCopy(confirmation: CloseConfirmation, t: Transl
   if (confirmation.cascadeConnectionCount > 0) {
     sentences.push(t("close.cascadeFiles"));
   }
+  if ((confirmation.activeTransferCount ?? 0) > 0) {
+    sentences.push(t("close.activeTransfers", { count: confirmation.activeTransferCount ?? 0 }));
+  }
   const [firstDirty] = confirmation.dirtyFileNames;
   if (confirmation.dirtyFileNames.length === 1 && firstDirty !== undefined) {
     sentences.push(t("close.dirtyOne", { name: firstDirty }));
