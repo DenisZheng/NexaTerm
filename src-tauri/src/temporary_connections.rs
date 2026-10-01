@@ -13,6 +13,7 @@ use crate::connections::{
 };
 use crate::ssh_config::{resolve_transient_connection, ResolvedSshConfig};
 use crate::terminal::manager::TerminalManager;
+use crate::remote_files::RemoteFileManager;
 
 #[derive(Clone, Default)]
 pub struct TemporaryConnectionManager {
@@ -126,7 +127,7 @@ impl TemporaryConnectionManager {
         Ok(())
     }
 
-    async fn resolve(&self, context_ref: &str) -> Result<ResolvedSshConfig, AppError> {
+    pub async fn resolve(&self, context_ref: &str) -> Result<ResolvedSshConfig, AppError> {
         self.entry(context_ref)
             .await?
             .config
@@ -252,8 +253,12 @@ pub async fn temporary_connection_terminal_connect(
 #[tauri::command]
 pub async fn temporary_connection_release(
     manager: State<'_, TemporaryConnectionManager>,
+    remote_file_manager: State<'_, RemoteFileManager>,
     request: TemporaryConnectionReleaseRequest,
 ) -> Result<bool, AppError> {
+    remote_file_manager
+        .invalidate_connection(&request.context_ref)
+        .await;
     Ok(manager.release(&request.context_ref).await)
 }
 
@@ -263,6 +268,10 @@ fn require_text(value: String, code: &str, message: &str) -> Result<String, AppE
         return Err(AppError::new(code, message, "value is empty", true));
     }
     Ok(trimmed.to_string())
+}
+
+pub fn is_temporary_connection_ref(value: &str) -> bool {
+    value.trim().starts_with("temp-ssh-")
 }
 
 fn temporary_context_missing(context_ref: &str) -> AppError {
@@ -298,6 +307,49 @@ mod tests {
         assert!(entry.config.is_none());
         assert!(manager.release(&context_ref).await);
         assert!(manager.entry(&context_ref).await.is_err());
+    }
+
+    #[test]
+    fn temporary_ref_detection_is_explicit() {
+        assert!(is_temporary_connection_ref("temp-ssh-123"));
+        assert!(!is_temporary_connection_ref("saved-connection-id"));
+        assert!(!is_temporary_connection_ref(""));
+    }
+
+    #[tokio::test]
+    async fn resolved_context_is_reusable_by_other_consumers() {
+        let manager = TemporaryConnectionManager::default();
+        let context_ref = manager
+            .create(TemporaryConnectionCreateRequest {
+                owner_instance_id: "workspace-item-2".to_string(),
+                host: "example.com".to_string(),
+                port: 22,
+                username: Some("ops".to_string()),
+            })
+            .await
+            .unwrap();
+        let config = ResolvedSshConfig {
+            connection_id: context_ref.clone(),
+            host: "example.com".to_string(),
+            port: 22,
+            username: "ops".to_string(),
+            auth_kind: ConnectionAuthKind::Password,
+            password: Some("secret".to_string()),
+            private_key_path: None,
+            private_key_passphrase: None,
+            proxy: Default::default(),
+            jump: Default::default(),
+            advanced: Default::default(),
+        };
+        manager
+            .set_config(&context_ref, "ops".to_string(), config)
+            .await
+            .unwrap();
+
+        let resolved = manager.resolve(&context_ref).await.unwrap();
+        assert_eq!(resolved.connection_id, context_ref);
+        assert_eq!(resolved.host, "example.com");
+        assert_eq!(resolved.username, "ops");
     }
 
     #[tokio::test]

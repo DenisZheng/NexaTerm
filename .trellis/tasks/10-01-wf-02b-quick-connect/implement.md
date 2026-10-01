@@ -11,14 +11,14 @@
 - [x] 临时连接关闭最后一个 tab 时释放 context；认证错误回 prompt。
 - [x] parser / Rust context 单测。
 - [x] WF-02B source gate 接 CI。
-- [ ] B1 CI / PR。
+- [x] B1 CI / PR：PR #24，CI #162 全绿。
 - [ ] B1 真实 SSH smoke（最终 A04 在 B3 一次集中验收）。
 
 ## B2 临时 Files/SFTP
 
-- [ ] saved / temporary 统一连接上下文解析。
-- [ ] remote_file list/read/write/create/rename/delete/transfer 支持 temporary ref。
-- [ ] context 生命周期覆盖活动传输/编辑。
+- [x] saved / temporary 统一连接上下文解析。
+- [x] remote_file list/read/write/create/rename/delete/transfer 支持 temporary ref。
+- [x] temporary release 同步关闭 RemoteFileManager 缓存；独立 SFTP transfer 持有自己的已解析配置，不依赖释放后的 registry。
 
 ## B3 保存为会话
 
