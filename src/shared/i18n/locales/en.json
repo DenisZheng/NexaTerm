@@ -1,4 +1,5 @@
 {
+  "close.activeTransfers": "Active file transfers to these connections: {count}. They will be canceled before closing.",
   "close.cascadeFiles": "Remote files of connections left without terminals will be closed too.",
   "close.confirm": "Close",
   "close.confirmDiscard": "Discard and close",
