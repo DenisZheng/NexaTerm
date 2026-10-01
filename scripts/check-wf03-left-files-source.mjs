@@ -25,6 +25,7 @@ for (const needle of [
 for (const needle of [
   "files={workspaceSidebarFileContext ? (",
   "<RemoteFilesView",
+  "key={workspaceSidebarFileContext.tabId}",
   'setWorkspaceSidebarView("files")',
   'availableTools={["monitor", "commands", "tools", "tunnels", "ai"]}',
 ]) {
