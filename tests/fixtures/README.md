@@ -35,6 +35,69 @@ Requires `docker` (compose v2) and an OpenSSH client. CI runs `up`/`smoke`/
 - xrdp: `testuser` / `testpass`
 - VNC: password `testpass`
 
+
+## WF-03 A05 / A06 GUI acceptance
+
+Use the direct SSH fixture on `127.0.0.1:2222` so terminal and Files/SFTP share one real test host.
+
+Prepare deterministic directories and the conflict test file:
+
+```sh
+node tests/fixtures/fixtures.mjs up
+node tests/fixtures/fixtures.mjs wf03-prepare
+```
+
+The prepare command prints the generated private-key path and these fixed remote paths:
+
+- A05 pane A: `/home/testuser/nexaterm-wf03/pane-a`
+- A05 pane B: `/home/testuser/nexaterm-wf03/pane-b`
+- A06 conflict file: `/home/testuser/nexaterm-wf03/editor-conflict.txt`
+
+Create or use a NexaTerm SSH profile with host `127.0.0.1`, port `2222`, user
+`testuser`, and the generated `tests/fixtures/keys/test_key` private key.
+
+### A05
+
+Open two SSH instances from that same saved profile and place them in two panes.
+Enable **follow terminal directory** independently in each Files view. In pane A run
+`cd /home/testuser/nexaterm-wf03/pane-a`; in pane B run
+`cd /home/testuser/nexaterm-wf03/pane-b`. Switch focus rapidly between panes.
+
+Pass conditions:
+
+- Files for pane A shows `A-*.txt` and pane B shows `B-*.txt`.
+- Each pane restores its own directory after repeated focus switches.
+- A stale/late directory response never replaces the currently focused pane's Files view.
+- Disconnecting one pane does not borrow the sibling pane's Files context; reconnect keeps the same logical pane owner.
+
+The deterministic delayed-response race is also covered by WF-03B automated tests; the GUI check verifies the real Tauri pane/Files binding.
+
+### A06
+
+Open `/home/testuser/nexaterm-wf03/editor-conflict.txt` from Files and make an
+unsaved local edit. While that editor remains open, mutate the remote file outside
+NexaTerm:
+
+```sh
+node tests/fixtures/fixtures.mjs wf03-mutate
+```
+
+Then save in NexaTerm.
+
+Pass conditions:
+
+- Saving detects the mtime/size mismatch and shows the remote-change conflict dialog.
+- The dialog offers reload, overwrite save, and cancel; no silent overwrite occurs.
+- After resolving the conflict, make another unsaved edit and close the editor/tab.
+  NexaTerm must explicitly confirm discarding the unsaved change; canceling the close
+  keeps the editor and its content.
+
+When finished:
+
+```sh
+node tests/fixtures/fixtures.mjs down
+```
+
 ## Manual acceptance examples
 
 Double-hop SSH (A12):
