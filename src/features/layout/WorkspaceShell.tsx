@@ -5151,7 +5151,7 @@ export function WorkspaceShell() {
             })
         : undefined,
     };
-    const actions = buildTerminalSubtabActions(sshMenuCtx, terminalSplitCanAddPane, { prepend: tab.temporaryContextRef ? [{ label: t("quickConnect.saveSession"), onSelect: () => void saveTemporaryQuickConnectTab(tab) }] : undefined });
+    const actions = buildTerminalSubtabActions(sshMenuCtx, terminalSplitCanAddPane, { prepend: tab.temporaryContextRef === tab.connectionId ? [{ label: t("quickConnect.saveSession"), onSelect: () => void saveTemporaryQuickConnectTab(tab) }] : undefined });
     return (
       <TabContextMenu key={tab.id} actions={actions}>
         <div
