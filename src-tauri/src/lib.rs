@@ -27,6 +27,7 @@ pub mod storage_sqlite;
 pub mod storage_vault;
 pub mod sync_snapshot;
 mod terminal;
+mod temporary_connections;
 mod tunnels;
 mod vnc;
 mod webdav;
@@ -49,6 +50,7 @@ pub fn run() {
         .manage(network_tools::NetworkDiagnosticSessionManager::default())
         .manage(remote_files::RemoteFileManager::default())
         .manage(terminal::manager::TerminalManager::default())
+        .manage(temporary_connections::TemporaryConnectionManager::default())
         .manage(rdp::RdpSessionManager::default())
         .manage(vnc::VncSessionManager::default())
         .manage(tunnels::TunnelManager::default())
@@ -132,6 +134,10 @@ pub fn run() {
             commands::get_app_runtime_info,
             commands::get_windows_pty_info,
             commands::terminal_connect,
+            temporary_connections::temporary_connection_create,
+            temporary_connections::temporary_connection_set_credentials,
+            temporary_connections::temporary_connection_terminal_connect,
+            temporary_connections::temporary_connection_release,
             commands::terminal_write,
             commands::terminal_resize,
             commands::terminal_close,
