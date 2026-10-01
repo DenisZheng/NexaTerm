@@ -239,6 +239,7 @@ import { RemoteFileTransferPanel } from "../files/RemoteFileTransferPanel";
 import {
   addRemoteFileTransfer,
   getRemoteFileTransfer,
+  getRemoteFileTransfers,
   markTransferCanceled,
   prepareTransferRetry,
   rebindRemoteFileTransferConnection,
@@ -1086,7 +1087,7 @@ export function WorkspaceShell() {
   const closeRequestController = useCloseRequest({
     execute: executeClosePlan,
     plan: (request) =>
-      planClose(request, buildCloseContext(localTerminalTabsRef.current, rdpSessionsRef.current, remoteFileTabs, terminalSplitPanes, terminalTabsRef.current, vncSessionsRef.current)),
+      planClose(request, buildCloseContext(localTerminalTabsRef.current, rdpSessionsRef.current, remoteFileTabs, terminalSplitPanes, terminalTabsRef.current, vncSessionsRef.current, getRemoteFileTransfers())),
   });
   const [pendingRemoteFileConflictId, setPendingRemoteFileConflictId] = useState<string | null>(null);
   const [remoteFileDeleteTarget, setRemoteFileDeleteTarget] =
@@ -7215,6 +7216,7 @@ export function WorkspaceShell() {
    * 连接级关闭连带远程文件，其余按实例类型分派到 WF-00B 现有关闭路径。
    */
   function executeClosePlan(plan: ClosePlan) {
+    for (const transferId of plan.transferIdsToCancel ?? []) requestCancelTransfer(transferId);
     for (const paneId of plan.splitPaneIds ?? []) {
       removeTerminalSplitPaneLayout(paneId);
     }
