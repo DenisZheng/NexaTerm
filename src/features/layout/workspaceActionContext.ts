@@ -24,6 +24,7 @@ export interface WorkspaceActionContextInput {
   readonly terminalSearchByTabId: Readonly<Record<string, { readonly query: string } | undefined>>;
   readonly commandSenderTargetCount: number;
   readonly canSplitTerminal: boolean;
+  readonly canOpenTunnels?: boolean;
 }
 
 /**
@@ -59,5 +60,6 @@ export function buildWorkspaceActionContext(input: WorkspaceActionContextInput):
       instanceId: pane.binding ? instanceItemId(pane.binding.kind, pane.binding.tabId) : null,
     })),
     commandSenderTargetCount: input.commandSenderTargetCount,
+    canOpenTunnels: Boolean(input.canOpenTunnels),
   };
 }

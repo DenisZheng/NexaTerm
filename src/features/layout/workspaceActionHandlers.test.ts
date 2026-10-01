@@ -5,7 +5,8 @@ function setup() {
   const operation = () => vi.fn();
   const operations: WorkspaceActionOperations = {
     quickOpen: operation(), openSettings: operation(), toggleSidebar: operation(), toggleTools: operation(),
-    toggleCommandSender: operation(), closeInstance: operation(), newTerminal: operation(), toggleSearch: operation(),
+    toggleCommandSender: operation(), openTunnels: operation(), closeItem: operation(), closeInstance: operation(),
+    closePane: operation(), closeSplitGroup: operation(), newTerminal: operation(), toggleSearch: operation(),
     searchNext: operation(), searchPrevious: operation(), splitRight: operation(), splitDown: operation(), splitFour: operation(),
   };
   return { operations, handlers: createWorkspaceActionHandlers(operations) };
@@ -20,11 +21,26 @@ describe("WF-01 4D-1 workspace action business adapter", () => {
     handlers["view.toggleSidebar"](target);
     handlers["view.toggleTools"](target);
     handlers["commandSender.toggle"](target);
+    handlers["tools.tunnels"](target);
     expect(operations.quickOpen).toHaveBeenCalledWith();
     expect(operations.openSettings).toHaveBeenCalledWith();
     expect(operations.toggleSidebar).toHaveBeenCalledWith();
     expect(operations.toggleTools).toHaveBeenCalledWith();
     expect(operations.toggleCommandSender).toHaveBeenCalledWith();
+    expect(operations.openTunnels).toHaveBeenCalledWith();
+  });
+
+  it("routes item, pane, and split-group close targets without changing identity", () => {
+    const { handlers, operations } = setup();
+    const item = { kind: "item" as const, itemId: "ssh:tab-a" };
+    const pane = { kind: "pane" as const, itemId: "split", paneId: "pane-a", instanceId: "ssh:tab-a" };
+    const group = { kind: "split-group" as const, itemId: "split" };
+    handlers["workspace.closeItem"](item);
+    handlers["terminal.closePane"](pane);
+    handlers["terminal.closeSplitGroup"](group);
+    expect(operations.closeItem).toHaveBeenCalledWith(item);
+    expect(operations.closePane).toHaveBeenCalledWith(pane);
+    expect(operations.closeSplitGroup).toHaveBeenCalledWith(group);
   });
 
   it("passes logical identity plus the raw instance id to instance operations", () => {
@@ -50,11 +66,11 @@ describe("WF-01 4D-1 workspace action business adapter", () => {
     expect(operations.splitRight).not.toHaveBeenCalled();
   });
 
-  it("does not register deferred or 4D-2-only actions", () => {
+  it("keeps only truly deferred actions unregistered", () => {
     const { handlers } = setup();
     expect(handlers["terminal.multiExec"]).toBeUndefined();
-    expect(handlers["tools.tunnels"]).toBeUndefined();
-    expect(handlers["terminal.closePane"]).toBeUndefined();
-    expect(handlers["terminal.closeSplitGroup"]).toBeUndefined();
+    expect(handlers["tools.tunnels"]).toBeTypeOf("function");
+    expect(handlers["terminal.closePane"]).toBeTypeOf("function");
+    expect(handlers["terminal.closeSplitGroup"]).toBeTypeOf("function");
   });
 });

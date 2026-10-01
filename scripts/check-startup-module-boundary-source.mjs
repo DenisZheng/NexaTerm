@@ -113,6 +113,11 @@ assertIncludes(
 );
 assertIncludes(
   shellSource,
+  "const TunnelPanel = lazy(",
+  "TunnelPanel must be lazy-loaded from WorkspaceShell.",
+);
+assertIncludes(
+  shellSource,
   "const RemoteFilePanel = lazy(",
   "RemoteFilePanel must be lazy-loaded from WorkspaceShell.",
 );

@@ -61,6 +61,7 @@ export const actionReasonKeys: Readonly<Record<ActionDisabledReason, ActionMessa
   "action-pending": "actionBar.reason.pending",
   "capability-unavailable": "actionBar.reason.capability",
   "split-unavailable": "actionBar.reason.split",
+  "tunnel-unavailable": "actionBar.reason.tunnels",
 };
 export const splitActionIds = ["terminal.splitRight", "terminal.splitDown", "terminal.splitFour"] as const;
 export interface ToolbarEntry { readonly id: string; readonly priority: number }

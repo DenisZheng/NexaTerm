@@ -18,7 +18,8 @@ const context = (workspaceVisible = true): WorkspaceActionContextInput => ({
 });
 const operations = (): WorkspaceActionOperations => ({
   quickOpen: vi.fn(), openSettings: vi.fn(), toggleSidebar: vi.fn(), toggleTools: vi.fn(),
-  toggleCommandSender: vi.fn(), closeInstance: vi.fn(), newTerminal: vi.fn(), toggleSearch: vi.fn(),
+  toggleCommandSender: vi.fn(), openTunnels: vi.fn(), closeItem: vi.fn(), closeInstance: vi.fn(),
+  closePane: vi.fn(), closeSplitGroup: vi.fn(), newTerminal: vi.fn(), toggleSearch: vi.fn(),
   searchNext: vi.fn(), searchPrevious: vi.fn(), splitRight: vi.fn(), splitDown: vi.fn(), splitFour: vi.fn(),
 });
 

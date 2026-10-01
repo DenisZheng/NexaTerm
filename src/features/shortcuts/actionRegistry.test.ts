@@ -148,6 +148,15 @@ describe("WF-01 4B: policies and shortcut compatibility", () => {
     expect(resolveWorkspaceAction({ actionId: "commandSender.toggle" }, { ...fixture(), commandSenderTargetCount: 0 }, {}).reason).toBe("no-command-targets");
   });
 
+  it("enables tunnels only for an SSH workspace capability", () => {
+    expect(resolveWorkspaceAction({ actionId: "tools.tunnels" }, fixture(), {}).reason).toBe("tunnel-unavailable");
+    expect(resolveWorkspaceAction(
+      { actionId: "tools.tunnels" },
+      { ...fixture(), canOpenTunnels: true },
+      {},
+    ).enabled).toBe(true);
+  });
+
   it("derives terminal capabilities and query availability from the selected instance", () => {
     const context = fixture();
     const request = { actionId: "terminal.search.next" };

@@ -33,7 +33,7 @@ for (const [sourceName, source, needles] of [
       "onCloseAll",
       "onCloseToRight(item.id)",
       "onCloseOthers(item.id)",
-      "Ctrl+K W",
+      "closeShortcutBinding",
     ],
   ],
   [
@@ -43,10 +43,6 @@ for (const [sourceName, source, needles] of [
       "closeOtherRemoteFileTabs",
       "closeRemoteFileTabsToRight",
       "closeSavedRemoteFileTabsForConnection",
-      "closeOtherTerminalTabs",
-      "closeTerminalTabsToRight",
-      "closeOtherLocalTerminalTabs",
-      "closeLocalTerminalTabsToRight",
       "closeWorkspaceItems(itemId, \"others\")",
       "closeWorkspaceItems(itemId, \"right\")",
       "copyRemotePath(tab.path)",
@@ -74,8 +70,6 @@ for (const [sourceName, source, needles] of [
 
 for (const functionName of [
   "closeRemoteFileTabsToRight",
-  "closeTerminalTabsToRight",
-  "closeLocalTerminalTabsToRight",
 ]) {
   const match = workspaceSource.match(new RegExp(`function ${functionName}\\([^)]*\\) \\{[\\s\\S]*?\\n  \\}`));
   if (!match || !match[0].includes("if (index < 0)")) {
@@ -87,6 +81,12 @@ for (const functionName of [
 const itemCloseSource = readFileSync("src/features/workspace/sessionTabs/itemClose.ts", "utf8");
 if (!itemCloseSource.includes("return index < 0 ? [] : closable.slice(index + 1);")) {
   throw new Error("closeScopeItemIds should guard missing item indexes before slicing.");
+}
+
+for (const fakeHint of ["Ctrl+F4", "Ctrl+K W"]) {
+  if (titlebarSource.includes(fakeHint)) {
+    throw new Error(`AppTitlebar must not hard-code shortcut hint: ${fakeHint}`);
+  }
 }
 
 console.log("Tab context menu source check passed.");
