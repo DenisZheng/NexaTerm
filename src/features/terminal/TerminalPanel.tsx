@@ -40,6 +40,7 @@ import {
   inferRemoteHomeDirectory,
 } from "./terminalInputDirectory";
 import { promptSnapshotLinesToDirectory } from "./terminalPromptDirectory";
+import { matchesTerminalEvent } from "./terminalEventScope";
 import {
   createTerminalSemanticHighlighter,
   getTerminalSemanticHighlightPalette,
@@ -1457,13 +1458,3 @@ function isTerminalPasteShortcut(event: KeyboardEvent) {
   );
 }
 
-function matchesTerminalEvent(
-  event: { request_id: string | null; session_id: string },
-  sessionId: string | null,
-  activeRequestId: string | null,
-) {
-  return (
-    (Boolean(sessionId) && event.session_id === sessionId) ||
-    (Boolean(activeRequestId) && event.request_id === activeRequestId)
-  );
-}
