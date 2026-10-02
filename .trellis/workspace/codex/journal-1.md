@@ -243,3 +243,39 @@ closeDecision 纯决策 + close action + followUp；六条关闭路径接入、�
 ### Next Steps
 
 - 等待最终组合 CI 与 PR 审核；不自行 merge、不启动 WF-04B/C。
+
+
+## Session 6: WF-04A 原生补验与合并收尾
+
+**Date**: 2026-10-02
+**Task**: WF-04A 原生补验与合并收尾
+**Branch**: `feat/wf04a-session-tree-consistency`
+
+### Summary
+
+补齐 legacy 冲突映射、失败保留输入、重启幂等与三主题真实 Tauri 验证；修复长路径网格溢出、portal 暗色错误色及重命名报告。Rust 374、前端 432 passed/1 todo，构建和 source/line-budget 通过。04A 子任务归档，父主线不变；PR #26 已获最终 CI 通过后合并授权，WF-04B/C 未启动。
+
+### Main Changes
+
+- 原生补验与数据证据：`.trellis/tasks/archive/2026-10/10-02-wf-04a-session-tree-consistency/validation/a07.md`。
+- canonical 树与 FK 未改变；显示修复沿用共享 Radix/token，报告准确记录原名和目标名。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `d0357a6` | fix: polish legacy group migration feedback and verify native recovery |
+
+### Testing
+
+- [OK] `cargo test --lib`：374/374；`pnpm test`：432 passed / 1 todo。
+- [OK] `pnpm build`、transfer/startup source gate、line budget、diff check。
+- [OK] macOS 原生 legacy 失败/显式映射/重启与三主题；Windows/Linux 本轮仅 CI。
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- 核对 PR #26 最终 HEAD CI 后执行已授权的合并并同步 main；不启动 WF-04B/C。
