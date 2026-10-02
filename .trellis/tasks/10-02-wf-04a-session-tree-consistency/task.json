@@ -16,11 +16,11 @@
   "base_branch": "main",
   "worktree_path": null,
   "commit": null,
-  "pr_url": null,
+  "pr_url": "https://github.com/DenisZheng/NexaTerm/pull/26",
   "subtasks": [],
   "children": [],
   "parent": "09-23-nexaterm-workflow-mainline",
   "relatedFiles": [],
-  "notes": "",
+  "notes": "04A-1~4 implemented; A07 macOS native GUI/data PASS. Draft PR #26 awaits maintainer review/merge. WF-04B/C not started.",
   "meta": {}
 }

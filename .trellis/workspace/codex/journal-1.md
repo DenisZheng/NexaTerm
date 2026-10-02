@@ -208,3 +208,38 @@ closeDecision 纯决策 + close action + followUp；六条关闭路径接入、�
 ### Next Steps
 
 - None - task complete
+
+
+## Session 5: WF-04A legacy migration and A07 native acceptance
+
+**Date**: 2026-10-02
+**Task**: WF-04A legacy migration and A07 native acceptance
+**Branch**: `feat/wf04a-session-tree-consistency`
+
+### Summary
+
+完成 04A-4 原文备份/事务幂等迁移与显式映射；Rust 374、frontend 432 通过，CI 七项全绿。A07 macOS 原生 GUI 创建/移动/冲突/export/import/退出重启，7 组 3 连接数据库一致。main 图标 a0fcc0d 合入分支。PR #26 保持 Draft，未合并；WF-04B/C 和 PR #12 未动。
+
+### Main Changes
+
+详见 10-02-wf-04a-session-tree-consistency/implement.md 与 validation/a07.md。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `cf4c925` | (see git log) |
+| `20116c3` | (see git log) |
+
+### Testing
+
+- Rust 374/374；frontend 432 passed / 1 todo；scripts 93 passed / 3 skipped。
+- CI 36987698243 七项通过；A07 macOS 真实 GUI + 数据重启对照通过。
+
+### Status
+
+[OK] 实现与 macOS A07 已完成；PR #26 待维护者审核合并。
+
+### Next Steps
+
+- 等待最终组合 CI 与 PR 审核；不自行 merge、不启动 WF-04B/C。

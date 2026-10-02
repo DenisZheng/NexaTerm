@@ -33,8 +33,8 @@
 ## 04A-4 Legacy migration + A07
 
 - [x] 原文备份、映射/修复报告与完成标记；解析/写入失败、重复 ID/名称、orphan/cycle、重试/重启幂等测试。
-- [ ] 在独立数据环境执行 PRD 的 A07 流程，保存 GUI、导出数据和重启比对证据。
-- [ ] 四维证据齐全再评估 A07，不以 unit/mock 或 CI 代替 GUI PASS。
+- [x] 在独立数据环境执行 PRD 的 A07 流程，保存 GUI、导出数据和重启比对证据。
+- [x] 四维证据齐全再评估 A07，不以 unit/mock 或 CI 代替 GUI PASS。
 
 ## 验证与交付
 
@@ -106,3 +106,9 @@ git diff --check
 - 前端只在迁移完成后开放树写入；迁移失败不阻止其它启动流程，提供报告与重试。展开状态独立迁移到 v2；成功前不写默认值，旧 v1 保留。
 - 本地验证：Rust lib 374/374；frontend 432 passed / 1 todo；scripts 93 passed / 3 skipped；pnpm check/build、transfer/startup source gate、line budget、git diff --check 通过。新模块 rustfmt；已有全仓 fmt 漂移不扩展处理。
 - 真实 GUI / 数据证据仍待执行，当前不宣称 A07 PASS。平台：macOS 本地；Windows/Linux 以本切片新 CI 为准。
+
+## A07 与 main 图标同步收尾
+
+- A07 macOS 真实 GUI + SQLite 重启对照 PASS，详情与前后数据见 validation/a07.md。其它平台仅自动化，不混淆验收层级。
+- cf4c925 / CI 36987698243 七项通过。维护者 main 图标提交 a0fcc0d / CI 36991530588 通过；已由 20116c3 合入当前分支。
+- PR #26 继续 Draft，待审核合并；不启动 WF-04B/04C，不处理 PR #12。

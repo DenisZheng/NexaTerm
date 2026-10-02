@@ -36,13 +36,13 @@
 
 测试树：Production 下 Web / Database，Development 下 Test；Root 为展示根。多个 SSH profile 分属不同层级。
 
-- [ ] 建嵌套组及空组 → 移动组 → 移动连接 → rename → 尝试制造 cycle/名称冲突。
-- [ ] export → 使用独立数据环境 → import → 真实重启 NexaTerm → 检查整棵树及 connection assignment。
-- [ ] hierarchy、空组、sort、rename/move 和关联保持；无 orphan/cycle；冲突按已确认规则处理且不静默覆盖。
-- [ ] SQLite、旧格式和 localStorage 迁移覆盖失败、回滚、重试及重启幂等。
-- [ ] 四维证据：实现状态、自动化证据、真实 GUI / 数据证据、平台与环境；unit/mock 不代表完整 A07 PASS。
+- [x] 建嵌套组及空组 → 移动组 → 移动连接 → rename → 尝试制造 cycle/名称冲突。
+- [x] export → 使用独立数据环境 → import → 真实重启 NexaTerm → 检查整棵树及 connection assignment。
+- [x] hierarchy、空组、sort、rename/move 和关联保持；无 orphan/cycle；冲突按已确认规则处理且不静默覆盖。
+- [x] SQLite、旧格式和 localStorage 迁移覆盖失败、回滚、重试及重启幂等。
+- [x] 四维证据：实现状态、自动化证据、真实 GUI / 数据证据、平台与环境；unit/mock 不代表完整 A07 PASS。
 
-当前证据：04A-1～04A-4 已实现，本地自动化证据见 implement.md；GUI / 数据验收待执行，A07 尚未 PASS。三平台 CI 不替代真实 A07。
+当前证据：04A-1～04A-4 已实现，本地自动化证据见 implement.md；A07 macOS 真实 GUI + 重启数据验收 PASS，见 validation/a07.md；Windows/Linux 仅 CI 自动化证据。PR #26 待维护者审核合并。
 
 ## 范围外
 
