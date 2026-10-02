@@ -15,6 +15,7 @@
 ## 04B-2 Tree preview / orchestration
 - [ ] 自定义组“连接全部…”入口。
 - [ ] 预览：递归开关、选择、协议/path/auth/open 状态、20 限制。
+- [x] 可取消的 4 并发执行器；waiting-user 保持占槽，active cancel 只触及本批 handle。
 - [ ] 批次进度与结果；不阻塞用户去处理 credential/host-key。
 - [ ] 复用现有 open/cancel，不误关 pre-existing instances。
 
