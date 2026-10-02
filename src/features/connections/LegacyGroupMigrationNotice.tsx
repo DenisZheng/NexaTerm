@@ -1,4 +1,5 @@
 import * as Dialog from "@radix-ui/react-dialog";
+import { X } from "lucide-react";
 import { useState } from "react";
 import { AppSelect } from "../../shared/ui/AppSelect";
 import { groupOptions, type ConnectionGroup, type LegacyGroupReport, type LegacyGroupResolution } from "./connectionGroupModel";
@@ -38,10 +39,10 @@ export default function LegacyGroupMigrationNotice({ report, groups, onResolve }
     <Dialog.Root open={open} onOpenChange={(next) => { if (!busy) setOpen(next); }}>
       <Dialog.Portal>
         <Dialog.Overlay className="dialog-backdrop" />
-        <Dialog.Content className="connection-dialog" onInteractOutside={(event) => event.preventDefault()}>
+        <Dialog.Content className="connection-dialog legacy-group-migration-dialog" onInteractOutside={(event) => event.preventDefault()}>
           <header className="dialog-head">
-            <Dialog.Title>旧分组迁移</Dialog.Title>
-            <Dialog.Close asChild><button type="button" disabled={busy}>关闭</button></Dialog.Close>
+            <div className="dialog-title-group"><Dialog.Title asChild><strong>旧分组迁移</strong></Dialog.Title></div>
+            <Dialog.Close asChild><button className="dialog-close-button" type="button" aria-label="关闭" disabled={busy}><X className="ui-icon" aria-hidden="true" /></button></Dialog.Close>
           </header>
           <Dialog.Description className="dialog-subtitle">
             {report.complete ? "迁移已完成。后续启动不会重新应用旧树。" : "请逐行确认名称、父组和目标。选择已有分组会更新其名称、位置和颜色，连接仍归属于原 ID；新建分组不会转移已有连接。"}

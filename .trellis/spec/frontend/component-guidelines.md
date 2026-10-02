@@ -161,6 +161,9 @@ replacing package has shipped.
   portal dialog, menu, popover, or floating picker, verify its dark/system-dark
   styles can match both `.app-shell[data-theme-mode=...]` and
   `body[data-theme-mode=...]`; do not rely on app-shell-only inheritance.
+- Portal error text must use the global danger token even when a shared legacy
+  error class has a fixed light-theme color. Reports containing paths or IDs
+  need shrinkable grid tracks and `overflow-wrap: anywhere`, not clipping.
 - Custom select/dropdown menus that portal to `document.body` and may appear
   inside a Radix modal dialog must be wrapped with
   `DismissableLayerBranch asChild` and the menu surface must explicitly set

@@ -112,3 +112,10 @@ git diff --check
 - A07 macOS 真实 GUI + SQLite 重启对照 PASS，详情与前后数据见 validation/a07.md。其它平台仅自动化，不混淆验收层级。
 - cf4c925 / CI 36987698243 七项通过。维护者 main 图标提交 a0fcc0d / CI 36991530588 通过；已由 20116c3 合入当前分支。
 - PR #26 继续 Draft，待审核合并；不启动 WF-04B/04C，不处理 PR #12。
+
+## 合并前补验与修复（2026-10-02）
+
+- 维护者“好，开始补然后合并”授权补齐原生 legacy 冲突与三主题证据、修复发现的问题、最终 CI 全绿后合并 PR #26；取代此前本 PR 的等待人工合并门禁。
+- 原生补验发现长备份路径撑开表单、portal 暗色错误文字偏暗，局部修复 grid 换行和 danger token，使用已有标题/关闭按钮样式。显式重命名报告误写清理空白，修正为原名→目标名并补现有回归断言。
+- 真实失败保留输入→显式映射→成功→重启幂等与三主题 PASS，详见 validation/a07.md 和 a07-legacy-after-restart.json。数据对照包含 canonical ID、父子关系、关联、排序、marker/report、legacy raw 与展开状态。
+- 最终本地 Rust 374/374、前端 432 passed / 1 todo；legacy 定向 Rust 6/6、前端迁移/controller 5/5；build、source gate、line budget、diff check 通过。未改 line-budget.json，未触及 PR #12 或 WF-04B/C。

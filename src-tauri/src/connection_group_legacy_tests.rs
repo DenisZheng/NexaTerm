@@ -149,6 +149,11 @@ fn legacy_ambiguity_requires_explicit_mapping_and_rejects_cycles() {
         .unwrap();
     assert!(report.complete);
     assert_eq!(report.mappings[0].canonical_id, existing.id);
+    // 显式重命名的报告必须包含原名与目标名，不能误记为仅清理空白。
+    assert!(report
+        .repairs
+        .iter()
+        .any(|entry| { entry.contains("Linux") && entry.contains("Production") }));
     assert_eq!(repo.connection_groups().unwrap().len(), 2);
 }
 #[test]

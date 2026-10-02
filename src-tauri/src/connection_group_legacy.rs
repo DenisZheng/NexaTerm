@@ -233,7 +233,7 @@ fn plan(
             return Err("现有目录颜色与旧数据冲突，请显式确认映射。".into());
         }
         if names[index] != row.name {
-            repairs.push(format!("{}：名称已去除首尾空白。", row.name));
+            repairs.push(format!("迁移名称：{} → {}。", row.name, names[index]));
         }
         let group = ConnectionGroup {
             id: targets[index].clone(),

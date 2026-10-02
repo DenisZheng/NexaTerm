@@ -42,8 +42,8 @@
 - [x] SQLite、旧格式和 localStorage 迁移覆盖失败、回滚、重试及重启幂等。
 - [x] 四维证据：实现状态、自动化证据、真实 GUI / 数据证据、平台与环境；unit/mock 不代表完整 A07 PASS。
 
-当前证据：04A-1～04A-4 已实现，本地自动化证据见 implement.md；A07 macOS 真实 GUI + 重启数据验收 PASS，见 validation/a07.md；Windows/Linux 仅 CI 自动化证据。PR #26 待维护者审核合并。
+当前证据：04A-1～04A-4 已实现，本地自动化证据见 implement.md；A07 macOS 真实 GUI + 重启数据验收 PASS，legacy 冲突与三主题补验 PASS，见 validation/a07.md；Windows/Linux 仅 CI 自动化证据。维护者已授权补验后合并 PR #26，执行前须最终 HEAD CI 全绿。
 
 ## 范围外
 
-WF-04B/04C、连接全部、批量认证/并发、新分屏、MultiExec、任意层数 Split、AI/Monitor/Docker 新功能、主题改版、RDP/VNC 重构、Workspace Restore。PR #12 不修改/合并；WF-02/WF-03 不重做；不自行 merge。
+WF-04B/04C、连接全部、批量认证/并发、新分屏、MultiExec、任意层数 Split、AI/Monitor/Docker 新功能、主题改版、RDP/VNC 重构、Workspace Restore。PR #12 不修改/合并；WF-02/WF-03 不重做。仅 PR #26 已于本轮得到明确合并授权。
