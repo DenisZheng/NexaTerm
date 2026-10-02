@@ -271,10 +271,13 @@ fn concurrent_directory_version_upgrade_is_atomic() {
     let root = std::env::temp_dir().join(format!("wf04a-dir-{}", uuid::Uuid::new_v4()));
     StorageRepository::open_root(&root, Arc::new(InMemorySecretStore::default())).unwrap();
     std::fs::write(root.join(".data-version"), "1\n").unwrap();
+    let barrier = Arc::new(std::sync::Barrier::new(8));
     let threads: Vec<_> = (0..8)
         .map(|_| {
             let root = root.clone();
+            let barrier = barrier.clone();
             std::thread::spawn(move || {
+                barrier.wait();
                 StorageRepository::open_root(root, Arc::new(InMemorySecretStore::default()))
                     .map(|_| ())
             })
@@ -289,6 +292,29 @@ fn concurrent_directory_version_upgrade_is_atomic() {
             .trim(),
         "2"
     );
+    // 只有首个持锁者升级；后续调用不得将升级前备份覆盖成新版本。
+    assert_eq!(
+        std::fs::read_to_string(root.join(".data-version.bak"))
+            .unwrap()
+            .trim(),
+        "1"
+    );
+}
+
+#[test]
+fn directory_version_lock_failure_preserves_marker() {
+    let root = std::env::temp_dir().join(format!("wf04a-lock-{}", uuid::Uuid::new_v4()));
+    std::fs::create_dir_all(root.join(".data-version.lock")).unwrap();
+    std::fs::write(root.join(".data-version"), "1\n").unwrap();
+    let error = StorageRepository::open_root(&root, Arc::new(InMemorySecretStore::default()))
+        .err()
+        .expect("锁文件不可用时必须拒绝升级");
+    assert_eq!(error.code, "storage_data_version_lock_failed");
+    assert_eq!(
+        std::fs::read_to_string(root.join(".data-version")).unwrap(),
+        "1\n"
+    );
+    assert!(!root.join("mxterm.db").exists());
 }
 
 #[test]

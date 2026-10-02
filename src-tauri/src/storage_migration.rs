@@ -41,6 +41,27 @@ impl StorageMigrator {
                 false,
             )
         })?;
+        // 锁独立文件且不删除：锁住会被替换的版本文件会丢失互斥身份。
+        // 原子替换不等于并发安全，Windows 的备份/替换也会争用文件句柄。
+        // 持锁覆盖读取与写入，后来者重新检查版本；句柄离开作用域释放跨进程锁。
+        let _version_lock = fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .truncate(false)
+            .open(self.root.join(".data-version.lock"))
+            .and_then(|file| {
+                file.lock()?;
+                Ok(file)
+            })
+            .map_err(|error| {
+                AppError::new(
+                    "storage_data_version_lock_failed",
+                    "无法锁定数据目录版本标记。",
+                    error,
+                    true,
+                )
+            })?;
         let path = self.root.join(DATA_VERSION_FILE);
         let current = match fs::read_to_string(&path) {
             Ok(content) => content.trim().parse::<u32>().map_err(|_| {

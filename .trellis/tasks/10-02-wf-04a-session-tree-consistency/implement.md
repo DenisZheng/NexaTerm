@@ -69,3 +69,11 @@ git diff --check
 - cargo fmt --check 失败：main 既有多文件格式差异（commands/MCP/X11/旧 importer 等），已通过 git show main:path + rustfmt 复核；不改无关文件。本次新模块经过 rustfmt。
 - GUI / 数据：未执行；平台：macOS 本地。A07 尚未完成；UI、sync/transfer 树字段和 legacy 导入仍在后续切片。
 - ui-ux-pro-max 已找到并读取 Claude Code 插件缓存 2.13.0 的 SKILL.md。定向 UX 搜索确认：拖动须有菜单/选择替代入口；错误靠近字段并用 role=alert 公告。04A-2 沿现有组件/token 落地。
+
+## 04A-1 Windows CI 修复（2026-10-02）
+
+- Draft PR #26，首轮 run 36964874600：六项通过，Windows 的目录版本并发升级测试失败（358 passed / 1 failed）。错误为 storage_data_version_write_failed / Access is denied，属于 A07 升级入口的实际并发缺陷。
+- 根因：原子替换只保护单次发布，不能串行化多个调用的版本读取、备份和替换；Windows 文件句柄争用使替换失败。
+- 修复：独立持久锁文件 `.data-version.lock`，标准库文件锁覆盖整个版本检查/写入，持锁重读，退出释放；失败不继续 SQLite 初始化。不新增依赖、不重试吞错、不跳过 Windows 测试。
+- 回归：8 调用 barrier 并发成功，升级前备份不被覆盖；新增锁不可用时版本不变、无数据库副作用测试。
+- macOS：`cargo test --manifest-path src-tauri/Cargo.toml --lib connection_groups -- --quiet` 10/10；同命令过滤 `storage` 57/57；line-budget、connection-transfer source gate、git diff --check 通过。Windows 修复结果待新 CI，不代表 A07 GUI PASS。
