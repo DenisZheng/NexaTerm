@@ -28,7 +28,7 @@ export interface BatchConnectController {
   start(groupId: string, connectionIds: readonly string[]): boolean;
 }
 
-export function useBatchConnectController(
+export function useBatchConnectController<Handle>(
   adapter: BatchConnectWorkspaceAdapter<Handle>,
 ): BatchConnectController {
   const adapterRef = useRef(adapter);
