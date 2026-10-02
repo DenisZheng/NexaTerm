@@ -66,19 +66,16 @@ export function createBatchConnectExecution<Handle>(
 
     await Promise.allSettled(
       [...active.entries()].map(async ([connectionId, handle]) => {
-        try {
-          await adapter.cancel(handle);
-        } finally {
-          if (!results.has(connectionId)) {
-            const result: BatchConnectExecutionResult = {
-              connectionId,
-              error: null,
-              status: "cancelled",
-            };
-            results.set(connectionId, result);
-            callbacks.onItemStatus?.(connectionId, "cancelled", null);
-          }
+        if (!results.has(connectionId)) {
+          const result: BatchConnectExecutionResult = {
+            connectionId,
+            error: null,
+            status: "cancelled",
+          };
+          results.set(connectionId, result);
+          callbacks.onItemStatus?.(connectionId, "cancelled", null);
         }
+        await adapter.cancel(handle);
       }),
     );
   }
