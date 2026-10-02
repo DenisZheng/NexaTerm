@@ -18,7 +18,7 @@
 | WF-01 主窗口与统一会话入口 | 统一菜单/工具栏找到新建、Files、Split、MultiExec；同一主机两次打开可直接定位 | WF-00 | 原型通过现有设计流程；标签、焦点、关闭与 lazy loading 不回归；A02 | `09-23-wf-01-unified-session-entry` |
 | WF-02A 保存并连接 / WF-02B Quick Connect | 新建→保存并连接；首页输入地址→临时连接→可保存 | WF-01 实例与入口约定 | 认证、取消、失败重试和临时文件上下文走通；A03 / A04 | 待创建 |
 | WF-03 SSH 与 Files 日常操作 | 打开 SSH→左侧 Files→跟随目录→编辑/上传/下载 | WF-02，已有 SFTP/编辑器 | 标签/pane 切换不串目录，冲突和传输关闭策略可验收；A05 / A06 | 待创建 |
-| WF-04A 会话树数据一致性 / 04B 批量打开与分屏 / 04C 统一 MultiExec | 树中整理/批量打开→2/4 分屏→选择实例→MultiExec | WF-01、WF-03 | 同主机多实例、混合 SSH/Local、部分失败和断线均明确；A07–A10 | 待创建 |
+| WF-04A 会话树数据一致性 / 04B 批量打开与分屏 / 04C 统一 MultiExec | 树中整理/批量打开→2/4 分屏→选择实例→MultiExec | WF-01、WF-03 | 同主机多实例、混合 SSH/Local、部分失败和断线均明确；A07–A10 | `10-02-wf-04a-session-tree-consistency`（仅 04A，planning；04B/04C 未启动） |
 | WF-05 常用协议与平台入口 | 同一入口打开 Local、WSL、Serial、Telnet、RDP、VNC | WF-01/02，现有 provider | 各平台真实连接矩阵有证据；A11 | 待创建 |
 | WF-06A 隧道 / 06B Proxy-Jump 多跳 / 06C X11 | 管理隧道、经跳板连接并用 SFTP、打开远端 X11 GUI | WF-02/03；X11 spike 在 WF-01 期间提前 | 真实 forwarding/跳板链、取消清理、X11 显示验证；A12 / A13 | 待创建（X11 spike 可独立） |
 | WF-07 工作区恢复 | 退出→重启→恢复标签/分屏/文件位置→按策略重连 | WF-04 目标状态模型 | 版本迁移、部分失败、缺配置和敏感数据边界；A14 | 待创建 |

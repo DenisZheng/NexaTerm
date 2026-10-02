@@ -391,6 +391,8 @@ manager.connect_resolved(app, &config).await
 
 ## Scenario: SQLite Storage Foundation
 
+> 当前分组表已在 WF-04A-1 升级为 schema v3；见 [connection-groups.md](./connection-groups.md)。以下 v1 表定义保留为历史基础结构，不能作为当前分组唯一约束。
+
 ### 1. Scope / Trigger
 
 - Trigger: backend code adds or changes SQLite schema, storage bootstrap, schema versioning, future JSON-to-SQLite migration helpers, or secret reference columns.

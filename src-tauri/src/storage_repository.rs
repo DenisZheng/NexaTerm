@@ -534,6 +534,7 @@ impl StorageRepository {
     }
 
     fn export_sync_groups(&self) -> Result<Vec<SyncConnectionGroup>, AppError> {
+        crate::connection_groups::require_flat_transfer(&self.connection)?;
         let mut statement = self
             .connection
             .prepare(
@@ -2443,28 +2444,7 @@ impl StorageRepository {
     }
 
     fn ensure_group(&self, name: &str, now: &str) -> Result<String, AppError> {
-        if let Some(id) = self
-            .connection
-            .query_row(
-                "SELECT id FROM connection_groups WHERE name = ?1",
-                params![name],
-                |row| row.get::<_, String>(0),
-            )
-            .optional()
-            .map_err(sqlite_repository_error)?
-        {
-            return Ok(id);
-        }
-
-        let id = uuid::Uuid::new_v4().to_string();
-        self.connection
-            .execute(
-                "INSERT INTO connection_groups(id, name, sort_order, created_at, updated_at)
-                 VALUES (?1, ?2, 0, ?3, ?3)",
-                params![id, name, now],
-            )
-            .map_err(sqlite_repository_error)?;
-        Ok(id)
+        crate::connection_groups::ensure_legacy_group(&self.connection, name, now)
     }
 }
 

@@ -2,6 +2,8 @@ mod ai_assistant;
 pub mod app_error;
 mod command_library;
 mod commands;
+mod connection_group_schema;
+pub mod connection_groups;
 mod connection_transfer;
 mod connection_transfer_recovery;
 mod connections;
