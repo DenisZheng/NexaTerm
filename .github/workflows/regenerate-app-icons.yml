@@ -1,0 +1,57 @@
+name: Regenerate NexaTerm app icons
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - src-tauri/app-icon.svg
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    name: Generate desktop icon set
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.22.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Tauri icons
+        run: pnpm tauri icon src-tauri/app-icon.svg
+
+      - name: Verify active desktop icons
+        run: |
+          test -s src-tauri/icons/32x32.png
+          test -s src-tauri/icons/128x128.png
+          test -s src-tauri/icons/128x128@2x.png
+          test -s src-tauri/icons/icon.ico
+          test -s src-tauri/icons/icon.icns
+
+      - name: Commit generated icon set
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src-tauri/icons/*.png src-tauri/icons/icon.ico src-tauri/icons/icon.icns
+          if git diff --cached --quiet; then
+            echo "Icon set already up to date."
+            exit 0
+          fi
+          git commit -m "chore(brand): replace legacy app icon"
+          git push origin HEAD:main
