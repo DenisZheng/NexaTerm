@@ -1986,6 +1986,7 @@ mod tests {
             name: "jump".to_string(),
             protocol: ConnectionProtocol::Ssh,
             group: None,
+            group_id: None,
             host: "jump.example.com".to_string(),
             port: 22,
             username: "root".to_string(),

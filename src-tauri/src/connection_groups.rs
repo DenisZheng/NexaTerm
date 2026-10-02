@@ -84,6 +84,24 @@ pub(crate) fn list(db: &Connection) -> Result<Vec<ConnectionGroup>, AppError> {
     rows.collect::<Result<Vec<_>, _>>().map_err(sql_error)
 }
 
+/// 新入口只按稳定 ID 关联；旧输入没有 ID 时才解析名称，歧义必须报错。
+pub(crate) fn resolve_input_group(
+    db: &Connection,
+    id: Option<&str>,
+    legacy_name: Option<&str>,
+    now: &str,
+) -> Result<Option<String>, AppError> {
+    if let Some(id) = id {
+        if !list(db)?.iter().any(|group| group.id == id) {
+            return Err(group_error("connection_group_missing", "分组不存在"));
+        }
+        return Ok(Some(id.to_owned()));
+    }
+    legacy_name
+        .map(|name| ensure_legacy_group(db, name, now))
+        .transpose()
+}
+
 impl StorageRepository {
     pub fn connection_groups(&self) -> Result<Vec<ConnectionGroup>, AppError> {
         list(self.sqlite_connection())

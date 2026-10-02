@@ -1363,6 +1363,7 @@ mod tests {
                 protocol: ConnectionProtocol::Ssh,
                 name: Some(connection_name.to_string()),
                 group: Some("Production".to_string()),
+                group_id: None,
                 host: "example.com".to_string(),
                 port: 22,
                 username: "root".to_string(),

@@ -337,3 +337,39 @@ fn legacy_name_and_transfer_never_guess_or_drop_tree_fields() {
         "connection_group_transfer_upgrade_required"
     );
 }
+
+#[test]
+fn profile_group_id_survives_rename_and_rejects_unknown_ids() {
+    let (repo, _) = repo();
+    let prod = create(&repo, "Production", None);
+    let dev = create(&repo, "Development", None);
+    let group = create(&repo, "Linux", Some(&prod.id));
+    create(&repo, "Linux", Some(&dev.id));
+    let input: crate::connections::ConnectionProfileInput =
+        serde_json::from_value(serde_json::json!({
+            "host":"example.invalid", "port":22, "username":"test",
+            "credential_mode":"prompt", "prompt_auth_kind":"password", "group_id":group.id
+        }))
+        .unwrap();
+    let saved = repo.connection_upsert(input.clone(), "t").unwrap();
+    assert_eq!(saved.group_id.as_deref(), Some(group.id.as_str()));
+    let mut renamed = super::GroupInput {
+        id: Some(group.id.clone()),
+        name: "Web".into(),
+        parent_id: Some(dev.id),
+        color: group.color,
+    };
+    repo.save_connection_group(&renamed, "t2").unwrap();
+    let read = repo.connection_get(&saved.id).unwrap().unwrap();
+    assert_eq!(read.group_id, saved.group_id);
+    assert_eq!(read.group.as_deref(), Some("Web"));
+    assert_eq!(repo.connection_list().unwrap()[0].group_id, saved.group_id);
+    let mut bad = input;
+    bad.group_id = Some("missing".into());
+    assert_eq!(
+        repo.connection_upsert(bad, "t").unwrap_err().code,
+        "connection_group_missing"
+    );
+    renamed.name = "Linux".into();
+    assert!(repo.save_connection_group(&renamed, "t").is_err());
+}

@@ -944,6 +944,7 @@ mod tests {
                 protocol: ConnectionProtocol::Ssh,
                 name: Some("生产连接".to_string()),
                 group: Some("生产".to_string()),
+                group_id: None,
                 host: "example.com".to_string(),
                 port: 22,
                 username: "root".to_string(),

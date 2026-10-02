@@ -23,7 +23,7 @@
 
 目录版本检查先以标准库 `File::lock` 独占 `.data-version.lock`，持锁覆盖读取、判定、备份与原子替换。句柄释放即解锁，不删除锁文件，也不锁会被替换的 `.data-version`。后来者持锁重读，避免重复升级覆盖 `.bak`，以及 Windows 备份/替换句柄争用；锁失败必须在 SQLite 初始化前返回错误。
 
-04A-1 尚未接通 UI/IPC 与新 transfer 格式；旧导出遇到 parent 或非默认颜色时报升级错误，不静默丢字段。04A-3 必须替换该临时保护为完整格式支持。
+04A-2 已接通 connection_group_list/save/delete/assign IPC；写操作共用 connection_store_lock。ConnectionProfile/Input.group_id 为规范 ID；存在时不回退名称，不存在时旧 group 名称兼容入口仍拒绝歧义。list/get/stored profile 三条读取路径同步返回 group_id。旧导出遇到 parent 或非默认颜色仍报升级错误，不静默丢字段；04A-3 必须替换该临时保护。
 
 ## 4. Validation & Error Matrix
 

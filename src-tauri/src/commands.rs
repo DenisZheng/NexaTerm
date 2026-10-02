@@ -2850,7 +2850,7 @@ mod tests {
     }
 }
 
-fn connection_store_lock() -> &'static Mutex<()> {
+pub(crate) fn connection_store_lock() -> &'static Mutex<()> {
     CONNECTION_STORE_LOCK.get_or_init(|| Mutex::new(()))
 }
 
@@ -3086,7 +3086,7 @@ pub(crate) fn detect_distribution_mode(
     "desktop-installer"
 }
 
-fn now_timestamp() -> Result<String, AppError> {
+pub(crate) fn now_timestamp() -> Result<String, AppError> {
     let duration = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_err(|error| {

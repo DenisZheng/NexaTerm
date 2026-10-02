@@ -18,10 +18,10 @@
 
 ## 04A-2 Frontend canonical groups
 
-- [ ] typed IPC、profile 类型、useConnections、ConnectionDialog 一并接入 ID，保留旧输入兼容边界。
-- [ ] tree controller 取代 localStorage 业务 owner，保留展开状态；迁移就绪门禁避免空数据覆盖旧树。
-- [ ] 创建子组、rename、组移动、连接拖放和错误显示；行为测试覆盖同名路径选择与失败不假成功。
-- [ ] 涉及 UI 入口时先读取 ui-ux-pro-max（缺失则查找并报告），在原型母版确认最小交互，不改主题。
+- [x] typed IPC、profile 类型、useConnections、ConnectionDialog 一并接入 ID，保留旧输入兼容边界。
+- [x] tree controller 取代 localStorage 业务 owner，保留展开状态；迁移就绪门禁避免空数据覆盖旧树。
+- [x] 创建子组、rename、组移动、连接拖放和错误显示；行为测试覆盖同名路径选择与失败不假成功。
+- [x] 涉及 UI 入口时先读取 ui-ux-pro-max（缺失则查找并报告），在原型母版确认最小交互，不改主题。
 
 ## 04A-3 Sync + Export / Import
 
@@ -77,3 +77,15 @@ git diff --check
 - 修复：独立持久锁文件 `.data-version.lock`，标准库文件锁覆盖整个版本检查/写入，持锁重读，退出释放；失败不继续 SQLite 初始化。不新增依赖、不重试吞错、不跳过 Windows 测试。
 - 回归：8 调用 barrier 并发成功，升级前备份不被覆盖；新增锁不可用时版本不变、无数据库副作用测试。
 - macOS：`cargo test --manifest-path src-tauri/Cargo.toml --lib connection_groups -- --quiet` 10/10；同命令过滤 `storage` 57/57；line-budget、connection-transfer source gate、git diff --check 通过。Windows 修复结果待新 CI，不代表 A07 GUI PASS。
+
+
+## 04A-2 实现与证据（2026-10-02）
+
+- PR #26 的 6b96200 CI run 36966178042 七项通过，Windows 并发升级修复已获真实 runner 证据。
+- 新增 group list/save/delete/assign typed IPC，与连接写入共用锁；ConnectionProfile/Input 增加 group_id，旧 group 保持名称语义。新 UI 用 ID，旧名称仅在无 ID 的兼容入口解析；未知 ID 拒绝。
+- ConnectionPane 不再读写 localStorage 树；useConnectionGroups 持后端投影，展开状态仍本地。编辑框支持父组选择，排除自己和后代；同名组用路径显示、ID 选择，保存失败保留输入。删除整棵子树的确认明确范围，连接回未分组。
+- 当前过渡门禁：旧 localStorage 原文非空时保留数据并阻止目录编辑，04A-4 将以一次性迁移替换此门禁；本切片不是可独立升级交付版本。
+- 维护者已授权直接实施，沿用现有 Radix/AppSelect/token，不新建原型或视觉体系。真实 GUI、三主题及 A07 验收待完整链路实现后统一留证。
+- 新增 profile 字段需要更新各协议的测试构造；连接与 RDP 内嵌测试机械移到相邻 tests.rs 以遵守预算，RDP 运行逻辑未改。删除已失去调用者的 connectionToInput/ensure_group。
+- 验证：cargo test --lib 360/360；分组定向 11/11；pnpm test 429 passed / 1 todo；test:scripts 93 passed / 3 skipped；pnpm run check/build、lazy boundary 通过，TerminalPanel/RemoteFileEditor 保持独立 chunk。
+- 相关 duplicate、jump、terminal-encoding、system-icon、dialog-host-key、remote-editor、workspace-activation、transfer source gate 通过；jump gate 的两个旧标识已对照 main 实现纠正，不改跳板行为。全仓已有 fmt 漂移仍不作为本切片清理范围。

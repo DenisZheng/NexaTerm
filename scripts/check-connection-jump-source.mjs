@@ -24,7 +24,7 @@ const requiredDialogSnippets = [
   "SSH 跳板机",
   "jump_connection_id",
   "选择跳板机",
-  "validateNetworkPath",
+  "validateConnectionNetworkPath",
 ];
 
 for (const snippet of requiredDialogSnippets) {
@@ -54,7 +54,7 @@ for (const snippet of requiredBackendSnippets) {
   }
 }
 
-if (!backendConfigSource.includes("pub jump: crate::connections::ConnectionJumpConfig")) {
+if (!backendConfigSource.includes("pub jump: ConnectionJumpConfig")) {
   throw new Error("ResolvedSshConfig should carry jump config for future SSH jump implementation.");
 }
 
