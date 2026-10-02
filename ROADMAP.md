@@ -1,12 +1,12 @@
 # NexaTerm 当前路线图
 
 > 更新：2026-10-02
-> 基线：GitHub `main` @ `a0fcc0d`
+> WF-04A 交付：PR #26（基于 GitHub `main` @ `a0fcc0d`）
 > 本文件是当前项目级执行顺序的唯一入口。需求范围仍以 `NEXATERM_REQUIREMENTS.md` 为准；交互规则仍以 `docs/WORKFLOW_SPEC.md` 为准。旧阶段计划、差距分析和工作流交付计划保留用于追溯，不再覆盖本文件的当前优先级。
 
 ## 当前工作流进展（2026-10-02）
 
-WF-02B / WF-03 已合入 main；最新 main 为 a0fcc0d（含图标更新）。唯一主线继续使用 `09-23-nexaterm-workflow-mainline`。WF-04A 四个切片已在 Draft PR #26 实现，A07 macOS 真实 GUI / 导入 / 重启数据对照 PASS（[证据](.trellis/tasks/10-02-wf-04a-session-tree-consistency/validation/a07.md)），待审核合并。Windows/Linux 仅 CI 自动化证据。WF-04B/04C 未启动，WS-X09/WS-X04 仍待确认。
+WF-02B / WF-03 与图标更新已在 main。唯一主线继续使用 `09-23-nexaterm-workflow-mainline`。WF-04A 四个切片实现与 A07 macOS 验收已完成，由 [PR #26](https://github.com/DenisZheng/NexaTerm/pull/26) 交付；真实 GUI / 导入 / 重启数据对照、legacy 冲突显式映射与三主题补验均 PASS（[归档证据](.trellis/tasks/archive/2026-10/10-02-wf-04a-session-tree-consistency/validation/a07.md)）。维护者已授权最终 CI 通过后合并。Windows/Linux 仅 CI 自动化证据。WF-04B/04C 未启动，WS-X09/WS-X04 仍待确认。
 
 ## 当前评审整改状态
 
