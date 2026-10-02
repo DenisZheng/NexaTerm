@@ -1,6 +1,5 @@
 import type { ConnectionGroup } from "./connectionGroupModel";
 import type {
-  ConnectionCredentialMode,
   ConnectionProtocol,
   ConnectionProfile,
 } from "./connectionTypes";
@@ -18,7 +17,7 @@ export type BatchConnectItemStatus =
 
 type BatchConnectProfile = Pick<
   ConnectionProfile,
-  "credential_mode" | "group_id" | "id" | "name" | "protocol"
+  "credential_mode" | "group_id" | "id" | "name" | "protocol" | "rdp" | "vnc"
 >;
 
 type BatchConnectGroup = Pick<
@@ -90,7 +89,7 @@ export function buildBatchConnectPreviewPlan(input: {
           groupPath: pathById.get(group.id) || group.name,
           name: connection.name,
           protocol: connection.protocol || "ssh",
-          requiresInteraction: requiresInteractiveCredential(connection.credential_mode),
+          requiresInteraction: requiresInteractiveCredential(connection),
         }),
       ),
   );
@@ -242,8 +241,19 @@ function resolveGroupPath(groups: readonly BatchConnectGroup[], groupId: string)
   return names.join(" / ");
 }
 
-function requiresInteractiveCredential(mode: ConnectionCredentialMode) {
-  return mode === "prompt";
+function requiresInteractiveCredential(
+  connection: Pick<ConnectionProfile, "credential_mode" | "protocol" | "rdp" | "vnc">,
+) {
+  if (connection.protocol === "rdp") {
+    return (
+      connection.rdp?.security.credential_mode === "prompt" ||
+      connection.rdp?.gateway?.credential_source === "prompt"
+    );
+  }
+  if (connection.protocol === "vnc") {
+    return connection.vnc?.security.credential_mode === "prompt";
+  }
+  return connection.credential_mode === "prompt";
 }
 
 function isActiveStatus(status: BatchConnectItemStatus) {

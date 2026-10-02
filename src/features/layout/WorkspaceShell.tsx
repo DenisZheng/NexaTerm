@@ -56,6 +56,8 @@ import {
 } from "lucide-react";
 
 import { ConnectionPane } from "../connections/ConnectionPane";
+import { useBatchConnectController } from "../connections/useBatchConnectController";
+import { batchWorkspaceClosePlan, batchWorkspaceItemId, collectBatchOpenConnectionIds, waitForBatchWorkspaceHandle, type BatchWorkspaceHandle } from "../connections/batchConnectWorkspaceRuntime";
 import {
   WorkspaceSidebar,
   readStoredWorkspaceSidebarView,
@@ -1325,6 +1327,18 @@ export function WorkspaceShell() {
   ]);
 
   const connectionById = useMemo(() => new Map([...connections, ...temporaryConnections].map((connection) => [connection.id, connection])), [connections, temporaryConnections]);
+  const batchOpenConnectionIds = useMemo(() => collectBatchOpenConnectionIds({ localTerminalTabs, rdpSessions, terminalTabs, vncSessions }), [localTerminalTabs, rdpSessions, terminalTabs, vncSessions]);
+  const batchConnect = useBatchConnectController<BatchWorkspaceHandle>({
+    cancel: (handle) => executeClosePlan(batchWorkspaceClosePlan(handle)),
+    focus: (handle) => selectWorkspaceItem(batchWorkspaceItemId(handle)),
+    start: (connectionId) => {
+      const connection = connections.find((item) => item.id === connectionId);
+      const handle = connection ? openNewConnectionSession(connection, false) : null;
+      if (!handle) throw new Error("连接已不存在，无法启动批量会话。");
+      return handle;
+    },
+    wait: (handle, reportStatus) => waitForBatchWorkspaceHandle(handle, () => ({ localTerminalTabs: localTerminalTabsRef.current, rdpSessions: rdpSessionsRef.current, terminalTabs: terminalTabsRef.current, vncSessions: vncSessionsRef.current }), reportStatus),
+  });
 
   const activeConnection = activeConnectionId
     ? connectionById.get(activeConnectionId) || null
@@ -6479,14 +6493,14 @@ export function WorkspaceShell() {
     startConnectionStep(connection, "terminal");
   }
 
-  function openNewConnectionSession(connection: ConnectionProfile) {
-    if (isRdpConnection(connection)) return void startRdpSession(connection);
-    if (isVncConnection(connection)) return void startVncSession(connection);
+  function openNewConnectionSession(connection: ConnectionProfile, activate = true): BatchWorkspaceHandle | null {
+    if (isRdpConnection(connection)) return { kind: "rdp", id: startRdpSession(connection, activate).id };
+    if (isVncConnection(connection)) return { kind: "vnc", id: startVncSession(connection, activate).id };
     if (isTelnetConnection(connection) || isSerialConnection(connection)) {
-      openCharacterTerminalInConnection(connection);
-      return;
+      return { kind: "character", id: openCharacterTerminalInConnection(connection, activate).id };
     }
-    startConnectionStep(connection, "terminal");
+    const tab = startConnectionStep(connection, "terminal", activate);
+    return tab ? { kind: "ssh", id: tab.id } : null;
   }
 
   function openTerminal(connection: ConnectionProfile) {
@@ -6517,15 +6531,16 @@ export function WorkspaceShell() {
     startRdpSession(connection);
   }
 
-  function startRdpSession(connection: ConnectionProfile) {
+  function startRdpSession(connection: ConnectionProfile, activate = true) {
     const session = buildRdpSession(connection);
     setRdpSessions((sessions) => {
       const nextSessions = [...sessions, session];
       rdpSessionsRef.current = nextSessions;
       return nextSessions;
     });
-    activateRdpSession(session);
+    if (activate) activateRdpSession(session);
     void runRdpSession(session.id, connection);
+    return session;
   }
 
   function revealNativeRdpHostSession(session: RdpSessionTab) {
@@ -6776,15 +6791,16 @@ export function WorkspaceShell() {
     startVncSession(connection);
   }
 
-  function startVncSession(connection: ConnectionProfile) {
+  function startVncSession(connection: ConnectionProfile, activate = true) {
     const session = buildVncSession(connection);
     setVncSessions((sessions) => {
       const nextSessions = [...sessions, session];
       vncSessionsRef.current = nextSessions;
       return nextSessions;
     });
-    activateVncSession(session);
+    if (activate) activateVncSession(session);
     void runVncSession(session.id, connection);
+    return session;
   }
 
   async function runVncSession(sessionId: string, connection: ConnectionProfile) {
@@ -8269,6 +8285,7 @@ export function WorkspaceShell() {
           onViewChange={setWorkspaceSidebarView}
           sessions={
             <ConnectionPane
+              batchConnect={{ ...batchConnect, openConnectionIds: batchOpenConnectionIds }}
               connections={connections}
               error={error || connectionGroupCatalog.error}
               loading={loading}

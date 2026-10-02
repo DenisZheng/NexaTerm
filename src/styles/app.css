@@ -15017,6 +15017,7 @@ body[data-platform="macos"] .dialog-backdrop {
 }
 
 .connection-dialog,
+.batch-connect-dialog,
 .group-dialog,
 .remote-file-text-dialog,
 .remote-file-properties-dialog,
@@ -18349,4 +18350,284 @@ body[data-platform="macos"][data-theme-mode="dark"] .ui-tooltip-arrow {
   to {
     transform: rotate(360deg);
   }
+}
+
+
+/* WF-04B: bounded batch-connect preview + non-modal progress. */
+.batch-connect-dialog {
+  width: min(720px, calc(100vw - 40px));
+  max-height: min(760px, calc(100vh - 40px));
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+}
+
+.batch-connect-options {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--mx-line);
+  color: var(--mx-muted);
+  background: color-mix(in srgb, var(--mx-panel-soft) 72%, transparent);
+  font-size: 12px;
+}
+
+.batch-connect-toggle {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--mx-text);
+  cursor: pointer;
+}
+
+.batch-connect-toggle input,
+.batch-connect-candidate input {
+  accent-color: var(--mx-primary);
+}
+
+.batch-connect-selection-count {
+  color: var(--mx-subtle);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.batch-connect-limit-note {
+  margin: 0;
+  padding: 7px 16px;
+  border-bottom: 1px solid var(--mx-line);
+  color: color-mix(in srgb, var(--mx-warning, #a16207) 78%, var(--mx-text));
+  background: color-mix(in srgb, var(--mx-warning, #f59e0b) 7%, var(--mx-panel));
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.batch-connect-candidates {
+  min-height: 120px;
+  overflow: auto;
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  padding: 10px 12px;
+}
+
+.batch-connect-candidate {
+  min-width: 0;
+  min-height: 48px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  display: grid;
+  grid-template-columns: 18px 20px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  color: var(--mx-text);
+  background: transparent;
+  cursor: pointer;
+}
+
+.batch-connect-candidate:hover {
+  border-color: color-mix(in srgb, var(--mx-line-strong) 38%, transparent);
+  background: var(--mx-active);
+}
+
+.batch-connect-candidate.selected {
+  border-color: color-mix(in srgb, var(--mx-primary) 30%, var(--mx-line));
+  background: color-mix(in srgb, var(--mx-primary) 6%, var(--mx-panel));
+}
+
+.batch-connect-candidate:has(input:disabled) {
+  cursor: default;
+  opacity: 0.58;
+}
+
+.batch-connect-candidate-copy,
+.batch-connect-status-copy {
+  min-width: 0;
+}
+
+.batch-connect-candidate-copy strong,
+.batch-connect-candidate-copy small,
+.batch-connect-status-copy strong,
+.batch-connect-status-copy small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.batch-connect-candidate-copy strong,
+.batch-connect-status-copy strong {
+  color: var(--mx-text);
+  font-size: 12px;
+  font-weight: 560;
+}
+
+.batch-connect-candidate-copy small,
+.batch-connect-status-copy small {
+  margin-top: 2px;
+  color: var(--mx-subtle);
+  font-size: 10.5px;
+}
+
+.batch-connect-candidate-flags {
+  max-width: 220px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.batch-connect-candidate-flags span {
+  min-height: 20px;
+  border: 1px solid var(--mx-line);
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 7px;
+  color: var(--mx-muted);
+  background: var(--mx-panel-soft);
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.batch-connect-empty {
+  margin: 0;
+  padding: 24px 10px;
+  color: var(--mx-muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.batch-connect-actions {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+}
+
+.batch-connect-dialog-hint {
+  overflow: hidden;
+  color: var(--mx-muted);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.batch-connect-status-panel {
+  flex: 0 1 250px;
+  min-height: 116px;
+  max-height: 250px;
+  border-top: 1px solid var(--mx-line);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--mx-panel) 72%, var(--mx-panel-soft));
+}
+
+.batch-connect-status-head {
+  min-width: 0;
+  min-height: 42px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--mx-line);
+}
+
+.batch-connect-status-head > div {
+  min-width: 0;
+}
+
+.batch-connect-status-head strong,
+.batch-connect-status-head small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.batch-connect-status-head strong {
+  color: var(--mx-text);
+  font-size: 12px;
+}
+
+.batch-connect-status-head small,
+.batch-connect-status-head > span {
+  color: var(--mx-subtle);
+  font-size: 10.5px;
+}
+
+.batch-connect-status-list {
+  min-height: 0;
+  overflow: auto;
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  padding: 5px 7px;
+}
+
+.batch-connect-status-row {
+  min-width: 0;
+  min-height: 34px;
+  border-radius: 7px;
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 6px;
+}
+
+.batch-connect-status-row:hover {
+  background: var(--mx-active);
+}
+
+.batch-connect-status-row[data-status="failed"] .batch-connect-status-copy small {
+  color: var(--mx-danger);
+}
+
+.batch-connect-status-row[data-status="success"] > .ui-icon:last-child {
+  color: color-mix(in srgb, #16a34a 72%, var(--mx-text));
+}
+
+.batch-connect-status-row[data-status="cancelled"] {
+  opacity: 0.62;
+}
+
+.batch-connect-focus {
+  min-width: auto;
+  width: auto;
+  padding: 0 7px;
+}
+
+.batch-connect-status-actions {
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 5px 8px;
+  border-top: 1px solid var(--mx-line);
+}
+
+.batch-connect-status-actions button {
+  min-height: 27px;
+  border: 1px solid var(--mx-line);
+  border-radius: 7px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 8px;
+  color: var(--mx-text);
+  background: var(--mx-panel);
+  font-size: 11px;
+}
+
+.batch-connect-status-actions button:hover {
+  background: var(--mx-active);
+}
+
+.batch-connect-status-actions .ui-icon {
+  width: 13px;
+  height: 13px;
 }

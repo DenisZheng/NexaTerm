@@ -1,4 +1,10 @@
+import { useI18n } from "../../shared/i18n";
 import { AppSelect } from "../../shared/ui/AppSelect";
+import {
+  BatchConnectPreviewDialog,
+  BatchConnectStatusPanel,
+  type ConnectionPaneBatchConnectController,
+} from "./BatchConnectUi";
 import { groupOptions, groupDescendants, type ConnectionGroup as CustomGroup, type ConnectionGroupInput, type LegacyGroupReport, type LegacyGroupResolution } from "./connectionGroupModel";
 import { groupErrorMessage } from "./useConnectionGroups";
 import * as ContextMenu from "@radix-ui/react-context-menu";
@@ -40,6 +46,7 @@ import type { ConnectionProfile } from "./connectionTypes";
 import { connectionTimestampOf, sortConnectionsByRecent } from "./connectionSearch";
 
 interface ConnectionPaneProps {
+  batchConnect: ConnectionPaneBatchConnectController;
   connections: ConnectionProfile[];
   error: string | null;
   loading: boolean;
@@ -105,6 +112,7 @@ const groupPalette = ["#64748b", "#2563eb", "#4f7d63", "#c47c2c", "#8b5cf6", "#d
 const connectionDragDataType = "application/x-mxterm-connection-id";
 
 export function ConnectionPane({
+  batchConnect,
   connections,
   error,
   loading,
@@ -131,6 +139,7 @@ export function ConnectionPane({
   recentConnectionLimit,
   selectedId,
 }: ConnectionPaneProps) {
+  const { t } = useI18n();
   const [groupError, setGroupError] = useState<string | null>(null);
   const connectionGroups = useMemo(
     () => Object.fromEntries(connections.filter((c) => c.group_id).map((c) => [c.id, c.group_id!])),
@@ -142,6 +151,7 @@ export function ConnectionPane({
   const [groupDraft, setGroupDraft] = useState("");
   const [groupColorDraft, setGroupColorDraft] = useState(groupPalette[0]);
   const [deleteRequest, setDeleteRequest] = useState<DeleteRequest | null>(null);
+  const [batchPreviewGroupId, setBatchPreviewGroupId] = useState<string | null>(null);
   const [draggingConnectionId, setDraggingConnectionId] = useState<string | null>(null);
   const [dropTargetId, setDropTargetId] = useState<DropTargetId | null>(null);
   const [mouseDrag, setMouseDrag] = useState<MouseDragState | null>(null);
@@ -349,6 +359,12 @@ export function ConnectionPane({
           </div>
         </section>
 
+        <BatchConnectStatusPanel
+          connections={connections}
+          controller={batchConnect}
+          groups={customGroups}
+        />
+
         <footer className="settings-foot">
           <Tooltip label="设置">
             <button
@@ -382,6 +398,15 @@ export function ConnectionPane({
 
       {renderGroupDialog()}
       {renderDeleteConfirmDialog()}
+      <BatchConnectPreviewDialog
+        connections={connections}
+        controller={batchConnect}
+        groups={customGroups}
+        targetGroupId={batchPreviewGroupId}
+        onOpenChange={(open) => {
+          if (!open) setBatchPreviewGroupId(null);
+        }}
+      />
     </>
   );
 
@@ -516,6 +541,8 @@ export function ConnectionPane({
         onToggleFavorite={onToggleFavorite}
         onCreateConnection={() => onCreate(group.id)}
         onCreateGroup={() => beginCreateGroup(group.id)}
+        connectAllLabel={t("batchConnect.menu")}
+        onConnectAll={() => setBatchPreviewGroupId(group.id)}
         onConnect={onConnect}
         onDeleteConnection={requestDeleteConnection}
         onConnectionDragEnd={finishConnectionDrag}
@@ -732,6 +759,8 @@ function TreeFolder({
   onToggleFavorite,
   onCreateConnection,
   onCreateGroup,
+  connectAllLabel,
+  onConnectAll,
   onConnect,
   onDeleteConnection,
   onConnectionDragEnd,
@@ -761,6 +790,8 @@ function TreeFolder({
   onToggleFavorite: (connection: ConnectionProfile) => void | Promise<void>;
   onCreateConnection: () => void;
   onCreateGroup: () => void;
+  connectAllLabel?: string;
+  onConnectAll?: () => void;
   onConnect: (connection: ConnectionProfile) => void;
   onDeleteConnection: (connection: ConnectionProfile) => void | Promise<void>;
   onConnectionDragEnd: () => void;
@@ -814,6 +845,12 @@ function TreeFolder({
               <Folder className="ui-icon" aria-hidden="true" />
               <span>{expanded ? "收起分组" : "展开分组"}</span>
             </ContextMenu.Item>
+            {onConnectAll && connectAllLabel ? (
+              <ContextMenu.Item className="context-menu-item" onSelect={onConnectAll}>
+                <Play className="ui-icon" aria-hidden="true" />
+                <span>{connectAllLabel}</span>
+              </ContextMenu.Item>
+            ) : null}
             <ContextMenu.Item className="context-menu-item" onSelect={onCreateConnection}>
               <Plus className="ui-icon" aria-hidden="true" />
               <span>新建连接</span>
