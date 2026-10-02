@@ -2,6 +2,11 @@ mod ai_assistant;
 pub mod app_error;
 mod command_library;
 mod commands;
+mod connection_group_schema;
+pub mod connection_groups;
+mod connection_group_commands;
+mod connection_group_transfer;
+mod connection_group_legacy;
 mod connection_transfer;
 mod connection_transfer_recovery;
 mod connections;
@@ -26,6 +31,7 @@ pub mod storage_repository;
 pub mod storage_sqlite;
 pub mod storage_vault;
 pub mod sync_snapshot;
+mod sync_import_transaction;
 mod terminal;
 mod temporary_connections;
 mod tunnels;
@@ -88,6 +94,11 @@ pub fn run() {
             commands::connection_transfer_import,
             mobaxterm_import::mobaxterm_import_preview,
             mobaxterm_import::mobaxterm_import_apply,
+            connection_group_commands::connection_group_migrate_legacy,
+            connection_group_commands::connection_group_list,
+            connection_group_commands::connection_group_save,
+            connection_group_commands::connection_group_delete,
+            connection_group_commands::connection_group_assign,
             commands::connection_list,
             commands::connection_upsert,
             commands::connection_set_favorite,

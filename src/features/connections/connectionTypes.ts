@@ -236,6 +236,7 @@ export interface ConnectionProfile {
   name: string;
   protocol?: ConnectionProtocol | null;
   group?: string | null;
+  group_id?: string | null;
   host: string;
   port: number;
   username: string;
@@ -273,6 +274,7 @@ export interface ConnectionProfileInput {
   protocol?: ConnectionProtocol;
   name?: string;
   group?: string;
+  group_id?: string;
   host: string;
   port: number;
   username: string;

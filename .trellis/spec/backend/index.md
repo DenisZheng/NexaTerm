@@ -16,6 +16,7 @@ This directory contains guidelines for backend development. Fill in each file wi
 |-------|-------------|--------|
 | [Directory Structure](./directory-structure.md) | Module organization and file layout | To fill |
 | [Database Guidelines](./database-guidelines.md) | ORM patterns, queries, migrations | To fill |
+| [Connection Groups](./connection-groups.md) | WF-04A canonical group model, SQLite v3 migration and repository contracts | Active |
 | [Error Handling](./error-handling.md) | Error types, handling strategies | To fill |
 | [Quality Guidelines](./quality-guidelines.md) | Code standards, forbidden patterns, CI security gates | Active |
 | [Security Evidence](./security-evidence.md) | 密钥硬门禁、依赖审计报告、CI artifact 与工具故障契约 | Active |

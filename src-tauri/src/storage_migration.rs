@@ -17,7 +17,7 @@ use crate::tunnels::TunnelStore;
 /// 各自有版本号，这是在它们之上的目录级标记：
 /// - 新版 App 打开旧目录时，在此按版本逐级迁移；
 /// - 旧版 App 遇到新版写出的目录时拒绝打开（降级保护），而不是静默损坏数据。
-pub const DATA_DIR_VERSION: u32 = 1;
+pub const DATA_DIR_VERSION: u32 = 2;
 const DATA_VERSION_FILE: &str = ".data-version";
 
 pub struct StorageMigrator {
@@ -31,7 +31,7 @@ impl StorageMigrator {
     }
 
     /// 目录级版本门：缺失则盖戳（全新或历史遗留目录），过新则拒绝（降级保护），
-    /// 过旧则留给未来的逐级迁移（当前 v1 无需迁移，直接盖戳）。
+    /// v2 阻止旧应用写入树模型；SQLite 迁移失败仍保留降级保护和备份。
     fn ensure_data_dir_version(&self) -> Result<(), AppError> {
         fs::create_dir_all(&self.root).map_err(|e| {
             AppError::new(
@@ -41,6 +41,27 @@ impl StorageMigrator {
                 false,
             )
         })?;
+        // 锁独立文件且不删除：锁住会被替换的版本文件会丢失互斥身份。
+        // 原子替换不等于并发安全，Windows 的备份/替换也会争用文件句柄。
+        // 持锁覆盖读取与写入，后来者重新检查版本；句柄离开作用域释放跨进程锁。
+        let _version_lock = fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .truncate(false)
+            .open(self.root.join(".data-version.lock"))
+            .and_then(|file| {
+                file.lock()?;
+                Ok(file)
+            })
+            .map_err(|error| {
+                AppError::new(
+                    "storage_data_version_lock_failed",
+                    "无法锁定数据目录版本标记。",
+                    error,
+                    true,
+                )
+            })?;
         let path = self.root.join(DATA_VERSION_FILE);
         let current = match fs::read_to_string(&path) {
             Ok(content) => content.trim().parse::<u32>().map_err(|_| {
@@ -74,18 +95,27 @@ impl StorageMigrator {
                 false,
             ));
         }
-        // current < DATA_DIR_VERSION 时在此逐级迁移；v1 尚无跨版本迁移项。
+        // v2 为分组树增加降级保护；具体 SQLite 事务升级由 SqliteStore 执行。
         // 仅在版本缺失或过旧时盖戳，避免每个 command 都重写 `.data-version` 在并发下
         // 互相截断文件、导致后续读取拿到空串而报 `storage_data_version_invalid`。
         if current < DATA_DIR_VERSION {
-            fs::write(&path, format!("{DATA_DIR_VERSION}\n")).map_err(|e| {
-                AppError::new(
-                    "storage_data_version_write_failed",
-                    "数据目录版本标记写入失败。",
-                    e,
-                    false,
-                )
-            })?;
+            // 多个命令可同时首次打开 v1 目录；原子替换避免读到截断的版本号。
+            crate::storage::write_json_document(
+                &path,
+                &DATA_DIR_VERSION,
+                crate::storage::JsonStoreErrorLabels {
+                    create_dir_code: "storage_data_version_write_failed",
+                    create_dir_message: "版本目录创建失败。",
+                    parse_code: "storage_data_version_invalid",
+                    parse_message: "版本标记损坏。",
+                    read_code: "storage_data_version_read_failed",
+                    read_message: "版本标记读取失败。",
+                    serialize_code: "storage_data_version_write_failed",
+                    serialize_message: "版本标记序列化失败。",
+                    write_code: "storage_data_version_write_failed",
+                    write_message: "版本标记写入失败。",
+                },
+            )?;
         }
         Ok(())
     }
@@ -812,12 +842,12 @@ mod tests {
             .unwrap();
 
         let content = fs::read_to_string(root.join(".data-version")).unwrap();
-        assert_eq!(content.trim(), "1");
+        assert_eq!(content.trim(), "2");
 
         // 幂等：第二次 migrate 不报错、不改写。
         StorageMigrator::new(root.clone(), secrets).migrate().unwrap();
         let content = fs::read_to_string(root.join(".data-version")).unwrap();
-        assert_eq!(content.trim(), "1");
+        assert_eq!(content.trim(), "2");
     }
 
     #[test]

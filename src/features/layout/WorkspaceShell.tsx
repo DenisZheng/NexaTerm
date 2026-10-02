@@ -1,3 +1,4 @@
+import { useConnectionGroups } from "../connections/useConnectionGroups";
 import {
   lazy,
   Suspense,
@@ -84,7 +85,6 @@ import type { ConnectionTransferMode } from "../connections/connectionTransferTy
 import type { ConnectionSaveIntent } from "../connections/connectionDialogSubmit";
 import {
   defaultRdpExternalRunnerForPlatform,
-  defaultJumpConfig,
   defaultVncConfig,
   formatRdpRunnerKind,
   formatVncRunnerKind,
@@ -1127,9 +1127,8 @@ export function WorkspaceShell() {
     defaultEditorTerminalSplitPercent,
   );
   const [resizingPane, setResizingPane] = useState<ResizingPane | null>(null);
-  const [pendingConnectionGroupName, setPendingConnectionGroupName] = useState<string | null>(null);
-  const [connectionGroupCatalog, setConnectionGroupCatalog] =
-    useState<ConnectionGroupCatalog>({ assignments: {}, groups: [] });
+  const [pendingConnectionGroupId, setPendingConnectionGroupId] = useState<string | null>(null);
+  const connectionGroupCatalog = useConnectionGroups(storageReady, connections, reload);
   const desktopPlatform = useMemo(() => resolveDesktopPlatform(), []);
   const platformCapabilities = useMemo(
     () => getPlatformCapabilities(desktopPlatform),
@@ -4064,7 +4063,7 @@ export function WorkspaceShell() {
 
   async function createConnection(groupName?: string) {
     setLeftPaneCollapsed(false);
-    setPendingConnectionGroupName(groupName || null);
+    setPendingConnectionGroupId(groupName || null);
     setEditingConnection(null);
     setDuplicatingConnection(false);
     await ensureConnectionDialogLoaded();
@@ -4072,7 +4071,7 @@ export function WorkspaceShell() {
   }
 
   async function editConnection(connection: ConnectionProfile) {
-    setPendingConnectionGroupName(null);
+    setPendingConnectionGroupId(null);
     setEditingConnection(connection);
     setDuplicatingConnection(false);
     await ensureConnectionDialogLoaded();
@@ -4080,7 +4079,7 @@ export function WorkspaceShell() {
   }
 
   async function duplicateConnection(connection: ConnectionProfile) {
-    setPendingConnectionGroupName(null);
+    setPendingConnectionGroupId(null);
     setEditingConnection(connection);
     setDuplicatingConnection(true);
     await ensureConnectionDialogLoaded();
@@ -4088,12 +4087,9 @@ export function WorkspaceShell() {
   }
 
   async function saveConnection(input: ConnectionProfileInput) {
-    const saved = await upsert({
-      ...input,
-      group: input.group || pendingConnectionGroupName || undefined,
-    });
+    const saved = await upsert(input);
     setSelectedConnectionId(saved.id);
-    setPendingConnectionGroupName(null);
+    setPendingConnectionGroupId(null);
     return saved;
   }
 
@@ -7489,7 +7485,7 @@ export function WorkspaceShell() {
   }
 
   async function moveConnectionToGroup(connection: ConnectionProfile, groupName: string | null) {
-    await upsert(connectionToInput({ ...connection, group: groupName || undefined }));
+    await connectionGroupCatalog.assign(connection, groupName);
   }
 
   async function toggleConnectionFavorite(connection: ConnectionProfile) {
@@ -8274,14 +8270,20 @@ export function WorkspaceShell() {
           sessions={
             <ConnectionPane
               connections={connections}
-              error={error}
+              error={error || connectionGroupCatalog.error}
               loading={loading}
               onConnect={openConnectionSession}
               onCreate={createConnection}
               onDelete={deleteConnection}
               onDuplicate={duplicateConnection}
               onEdit={editConnection}
-              onGroupCatalogChange={setConnectionGroupCatalog}
+              groups={connectionGroupCatalog.groups}
+              groupReady={connectionGroupCatalog.ready}
+              migration={connectionGroupCatalog.migration}
+              onResolveMigration={connectionGroupCatalog.resolveMigration}
+              groupBusy={connectionGroupCatalog.busy}
+              onSaveGroup={connectionGroupCatalog.save}
+              onDeleteGroup={connectionGroupCatalog.remove}
               onMoveConnectionToGroup={moveConnectionToGroup}
               onOpen={openTerminal}
               onOpenSearch={() => setConnectionSearchOpen(true)}
@@ -9209,7 +9211,7 @@ export function WorkspaceShell() {
             connection={editingConnection}
             connections={connections}
             credentials={credentials}
-            defaultGroup={pendingConnectionGroupName}
+            defaultGroup={pendingConnectionGroupId}
             duplicate={duplicatingConnection}
             groups={connectionGroupCatalog.groups}
             onClose={closeConnectionDialog}
@@ -9227,7 +9229,7 @@ export function WorkspaceShell() {
               connection={editingConnection}
               connections={connections}
               credentials={credentials}
-              defaultGroup={pendingConnectionGroupName}
+              defaultGroup={pendingConnectionGroupId}
               duplicate={duplicatingConnection}
               groups={connectionGroupCatalog.groups}
               onClose={closeConnectionDialog}
@@ -9890,7 +9892,7 @@ export function WorkspaceShell() {
 
   function closeConnectionDialog() {
     setDialogOpen(false);
-    setPendingConnectionGroupName(null);
+    setPendingConnectionGroupId(null);
     setDuplicatingConnection(false);
   }
 }
@@ -12050,36 +12052,6 @@ function connectionErrorSummary(code: string, fallback: string) {
     return "主机不可达";
   }
   return fallback;
-}
-
-function connectionToInput(connection: ConnectionProfile): ConnectionProfileInput {
-  return {
-    advanced: connection.advanced,
-    credential_id: connection.credential_id || undefined,
-    credential_mode: connection.credential_mode,
-    group: connection.group || undefined,
-    host: connection.host,
-    id: connection.id,
-    inline_auth_kind: connection.inline_auth_kind || undefined,
-    inline_password: connection.inline_password || undefined,
-    inline_private_key_passphrase: connection.inline_private_key_passphrase || undefined,
-    inline_private_key_path: connection.inline_private_key_path || undefined,
-    is_favorite: connection.is_favorite,
-    jump: connection.jump || defaultJumpConfig,
-    last_connected_at: connection.last_connected_at || undefined,
-    name: connection.name,
-    notes: connection.notes || undefined,
-    port: connection.port,
-    prompt_auth_kind: connection.prompt_auth_kind || undefined,
-    protocol: connection.protocol || "ssh",
-    proxy: connection.proxy,
-    rdp: connection.rdp || undefined,
-    vnc: connection.vnc || undefined,
-    remote_os_id: connection.remote_os_id || undefined,
-    remote_os_name: connection.remote_os_name || undefined,
-    remote_os_version: connection.remote_os_version || undefined,
-    username: connection.username,
-  };
 }
 
 function runtimeCredentialRequest(step: ConnectionStepState): ConnectionRuntimeCredentialRequest {

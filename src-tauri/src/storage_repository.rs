@@ -342,21 +342,8 @@ impl StorageRepository {
             )
             .map_err(sqlite_repository_error)?;
 
-        for group in &data.connection_groups {
-            self.connection
-                .execute(
-                    "INSERT INTO connection_groups(id, name, sort_order, created_at, updated_at)
-                     VALUES (?1, ?2, ?3, ?4, ?5)",
-                    params![
-                        group.id,
-                        group.name,
-                        group.sort_order,
-                        group.created_at,
-                        group.updated_at,
-                    ],
-                )
-                .map_err(sqlite_repository_error)?;
-        }
+        let groups = data.connection_groups.iter().map(crate::connection_group_transfer::canonical).collect::<Vec<_>>();
+        crate::connection_group_transfer::persist(&self.connection, &groups)?;
 
         for credential in &data.credentials {
             let secret_ref = if restore_secret_refs {
@@ -534,25 +521,7 @@ impl StorageRepository {
     }
 
     fn export_sync_groups(&self) -> Result<Vec<SyncConnectionGroup>, AppError> {
-        let mut statement = self
-            .connection
-            .prepare(
-                "SELECT id, name, sort_order, created_at, updated_at
-                   FROM connection_groups ORDER BY sort_order ASC, created_at ASC, name ASC",
-            )
-            .map_err(sqlite_repository_error)?;
-        let rows = statement
-            .query_map([], |row| {
-                Ok(SyncConnectionGroup {
-                    id: row.get(0)?,
-                    name: row.get(1)?,
-                    sort_order: row.get(2)?,
-                    created_at: row.get(3)?,
-                    updated_at: row.get(4)?,
-                })
-            })
-            .map_err(sqlite_repository_error)?;
-        collect_rows(rows)
+        Ok(self.connection_groups()?.into_iter().map(crate::connection_group_transfer::exported).collect())
     }
 
     fn export_sync_credentials(&self) -> Result<Vec<SyncCredentialRecord>, AppError> {
@@ -762,10 +731,9 @@ impl StorageRepository {
                 })
                 .flatten()
         });
-        let group_id = match validated.group.as_deref() {
-            Some(group) => Some(self.ensure_group(group, now)?),
-            None => None,
-        };
+        let group_id = crate::connection_groups::resolve_input_group(
+            &self.connection, input.group_id.as_deref(), validated.group.as_deref(), now,
+        )?;
 
         let existing_stored_connection = self.stored_connection_optional(&id)?;
         let duplicate_source = source_connection_id
@@ -905,7 +873,7 @@ impl StorageRepository {
                         c.jump_json, c.advanced_json, c.rdp_json, c.vnc_json, c.telnet_json,
                         c.serial_json, c.notes, c.is_favorite,
                         c.last_connected_at, c.remote_os_id, c.remote_os_name,
-                        c.remote_os_version, c.created_at, c.updated_at
+                        c.remote_os_version, c.created_at, c.updated_at, c.group_id
                    FROM connections c
                    LEFT JOIN connection_groups g ON g.id = c.group_id
                   ORDER BY c.created_at ASC, c.name ASC",
@@ -1040,7 +1008,7 @@ impl StorageRepository {
                         c.jump_json, c.advanced_json, c.rdp_json, c.vnc_json, c.telnet_json,
                         c.serial_json, c.notes, c.is_favorite,
                         c.last_connected_at, c.remote_os_id, c.remote_os_name,
-                        c.remote_os_version, c.created_at, c.updated_at
+                        c.remote_os_version, c.created_at, c.updated_at, c.group_id
                    FROM connections c
                    LEFT JOIN connection_groups g ON g.id = c.group_id
                   WHERE c.id = ?1",
@@ -1485,6 +1453,7 @@ impl StorageRepository {
             name: validated.name,
             protocol: validated.protocol,
             group: validated.group,
+            group_id: None,
             host: validated.host,
             port: validated.port,
             username: validated.username,
@@ -1713,7 +1682,7 @@ impl StorageRepository {
                         c.jump_json, c.advanced_json, c.rdp_json, c.vnc_json, c.telnet_json,
                         c.serial_json, c.notes, c.is_favorite,
                         c.last_connected_at, c.remote_os_id, c.remote_os_name,
-                        c.remote_os_version, c.created_at, c.updated_at,
+                        c.remote_os_version, c.created_at, c.updated_at, c.group_id,
                         c.inline_secret_ref, c.inline_secret_slot_id
                    FROM connections c
                    LEFT JOIN connection_groups g ON g.id = c.group_id
@@ -1721,8 +1690,8 @@ impl StorageRepository {
                 params![id],
                 |row| {
                     let profile = row_to_connection_profile(row)?;
-                    let account: Option<String> = row.get(27)?;
-                    let slot_id: Option<String> = row.get(28)?;
+                    let account: Option<String> = row.get(28)?;
+                    let slot_id: Option<String> = row.get(29)?;
                     let reference = account.map(|account| SecretReference {
                         service: VAULT_SERVICE,
                         slot_id: slot_id.unwrap_or_else(|| account.clone()),
@@ -2442,30 +2411,6 @@ impl StorageRepository {
             .map_err(sqlite_repository_error)
     }
 
-    fn ensure_group(&self, name: &str, now: &str) -> Result<String, AppError> {
-        if let Some(id) = self
-            .connection
-            .query_row(
-                "SELECT id FROM connection_groups WHERE name = ?1",
-                params![name],
-                |row| row.get::<_, String>(0),
-            )
-            .optional()
-            .map_err(sqlite_repository_error)?
-        {
-            return Ok(id);
-        }
-
-        let id = uuid::Uuid::new_v4().to_string();
-        self.connection
-            .execute(
-                "INSERT INTO connection_groups(id, name, sort_order, created_at, updated_at)
-                 VALUES (?1, ?2, 0, ?3, ?3)",
-                params![id, name, now],
-            )
-            .map_err(sqlite_repository_error)?;
-        Ok(id)
-    }
 }
 
 fn row_to_connection_profile(row: &rusqlite::Row<'_>) -> rusqlite::Result<ConnectionProfile> {
@@ -2486,6 +2431,7 @@ fn row_to_connection_profile(row: &rusqlite::Row<'_>) -> rusqlite::Result<Connec
         protocol: serde_json::from_value(serde_json::Value::String(protocol))
             .map_err(from_serde_row_error)?,
         group: row.get(3)?,
+        group_id: row.get(27)?,
         host: row.get(4)?,
         port: row.get(5)?,
         username: row.get(6)?,
@@ -3940,6 +3886,7 @@ mod tests {
             protocol: ConnectionProtocol::Ssh,
             name: Some("生产".to_string()),
             group: Some("默认".to_string()),
+            group_id: None,
             host: " example.com ".to_string(),
             port: 22,
             username: " root ".to_string(),

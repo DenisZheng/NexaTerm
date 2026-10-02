@@ -1,7 +1,12 @@
+import { AppSelect } from "../../shared/ui/AppSelect";
+import { groupOptions, groupDescendants, type ConnectionGroup as CustomGroup, type ConnectionGroupInput, type LegacyGroupReport, type LegacyGroupResolution } from "./connectionGroupModel";
+import { groupErrorMessage } from "./useConnectionGroups";
 import * as ContextMenu from "@radix-ui/react-context-menu";
 import * as Dialog from "@radix-ui/react-dialog";
 import {
   FormEvent,
+  lazy,
+  Suspense,
   useEffect,
   useMemo,
   useState,
@@ -38,16 +43,19 @@ interface ConnectionPaneProps {
   connections: ConnectionProfile[];
   error: string | null;
   loading: boolean;
-  onCreate: (groupName?: string) => void;
+  onCreate: (groupId?: string) => void;
   onConnect: (connection: ConnectionProfile) => void;
   onDelete: (connection: ConnectionProfile) => void | Promise<void>;
   onDuplicate: (connection: ConnectionProfile) => void;
   onEdit: (connection: ConnectionProfile) => void;
-  onGroupCatalogChange?: (catalog: {
-    assignments: ConnectionGroupAssignments;
-    groups: CustomGroup[];
-  }) => void;
-  onMoveConnectionToGroup: (connection: ConnectionProfile, groupName: string | null) => void | Promise<void>;
+  groups: CustomGroup[];
+  groupReady: boolean;
+  migration?: LegacyGroupReport | null;
+  onResolveMigration?: (resolutions?: LegacyGroupResolution[]) => Promise<unknown>;
+  groupBusy: boolean;
+  onSaveGroup: (input: ConnectionGroupInput) => Promise<unknown>;
+  onDeleteGroup: (id: string) => Promise<unknown>;
+  onMoveConnectionToGroup: (connection: ConnectionProfile, groupId: string | null) => Promise<unknown>;
   onOpen: (connection: ConnectionProfile) => void;
   onOpenSearch: () => void;
   onOpenSettings: () => void;
@@ -62,7 +70,6 @@ interface ConnectionPaneProps {
 type SystemFolderId = "favorites" | "recent";
 type FolderId = SystemFolderId | `group-${string}`;
 type DropTargetId = "root" | `group-${string}`;
-type ConnectionGroupAssignments = Record<string, string>;
 
 interface MouseDragState {
   active: boolean;
@@ -83,13 +90,6 @@ interface SystemFolder {
   label: string;
 }
 
-interface CustomGroup {
-  id: string;
-  color: string;
-  name: string;
-  parentId?: string | null;
-}
-
 type DeleteRequest =
   | { type: "connection"; connection: ConnectionProfile }
   | { type: "group"; group: CustomGroup };
@@ -99,8 +99,8 @@ const systemFolders: SystemFolder[] = [
   { id: "recent", color: "#64748b", icon: Clock3, label: "最近" },
 ];
 
-const customGroupStorageKey = "mxterm.connectionGroups.v2";
-const expandedFolderStorageKey = "mxterm.connectionExpandedFolders.v1";
+const LegacyGroupMigrationNotice = lazy(() => import("./LegacyGroupMigrationNotice"));
+const expandedFolderStorageKey = "mxterm.connectionExpandedFolders.v2";
 const groupPalette = ["#64748b", "#2563eb", "#4f7d63", "#c47c2c", "#8b5cf6", "#d14d72"];
 const connectionDragDataType = "application/x-mxterm-connection-id";
 
@@ -113,7 +113,13 @@ export function ConnectionPane({
   onDelete,
   onDuplicate,
   onEdit,
-  onGroupCatalogChange,
+  groups: customGroups,
+  groupReady,
+  migration,
+  onResolveMigration,
+  groupBusy,
+  onSaveGroup,
+  onDeleteGroup,
   onMoveConnectionToGroup,
   onOpen,
   onOpenSearch,
@@ -125,9 +131,9 @@ export function ConnectionPane({
   recentConnectionLimit,
   selectedId,
 }: ConnectionPaneProps) {
-  const [customGroups, setCustomGroups] = useState<CustomGroup[]>(readStoredGroups);
+  const [groupError, setGroupError] = useState<string | null>(null);
   const connectionGroups = useMemo(
-    () => buildConnectionGroupAssignments(connections, customGroups),
+    () => Object.fromEntries(connections.filter((c) => c.group_id).map((c) => [c.id, c.group_id!])),
     [connections, customGroups],
   );
   const [creatingGroup, setCreatingGroup] = useState(false);
@@ -140,6 +146,7 @@ export function ConnectionPane({
   const [dropTargetId, setDropTargetId] = useState<DropTargetId | null>(null);
   const [mouseDrag, setMouseDrag] = useState<MouseDragState | null>(null);
   const [quickSelectedId, setQuickSelectedId] = useState<string | null>(null);
+  const [expansionLoaded, setExpansionLoaded] = useState(false);
   const [expandedFolders, setExpandedFolders] = useState<Record<FolderId, boolean>>(
     readStoredExpandedFolders,
   );
@@ -152,15 +159,6 @@ export function ConnectionPane({
     () => new Set(customGroups.map((group) => group.id)),
     [customGroups],
   );
-  const customGroupNames = useMemo(
-    () =>
-      new Set(
-        customGroups
-          .map((group) => normalizeGroupName(group.name))
-          .filter(Boolean),
-      ),
-    [customGroups],
-  );
   const topLevelCustomGroups = useMemo(
     () =>
       customGroups.filter(
@@ -170,31 +168,22 @@ export function ConnectionPane({
   );
   const ungroupedConnections = useMemo(
     () =>
-      connections.filter((connection) => !customGroupNames.has(connectionGroups[connection.id] || "")),
-    [connections, connectionGroups, customGroupNames],
+      connections.filter((connection) => !customGroupIds.has(connectionGroups[connection.id] || "")),
+    [connections, connectionGroups, customGroupIds],
   );
   const draggedConnection = mouseDrag?.active
     ? connections.find((connection) => connection.id === mouseDrag.connectionId) || null
     : null;
 
   useEffect(() => {
-    writeStoredGroups(customGroups);
-  }, [customGroups]);
-
-  useEffect(() => {
+    if (!groupReady) return;
+    if (!expansionLoaded) {
+      setExpandedFolders(readStoredExpandedFolders());
+      setExpansionLoaded(true);
+      return;
+    }
     writeStoredExpandedFolders(expandedFolders);
-  }, [expandedFolders]);
-
-  useEffect(() => {
-    setCustomGroups((groups) => mergeProfileGroups(groups, connections));
-  }, [connections]);
-
-  useEffect(() => {
-    onGroupCatalogChange?.({
-      assignments: connectionGroups,
-      groups: customGroups,
-    });
-  }, [connectionGroups, customGroups, onGroupCatalogChange]);
+  }, [expandedFolders, groupReady, expansionLoaded]);
 
   useEffect(() => {
     if (!mouseDrag) {
@@ -255,7 +244,8 @@ export function ConnectionPane({
       <aside className="connection-pane app-sidebar" aria-label="连接仓库">
         <section className="pane-scroll connection-tree" aria-label="连接树">
           {loading ? <p className="pane-note">加载连接中...</p> : null}
-          {error ? <p className="pane-error">{error}</p> : null}
+          {migration && onResolveMigration ? <Suspense fallback={null}><LegacyGroupMigrationNotice report={migration} groups={customGroups} onResolve={onResolveMigration} /></Suspense> : null}
+          {error || groupError ? <p className="pane-error" role="alert">{groupError || error}</p> : null}
 
           <div className="tree-block" aria-label="固定分组">
             {systemFolders.map((folder) => (
@@ -404,7 +394,7 @@ export function ConnectionPane({
       <Dialog.Root
         open={creatingGroup}
         onOpenChange={(open) => {
-          if (!open) {
+          if (!open && !groupBusy) {
             resetGroupForm();
           }
         }}
@@ -444,6 +434,13 @@ export function ConnectionPane({
                     onChange={(event) => setGroupDraft(event.target.value)}
                   />
                 </label>
+                <label>
+                  <span>父分组</span>
+                  <AppSelect ariaLabel="父分组" value={creatingGroupParentId || ""}
+                    options={[{ value: "", label: "根目录" }, ...groupOptions(customGroups.filter((group) => !editingGroupId || !groupDescendants(customGroups, editingGroupId).has(group.id)))]}
+                    onChange={(id) => setCreatingGroupParentId(id || null)} />
+                </label>
+                {groupError ? <p className="pane-error" role="alert">{groupError}</p> : null}
                 <div className="group-dialog-colors">
                   <span>颜色</span>
                   <div className="group-color-row" aria-label="分组颜色">
@@ -469,7 +466,7 @@ export function ConnectionPane({
                     <span>取消</span>
                   </button>
                 </Dialog.Close>
-                <button className="primary-button" type="submit">
+                <button className="primary-button" type="submit" disabled={!groupReady || groupBusy}>
                   <Check className="ui-icon" aria-hidden="true" />
                   <span>{editingGroupId ? "更新" : "保存"}</span>
                 </button>
@@ -485,7 +482,7 @@ export function ConnectionPane({
     return (
       <ConfirmDialog
         confirmLabel="删除"
-        description={deleteRequestDescription(deleteRequest)}
+        description={deleteRequestDescription(deleteRequest, customGroups)}
         open={Boolean(deleteRequest)}
         title={deleteRequestTitle(deleteRequest)}
         onConfirm={confirmDeleteRequest}
@@ -517,7 +514,7 @@ export function ConnectionPane({
         onOpen={onOpen}
         onSelect={selectTreeConnection}
         onToggleFavorite={onToggleFavorite}
-        onCreateConnection={() => onCreate(normalizeGroupName(group.name))}
+        onCreateConnection={() => onCreate(group.id)}
         onCreateGroup={() => beginCreateGroup(group.id)}
         onConnect={onConnect}
         onDeleteConnection={requestDeleteConnection}
@@ -532,7 +529,7 @@ export function ConnectionPane({
         onToggle={() => toggleFolder(folderId)}
         selectedId={selectedId}
         connections={connections.filter(
-          (connection) => connectionGroups[connection.id] === normalizeGroupName(group.name),
+          (connection) => connectionGroups[connection.id] === group.id,
         )}
         nestedContent={
           <>
@@ -617,9 +614,8 @@ export function ConnectionPane({
   function assignConnectionToGroup(connectionId: string, groupId: string) {
     const connection = connections.find((item) => item.id === connectionId);
     const group = customGroups.find((item) => item.id === groupId);
-    const groupName = normalizeGroupName(group?.name);
-    if (connection && groupName) {
-      void onMoveConnectionToGroup(connection, groupName);
+    if (connection && group && groupReady) {
+      void onMoveConnectionToGroup(connection, group.id).catch((cause: unknown) => setGroupError(groupErrorMessage(cause)));
     }
     finishConnectionDrag();
   }
@@ -628,7 +624,7 @@ export function ConnectionPane({
     if (targetId === "root") {
       const connection = connections.find((item) => item.id === connectionId);
       if (connection) {
-        void onMoveConnectionToGroup(connection, null);
+        void onMoveConnectionToGroup(connection, null).catch((cause: unknown) => setGroupError(groupErrorMessage(cause)));
       }
       finishConnectionDrag();
       return;
@@ -654,6 +650,8 @@ export function ConnectionPane({
   }
 
   function beginCreateGroup(parentId: string | null = null) {
+    if (!groupReady || groupBusy) return;
+    setGroupError(null);
     setEditingGroupId(null);
     setCreatingGroupParentId(parentId);
     setGroupDraft("");
@@ -668,6 +666,8 @@ export function ConnectionPane({
   }
 
   function beginEditGroup(group: CustomGroup) {
+    if (!groupReady || groupBusy) return;
+    setGroupError(null);
     setEditingGroupId(group.id);
     setCreatingGroupParentId(group.parentId || null);
     setGroupDraft(group.name);
@@ -675,57 +675,15 @@ export function ConnectionPane({
     setCreatingGroup(true);
   }
 
-  function saveGroup(event: FormEvent<HTMLFormElement>) {
+  async function saveGroup(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const name = groupDraft.trim();
-
-    if (!name) {
-      return;
-    }
-
-    const hasDuplicateName = customGroups.some(
-      (group) =>
-        normalizeGroupName(group.name) === name &&
-        group.id !== editingGroupId,
-    );
-
-    if (hasDuplicateName) {
+    setGroupError(null);
+    try {
+      await onSaveGroup({ id: editingGroupId || undefined, name: groupDraft.trim(), color: groupColorDraft, parent_id: creatingGroupParentId });
       resetGroupForm();
-      return;
+    } catch (cause) {
+      setGroupError(groupErrorMessage(cause));
     }
-
-    const editingGroup = editingGroupId
-      ? customGroups.find((group) => group.id === editingGroupId)
-      : null;
-    const previousName = normalizeGroupName(editingGroup?.name);
-
-    setCustomGroups((groups) => {
-      if (editingGroupId) {
-        return groups.map((group) =>
-          group.id === editingGroupId ? { ...group, color: groupColorDraft, name } : group,
-        );
-      }
-
-      return [
-        ...groups,
-        {
-          color: groupColorDraft,
-          id: Date.now().toString(),
-          name,
-          parentId: creatingGroupParentId,
-        },
-      ];
-    });
-
-    if (editingGroup && previousName && previousName !== name) {
-      connections.forEach((connection) => {
-        if (connectionGroups[connection.id] === previousName) {
-          void onMoveConnectionToGroup(connection, name);
-        }
-      });
-    }
-
-    resetGroupForm();
   }
 
   function requestDeleteConnection(connection: ConnectionProfile) {
@@ -746,27 +704,7 @@ export function ConnectionPane({
       return;
     }
 
-    deleteGroup(deleteRequest.group);
-  }
-
-  function deleteGroup(group: CustomGroup) {
-    const deletingGroupIds = collectGroupAndDescendantIds(customGroups, group.id);
-    const deletingGroupNames = new Set(
-      customGroups
-        .filter((item) => deletingGroupIds.has(item.id))
-        .map((item) => normalizeGroupName(item.name))
-        .filter(Boolean),
-    );
-    setCustomGroups((groups) => groups.filter((item) => !deletingGroupIds.has(item.id)));
-    connections.forEach((connection) => {
-      const groupName = connectionGroups[connection.id];
-      if (groupName && deletingGroupNames.has(groupName)) {
-        void onMoveConnectionToGroup(connection, null);
-      }
-    });
-    if (editingGroupId === group.id) {
-      resetGroupForm();
-    }
+    await onDeleteGroup(deleteRequest.group.id);
   }
 
   function resetGroupForm() {
@@ -1085,13 +1023,13 @@ function deleteRequestTitle(request: DeleteRequest | null) {
   return request.type === "group" ? "删除分组" : "删除连接";
 }
 
-function deleteRequestDescription(request: DeleteRequest | null) {
+function deleteRequestDescription(request: DeleteRequest | null, groups: CustomGroup[]) {
   if (!request) {
     return "";
   }
 
   if (request.type === "group") {
-    return `确认删除分组“${request.group.name}”吗？分组内的连接会回到未分组。`;
+    return `确认删除“${request.group.name}”及其 ${groupDescendants(groups, request.group.id).size - 1} 个子组吗？整棵子树中的连接保留并回到未分组。`;
   }
 
   return `确认删除连接“${request.connection.name}”吗？这个操作无法撤销。`;
@@ -1108,23 +1046,6 @@ function buildCatalog(connections: ConnectionProfile[], recentConnectionLimit: n
     favorites: sorted.filter((connection) => connection.is_favorite),
     recent,
   } satisfies Record<SystemFolderId, ConnectionProfile[]>;
-}
-
-function collectGroupAndDescendantIds(groups: CustomGroup[], groupId: string) {
-  const deletingGroupIds = new Set<string>([groupId]);
-  let changed = true;
-
-  while (changed) {
-    changed = false;
-    groups.forEach((group) => {
-      if (group.parentId && deletingGroupIds.has(group.parentId) && !deletingGroupIds.has(group.id)) {
-        deletingGroupIds.add(group.id);
-        changed = true;
-      }
-    });
-  }
-
-  return deletingGroupIds;
 }
 
 function getDraggedConnectionId(event: DragEvent<HTMLElement>) {
@@ -1155,32 +1076,6 @@ function getDropTargetFromPoint(x: number, y: number): DropTargetId | null {
   }
 
   return null;
-}
-
-function readStoredGroups() {
-  if (typeof window === "undefined") {
-    return [];
-  }
-
-  try {
-    const raw = window.localStorage.getItem(customGroupStorageKey);
-    const parsed: unknown = raw ? JSON.parse(raw) : [];
-
-    if (!Array.isArray(parsed)) {
-      return [];
-    }
-
-    return parsed
-      .filter(isStoredGroup)
-      .map((group) => ({
-        color: group.color,
-        id: group.id,
-        name: group.name,
-        parentId: typeof group.parentId === "string" ? group.parentId : null,
-      }));
-  } catch {
-    return [];
-  }
 }
 
 function readStoredExpandedFolders(): Record<FolderId, boolean> {
@@ -1228,103 +1123,6 @@ function isFolderId(value: string): value is FolderId {
   return value === "favorites" || value === "recent" || value.startsWith("group-");
 }
 
-function isStoredGroup(value: unknown): value is CustomGroup {
-  if (typeof value !== "object" || value === null) {
-    return false;
-  }
-
-  const group = value as Partial<CustomGroup>;
-  return Boolean(group.id && group.name && group.color);
-}
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function writeStoredGroups(groups: CustomGroup[]) {
-  try {
-    window.localStorage.setItem(customGroupStorageKey, JSON.stringify(groups));
-  } catch {
-    // localStorage can be unavailable in restricted preview contexts.
-  }
-}
-
-function buildConnectionGroupAssignments(
-  connections: ConnectionProfile[],
-  groups: CustomGroup[],
-) {
-  const groupById = new Map(groups.map((group) => [group.id, group]));
-  const groupNames = new Set(
-    groups
-      .map((group) => normalizeGroupName(group.name))
-      .filter(Boolean),
-  );
-
-  return Object.fromEntries(
-    connections
-      .map((connection) => {
-        const groupName = resolveConnectionGroupName(
-          connection.group,
-          groupById,
-          groupNames,
-        );
-        return [connection.id, groupName] as const;
-      })
-      .filter(([, group]) => Boolean(group)),
-  );
-}
-
-function mergeProfileGroups(groups: CustomGroup[], connections: ConnectionProfile[]) {
-  const existingIds = new Set(groups.map((group) => group.id));
-  const existingNames = new Set(groups.map((group) => normalizeGroupName(group.name)));
-  const nextGroups = [...groups];
-
-  connections.forEach((connection) => {
-    const name = normalizeGroupName(connection.group);
-    if (!name || existingNames.has(name) || existingIds.has(name)) {
-      return;
-    }
-    const id = uniqueGroupId(name, existingIds);
-    nextGroups.push({
-      color: groupPalette[nextGroups.length % groupPalette.length],
-      id,
-      name,
-      parentId: null,
-    });
-    existingIds.add(id);
-    existingNames.add(name);
-  });
-
-  return nextGroups.length === groups.length ? groups : nextGroups;
-}
-
-function resolveConnectionGroupName(
-  value: string | null | undefined,
-  groupById: Map<string, CustomGroup>,
-  groupNames: Set<string>,
-) {
-  const groupName = normalizeGroupName(value);
-  if (!groupName || groupNames.has(groupName)) {
-    return groupName;
-  }
-
-  return normalizeGroupName(groupById.get(groupName)?.name) || groupName;
-}
-
-function uniqueGroupId(name: string, existingIds: Set<string>) {
-  if (!existingIds.has(name)) {
-    return name;
-  }
-
-  let index = 1;
-  let nextId = `${name}-${index.toString()}`;
-  while (existingIds.has(nextId)) {
-    index += 1;
-    nextId = `${name}-${index.toString()}`;
-  }
-  return nextId;
-}
-
-function normalizeGroupName(value: string | null | undefined) {
-  return value?.trim() || "";
 }

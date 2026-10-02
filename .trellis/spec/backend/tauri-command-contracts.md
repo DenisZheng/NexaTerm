@@ -391,6 +391,8 @@ manager.connect_resolved(app, &config).await
 
 ## Scenario: SQLite Storage Foundation
 
+> 当前分组表已在 WF-04A-1 升级为 schema v3；见 [connection-groups.md](./connection-groups.md)。以下 v1 表定义保留为历史基础结构，不能作为当前分组唯一约束。
+
 ### 1. Scope / Trigger
 
 - Trigger: backend code adds or changes SQLite schema, storage bootstrap, schema versioning, future JSON-to-SQLite migration helpers, or secret reference columns.
@@ -3096,12 +3098,12 @@ Preparation suspends recovery and removes managed and external sidecar blockers 
 
 - Trigger: changing the portable connection bundle, its three Tauri commands, the SQLite merge rules, or credential-vault recovery.
 - Source files: `src-tauri/src/connection_transfer.rs`, `src-tauri/src/connection_transfer_recovery.rs`, `src-tauri/src/secure_bundle.rs`, `src-tauri/src/commands.rs`, and `src-tauri/src/storage_vault.rs`.
-- The transfer format is independent from `mxterm-sync`; only the tested Argon2id and AES-256-GCM helper is shared.
+- The transfer format is independent from `mxterm-sync`; the tested encryption helper, canonical group model and recovery journal are shared.
 
 ### 2. Signatures
 
 - `connection_transfer_export(app, request: { path: String, password: String }) -> Result<ConnectionTransferExportResult, AppError>`
-- `connection_transfer_preview(app, request: { path: String, password: String }) -> Result<ConnectionTransferPreviewResult, AppError>`
+- `connection_transfer_preview(app, request: { path: String, password: String, strategy?: ConnectionTransferConflictStrategy }) -> Result<ConnectionTransferPreviewResult, AppError>`
 - `connection_transfer_import(app, request: { path: String, password: String, fingerprint: String, strategy: ConnectionTransferConflictStrategy }) -> Result<ConnectionTransferImportResult, AppError>`
 - `ConnectionTransferConflictStrategy` serializes as `skip | overwrite`.
 - `ConnectionTransferPreviewResult` returns a SHA-256 `fingerprint`, per-entity `total/new/conflicts` counts, and `private_key_warnings`.
@@ -3109,12 +3111,12 @@ Preparation suspends recovery and removes managed and external sidecar blockers 
 
 ### 3. Contracts
 
-- The JSON envelope uses `format = "mxterm-connections"` and `version = 1`. Its readable `data` contains connection groups, reusable credentials, and all supported connection protocols; `secrets` is an encrypted JSON envelope.
-- `data_sha256` is SHA-256 over `serde_json::to_vec(&data)`. AES-GCM associated data is `mxterm-connections\0v1\0<data_sha256>`, so readable metadata cannot be changed independently from encrypted credentials.
+- The JSON envelope uses `format = "mxterm-connections"` and `version = 2` (reads v1). Its readable `data` contains connection groups, reusable credentials, and all supported connection protocols; `secrets` is an encrypted JSON envelope.
+- `data_sha256` is SHA-256 over `serde_json::to_vec(&data)`. AES-GCM associated data is `mxterm-connections\0v<bundle.version>\0<data_sha256>`, so readable metadata cannot be changed independently from encrypted credentials.
 - Exported secrets may contain passwords and private-key passphrases, but never vault references or private-key file contents. Private-key paths remain metadata and unavailable paths are preview warnings.
 - Reject files over 16 MiB, passwords over 1024 bytes, more than 10,000 connections, 5,000 credentials, 5,000 groups, or 20,000 secret records before mutation.
 - Preview validates format, version, digest, decryption, duplicates, references, limits, and conflicts. Import re-reads the file and requires the exact preview fingerprint before applying it.
-- `skip` is the default UI policy. `overwrite` must be supplied explicitly. Connections and credentials conflict by stable ID; groups resolve both stable-ID and unique-name conflicts.
+- `skip` is the default UI policy. `overwrite` must be supplied explicitly. Connections and credentials conflict by stable ID; groups resolve stable ID and mapped-parent + sibling-name conflicts through the shared tree planner. Preview uses the selected strategy (default skip); the final merged tree is validated before transaction writes.
 - Export, preview, and import hold both connection and credential store locks. Import performs the SQLite changes in one transaction and compensates every vault write on ordinary failure.
 - Before vault mutation, write `.connection-transfer-pending.json` and back up `secrets.enc` to `.connection-transfer-secrets.enc.bak`. The SQLite transaction writes its transaction ID to `app_settings[connection_transfer_last_commit]`.
 - On repository reopen, a pending journal whose transaction ID is not committed restores the previous vault; a committed ID keeps the new vault. Recovery failure is non-recoverable and stops repository use.

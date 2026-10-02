@@ -1,3 +1,4 @@
+import { groupOptions as canonicalGroupOptions } from "./connectionGroupModel";
 import * as Dialog from "@radix-ui/react-dialog";
 import {
   AlertTriangle,
@@ -348,8 +349,8 @@ export function ConnectionDialog({
   const [revealBusy, setRevealBusy] = useState(false);
   const busyRef = useRef(false);
   const groupOptions = useMemo(
-    () => buildGroupOptions(groups, form.group || ""),
-    [form.group, groups],
+    () => buildGroupOptions(groups, form.group_id || ""),
+    [form.group_id, groups],
   );
   const desktopPlatform = useMemo(() => resolveDesktopPlatform(), []);
   const platformCapabilities = useMemo(
@@ -428,7 +429,7 @@ export function ConnectionDialog({
         ? duplicate
           ? duplicateFormFromConnection(connection, connections, groups)
           : formFromConnection(connection, groups)
-        : { ...emptyForm, group: normalizeGroupName(defaultGroup) },
+        : { ...emptyForm, group_id: defaultGroup || "" },
     );
   }, [connection, connections, defaultGroup, duplicate, groups, open]);
 
@@ -959,7 +960,7 @@ export function ConnectionDialog({
   function renderBasicTab() {
     const credentialMode = form.credential_mode || "inline";
     const inlineAuthKind = form.inline_auth_kind || "password";
-    const showGroupField = groupOptions.length > 0 || Boolean(form.group?.trim());
+    const showGroupField = groupOptions.length > 0 || Boolean(form.group_id?.trim());
     const rdp = form.rdp || defaultRdpConfig;
     const passwordCredentials = credentials.filter((credential) => credential.kind === "password");
     const desktopProtocolName = isRdp ? "RDP" : "VNC";
@@ -983,7 +984,7 @@ export function ConnectionDialog({
                 <span>分组</span>
                 <AppSelect
                   ariaLabel="分组"
-                  value={form.group || ""}
+                  value={form.group_id || ""}
                   options={[
                     { label: "不分组", value: "" },
                     ...groupOptions.map((group) => ({
@@ -991,7 +992,7 @@ export function ConnectionDialog({
                       value: group.value,
                     })),
                   ]}
-                  onChange={(group) => setForm({ ...form, group })}
+                  onChange={(group) => setForm({ ...form, group: undefined, group_id: group })}
                 />
               </label>
             ) : null}
@@ -1092,7 +1093,7 @@ export function ConnectionDialog({
                 <span>分组</span>
                 <AppSelect
                   ariaLabel="分组"
-                  value={form.group || ""}
+                  value={form.group_id || ""}
                   options={[
                     { label: "不分组", value: "" },
                     ...groupOptions.map((group) => ({
@@ -1100,7 +1101,7 @@ export function ConnectionDialog({
                       value: group.value,
                     })),
                   ]}
-                  onChange={(group) => setForm({ ...form, group })}
+                  onChange={(group) => setForm({ ...form, group: undefined, group_id: group })}
                 />
               </label>
             ) : null}
@@ -1247,7 +1248,7 @@ export function ConnectionDialog({
                 <span>分组</span>
                 <AppSelect
                   ariaLabel="分组"
-                  value={form.group || ""}
+                  value={form.group_id || ""}
                   options={[
                     { label: "不分组", value: "" },
                     ...groupOptions.map((group) => ({
@@ -1255,7 +1256,7 @@ export function ConnectionDialog({
                       value: group.value,
                     })),
                   ]}
-                  onChange={(group) => setForm({ ...form, group })}
+                  onChange={(group) => setForm({ ...form, group: undefined, group_id: group })}
                 />
               </label>
             ) : null}
@@ -1464,7 +1465,7 @@ export function ConnectionDialog({
               <span>分组</span>
               <AppSelect
                 ariaLabel="分组"
-                value={form.group || ""}
+                value={form.group_id || ""}
                 options={[
                   { label: "不分组", value: "" },
                   ...groupOptions.map((group) => ({
@@ -1472,7 +1473,7 @@ export function ConnectionDialog({
                     value: group.value,
                   })),
                 ]}
-                onChange={(group) => setForm({ ...form, group })}
+                onChange={(group) => setForm({ ...form, group: undefined, group_id: group })}
               />
             </label>
           ) : null}
@@ -2870,7 +2871,7 @@ export function ConnectionDialog({
 
 function formFromConnection(
   connection: ConnectionProfile,
-  groups: ConnectionDialogGroup[] = [],
+  _groups: ConnectionDialogGroup[] = [],
 ): ConnectionProfileInput {
   const credentialMode = connection.credential_mode || "inline";
   const legacyAuthKind =
@@ -2882,7 +2883,7 @@ function formFromConnection(
     id: connection.id,
     protocol: connection.protocol || "ssh",
     name: connection.name,
-    group: resolveGroupName(connection.group, groups),
+    group_id: connection.group_id || "",
     host: connection.host,
     port: connection.port,
     username: connection.username,
@@ -2921,10 +2922,10 @@ function formFromConnection(
 function duplicateFormFromConnection(
   connection: ConnectionProfile,
   connections: ConnectionProfile[],
-  groups: ConnectionDialogGroup[] = [],
+  _groups: ConnectionDialogGroup[] = [],
 ): ConnectionProfileInput {
   return {
-    ...formFromConnection(connection, groups),
+    ...formFromConnection(connection, _groups),
     id: undefined,
     source_connection_id: connection.id,
     name: nextDuplicateConnectionName(connection.name, connections),
@@ -3120,56 +3121,8 @@ function normalizeForSubmit(
   };
 }
 
-function buildGroupOptions(groups: ConnectionDialogGroup[], currentGroup: string): GroupOption[] {
-  const groupById = new Map(groups.map((group) => [group.id, group]));
-  const seenValues = new Set<string>();
-  const options = groups.reduce<GroupOption[]>((items, group) => {
-    const value = normalizeGroupName(group.name);
-    if (!value || seenValues.has(value)) {
-      return items;
-    }
-
-    seenValues.add(value);
-    items.push({
-      label: groupPathLabel(group, groupById),
-      value,
-    });
-    return items;
-  }, []);
-  const trimmedCurrentGroup = normalizeGroupName(currentGroup);
-
-  if (
-    trimmedCurrentGroup &&
-    !options.some((option) => option.value === trimmedCurrentGroup)
-  ) {
-    options.push({
-      label: trimmedCurrentGroup,
-      value: trimmedCurrentGroup,
-    });
-  }
-
-  return options;
-}
-
-function resolveGroupName(
-  value: string | null | undefined,
-  groups: ConnectionDialogGroup[],
-) {
-  const groupName = normalizeGroupName(value);
-  if (!groupName) {
-    return "";
-  }
-
-  if (groups.some((group) => normalizeGroupName(group.name) === groupName)) {
-    return groupName;
-  }
-
-  const legacyGroup = groups.find((group) => group.id === groupName);
-  return normalizeGroupName(legacyGroup?.name) || groupName;
-}
-
-function normalizeGroupName(value: string | null | undefined) {
-  return value?.trim() || "";
+function buildGroupOptions(groups: ConnectionDialogGroup[], _currentGroup: string): GroupOption[] {
+  return canonicalGroupOptions(groups.map((group) => ({ ...group, parentId: group.parentId || null })));
 }
 
 function withDefaultRdpConfig(value?: RdpConnectionConfig | null): RdpConnectionConfig {
@@ -3256,27 +3209,6 @@ function usesSerialEndpoint(form: ConnectionProfileInput): boolean {
     (form.protocol || "ssh") === "serial" ||
     (form.port === protocolDefaultPorts.serial && Boolean(serial.port_name) && form.host === serial.port_name)
   );
-}
-
-function groupPathLabel(
-  group: ConnectionDialogGroup,
-  groupById: Map<string, ConnectionDialogGroup>,
-) {
-  const names = [group.name];
-  let parentId = group.parentId || null;
-  const visited = new Set<string>([group.id]);
-
-  while (parentId && !visited.has(parentId)) {
-    const parent = groupById.get(parentId);
-    if (!parent) {
-      break;
-    }
-    names.unshift(parent.name);
-    visited.add(parent.id);
-    parentId = parent.parentId || null;
-  }
-
-  return names.join(" / ");
 }
 
 function tabForError(error: unknown): ConnectionDialogTab {

@@ -129,8 +129,8 @@ export function ConnectionTransferDialog({
     }
   }
 
-  async function runPreview(event: FormEvent) {
-    event.preventDefault();
+  async function runPreview(event?: FormEvent, nextStrategy = strategy) {
+    event?.preventDefault();
     if (!path) {
       setError("请先选择连接迁移文件。");
       return;
@@ -142,7 +142,7 @@ export function ConnectionTransferDialog({
     setBusy(true);
     setError(null);
     try {
-      setPreview(await connectionTransferPreview(path, password));
+      setPreview(await connectionTransferPreview(path, password, nextStrategy));
     } catch (previewError) {
       setPreview(null);
       setError(formatError(previewError, "连接迁移文件预检失败。"));
@@ -298,14 +298,12 @@ export function ConnectionTransferDialog({
                   onChange={changePassword}
                   onToggle={() => setShowPassword((visible) => !visible)}
                 />
-                {preview ? (
-                  <PreviewPanel
-                    preview={preview}
-                    strategy={strategy}
-                    busy={busy}
-                    onStrategyChange={setStrategy}
-                  />
-                ) : null}
+                <label className="connection-transfer-field">
+                  <span>冲突处理</span>
+                  <AppSelect ariaLabel="冲突处理" disabled={busy} options={conflictOptions} value={strategy}
+                    onChange={(value) => { setStrategy(value); setPreview(null); if (path && password) void runPreview(undefined, value); }} />
+                </label>
+                {preview ? <PreviewPanel preview={preview} /> : null}
                 {error ? <p className="connection-transfer-error" role="alert">{error}</p> : null}
                 <footer className="connection-transfer-actions">
                   <Dialog.Close asChild><button disabled={busy} type="button">取消</button></Dialog.Close>
@@ -357,7 +355,7 @@ function PasswordField({ id, label, value, visible, busy, onChange, onToggle }: 
   );
 }
 
-function PreviewPanel({ preview, strategy, busy, onStrategyChange }: { preview: ConnectionTransferPreviewResult; strategy: ConnectionTransferConflictStrategy; busy: boolean; onStrategyChange: (value: ConnectionTransferConflictStrategy) => void }) {
+function PreviewPanel({ preview }: { preview: ConnectionTransferPreviewResult }) {
   const { summary } = preview;
   return (
     <section className="connection-transfer-preview" aria-label="预检结果">
@@ -366,10 +364,6 @@ function PreviewPanel({ preview, strategy, busy, onStrategyChange }: { preview: 
         <TransferStat label="账号" value={summary.credentials} />
         <TransferStat label="分组" value={summary.groups} />
       </div>
-      <label className="connection-transfer-field">
-        <span>冲突处理</span>
-        <AppSelect ariaLabel="冲突处理" disabled={busy} options={conflictOptions} value={strategy} onChange={onStrategyChange} />
-      </label>
       {summary.private_key_warnings.length ? (
         <div className="connection-transfer-warning">
           <AlertTriangle className="ui-icon" aria-hidden="true" />

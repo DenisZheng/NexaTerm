@@ -1,0 +1,81 @@
+{
+  "source_commit": "cf4c925",
+  "identifier": "com.nexaterm.wf04a-a07-import",
+  "groups": [
+    {
+      "id": "086513b0-656c-4f73-b4e8-57dbdb59d3c2",
+      "name": "Test",
+      "parent_id": "e4af8a1e-1f7c-406b-82f7-e9d141a21067",
+      "sort_order": 0,
+      "color": "#64748b"
+    },
+    {
+      "id": "61402ee7-d040-4a60-826c-9b119f094a49",
+      "name": "Web",
+      "parent_id": "db24d3a4-f511-499e-810f-be4e1aec21a6",
+      "sort_order": 0,
+      "color": "#2563eb"
+    },
+    {
+      "id": "6a6da9b7-083c-43cf-98df-ded019ec981f",
+      "name": "Test Moved",
+      "parent_id": "db24d3a4-f511-499e-810f-be4e1aec21a6",
+      "sort_order": 2,
+      "color": "#64748b"
+    },
+    {
+      "id": "7e7dbac4-407b-423e-9eb2-eaeeb98752ca",
+      "name": "Web",
+      "parent_id": "e4af8a1e-1f7c-406b-82f7-e9d141a21067",
+      "sort_order": 1,
+      "color": "#64748b"
+    },
+    {
+      "id": "a0525a6e-d6b6-4ca8-b1b0-3915688f847e",
+      "name": "Database",
+      "parent_id": "db24d3a4-f511-499e-810f-be4e1aec21a6",
+      "sort_order": 1,
+      "color": "#64748b"
+    },
+    {
+      "id": "db24d3a4-f511-499e-810f-be4e1aec21a6",
+      "name": "Production",
+      "parent_id": null,
+      "sort_order": 0,
+      "color": "#64748b"
+    },
+    {
+      "id": "e4af8a1e-1f7c-406b-82f7-e9d141a21067",
+      "name": "Development",
+      "parent_id": null,
+      "sort_order": 1,
+      "color": "#64748b"
+    }
+  ],
+  "connections": [
+    {
+      "id": "576db564-1424-4b99-999e-25d99778c05e",
+      "name": "A07 Web",
+      "group_id": "086513b0-656c-4f73-b4e8-57dbdb59d3c2",
+      "credential_mode": "prompt"
+    },
+    {
+      "id": "58c89d5c-21e2-4166-b222-c37dfc181560",
+      "name": "A07 Test",
+      "group_id": "086513b0-656c-4f73-b4e8-57dbdb59d3c2",
+      "credential_mode": "prompt"
+    },
+    {
+      "id": "d44556c7-5a97-4cfd-8786-0f7db89411af",
+      "name": "A07 Database",
+      "group_id": "a0525a6e-d6b6-4ca8-b1b0-3915688f847e",
+      "credential_mode": "prompt"
+    }
+  ],
+  "foreign_key_check": [],
+  "comparison": {
+    "groups": true,
+    "connections": true,
+    "foreign_key_check": true
+  }
+}

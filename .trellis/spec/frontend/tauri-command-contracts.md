@@ -187,7 +187,7 @@ type SerialTerminalOpenRequest = {
 - Wrapper argument objects must match Rust command parameter names exactly, for example `{ request }`, `{ id }`, and `{ sessionId }`.
 - UI state may use empty strings while editing, but `useConnections` and `useCredentials` must trim optional fields and convert blanks to `undefined` before calling `connectionUpsert` or `credentialUpsert`.
 - Connection profiles own target and behavior fields: group, host, port, username, credential mode, proxy, SSH jump reference, advanced settings, and notes.
-- `ConnectionProfileInput.group` is the persisted group display name. Frontend-only tree ids from `ConnectionPane` / localStorage are UI identifiers only and must never be passed to `connectionUpsert`, `ConnectionDialog`, or move/create handlers as the saved group value. When reading legacy data that still stores a local tree id, resolve it to the matching group name before displaying or saving.
+- WF-04A：`ConnectionProfileInput.group_id` 是 SQLite canonical ID，优先于兼容字段 `group`；`group` 仍是旧名称而非 ID。正常 UI 只提交 group_id，清除归属时两者都不传。读取 profile 同时返回 group_id 与显示名称；同名路径选项以 ID 为 value，不按名称去重。旧 localStorage ID 必须经迁移映射，不能直接当 canonical ID。
 - Connection profiles also own repository UI metadata: `is_favorite` is the explicit favorite flag and `last_connected_at` is the last successful terminal connection timestamp. Do not infer favorites from notes or recent activity from `updated_at`.
 - Connection profiles also persist detected remote system metadata: `remote_os_id`, `remote_os_name`, and `remote_os_version`. UI system icons must prefer these fields before falling back to local name/notes/group text inference.
 - Credential profiles own reusable login account material: username plus password or private key path/passphrase plus local notes. They must not store host or port.
@@ -2377,7 +2377,7 @@ Process termination remains an explicit user decision.
 ### 2. Signatures
 
 - `connectionTransferExport(path: string, password: string): Promise<ConnectionTransferExportResult>`
-- `connectionTransferPreview(path: string, password: string): Promise<ConnectionTransferPreviewResult>`
+- `connectionTransferPreview(path: string, password: string, strategy?: "skip" | "overwrite"): Promise<ConnectionTransferPreviewResult>`
 - `connectionTransferImport(path: string, password: string, fingerprint: string, strategy: "skip" | "overwrite"): Promise<ConnectionTransferImportResult>`
 - `selectConnectionTransferImportPath(): Promise<string | null>`
 - `selectConnectionTransferExportPath(): Promise<string | null>`
@@ -2390,6 +2390,7 @@ Process termination remains an explicit user decision.
 - File-picker cancellation returns `null` and must not invoke a backend command.
 - Export requires a non-empty password and matching confirmation before invoke. Password values remain component state only and are cleared when the dialog closes.
 - Import selects a file, accepts a password, runs preview, displays counts and private-key warnings, defaults conflict handling to `skip`, and requires an explicit select change for `overwrite`.
+- Changing strategy invalidates the previous preview and re-runs preflight; strategy selection remains available after errors.
 - Import passes the preview fingerprint unchanged. Only a successful import awaits the existing connection/group reload callback; cancellation, preview failure, and apply failure do not reload.
 - Busy state disables duplicate actions. Errors stay visible in the dialog and do not close it. Long private-key paths wrap.
 - Use shared Radix dialog patterns, Lucide icons, `AppSelect`, shared input attributes, and global `--mx-*` tokens. The workflow must work in light, explicit dark, and system-dark themes.

@@ -21,7 +21,8 @@
   "children": [
     "09-23-wf-00a-spec-context-switch",
     "09-23-wf-00b-close-lifecycle",
-    "09-23-wf-01-unified-session-entry"
+    "09-23-wf-01-unified-session-entry",
+    "10-02-wf-04a-session-tree-consistency"
   ],
   "parent": null,
   "relatedFiles": [],

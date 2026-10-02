@@ -248,6 +248,7 @@ pub async fn temporary_connection_set_credentials(
             protocol: ConnectionProtocol::Ssh,
             name: Some(format!("{username}@{}", entry.host)),
             group: None,
+        group_id: None,
             host: entry.host,
             port: entry.port,
             username: username.clone(),
@@ -356,6 +357,7 @@ fn saved_profile_input(config: &ResolvedSshConfig, name: Option<String>) -> Conn
             (!value.is_empty()).then_some(value)
         }),
         group: None,
+        group_id: None,
         host: config.host.clone(),
         port: config.port,
         username: config.username.clone(),

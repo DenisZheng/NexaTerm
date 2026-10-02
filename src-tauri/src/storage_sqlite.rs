@@ -6,7 +6,7 @@ use tauri::{AppHandle, Manager};
 
 use crate::app_error::AppError;
 
-pub const SQLITE_SCHEMA_VERSION: i64 = 2;
+pub const SQLITE_SCHEMA_VERSION: i64 = 3;
 
 /// 并发打开仓库时（每个 Tauri command 都会重新 open），等待写锁释放而不是立即报
 /// SQLITE_BUSY。此前 journal_mode=delete 且无 busy_timeout，一次用户操作并发触发多个
@@ -233,6 +233,7 @@ impl SqliteStore {
     }
 
     pub fn initialize(&self) -> Result<(), AppError> {
+        crate::connection_group_schema::reject_newer_schema(&self.connection)?;
         self.connection.execute_batch(SCHEMA_SQL).map_err(|error| {
             AppError::new(
                 "sqlite_store_init_failed",
@@ -241,6 +242,7 @@ impl SqliteStore {
                 true,
             )
         })?;
+        crate::connection_group_schema::migrate(&self.connection)?;
         self.ensure_command_snippet_group_column()?;
         self.ensure_command_history_scope_columns()?;
         self.ensure_connection_protocol_columns()?;

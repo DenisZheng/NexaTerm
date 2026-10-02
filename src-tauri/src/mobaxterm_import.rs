@@ -713,6 +713,7 @@ fn import_from_file(
                     protocol: ConnectionProtocol::Ssh,
                     name: Some(selected_name.clone()),
                     group: item.folder_path.clone(),
+                    group_id: None,
                     host,
                     port,
                     username,

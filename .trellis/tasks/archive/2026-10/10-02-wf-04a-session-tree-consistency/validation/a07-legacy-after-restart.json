@@ -1,0 +1,96 @@
+{
+  "environment": "com.nexaterm.wf04a-legacy",
+  "groups": [
+    {
+      "id": "1da13884-ce8c-4c99-a126-6eedee2d60ab",
+      "name": "Linux",
+      "parent_id": "canonical-production",
+      "sort_order": 0,
+      "color": "#64748b"
+    },
+    {
+      "id": "canonical-production",
+      "name": "Production",
+      "parent_id": null,
+      "sort_order": 0,
+      "color": "#64748b"
+    }
+  ],
+  "connections": [
+    {
+      "id": "legacy-test-ssh",
+      "name": "Legacy Mapping SSH",
+      "group_id": "canonical-production",
+      "credential_mode": "prompt"
+    }
+  ],
+  "report": {
+    "complete": true,
+    "backup_path": "legacy-groups-39456084cb225f04a622cdc89a71868b2483ab01349bb76232f601e202f8e17e.json",
+    "issue": null,
+    "rows": [
+      {
+        "id": "legacy-dup",
+        "name": "Linux",
+        "color": "#64748b",
+        "parentId": null
+      },
+      {
+        "id": "legacy-dup",
+        "name": "Linux",
+        "color": "#64748b",
+        "parentId": null
+      }
+    ],
+    "mappings": [
+      {
+        "legacy_id": "legacy-dup",
+        "canonical_id": "canonical-production"
+      },
+      {
+        "legacy_id": "legacy-dup",
+        "canonical_id": "1da13884-ce8c-4c99-a126-6eedee2d60ab"
+      }
+    ],
+    "repairs": [
+      "使用维护者显式确认的逐行名称、父组和 ID 映射。",
+      "迁移名称：Linux → Production。"
+    ]
+  },
+  "foreign_key_check": [],
+  "legacy_raw_preserved": true,
+  "raw_sha256": "39456084cb225f04a622cdc89a71868b2483ab01349bb76232f601e202f8e17e",
+  "expansion_v1": {
+    "group-legacy-dup": false
+  },
+  "expansion_v2": {
+    "favorites": true,
+    "recent": true,
+    "group-canonical-production": false,
+    "group-1da13884-ce8c-4c99-a126-6eedee2d60ab": false
+  },
+  "theme": "dark",
+  "same_after_restart": true,
+  "after_failed_mapping": {
+    "stage": "after_failed_gui_mapping",
+    "groups": [
+      {
+        "id": "canonical-production",
+        "name": "Production",
+        "parent_id": null,
+        "sort_order": 0,
+        "color": "#64748b"
+      }
+    ],
+    "connections": [
+      {
+        "id": "legacy-test-ssh",
+        "name": "Legacy Mapping SSH",
+        "group_id": "canonical-production",
+        "credential_mode": "prompt"
+      }
+    ],
+    "marker_absent": true,
+    "raw_backup_sha256": "39456084cb225f04a622cdc89a71868b2483ab01349bb76232f601e202f8e17e"
+  }
+}

@@ -15169,6 +15169,27 @@ body[data-platform="macos"] .dialog-backdrop {
   padding-top: 14px;
 }
 
+/* 迁移报告含完整路径与 ID：允许长串换行，避免撑开表单网格。 */
+.legacy-group-migration-dialog .dialog-body {
+  grid-template-columns: minmax(0, 1fr);
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.legacy-group-migration-dialog .dialog-subtitle {
+  padding: 12px 16px 0;
+}
+
+.legacy-group-migration-dialog :where(p, .dialog-section-title) {
+  margin: 0;
+}
+
+/* Radix portal 不在 app-shell 内，错误色直接使用全局主题 token。 */
+.legacy-group-migration-dialog .pane-error {
+  color: var(--mx-danger);
+}
+
 .dialog-section {
   display: grid;
   gap: 8px;
