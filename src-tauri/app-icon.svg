@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#B9F4FF"/>
+      <stop offset="0.52" stop-color="#55D8F7"/>
+      <stop offset="1" stop-color="#2AB8F5"/>
+    </linearGradient>
+    <linearGradient id="nA" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#57F4E4"/>
+      <stop offset="1" stop-color="#19C8F4"/>
+    </linearGradient>
+    <linearGradient id="nB" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1EC9F4"/>
+      <stop offset="1" stop-color="#1574F6"/>
+    </linearGradient>
+    <linearGradient id="wire" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1098FF"/>
+      <stop offset="1" stop-color="#33F1B4"/>
+    </linearGradient>
+  </defs>
+  <rect x="64" y="64" width="896" height="896" rx="200" fill="url(#bg)"/>
+
+  <!-- terminal monitor -->
+  <rect x="150" y="260" width="560" height="450" rx="72" fill="#FFFFFF"/>
+  <rect x="178" y="288" width="504" height="394" rx="50" fill="#12345B"/>
+  <circle cx="230" cy="335" r="19" fill="#FF6E6A"/>
+  <circle cx="284" cy="335" r="19" fill="#FFD54A"/>
+  <circle cx="338" cy="335" r="19" fill="#31E6A6"/>
+  <path d="M224 462 L294 530 L224 598" fill="none" stroke="#FFFFFF" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M330 598 H410" fill="none" stroke="#FFFFFF" stroke-width="28" stroke-linecap="round"/>
+  <path d="M390 710 H500 L520 794 H370 Z" fill="#EAF1F7"/>
+  <rect x="330" y="790" width="230" height="34" rx="17" fill="#FFFFFF"/>
+
+  <!-- NexaTerm N -->
+  <rect x="530" y="386" width="82" height="300" rx="36" fill="url(#nB)"/>
+  <rect x="688" y="386" width="82" height="300" rx="36" fill="url(#nB)"/>
+  <path d="M568 402 L720 663" fill="none" stroke="url(#nA)" stroke-width="86" stroke-linecap="round"/>
+
+  <!-- remote/network links -->
+  <path d="M720 430 C770 350 812 320 860 320" fill="none" stroke="#139BFF" stroke-width="22" stroke-linecap="round"/>
+  <path d="M770 536 H870" fill="none" stroke="url(#wire)" stroke-width="22" stroke-linecap="round"/>
+  <path d="M770 652 C812 700 828 728 858 742" fill="none" stroke="#33E8B8" stroke-width="22" stroke-linecap="round"/>
+
+  <!-- remote nodes -->
+  <rect x="832" y="278" width="94" height="94" rx="25" fill="#FFFFFF"/>
+  <rect x="846" y="292" width="66" height="66" rx="17" fill="#1689F8"/>
+  <rect x="852" y="490" width="94" height="94" rx="25" fill="#FFFFFF"/>
+  <rect x="866" y="504" width="66" height="66" rx="17" fill="#1689F8"/>
+  <rect x="830" y="700" width="94" height="94" rx="25" fill="#FFFFFF"/>
+  <rect x="844" y="714" width="66" height="66" rx="17" fill="#1689F8"/>
+</svg>
