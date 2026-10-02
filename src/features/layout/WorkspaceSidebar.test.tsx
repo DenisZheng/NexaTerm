@@ -32,6 +32,7 @@ function Harness({
     <WorkspaceSidebar
       activeView={view}
       fileContext={context}
+      files={context ? <div data-testid="live-files">Live Files fixture</div> : null}
       onViewChange={setView}
       sessions={<div>Session fixture</div>}
     />
@@ -57,7 +58,7 @@ describe("WF-01 slice 5 workspace sidebar shell", () => {
     fireEvent.click(files);
     expect(files.getAttribute("aria-selected")).toBe("true");
     expect(files.tabIndex).toBe(0);
-    expect(screen.getByText("Remote Files")).toBeDefined();
+    expect(screen.getByTestId("live-files")).toBeDefined();
   });
 
   it("supports arrow/Home/End navigation without adding another menu system", () => {
@@ -72,15 +73,13 @@ describe("WF-01 slice 5 workspace sidebar shell", () => {
     expect(document.activeElement).toBe(sessions);
   });
 
-  it("shows only the resolved SSH context and keeps the real file browser deferred", () => {
+  it("renders the live Files view only for the resolved SSH context", () => {
     render(<Harness initialView="files" />);
     const panel = screen.getByRole("tabpanel");
     expect(panel.getAttribute("data-connection-id")).toBe("fixture-connection");
     expect(panel.getAttribute("data-terminal-id")).toBe("fixture-tab");
-    expect(screen.getByText("Fixture SSH")).toBeDefined();
-    expect(screen.getByText("/srv/app")).toBeDefined();
-    expect(screen.getByText(/WF-03/)).toBeDefined();
-    expect(document.querySelector(".remote-file-panel")).toBeNull();
+    expect(screen.getByTestId("live-files").textContent).toContain("Live Files fixture");
+    expect(screen.queryByText(/WF-03/)).toBeNull();
   });
 
   it("fails closed when no SSH terminal or SSH pane is active", () => {

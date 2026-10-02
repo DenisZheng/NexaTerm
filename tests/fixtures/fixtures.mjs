@@ -5,6 +5,8 @@
 // smoke - wait for ports, then verify: direct SSH, double-hop SSH via the
 //         jump host, and X11 forwarding. RDP/VNC are port-checked only;
 //         protocol-level acceptance is manual (see README.md).
+// wf03-prepare - seed deterministic SSH/SFTP paths for A05/A06 GUI acceptance.
+// wf03-mutate  - change the A06 remote file out-of-band to trigger conflict handling.
 // down  - stop the stack and remove volumes.
 //
 // Requires: docker (compose v2) and an OpenSSH client. CI runs this on
@@ -20,6 +22,10 @@ const dir = path.dirname(fileURLToPath(import.meta.url));
 const composeFile = path.join(dir, "docker-compose.yml");
 const keysDir = path.join(dir, "keys");
 const privateKey = path.join(keysDir, "test_key");
+const WF03_ROOT = "/home/testuser/nexaterm-wf03";
+const WF03_PANE_A = `${WF03_ROOT}/pane-a`;
+const WF03_PANE_B = `${WF03_ROOT}/pane-b`;
+const WF03_CONFLICT_FILE = `${WF03_ROOT}/editor-conflict.txt`;
 
 const SSH_OPTS = [
   "-o",
@@ -87,6 +93,102 @@ function waitPort(host, port, timeoutMs) {
     };
     tryOnce();
   });
+}
+
+
+function requireFixtureKey() {
+  if (!existsSync(privateKey)) {
+    console.error("error: fixture key is missing; run 'node tests/fixtures/fixtures.mjs up' first");
+    process.exit(2);
+  }
+}
+
+function runFixtureSsh(command, opts = {}) {
+  requireTool("ssh", ["-V"]);
+  requireFixtureKey();
+  return sh(
+    "ssh",
+    [
+      "-i",
+      privateKey,
+      ...SSH_OPTS,
+      "-p",
+      "2222",
+      "testuser@127.0.0.1",
+      command,
+    ],
+    { quiet: true, stdio: "pipe", ...opts },
+  );
+}
+
+function cmdWf03Prepare() {
+  const command = [
+    "set -eu",
+    `root='${WF03_ROOT}'`,
+    'rm -rf "$root"',
+    'mkdir -p "$root/pane-a/deep" "$root/pane-b/deep"',
+    'for i in $(seq -w 1 80); do printf "pane-a file %s\\n" "$i" > "$root/pane-a/A-$i.txt"; done',
+    'for i in $(seq -w 1 80); do printf "pane-b file %s\\n" "$i" > "$root/pane-b/B-$i.txt"; done',
+    'printf "pane-a deep marker\\n" > "$root/pane-a/deep/A-DEEP.txt"',
+    'printf "pane-b deep marker\\n" > "$root/pane-b/deep/B-DEEP.txt"',
+    'printf "version=1\\norigin=fixture-prepare\\n" > "$root/editor-conflict.txt"',
+    'printf "manual browse target\\n" > "$root/manual-browse.txt"',
+    'find "$root" -maxdepth 2 -type f -print | sort | head -n 12',
+    'stat -c "conflict size=%s mtime=%Y" "$root/editor-conflict.txt"',
+  ].join("; ");
+
+  try {
+    const output = runFixtureSsh(command).trim();
+    console.log("WF-03 acceptance fixture ready");
+    if (output) console.log(output);
+    console.log("");
+    console.log("NexaTerm SSH profile:");
+    console.log("  host: 127.0.0.1");
+    console.log("  port: 2222");
+    console.log("  user: testuser");
+    console.log(`  private key: ${privateKey}`);
+    console.log("");
+    console.log("A05 paths:");
+    console.log(`  pane A: ${WF03_PANE_A}`);
+    console.log(`  pane B: ${WF03_PANE_B}`);
+    console.log("");
+    console.log("A06 file:");
+    console.log(`  ${WF03_CONFLICT_FILE}`);
+    console.log("");
+    console.log("When the A06 editor has unsaved local changes, run:");
+    console.log("  node tests/fixtures/fixtures.mjs wf03-mutate");
+  } catch (e) {
+    const stderr = typeof e.stderr === "string" ? e.stderr.trim() : "";
+    console.error(
+      "WF-03 prepare failed. Make sure the fixtures are running with 'node tests/fixtures/fixtures.mjs up'.",
+    );
+    console.error(stderr || e.message.split("\n")[0]);
+    process.exit(1);
+  }
+}
+
+function cmdWf03Mutate() {
+  const command = [
+    "set -eu",
+    `file='${WF03_CONFLICT_FILE}'`,
+    'test -f "$file"',
+    'printf "version=2\\norigin=external-mutation\\nchanged_at=%s\\n" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$file"',
+    'stat -c "conflict size=%s mtime=%Y" "$file"',
+    'cat "$file"',
+  ].join("; ");
+
+  try {
+    const output = runFixtureSsh(command).trim();
+    console.log("WF-03 A06 remote file mutated out-of-band");
+    if (output) console.log(output);
+  } catch (e) {
+    const stderr = typeof e.stderr === "string" ? e.stderr.trim() : "";
+    console.error(
+      "WF-03 mutate failed. Run wf03-prepare first and keep the fixtures running.",
+    );
+    console.error(stderr || e.message.split("\n")[0]);
+    process.exit(1);
+  }
 }
 
 async function cmdSmoke() {
@@ -211,7 +313,9 @@ const cmd = process.argv[2];
 if (cmd === "up") cmdUp();
 else if (cmd === "down") cmdDown();
 else if (cmd === "smoke") await cmdSmoke();
+else if (cmd === "wf03-prepare") cmdWf03Prepare();
+else if (cmd === "wf03-mutate") cmdWf03Mutate();
 else {
-  console.error("usage: node fixtures.mjs <up|smoke|down>");
+  console.error("usage: node fixtures.mjs <up|smoke|wf03-prepare|wf03-mutate|down>");
   process.exit(2);
 }

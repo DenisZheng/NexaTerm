@@ -10,6 +10,9 @@
 - Source files: `src/shared/tauri/commands.ts`, `src/features/connections/connectionTypes.ts`, and `src/features/terminal/terminalTypes.ts`.
 - Frontend code must call Rust through typed wrapper functions instead of scattering `invoke(...)` calls through UI components.
 - Secret vault startup is settings-driven: if `settings.security.masterPasswordEnabled` is false, `useSecretVault` calls `secretVaultUnlockLocal()` once and should not show the unlock gate after success; if true, the gate calls `secretVaultUnlock(masterPassword)`. A failed local auto-unlock must stop retrying automatically and surface a stable unlock/error state instead of toggling storage hooks indefinitely.
+- 保险库状态未查询成功时使用 `null`，不得用 `initialized: false` 代替未知。自动解锁前先调用 `secretVaultStatus()`；后端已解锁时复用现有状态，避免重复请求系统授权。查询失败时不调用解锁命令。
+- 本机自动解锁失败的门禁只提供显式重试，不展示安全密码输入或“创建保险库”。`useSecretVault.retry()` 在本机模式调用自动解锁，在高级保护模式重新读取状态；重试期间保持门禁、禁止并发重入，成功后才开放 storage hooks。只有高级保护开启且状态查询成功，才允许密码解锁/初始化。
+- 回归测试 `src/features/security/SecretVaultGate.test.tsx` 使用真实 hook + gate，仅 mock IPC，覆盖状态未知、本机首次/已有保险库失败、显式重试成功/失败、StrictMode 单次授权和高级保护解锁。
 - The Settings security page owns the master-password protection switch. Turning it on must call `secretVaultEnableMasterPassword(masterPassword)` before persisting `masterPasswordEnabled: true`; turning it off must call `secretVaultDisableMasterPassword()` before persisting false.
 
 ### 2. Signatures

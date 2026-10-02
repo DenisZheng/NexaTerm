@@ -20,6 +20,7 @@ use crate::terminal::session::{
     ExecOutput, ExecProgressCallback, ReusableExecSession, ReusableSftpSession,
 };
 mod lifecycle;
+mod metadata;
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum RemoteFileKind {
@@ -339,17 +340,19 @@ pub fn build_remote_read_command(path: &str) -> String {
     format!("path={quoted_path}; cat \"$path\"")
 }
 
-pub fn build_remote_write_command(path: &str) -> String {
+pub fn build_remote_write_command(path: &str, known_mode: Option<&str>) -> String {
     let quoted_path = quote_posix_shell(path);
+    let quoted_mode = quote_posix_shell(known_mode.unwrap_or(""));
     let tmp_suffix = timestamp_millis();
     format!(
-        "path={quoted_path}; \
+        "path={quoted_path}; mode={quoted_mode}; \
          case \"$path\" in */*) dir=${{path%/*}}; [ -z \"$dir\" ] && dir=/ ;; *) dir=. ;; esac; \
          base=${{path##*/}}; \
          tmp=\"$dir/.${{base}}.mxterm.{tmp_suffix}.$$\"; \
          cleanup() {{ rm -f \"$tmp\"; }}; trap cleanup INT TERM HUP; \
          cat > \"$tmp\" || {{ cleanup; exit 2; }}; \
-         if [ -f \"$path\" ]; then mode=$(stat -c %a \"$path\" 2>/dev/null || stat -f %Lp \"$path\" 2>/dev/null || printf ''); [ -n \"$mode\" ] && chmod \"$mode\" \"$tmp\" 2>/dev/null || true; fi; \
+         if [ -z \"$mode\" ] && [ -f \"$path\" ]; then mode=$(stat -c %a \"$path\" 2>/dev/null || stat -f %Lp \"$path\" 2>/dev/null || printf ''); fi; \
+         if [ -n \"$mode\" ]; then chmod \"$mode\" \"$tmp\" || {{ cleanup; exit 4; }}; fi; \
          mv \"$tmp\" \"$path\" || {{ cleanup; exit 3; }}; \
          trap - INT TERM HUP"
     )
@@ -698,24 +701,13 @@ impl RemoteFileManager {
     ) -> Result<RemoteFileWriteResult, AppError> {
         let config = RemoteFileSessionConfig::from_config(profile);
         let current = self.metadata(app, &config, path).await?;
-        let changed = current.mtime != expected_mtime || current.size != expected_size;
-        if changed && !overwrite {
-            return Err(AppError::new(
-                "remote_file_conflict",
-                "远端文件已变化。",
-                format!(
-                    "expected size={} mtime={}, current size={} mtime={}",
-                    expected_size, expected_mtime, current.size, current.mtime
-                ),
-                true,
-            ));
-        }
+        metadata::check_write_version(&current, expected_mtime, expected_size, overwrite)?;
 
         let output = self
             .exec_with_reconnect_stdin(
                 app,
                 &config,
-                &build_remote_write_command(path),
+                &build_remote_write_command(path, current.mode.as_deref()),
                 content.as_bytes(),
                 None,
             )
@@ -1120,7 +1112,7 @@ impl RemoteFileManager {
             .exec_with_reconnect_stdin(
                 app,
                 &config,
-                &build_remote_write_command(&archive_path),
+                &build_remote_write_command(&archive_path, None),
                 archive_content,
                 progress,
             )
@@ -1218,7 +1210,7 @@ impl RemoteFileManager {
             .exec_with_reconnect_stdin_file_progress(
                 app,
                 &config,
-                &build_remote_write_command(&archive_path),
+                &build_remote_write_command(&archive_path, None),
                 local_path,
                 progress,
             )
@@ -1437,32 +1429,6 @@ impl RemoteFileManager {
             return false;
         };
         output.exit_status == Some(0)
-    }
-
-    async fn metadata(
-        &self,
-        app: &AppHandle,
-        config: &RemoteFileSessionConfig,
-        path: &str,
-    ) -> Result<RemoteFileMetadata, AppError> {
-        let output = self
-            .exec_with_reconnect(app, config, &build_remote_metadata_command(path))
-            .await?;
-        if output.exit_status != Some(0) {
-            return Err(remote_file_command_error(
-                "remote_file_metadata_failed",
-                "远程文件信息读取失败。",
-                &output,
-            ));
-        }
-        parse_remote_file_metadata(&output.stdout).ok_or_else(|| {
-            AppError::new(
-                "remote_file_metadata_parse_failed",
-                "远程文件信息解析失败。",
-                String::from_utf8_lossy(&output.stdout),
-                true,
-            )
-        })
     }
 
     async fn exec_with_reconnect(
@@ -2769,7 +2735,7 @@ mod tests {
     #[test]
     fn build_remote_write_command_uses_temp_file_and_does_not_embed_content() {
         let content = "literal content that must never appear";
-        let command = build_remote_write_command("/srv/app's data/app.conf");
+        let command = build_remote_write_command("/srv/app's data/app.conf", None);
 
         assert!(command.contains("path='/srv/app'\\''s data/app.conf'"));
         assert!(command.contains("cat > \"$tmp\""));

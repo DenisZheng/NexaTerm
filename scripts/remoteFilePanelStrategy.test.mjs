@@ -92,7 +92,7 @@ test("keeps inactive stacked remote file panels mounted but visually hidden", as
   );
   const appCssSource = await readFile(new URL("../src/styles/app.css", import.meta.url), "utf8");
 
-  assert.match(remoteFilePanelSource, /className=\{`tool-pane \$\{active \? "" : "is-hidden"\}`\}/);
+  assert.match(remoteFilePanelSource, /className=\{`tool-pane \$\{hideToolTabs \? "remote-files-view " : ""\}\$\{active \? "" : "is-hidden"\}`\}/);
   assert.match(appCssSource, /\.tool-pane\.is-hidden\s*\{[^}]*visibility:\s*hidden;[^}]*pointer-events:\s*none;/s);
   assert.match(appCssSource, /\.remote-file-panel-stack \.tool-pane\.is-hidden\s*\{[^}]*position:\s*absolute;[^}]*inset:\s*0;/s);
 });
@@ -114,7 +114,7 @@ test("renders inactive remote file panels as lightweight placeholders", async ()
   );
 
   assert.match(remoteFilePanelSource, /if \(!active\)\s*\{\s*return \(\s*<aside/s);
-  assert.match(remoteFilePanelSource, /className="tool-pane is-hidden"/);
+  assert.match(remoteFilePanelSource, /className=\{`tool-pane \$\{hideToolTabs \? "remote-files-view " : ""\}is-hidden`\}/);
   assert.match(remoteFilePanelSource, /aria-hidden="true"/);
   assert.match(remoteFilePanelSource, /data-remote-file-panel-placeholder="true"/);
 });
@@ -127,7 +127,8 @@ test("guards remote file async loads after the active panel unmounts", async () 
 
   assert.match(remoteFilePanelSource, /const mountedRef = useRef\(true\);/);
   assert.match(remoteFilePanelSource, /mountedRef\.current = false;/);
-  assert.match(remoteFilePanelSource, /mountedRef\.current &&/);
+  assert.match(remoteFilePanelSource, /canApplyRemoteFileDirectoryResponse/);
+  assert.match(remoteFilePanelSource, /mounted: mountedRef\.current/);
 });
 
 test("saves remote file state before tab-switch unmounts can occur", async () => {
@@ -166,7 +167,7 @@ test("restores deferred remote file tree with low-priority React work", async ()
   );
 });
 
-test("constructs SSH auxiliary right-pane tools only for the visible tool tab", async () => {
+test("constructs SSH auxiliary right-pane tools without duplicating Files", async () => {
   const workspaceShellSource = await readFile(
     new URL("../src/features/layout/WorkspaceShell.tsx", import.meta.url),
     "utf8",
@@ -176,5 +177,7 @@ test("constructs SSH auxiliary right-pane tools only for the visible tool tab", 
   assert.match(workspaceShellSource, /commandPanel=\{panel\.active && rightTool === "commands" \? renderCommandLibraryPanel\(\) : null\}/);
   assert.match(workspaceShellSource, /toolsPanel=\{\s*panel\.renderDockerTools \? \(/s);
   assert.match(workspaceShellSource, /active=\{panel\.active && rightTool === "tools"\}/);
-  assert.match(workspaceShellSource, /transferPanel=\{\s*panel\.active && rightTool === "files" \? \(/s);
+  assert.match(workspaceShellSource, /availableTools=\{\["monitor", "commands", "tools", "tunnels", "ai"\]\}/);
+  assert.doesNotMatch(workspaceShellSource, /rightTool === "files"/);
+  assert.match(workspaceShellSource, /<RemoteFilesView[\s\S]*transferPanel=\{<RemoteFileTransferPanel/m);
 });

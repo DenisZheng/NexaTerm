@@ -1,5 +1,11 @@
 import { terminalPaneBindingKey, type TerminalSplitPane } from "../../terminal/terminalSplitLayout";
 import type { WorkspaceItem } from "./instances";
+import {
+  currentRemoteFileTransferClosePolicy,
+  planRemoteFileTransferClose,
+  type RemoteFileTransferCloseCandidate,
+  type RemoteFileTransferClosePolicy,
+} from "../../files/remoteFileTransferClosePolicy";
 
 /**
  * 关闭操作的范围与计划 —— WF-01 切片 3（WS-M02 标签即实例 / WS-E05 编辑器随所属 SSH 工作区 / WS-E12 分屏组一个标签 / WS-F08 未保存编辑的关闭确认）。
@@ -66,6 +72,7 @@ export interface CloseContext {
   localTerminalTabs: readonly { id: string }[];
   rdpSessions: readonly { id: string }[];
   remoteFileTabs: readonly { connectionId: string; dirty: boolean; name: string }[];
+  remoteFileTransfers?: readonly RemoteFileTransferCloseCandidate[];
   /** 当前分屏组成员实例 id（按 pane 顺序）；没有分屏时为空。 */
   splitMemberIds: readonly string[];
   /** 当前 pane 与实例的映射；用于确认后重算单 pane 关闭。 */
@@ -82,11 +89,13 @@ export function buildCloseContext(
   terminalSplitPanes: readonly Pick<TerminalSplitPane, "binding" | "id">[],
   terminalTabs: readonly { connectionId: string; id: string }[],
   vncSessions: readonly { id: string }[],
+  remoteFileTransfers?: readonly RemoteFileTransferCloseCandidate[],
 ): CloseContext {
   return {
     localTerminalTabs: localTerminalTabs.map(({ id }) => ({ id })),
     rdpSessions: rdpSessions.map(({ id }) => ({ id })),
     remoteFileTabs: remoteFileTabs.map(({ connectionId, dirty, name }) => ({ connectionId, dirty, name })),
+    ...(remoteFileTransfers ? { remoteFileTransfers } : {}),
     splitMemberIds: terminalSplitPanes.flatMap((pane) =>
       pane.binding ? [terminalPaneBindingKey(pane.binding)] : [],
     ),
@@ -109,6 +118,8 @@ export interface CloseConfirmation {
   instanceCount: number;
   /** 被拆除分屏组的成员数；未拆组时为 0。 */
   splitPaneCount: number;
+  /** WS-F09 policy requests canceling these active transfers after confirmation. */
+  activeTransferCount?: number;
 }
 
 export interface ClosePlan {
@@ -123,6 +134,8 @@ export interface ClosePlan {
   splitPaneIds?: string[];
   /** 实例级关闭的 SSH 终端（不含已由连接级关闭覆盖的）。 */
   sshTabIds: string[];
+  /** Present only when the configured WS-F09 policy cancels active transfers. */
+  transferIdsToCancel?: string[];
   vncSessionIds: string[];
 }
 
@@ -131,9 +144,13 @@ export interface ClosePlan {
  *
  * - 连带远程文件：一次关闭后某 SSH 连接不再有任何终端（独立实例或分屏成员）而仍有远程文件 tab 时，
  *   改走连接级关闭，远程文件一并关闭——编辑器属于所属 SSH 工作区（WS-E05），没有终端就没有工作区可回。
- * - 确认：会丢弃未保存修改，或拆除含两个及以上成员的分屏组时需要确认；一次操作只确认一次。
+ * - 确认：会丢弃未保存修改、拆除多个分屏成员或按 WS-F09 取消活动传输时需要确认；一次操作只确认一次。
  */
-export function planClose(request: CloseRequest, context: CloseContext): ClosePlan {
+export function planClose(
+  request: CloseRequest,
+  context: CloseContext,
+  transferClosePolicy: RemoteFileTransferClosePolicy = currentRemoteFileTransferClosePolicy,
+): ClosePlan {
   const requestedPaneIds = new Set(request.splitPaneIds ?? []);
   const splitPanes = (context.splitPanes ?? []).filter((pane) => requestedPaneIds.has(pane.id));
   const splitPaneIds = splitPanes.map((pane) => pane.id);
@@ -148,15 +165,18 @@ export function planClose(request: CloseRequest, context: CloseContext): ClosePl
   const filesByConnection = new Set(context.remoteFileTabs.map((tab) => tab.connectionId));
 
   const connectionIds: string[] = [];
+  // 传输按连接归属，关闭最后一个实例时才释放；是否打开编辑器不影响传输确认。
+  const releasedConnectionIds = new Set<string>();
   for (const tab of closingSsh) {
-    if (connectionIds.includes(tab.connectionId) || !filesByConnection.has(tab.connectionId)) {
+    if (releasedConnectionIds.has(tab.connectionId)) {
       continue;
     }
     const allClosing = context.terminalTabs
       .filter((other) => other.connectionId === tab.connectionId)
       .every((other) => closingSshIds.has(other.id));
     if (allClosing) {
-      connectionIds.push(tab.connectionId);
+      releasedConnectionIds.add(tab.connectionId);
+      if (filesByConnection.has(tab.connectionId)) connectionIds.push(tab.connectionId);
     }
   }
   const cascading = new Set(connectionIds);
@@ -168,11 +188,19 @@ export function planClose(request: CloseRequest, context: CloseContext): ClosePl
   const dirtyFileNames = context.remoteFileTabs
     .filter((tab) => tab.dirty && cascading.has(tab.connectionId))
     .map((tab) => tab.name);
+  const transferDecision = planRemoteFileTransferClose(
+    context.remoteFileTransfers ?? [],
+    releasedConnectionIds,
+    transferClosePolicy,
+  );
 
   return {
     confirmation:
-      dirtyFileNames.length > 0 || splitPaneCount > 1
+      dirtyFileNames.length > 0 || splitPaneCount > 1 || transferDecision.requiresConfirmation
         ? {
+            ...(transferDecision.requiresConfirmation
+              ? { activeTransferCount: transferDecision.activeTransferIds.length }
+              : {}),
             cascadeConnectionCount: connectionIds.length,
             dirtyFileNames,
             instanceCount: closingSsh.length + localTabIds.length + rdpSessionIds.length + vncSessionIds.length,
@@ -185,6 +213,9 @@ export function planClose(request: CloseRequest, context: CloseContext): ClosePl
     splitGroup: request.splitGroup,
     ...(splitPaneIds.length > 0 ? { splitPaneIds } : {}),
     sshTabIds: closingSsh.filter((tab) => !cascading.has(tab.connectionId)).map((tab) => tab.id),
+    ...(transferDecision.cancelTransferIds.length > 0
+      ? { transferIdsToCancel: transferDecision.cancelTransferIds }
+      : {}),
     vncSessionIds,
   };
 }

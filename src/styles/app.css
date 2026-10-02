@@ -3098,6 +3098,31 @@ button {
   padding: 12px;
 }
 
+.workspace-sidebar-files.is-live {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+}
+
+.workspace-sidebar-files.is-live > .remote-files-view {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+  grid-column: auto;
+  border-left: 0;
+  background: transparent;
+}
+
+.workspace-sidebar-files.is-live .file-panel-toolbar {
+  padding: 6px;
+}
+
+.workspace-sidebar-files.is-live .file-panel-actions {
+  flex-wrap: wrap;
+}
+
 .workspace-sidebar-files-head {
   display: flex;
   align-items: flex-start;

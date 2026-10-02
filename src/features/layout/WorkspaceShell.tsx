@@ -170,6 +170,7 @@ const RemoteFilePanel = lazy(async () => {
   const module = await loadRemoteFilePanel();
   return { default: module.RemoteFilePanel };
 });
+const RemoteFilesView = lazy(async () => ({ default: (await loadRemoteFilePanel()).RemoteFilesView }));
 const MonitorPanel = lazy(async () => {
   const module = await loadMonitorPanel();
   return { default: module.MonitorPanel };
@@ -238,8 +239,10 @@ import { RemoteFileTransferPanel } from "../files/RemoteFileTransferPanel";
 import {
   addRemoteFileTransfer,
   getRemoteFileTransfer,
+  getRemoteFileTransfers,
   markTransferCanceled,
   prepareTransferRetry,
+  rebindRemoteFileTransferConnection,
   setTransferProgress,
   updateRemoteFileTransfer,
 } from "../files/remoteFileTransferStore";
@@ -1084,7 +1087,7 @@ export function WorkspaceShell() {
   const closeRequestController = useCloseRequest({
     execute: executeClosePlan,
     plan: (request) =>
-      planClose(request, buildCloseContext(localTerminalTabsRef.current, rdpSessionsRef.current, remoteFileTabs, terminalSplitPanes, terminalTabsRef.current, vncSessionsRef.current)),
+      planClose(request, buildCloseContext(localTerminalTabsRef.current, rdpSessionsRef.current, remoteFileTabs, terminalSplitPanes, terminalTabsRef.current, vncSessionsRef.current, getRemoteFileTransfers())),
   });
   const [pendingRemoteFileConflictId, setPendingRemoteFileConflictId] = useState<string | null>(null);
   const [remoteFileDeleteTarget, setRemoteFileDeleteTarget] =
@@ -1092,7 +1095,7 @@ export function WorkspaceShell() {
   const [remoteFileTextAction, setRemoteFileTextAction] = useState<RemoteFileTextAction | null>(null);
   const [remoteFileTextValue, setRemoteFileTextValue] = useState("");
   const [remoteFileTextError, setRemoteFileTextError] = useState<string | null>(null);
-  const [rightTool, setRightTool] = useState<RemoteFileTool>("files");
+  const [rightTool, setRightTool] = useState<RemoteFileTool>("commands");
   const [aiAssistantPanelLoaded, setAiAssistantPanelLoaded] = useState(false);
   const [settingsViewLoaded, setSettingsViewLoaded] = useState(false);
   const [LoadedSettingsView, setLoadedSettingsView] =
@@ -2908,8 +2911,8 @@ export function WorkspaceShell() {
     }
 
     activateRemoteFileTab(tab);
-    setRightTool("files");
-    setRightPaneCollapsed(false);
+    setLeftPaneCollapsed(false);
+    setWorkspaceSidebarView("files");
     triggerRemoteFileLocate(tab.connectionId, remotePathParent(tab.path));
   }
 
@@ -3507,6 +3510,7 @@ export function WorkspaceShell() {
     const localName = localPathName(localPath);
     const uploadPath = joinRemotePath(normalizedParentPath, localName);
     const transferId = options.transferId ?? addRemoteFileTransfer({
+      connectionId: connection.id,
       direction: "upload",
       kind: "file",
       name: localName,
@@ -3576,6 +3580,7 @@ export function WorkspaceShell() {
     const rootName = localPathName(localPath);
     const remotePath = joinRemotePath(normalizedParentPath, rootName);
     const transferId = options.transferId ?? addRemoteFileTransfer({
+      connectionId: connection.id,
       direction: "upload",
       kind: "directory",
       name: rootName,
@@ -3651,6 +3656,7 @@ export function WorkspaceShell() {
     const normalizedParentPath = normalizeRemotePath(parentPath);
     const uploadPath = joinRemotePath(normalizedParentPath, item.file.name);
     const transferId = options.transferId ?? addRemoteFileTransfer({
+      connectionId: connection.id,
       direction: "upload",
       kind: "file",
       name: item.file.name,
@@ -3757,6 +3763,7 @@ export function WorkspaceShell() {
     const normalizedParentPath = normalizeRemotePath(parentPath);
     const remotePath = joinRemotePath(normalizedParentPath, rootName);
     const transferId = options.transferId ?? addRemoteFileTransfer({
+      connectionId: connection.id,
       direction: "upload",
       kind: "directory",
       name: rootName,
@@ -3936,6 +3943,7 @@ export function WorkspaceShell() {
     }
     const isDirectory = entry.type === "directory";
     const transferId = options.transferId ?? addRemoteFileTransfer({
+      connectionId: connection.id,
       direction: "download",
       kind: isDirectory ? "directory" : "file",
       name: entry.name,
@@ -5126,7 +5134,7 @@ export function WorkspaceShell() {
     const ref = tab.temporaryContextRef; if (!ref) return;
     const profile = await saveTemporaryQuickConnectProfile(ref, connectionById.get(tab.connectionId)?.name); await reload(); const rebound = rebindTemporaryTerminalTab(tab, profile);
     const next = terminalTabsRef.current.map((item) => item.id === tab.id ? rebound : item); terminalTabsRef.current = next; setTerminalTabs(next);
-    setRemoteFileTabs((items) => rebindConnectionItems(items, ref, profile.id)); setTemporaryConnections((items) => items.filter((item) => item.id !== ref)); activateTerminalTab(rebound);
+    setRemoteFileTabs((items) => rebindConnectionItems(items, ref, profile.id)); rebindRemoteFileTransferConnection(ref, profile.id); setTemporaryConnections((items) => items.filter((item) => item.id !== ref)); activateTerminalTab(rebound);
   }
   function renderSshTerminalSubtab(tab: TerminalTab, index: number) {
     const sshMenuCtx: TerminalSubtabMenuContext<TerminalTab> = {
@@ -7208,6 +7216,7 @@ export function WorkspaceShell() {
    * 连接级关闭连带远程文件，其余按实例类型分派到 WF-00B 现有关闭路径。
    */
   function executeClosePlan(plan: ClosePlan) {
+    for (const transferId of plan.transferIdsToCancel ?? []) requestCancelTransfer(transferId);
     for (const paneId of plan.splitPaneIds ?? []) {
       removeTerminalSplitPaneLayout(paneId);
     }
@@ -8208,6 +8217,8 @@ export function WorkspaceShell() {
         <SecretVaultGate
           error={secretVault.error}
           loading={secretVault.loading}
+          masterPasswordEnabled={settings.security.masterPasswordEnabled}
+          onRetry={secretVault.retry}
           onUnlock={secretVault.unlock}
           status={secretVault.status}
           unlocking={secretVault.unlocking}
@@ -8248,6 +8259,17 @@ export function WorkspaceShell() {
         <WorkspaceSidebar
           activeView={workspaceSidebarView}
           fileContext={workspaceSidebarFileContext}
+          files={workspaceSidebarFileContext ? (
+            <RemoteFilesView key={workspaceSidebarFileContext.tabId} active={!leftPaneCollapsed && workspaceSidebarView === "files"} connection={connectionById.get(workspaceSidebarFileContext.connectionId) || null}
+              locateRequest={remoteFileLocateRequest} refreshRequest={remoteFileRefreshRequest} nativeDropTargetPath={nativeFileDropTargetPath}
+              stateKey={`ssh-file-panel:${workspaceSidebarFileContext.tabId}`} terminalPath={workspaceSidebarFileContext.path}
+              transferPanel={<RemoteFileTransferPanel onCancel={requestCancelTransfer} onCopyPath={copyRemotePath} onRemove={removeRemoteFileTransfer} onRetry={retryRemoteFileTransfer} onOpenLocalPath={openLocalTransferPath} onRevealLocalPath={revealLocalTransferPath} />}
+              onCopyPath={copyRemotePath} onCreateDirectory={requestCreateRemoteDirectory} onCreateFile={requestCreateRemoteFile}
+              onDeleteEntries={requestDeleteRemoteEntries} onDeleteEntry={requestDeleteRemoteEntry} onDownloadEntries={downloadRemoteFiles} onDownloadEntry={downloadRemoteFile}
+              onOpenFile={openRemoteFile} onRenameEntry={requestRenameRemoteEntry} onShowProperties={showRemoteFileProperties}
+              onUploadDirectory={uploadRemoteDirectory} onUploadFile={uploadRemoteFile} onUploadItems={uploadRemoteItems}
+              resolveTerminalPath={() => resolveTerminalLocatePath(workspaceSidebarFileContext.tabId)} />
+          ) : null}
           onViewChange={setWorkspaceSidebarView}
           sessions={
             <ConnectionPane
@@ -9111,19 +9133,14 @@ export function WorkspaceShell() {
                 {sshRemoteFilePanelStack.length > 0 ? (
                   sshRemoteFilePanelStack.map((panel) => {
                     const panelConnection = connectionById.get(panel.connectionId) || null;
-                    const panelTerminalPath = terminalDirectories[panel.tabId] || null;
 
                     return (
                       <RemoteFilePanel
                         active={panel.active}
                         activeTool={rightTool}
-                        availableTools={undefined}
+                        availableTools={["monitor", "commands", "tools", "tunnels", "ai"]}
                         connection={panelConnection}
                         key={panel.key}
-                        locateRequest={remoteFileLocateRequest}
-                        refreshRequest={remoteFileRefreshRequest}
-                        nativeDropTargetPath={nativeFileDropTargetPath}
-                        stateKey={panel.key}
                         monitorPanel={
                           panel.active && rightTool === "monitor" ? (
                             <Suspense fallback={<p className="file-panel-empty">正在加载监控...</p>}>
@@ -9157,34 +9174,7 @@ export function WorkspaceShell() {
                             </Suspense>
                           ) : null
                         }
-                        transferPanel={
-                          panel.active && rightTool === "files" ? (
-                            <RemoteFileTransferPanel
-                              onCancel={requestCancelTransfer}
-                              onCopyPath={copyRemotePath}
-                              onRemove={removeRemoteFileTransfer}
-                              onRetry={retryRemoteFileTransfer}
-                              onOpenLocalPath={openLocalTransferPath}
-                              onRevealLocalPath={revealLocalTransferPath}
-                            />
-                          ) : null
-                        }
-                        onCopyPath={copyRemotePath}
-                        onCreateDirectory={requestCreateRemoteDirectory}
-                        onCreateFile={requestCreateRemoteFile}
-                        onDeleteEntries={requestDeleteRemoteEntries}
-                        onDeleteEntry={requestDeleteRemoteEntry}
-                        onDownloadEntries={downloadRemoteFiles}
-                        onDownloadEntry={downloadRemoteFile}
-                        onOpenFile={openRemoteFile}
-                        onRenameEntry={requestRenameRemoteEntry}
-                        onShowProperties={showRemoteFileProperties}
                         onToolChange={setRightTool}
-                        onUploadDirectory={uploadRemoteDirectory}
-                        onUploadFile={uploadRemoteFile}
-                        onUploadItems={uploadRemoteItems}
-                        resolveTerminalPath={() => resolveTerminalLocatePath(panel.tabId)}
-                        terminalPath={panelTerminalPath}
                       />
                     );
                   })
@@ -9192,11 +9182,8 @@ export function WorkspaceShell() {
                   <RemoteFilePanel
                     active={!rightPaneCollapsed}
                     activeTool={rightTool}
-                    availableTools={undefined}
+                    availableTools={["monitor", "commands", "tools", "tunnels", "ai"]}
                     connection={remoteFileConnection}
-                    locateRequest={remoteFileLocateRequest}
-                    refreshRequest={remoteFileRefreshRequest}
-                    nativeDropTargetPath={nativeFileDropTargetPath}
                     aiPanel={aiAssistantPanelNode}
                     tunnelPanel={
                       rightTool === "tunnels" && isSshConnection(activeConnection) ? (
@@ -9209,12 +9196,6 @@ export function WorkspaceShell() {
                       ) : null
                     }
                     onToolChange={setRightTool}
-                    resolveTerminalPath={
-                      activeConnectedTerminalTab
-                        ? () => resolveTerminalLocatePath(activeConnectedTerminalTab.id)
-                        : undefined
-                    }
-                    terminalPath={activeTerminalDirectory}
                   />
                 )}
               </div>

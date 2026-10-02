@@ -50,6 +50,7 @@ export type RemoteFileTransferRetry =
 
 export interface RemoteFileTransferItem {
   id: string;
+  connectionId: string | null;
   createdAt: number;
   direction: TransferDirection;
   error?: string | null;

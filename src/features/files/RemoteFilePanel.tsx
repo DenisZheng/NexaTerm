@@ -55,6 +55,14 @@ import {
   sortRemoteFileEntries,
 } from "./remoteFilePaths";
 import type { RemoteFileEntry, RemoteFileEntryMetadata } from "./remoteFileTypes";
+import {
+  canApplyRemoteFileDirectoryResponse,
+  currentRemoteFileFollowPolicy,
+  followStateAfterManualBrowse,
+  remoteFileInstanceOwnerKey,
+  shouldResetRemoteFileNavigation,
+  type RemoteFileDirectoryRequestToken,
+} from "./remoteFileInstanceState";
 
 export type RemoteFileTool = "files" | "monitor" | "commands" | "tools" | "ai" | "tunnels";
 
@@ -65,6 +73,7 @@ export interface RemoteFileUploadItem {
 
 interface RemoteFilePanelProps {
   active: boolean;
+  hideToolTabs?: boolean;
   activeTool: RemoteFileTool;
   availableTools?: RemoteFileTool[];
   connection: ConnectionProfile | null;
@@ -182,12 +191,14 @@ interface RemoteFilePanelStateSnapshot {
   expandedDirectories: Record<string, boolean>;
   locatedDirectoryPath: string | null;
   showHidden: boolean;
+  followTerminalDirectory: boolean;
 }
 
 const remoteFilePanelStateCache = new Map<string, RemoteFilePanelStateSnapshot>();
 
 function RemoteFilePanelComponent({
   active = true,
+  hideToolTabs = false,
   activeTool,
   availableTools,
   connection,
@@ -239,6 +250,9 @@ function RemoteFilePanelComponent({
     initialState?.locatedDirectoryPath || null,
   );
   const [showHidden, setShowHidden] = useState(initialState?.showHidden || false);
+  const [followTerminalDirectory, setFollowTerminalDirectory] = useState(
+    initialState?.followTerminalDirectory ?? currentRemoteFileFollowPolicy.defaultEnabled,
+  );
   const [uploadMenuOpen, setUploadMenuOpen] = useState(false);
   const [dropTargetPath, setDropTargetPath] = useState<string | null>(null);
   const [loadingPath, setLoadingPath] = useState<string | null>(null);
@@ -261,6 +275,8 @@ function RemoteFilePanelComponent({
   const remoteFileRowRefs = useRef(new Map<string, HTMLButtonElement>());
   const connectionLoadScopeRef = useRef(0);
   const directoryLoadRequestRef = useRef(0);
+  const ownerKey = remoteFileInstanceOwnerKey(stateKey, connectionId);
+  const lastOwnerKeyRef = useRef(ownerKey);
   const directoryEntriesRef = useRef<Record<string, RemoteFileEntry[]>>(initialState?.directoryEntries || {});
   const lastConnectionIdRef = useRef(connectionId);
   const mountedRef = useRef(true);
@@ -289,12 +305,30 @@ function RemoteFilePanelComponent({
 
   useEffect(() => {
     const nextConnectionId = connectionId;
-    if (lastConnectionIdRef.current === nextConnectionId) {
+    const previousOwnerKey = lastOwnerKeyRef.current;
+    const ownerChanged = shouldResetRemoteFileNavigation(previousOwnerKey, ownerKey);
+    const connectionChanged = lastConnectionIdRef.current !== nextConnectionId;
+    if (!ownerChanged && !connectionChanged) {
       return;
     }
+
+    lastOwnerKeyRef.current = ownerKey;
     lastConnectionIdRef.current = nextConnectionId;
     connectionLoadScopeRef.current += 1;
     directoryLoadRequestRef.current += 1;
+    setLoadingPath(null);
+    setVisibleLoadingPath(null);
+    setError(null);
+    clearLoadingIndicatorTimer();
+    closeRemoteFileInfo();
+    remoteFileMetadataCacheRef.current.clear();
+    remoteFileMetadataRequestRef.current.clear();
+    remoteFileMetadataGenerationRef.current.clear();
+
+    if (!ownerChanged) {
+      return;
+    }
+
     directoryEntriesRef.current = {};
     setDirectoryEntries({});
     setExpandedDirectories({});
@@ -304,16 +338,9 @@ function RemoteFilePanelComponent({
     clearSelection();
     setCurrentPath(defaultRemotePath);
     setActiveDirectoryPath(defaultRemotePath);
-    setLoadingPath(null);
-    setVisibleLoadingPath(null);
     setPendingRevealScrollPath(null);
-    setError(null);
-    clearLoadingIndicatorTimer();
-    closeRemoteFileInfo();
-    remoteFileMetadataCacheRef.current.clear();
-    remoteFileMetadataRequestRef.current.clear();
-    remoteFileMetadataGenerationRef.current.clear();
-  }, [connectionId]);
+    setFollowTerminalDirectory(currentRemoteFileFollowPolicy.defaultEnabled);
+  }, [connectionId, ownerKey]);
 
   useLayoutEffect(() => {
     if (!stateKey) {
@@ -326,6 +353,7 @@ function RemoteFilePanelComponent({
       expandedDirectories,
       locatedDirectoryPath,
       showHidden,
+      followTerminalDirectory,
     });
   }, [
     activeDirectoryPath,
@@ -334,6 +362,7 @@ function RemoteFilePanelComponent({
     expandedDirectories,
     locatedDirectoryPath,
     showHidden,
+    followTerminalDirectory,
     stateKey,
   ]);
 
@@ -413,6 +442,26 @@ function RemoteFilePanelComponent({
     navigateToPath(path);
   }, [active, connectionId, effectiveActiveTool, locateRequest?.connectionId, locateRequest?.id, locateRequest?.path]);
 
+  useEffect(() => {
+    if (
+      !active ||
+      effectiveActiveTool !== "files" ||
+      !connection ||
+      !followTerminalDirectory ||
+      !terminalDirectory ||
+      locatedDirectoryPath === terminalDirectory
+    ) {
+      return;
+    }
+    revealDirectoryPath(terminalDirectory, true);
+  }, [
+    active,
+    connectionId,
+    effectiveActiveTool,
+    followTerminalDirectory,
+    terminalDirectory,
+  ]);
+
   useEffect(
     () => () => {
       mountedRef.current = false;
@@ -432,8 +481,8 @@ function RemoteFilePanelComponent({
   if (!active) {
     return (
       <aside
-        className="tool-pane is-hidden"
-        aria-label="右侧工具面板"
+        className={`tool-pane ${hideToolTabs ? "remote-files-view " : ""}is-hidden`}
+        aria-label={hideToolTabs ? "远程文件" : "右侧工具面板"}
         aria-hidden="true"
         data-remote-file-panel-placeholder="true"
       />
@@ -441,13 +490,15 @@ function RemoteFilePanelComponent({
   }
 
   return (
-    <aside className={`tool-pane ${active ? "" : "is-hidden"}`} aria-label="右侧工具面板" aria-hidden={!active}>
-      <FilePanelTabs
-        activeTool={effectiveActiveTool}
-        availableTools={visibleTools}
-        onToolChange={onToolChange}
-        onToggleRightPane={onToggleRightPane}
-      />
+    <aside className={`tool-pane ${hideToolTabs ? "remote-files-view " : ""}${active ? "" : "is-hidden"}`} aria-label={hideToolTabs ? "远程文件" : "右侧工具面板"} aria-hidden={!active}>
+      {hideToolTabs ? null : (
+        <FilePanelTabs
+          activeTool={effectiveActiveTool}
+          availableTools={visibleTools}
+          onToolChange={onToolChange}
+          onToggleRightPane={onToggleRightPane}
+        />
+      )}
       <div className="tool-panel-slot" hidden={effectiveActiveTool !== "tools"}>
         {toolsPanel || <p className="file-panel-empty">打开一个 SSH 会话后显示工具。</p>}
       </div>
@@ -473,6 +524,7 @@ function RemoteFilePanelComponent({
             showHidden={showHidden}
             terminalPath={terminalDirectory}
             locatedDirectoryPath={locatedDirectoryPath}
+            followTerminalDirectory={followTerminalDirectory}
             canLocateTerminalDirectory={Boolean(terminalDirectory || resolveTerminalPath)}
             uploadMenuOpen={uploadMenuOpen}
             onLocateTerminalDirectory={revealTerminalDirectory}
@@ -480,6 +532,7 @@ function RemoteFilePanelComponent({
             onRefresh={() => void loadDirectory(activeDirectoryPath, true)}
             onCollapseExpandedDirectories={collapseExpandedDirectories}
             onToggleHidden={() => setShowHidden((value) => !value)}
+            onToggleFollowTerminalDirectory={() => setFollowTerminalDirectory((value) => !value)}
             onToggleUploadMenu={() => setUploadMenuOpen((open) => !open)}
             onCreateDirectory={connection ? onCreateDirectory : undefined}
             onCreateFile={connection ? onCreateFile : undefined}
@@ -687,6 +740,9 @@ function RemoteFilePanelComponent({
 
   function navigateToPath(path: string) {
     const normalizedPath = normalizeRemotePath(path);
+    setFollowTerminalDirectory((enabled) =>
+      followStateAfterManualBrowse(enabled, currentRemoteFileFollowPolicy),
+    );
     revealDirectoryPath(normalizedPath, false);
   }
 
@@ -747,12 +803,18 @@ function RemoteFilePanelComponent({
     const requestLoadScope = connectionLoadScopeRef.current;
     const requestId = directoryLoadRequestRef.current + 1;
     directoryLoadRequestRef.current = requestId;
+    const requestToken: RemoteFileDirectoryRequestToken = {
+      connectionId: connection.id,
+      ownerKey,
+      requestId,
+      scope: requestLoadScope,
+    };
     clearLoadingIndicatorTimer();
     setLoadingPath(normalizedPath);
     setVisibleLoadingPath(null);
     setError(null);
     loadingIndicatorTimerRef.current = setTimeout(() => {
-      if (!isLatestDirectoryLoadRequest(requestLoadScope, requestId)) {
+      if (!canApplyDirectoryResponse(requestToken, true)) {
         return;
       }
       setVisibleLoadingPath((current) => current ?? normalizedPath);
@@ -763,7 +825,7 @@ function RemoteFilePanelComponent({
         ? await remoteFileList(connection.id, normalizedPath)
         : previewEntriesForPath(normalizedPath);
 
-      if (connectionLoadScopeRef.current !== requestLoadScope) {
+      if (!canApplyDirectoryResponse(requestToken, false)) {
         return;
       }
 
@@ -775,11 +837,11 @@ function RemoteFilePanelComponent({
         directoryEntriesRef.current = next;
         return next;
       });
-      if (isLatestDirectoryLoadRequest(requestLoadScope, requestId)) {
+      if (canApplyDirectoryResponse(requestToken, true)) {
         setError(null);
       }
     } catch (error) {
-      if (!isLatestDirectoryLoadRequest(requestLoadScope, requestId)) {
+      if (!canApplyDirectoryResponse(requestToken, true)) {
         return;
       }
       setError(formatError(error));
@@ -794,9 +856,39 @@ function RemoteFilePanelComponent({
   }
 
   function isLatestDirectoryLoadRequest(scope: number, requestId: number) {
-    return mountedRef.current &&
-      connectionLoadScopeRef.current === scope &&
-      directoryLoadRequestRef.current === requestId;
+    return canApplyRemoteFileDirectoryResponse(
+      {
+        connectionId: connectionId || "",
+        ownerKey,
+        requestId,
+        scope,
+      },
+      {
+        connectionId,
+        mounted: mountedRef.current,
+        ownerKey,
+        requestId: directoryLoadRequestRef.current,
+        scope: connectionLoadScopeRef.current,
+      },
+      true,
+    );
+  }
+
+  function canApplyDirectoryResponse(
+    request: RemoteFileDirectoryRequestToken,
+    latestOnly: boolean,
+  ) {
+    return canApplyRemoteFileDirectoryResponse(
+      request,
+      {
+        connectionId,
+        mounted: mountedRef.current,
+        ownerKey,
+        requestId: directoryLoadRequestRef.current,
+        scope: connectionLoadScopeRef.current,
+      },
+      latestOnly,
+    );
   }
 
   async function loadRevealPath(paths: string[]) {
@@ -1268,6 +1360,24 @@ function RemoteFilePanelComponent({
 
 export const RemoteFilePanel = memo(RemoteFilePanelComponent, areRemoteFilePanelPropsEqual);
 
+export type RemoteFilesViewProps = Omit<
+  RemoteFilePanelProps,
+  | "activeTool"
+  | "availableTools"
+  | "aiPanel"
+  | "commandPanel"
+  | "hideToolTabs"
+  | "monitorPanel"
+  | "onToggleRightPane"
+  | "onToolChange"
+  | "toolsPanel"
+  | "tunnelPanel"
+>;
+
+export function RemoteFilesView(props: RemoteFilesViewProps) {
+  return <RemoteFilePanel {...props} activeTool="files" availableTools={["files"]} hideToolTabs />;
+}
+
 function areRemoteFilePanelPropsEqual(previous: RemoteFilePanelProps, next: RemoteFilePanelProps) {
   if (!previous.active && !next.active) {
     return previous.connection?.id === next.connection?.id && previous.stateKey === next.stateKey;
@@ -1350,6 +1460,7 @@ function FilePanelShell({
   showHidden,
   terminalPath,
   locatedDirectoryPath,
+  followTerminalDirectory,
   canLocateTerminalDirectory,
   uploadMenuOpen,
   onLocateTerminalDirectory,
@@ -1360,6 +1471,7 @@ function FilePanelShell({
   onCreateFile,
   onCopyCurrentPath,
   onToggleHidden,
+  onToggleFollowTerminalDirectory,
   onToggleUploadMenu,
   onUploadDirectory,
   onUploadFile,
@@ -1375,6 +1487,7 @@ function FilePanelShell({
   showHidden: boolean;
   terminalPath: string | null;
   locatedDirectoryPath: string | null;
+  followTerminalDirectory: boolean;
   canLocateTerminalDirectory: boolean;
   uploadMenuOpen: boolean;
   onLocateTerminalDirectory: () => void;
@@ -1382,6 +1495,7 @@ function FilePanelShell({
   onRefresh: () => void;
   onCollapseExpandedDirectories: () => void;
   onToggleHidden: () => void;
+  onToggleFollowTerminalDirectory: () => void;
   onToggleUploadMenu: () => void;
   onUploadDirectory?: (parentPath: string) => void;
   onUploadFile?: (parentPath: string) => void;
@@ -1442,6 +1556,18 @@ function FilePanelShell({
                 onClick={onLocateTerminalDirectory}
               >
                 <Crosshair className="ui-icon" aria-hidden="true" />
+              </button>
+            </Tooltip>
+            <Tooltip label={followTerminalDirectory ? "关闭跟随终端目录" : "跟随终端目录"}>
+              <button
+                className={`mini-action ${followTerminalDirectory ? "active" : ""}`}
+                type="button"
+                aria-label="跟随终端目录"
+                aria-pressed={followTerminalDirectory}
+                disabled={disabled}
+                onClick={onToggleFollowTerminalDirectory}
+              >
+                <ListTree className="ui-icon" aria-hidden="true" />
               </button>
             </Tooltip>
             <Tooltip label={showHidden ? "隐藏点文件" : "显示点文件"}>
