@@ -92,6 +92,9 @@ jobs:
       - name: WF-03A left Files view
         run: pnpm run check:wf03-left-files
 
+      - name: WF-04B bounded batch and instance split
+        run: pnpm run check:wf04b-batch-split
+
   security:
     name: Security evidence
     runs-on: ubuntu-22.04

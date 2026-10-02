@@ -449,6 +449,7 @@ import {
   useTerminalSplitController,
   type TerminalSplitHost,
 } from "../workspace/split/useTerminalSplitController";
+import { splitGroupInsertionIndex } from "../workspace/split/anchor";
 import {
   displayOrdinal,
   HOME_ITEM_ID,
@@ -1386,7 +1387,6 @@ export function WorkspaceShell() {
     focusedTerminalSplitPane,
     nextTerminalSplitId,
     setFocusedTerminalPaneId,
-    setTerminalSplitAnchorIndex,
     setTerminalSplitAutoCreateSameSession,
     setTerminalSplitHost,
     setTerminalSplitLayout,
@@ -1398,7 +1398,6 @@ export function WorkspaceShell() {
     setTerminalSplitTabActive,
     terminalSessionIdForBinding,
     terminalSplitActive,
-    terminalSplitAnchorIndex,
     terminalSplitAutoCreateSameSession,
     terminalSplitCanAddPane,
     terminalSplitExists,
@@ -1838,7 +1837,8 @@ export function WorkspaceShell() {
             terminalPaneBindingKey({ kind: "ssh", tabId: tab.id }),
           ),
       ).length +
-      (terminalSplitHost?.kind === "ssh" && terminalSplitHost.connectionId === activeConnectionId
+      (terminalSplitHost?.kind === "ssh" &&
+      activeConnectionTabs.some((tab) => tab.id === terminalSplitHost.tabId)
         ? 1
         : 0)
     : activeConnectionTabs.length;
@@ -1987,13 +1987,9 @@ export function WorkspaceShell() {
       }),
       ...connections
         .filter(isSshConnection)
-        .filter(
-          (connection) =>
-            !terminalTabs.some((tab) => tab.connectionId === connection.id),
-        )
         .map((connection) => ({
           connectionId: connection.id,
-          group: "未打开 SSH 连接",
+          group: "新建 SSH 实例",
           icon: (
             <ConnectionSystemLogo compact connection={connection} decorative />
           ),
@@ -2004,6 +2000,18 @@ export function WorkspaceShell() {
             connection.host,
             connection.port?.toString(),
           ]
+            .filter(Boolean)
+            .join(" "),
+          value: `connection:${connection.id}`,
+        })),
+      ...connections
+        .filter((connection) => isTelnetConnection(connection) || isSerialConnection(connection))
+        .map((connection) => ({
+          connectionId: connection.id,
+          group: "新建 Telnet / 串口实例",
+          icon: <ConnectionSystemLogo compact connection={connection} decorative />,
+          label: `${connection.name || connection.host} · ${formatConnectionAddress(connection)}`,
+          searchText: [connection.name, connection.host, connection.port?.toString()]
             .filter(Boolean)
             .join(" "),
           value: `connection:${connection.id}`,
@@ -4386,27 +4394,11 @@ export function WorkspaceShell() {
   }
 
   function terminalSplitHostForBinding(binding: TerminalPaneBinding): TerminalSplitHost | null {
-    if (binding.kind === "local") {
-      return { kind: "local" };
-    }
-    const tab = terminalTabs.find((item) => item.id === binding.tabId);
-    return tab ? { connectionId: tab.connectionId, kind: "ssh" } : null;
-  }
-
-  function terminalSplitAnchorIndexForBinding(binding: TerminalPaneBinding) {
-    if (binding.kind === "local") {
-      return Math.max(0, localTerminalTabs.findIndex((tab) => tab.id === binding.tabId));
-    }
-    const tab = terminalTabs.find((item) => item.id === binding.tabId);
-    if (!tab) {
-      return 0;
-    }
-    return Math.max(
-      0,
-      terminalTabs
-        .filter((item) => item.connectionId === tab.connectionId)
-        .findIndex((item) => item.id === binding.tabId),
-    );
+    const exists =
+      binding.kind === "ssh"
+        ? terminalTabs.some((item) => item.id === binding.tabId)
+        : localTerminalTabs.some((item) => item.id === binding.tabId);
+    return exists ? binding : null;
   }
 
   function createSameSessionTerminalBinding(
@@ -4449,11 +4441,17 @@ export function WorkspaceShell() {
   }
 
   function activateTerminalSplitHost(host: TerminalSplitHost | null = terminalSplitHost) {
-    if (!host) {
+    if (!host) return;
+    setSettingsSectionRequest(undefined);
+    if (host.kind === "ssh") {
+      const tab = terminalTabs.find((item) => item.id === host.tabId);
+      if (!tab) return;
+      dispatchTabs({ type: "tabs/activateSplitHost", host: { kind: "ssh", connectionId: tab.connectionId } });
       return;
     }
-    setSettingsSectionRequest(undefined);
-    dispatchTabs({ type: "tabs/activateSplitHost", host });
+    if (localTerminalTabs.some((item) => item.id === host.tabId)) {
+      dispatchTabs({ type: "tabs/activateSplitHost", host: { kind: "local" } });
+    }
   }
 
   function activateTerminalSplitTab(paneId?: string) {
@@ -4561,7 +4559,6 @@ export function WorkspaceShell() {
         nextBinding,
       );
       setTerminalSplitHost(host);
-      setTerminalSplitAnchorIndex(terminalSplitAnchorIndexForBinding(binding));
       setTerminalSplitTabActive(true);
       setTerminalSplitLayout(nextLayout);
       setFocusedTerminalPaneId(nextPaneId);
@@ -4631,7 +4628,6 @@ export function WorkspaceShell() {
     const nextLayout = createTerminalFourPane(bindings.slice(0, terminalSplitMaxPanes));
     if (!terminalSplitHost) {
       setTerminalSplitHost(host);
-      setTerminalSplitAnchorIndex(terminalSplitAnchorIndexForBinding(binding));
     }
     setTerminalSplitTabActive(true);
     setTerminalSplitLayout(nextLayout.layout);
@@ -5216,12 +5212,18 @@ export function WorkspaceShell() {
     const items = visibleTabs.map((tab) =>
       renderSshTerminalSubtab(tab, activeConnectionTabs.findIndex((item) => item.id === tab.id)),
     );
-    if (
-      terminalSplitExists &&
-      terminalSplitHost?.kind === "ssh" &&
-      terminalSplitHost.connectionId === activeConnectionId
-    ) {
-      items.splice(Math.min(terminalSplitAnchorIndex, items.length), 0, renderTerminalSplitGroupSubtab());
+    const splitHostTab =
+      terminalSplitHost?.kind === "ssh"
+        ? activeConnectionTabs.find((tab) => tab.id === terminalSplitHost.tabId) || null
+        : null;
+    if (terminalSplitExists && splitHostTab) {
+      const index = splitGroupInsertionIndex(
+        activeConnectionTabs,
+        "ssh",
+        terminalSplitHost,
+        terminalSplitMemberKeys,
+      );
+      items.splice(Math.min(index, items.length), 0, renderTerminalSplitGroupSubtab());
     }
     return items;
   }
@@ -5286,7 +5288,13 @@ export function WorkspaceShell() {
       renderLocalTerminalSubtab(tab, localTerminalTabs.findIndex((item) => item.id === tab.id)),
     );
     if (terminalSplitExists && terminalSplitHost?.kind === "local") {
-      items.splice(Math.min(terminalSplitAnchorIndex, items.length), 0, renderTerminalSplitGroupSubtab());
+      const index = splitGroupInsertionIndex(
+        localTerminalTabs,
+        "local",
+        terminalSplitHost,
+        terminalSplitMemberKeys,
+      );
+      items.splice(Math.min(index, items.length), 0, renderTerminalSplitGroupSubtab());
     }
     return items;
   }
@@ -7326,12 +7334,14 @@ export function WorkspaceShell() {
 
     if (option.connectionId) {
       const connection = connectionById.get(option.connectionId) || null;
-      if (!isSshConnection(connection)) {
+      if (isSshConnection(connection)) {
+        const tab = startConnectionStep(connection, "terminal", false);
+        if (tab) assignTerminalSplitBinding(paneId, { kind: "ssh", tabId: tab.id });
         return;
       }
-      const tab = startConnectionStep(connection, "terminal", false);
-      if (tab) {
-        assignTerminalSplitBinding(paneId, { kind: "ssh", tabId: tab.id });
+      if (isTelnetConnection(connection) || isSerialConnection(connection)) {
+        const tab = openCharacterTerminalInConnection(connection, false);
+        assignTerminalSplitBinding(paneId, { kind: "local", tabId: tab.id });
       }
       return;
     }

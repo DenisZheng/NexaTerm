@@ -28,7 +28,7 @@ const allocateIds = (): FourPaneIds => {
 
 function twoPane(): SplitState {
   const layout = splitTerminalPane(createTerminalSplitLayout("p1", ssh("a")), "p1", "row", "s1", "p2", ssh("b"));
-  return { ...initialSplitState, focusedPaneId: "p1", host: { kind: "ssh", connectionId: "c" }, layout, tabActive: true };
+  return { ...initialSplitState, focusedPaneId: "p1", host: ssh("b"), layout, tabActive: true };
 }
 
 describe("splitReducer 基本 action", () => {
@@ -81,6 +81,23 @@ describe("split/availableBindingsChanged", () => {
     ).toBe(state);
   });
 
+  it("宿主绑定到具体实例；同 profile 的其它实例不能替代它，宿主失效时转移到存活 pane", () => {
+    const base = twoPane();
+    expect(base.host).toEqual(ssh("b"));
+    const layout = splitTerminalPane(base.layout!, "p1", "column", "s2", "p3", ssh("c"));
+    const next = splitReducer(
+      { ...base, layout },
+      {
+        type: "split/availableBindingsChanged",
+        availableKeys: new Set(["ssh:a", "ssh:c"]),
+        fallbackBinding: null,
+        allocateIds,
+      },
+    );
+    expect(next.layout).not.toBeNull();
+    expect(next.host).toEqual(ssh("a"));
+  });
+
   it("一个 binding 失效 → 单 pane → 整体清空并标记 collapsedTo", () => {
     const next = splitReducer(twoPane(), {
       type: "split/availableBindingsChanged",
@@ -120,7 +137,7 @@ describe("split/availableBindingsChanged", () => {
     );
     expect(next.layout).not.toBeNull();
     expect(next.focusedPaneId).toBe("p1");
-    expect(next.host).toEqual(base.host);
+    expect(next.host).toEqual(ssh("a"));
   });
 
   it("超过上限时以焦点 binding 为首重建四宫格", () => {

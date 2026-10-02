@@ -20,11 +20,12 @@
 - [x] 复用现有 open/cancel；batch handle 绑定新建实例 ID，取消不按 connectionId 关闭旧实例。
 
 ## 04B-3 Split
-- [ ] 复用现有 2/4 pane 与拖动比例。
-- [ ] pane 明确选择已打开实例。
-- [ ] pane 显式新建实例。
-- [ ] 修正 split anchor/owner 遗留 connection-level 假设，保持 instance binding。
-- [ ] 一次操作焦点唯一。
+- [x] 复用现有 2/4 pane 与拖动比例，不新增布局引擎。
+- [x] pane 明确选择已打开实例，binding 始终为具体 tabId。
+- [x] pane 显式新建实例：SSH（即使 profile 已打开）、Telnet/Serial 与默认本地终端。
+- [x] split host 改为具体 terminal binding；删除会漂移的数字 anchor，标签位置从 host 实例动态计算。
+- [x] host 实例关闭但仍有 >=2 pane 时转移到第一个存活 binding；同 profile sibling 不冒充原 host。
+- [x] 一次操作焦点唯一；现有 picker/move binding 行为继续复用。
 
 ## 04B-4 A08 / delivery
 - [ ] 自动化：成功 + 失败 + cancel + retry + pre-existing isolation。
@@ -43,3 +44,13 @@
 - 04B-2 在此基线上新增：预览 UI、20 项选择保护、侧栏批次状态、实例级 focus/cancel、RDP/VNC/SSH/Telnet/Serial 运行态映射；等待当前切片 CI。
 - `WorkspaceShell.tsx` 保持低于既有 13860 line budget，未修改 `scripts/line-budget.json`。
 - A08 真实 Tauri 尚未执行，不以单元/CI 代替。
+
+
+## 04B-3 实施说明（待本切片 CI）
+
+- `TerminalSplitHost` 从 SSH connection / generic local owner 改为具体 `TerminalPaneBinding`，解决同 profile 多实例时标题、宿主和标签锚点歧义。
+- 删除 `anchorIndex` / `split/setAnchorIndex`；分屏组插入位置由 exact host tab + 当前成员集合实时计算，避免前序 tab 关闭/增加后数字索引漂移。
+- reducer 在 host binding 失效且布局仍 >=2 pane 时转移到第一个存活 pane；单 pane 仍沿原逻辑折叠回独立 tab。
+- Split picker 继续列出已打开实例，同时所有 SSH profile 均提供“新建 SSH 实例”；Telnet/Serial 增加显式新建实例入口。批量连接仍不会自动进入 Split。
+- 新增 WF-04B source gate，固定 20/4 限制、实例级 cancel、exact split host、无 numeric anchor 与已确认 WS-X09。
+- `WorkspaceShell.tsx` 预计算版本 13848 行，低于既有 13860 预算；未修改 `scripts/line-budget.json`。

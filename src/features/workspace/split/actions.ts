@@ -1,9 +1,7 @@
 import type { TerminalPaneBinding, TerminalSplitNode } from "../../terminal/terminalSplitLayout";
 
-/** 分屏宿主：分屏 tab 挂在哪个连接（ssh）或本地终端（local）之下。 */
-export type TerminalSplitHost =
-  | { connectionId: string; kind: "ssh" }
-  | { kind: "local" };
+/** 分屏宿主就是创建分屏时的具体终端实例；不再按 connection/profile 粗粒度归属。 */
+export type TerminalSplitHost = TerminalPaneBinding;
 
 /** 打开 pane 选择器的请求；`key` 单调递增用于触发重新打开同一 pane 的选择器。 */
 export interface TerminalSplitPickerOpenRequest {
@@ -36,7 +34,6 @@ export type SplitAction =
         | ((current: TerminalSplitNode | null) => TerminalSplitNode | null);
     }
   | { type: "split/setHost"; host: TerminalSplitHost | null }
-  | { type: "split/setAnchorIndex"; anchorIndex: number }
   | { type: "split/setTabActive"; active: boolean }
   | { type: "split/focusPane"; paneId: string | null }
   | { type: "split/bumpRevision" }

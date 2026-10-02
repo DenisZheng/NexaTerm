@@ -146,25 +146,25 @@ describe("selectWorkspaceItems", () => {
   });
 
   describe("分屏组（WS-E12）", () => {
-    it("成员折叠为一个分屏组项，占成员中最靠前的位置；宿主取 pane 顺序中第一个属于宿主连接的成员", () => {
+    it("成员折叠为一个分屏组项；同 profile 多实例时宿主严格取指定 terminal binding", () => {
       const items = selectWorkspaceItems(mixed, ["rdp:r1", "local:l1", "ssh:t1", "vnc:v1", "ssh:t2"], {
         bindings: [
           { kind: "local", tabId: "l1" },
           { kind: "ssh", tabId: "t2" },
           { kind: "ssh", tabId: "t1" },
         ],
-        host: { connectionId: "a", kind: "ssh" },
+        host: { kind: "ssh", tabId: "t1" },
       });
       expect(ids(items)).toEqual(["home", "rdp:r1", "split", "vnc:v1"]);
       expect(items[2]).toEqual({
         kind: "split",
         id: "split",
-        host: { kind: "ssh", id: "ssh:t2", connectionId: "a", ordinal: 1, tabId: "t2" },
+        host: { kind: "ssh", id: "ssh:t1", connectionId: "a", ordinal: 0, tabId: "t1" },
         memberIds: ["local:l1", "ssh:t2", "ssh:t1"],
       });
     });
 
-    it("本地宿主取第一个本地成员；宿主在成员里找不到时取第一个成员", () => {
+    it("本地宿主同样按具体实例匹配；宿主实例找不到时取第一个存活成员", () => {
       const splitHost = (items: readonly WorkspaceItem[]) => {
         const group = items.find((item) => item.kind === "split");
         return group?.kind === "split" ? group.host.id : null;
@@ -173,14 +173,14 @@ describe("selectWorkspaceItems", () => {
         { kind: "ssh" as const, tabId: "t2" },
         { kind: "local" as const, tabId: "l1" },
       ];
-      expect(splitHost(selectWorkspaceItems(mixed, [], { bindings, host: { kind: "local" } }))).toBe("local:l1");
-      expect(splitHost(selectWorkspaceItems(mixed, [], { bindings, host: { connectionId: "zz", kind: "ssh" } }))).toBe(
+      expect(splitHost(selectWorkspaceItems(mixed, [], { bindings, host: { kind: "local", tabId: "l1" } }))).toBe("local:l1");
+      expect(splitHost(selectWorkspaceItems(mixed, [], { bindings, host: { kind: "ssh", tabId: "gone" } }))).toBe(
         "ssh:t2",
       );
     });
 
     it("指向已不存在实例的 binding 被忽略；没有可用成员时不生成分屏组项", () => {
-      const host = { connectionId: "a", kind: "ssh" as const };
+      const host = { kind: "ssh" as const, tabId: "t1" };
       const partial = selectWorkspaceItems(mixed, [], {
         bindings: [
           { kind: "ssh", tabId: "gone" },
