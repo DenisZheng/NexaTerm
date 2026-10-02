@@ -1333,7 +1333,7 @@ export function WorkspaceShell() {
     focus: (handle) => selectWorkspaceItem(batchWorkspaceItemId(handle)),
     start: (connectionId) => {
       const connection = connections.find((item) => item.id === connectionId);
-      const handle = connection ? openNewConnectionSession(connection, false) : null;
+      const handle = connection ? openNewConnectionSessionWithActivation(connection, false) : null;
       if (!handle) throw new Error("连接已不存在，无法启动批量会话。");
       return handle;
     },
@@ -6493,7 +6493,14 @@ export function WorkspaceShell() {
     startConnectionStep(connection, "terminal");
   }
 
-  function openNewConnectionSession(connection: ConnectionProfile, activate = true): BatchWorkspaceHandle | null {
+  function openNewConnectionSession(connection: ConnectionProfile) {
+    return openNewConnectionSessionWithActivation(connection, true);
+  }
+
+  function openNewConnectionSessionWithActivation(
+    connection: ConnectionProfile,
+    activate: boolean,
+  ): BatchWorkspaceHandle | null {
     if (isRdpConnection(connection)) return { kind: "rdp", id: startRdpSession(connection, activate).id };
     if (isVncConnection(connection)) return { kind: "vnc", id: startVncSession(connection, activate).id };
     if (isTelnetConnection(connection) || isSerialConnection(connection)) {
