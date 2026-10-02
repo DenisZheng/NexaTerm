@@ -17,7 +17,7 @@ export interface BatchConnectWorkspaceAdapter<Handle>
   focus(handle: Handle): void;
 }
 
-export interface BatchConnectController<Handle> {
+export interface BatchConnectController {
   active: boolean;
   cancelRemaining(): Promise<void>;
   dismiss(): boolean;
@@ -28,9 +28,9 @@ export interface BatchConnectController<Handle> {
   start(groupId: string, connectionIds: readonly string[]): boolean;
 }
 
-export function useBatchConnectController<Handle>(
+export function useBatchConnectController(
   adapter: BatchConnectWorkspaceAdapter<Handle>,
-): BatchConnectController<Handle> {
+): BatchConnectController {
   const adapterRef = useRef(adapter);
   adapterRef.current = adapter;
 
