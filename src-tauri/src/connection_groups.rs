@@ -245,19 +245,5 @@ pub(crate) fn ensure_legacy_group(
     }
 }
 
-/// 04A-3 接通新格式前，旧格式不能静默剥离刚写入的树字段。
-pub(crate) fn require_flat_transfer(db: &Connection) -> Result<(), AppError> {
-    if list(db)?
-        .iter()
-        .any(|g| g.parent_id.is_some() || g.color != "#64748b")
-    {
-        return Err(group_error(
-            "connection_group_transfer_upgrade_required",
-            "当前传输格式尚不支持分组树，请完成版本升级后重试",
-        ));
-    }
-    Ok(())
-}
-
 #[cfg(test)]
 mod tests;

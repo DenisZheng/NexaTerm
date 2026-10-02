@@ -50,3 +50,11 @@ SyncConnectionGroup 与 transfer 贯穿 stable ID/parent；预览和 apply 共�
 SQLite v3 通过独立迁移模块重建 groups，保留 ID/name/sort/timestamps，补 parent_id/color；FK 引用和环由数据库触发器保护，同级唯一使用 root/non-root 两个索引。迁移前用 VACUUM INTO 创建一致备份（涵盖 WAL），关闭 FK 仅在迁移连接、事务外；事务内 copy/drop/rename 后 foreign_key_check，失败 rollback，恢复 FK。旧 schema 高于应用版本时拒绝初始化。目录 v2 拒绝旧应用打开，失败保留备份与版本保护，不假装旧应用可直接读新版。
 
 测试使用临时数据库，覆盖 v2 数据和空组/连接关系、重复初始化、同级冲突、环、orphan、删除回未分组、旧数据不满足新规则时原子回滚。新建 fresh DB 不需要老数据备份。
+
+## 04A-3 格式与合并边界
+
+- 新写入 sync v3 / transfer v2，读取兼容 sync v2 / transfer v1；未知版本拒绝。解密 AAD 使用包自己的版本，manifest/envelope/document 版本必须一致。
+- SyncConnectionGroup 增加 parent_id/color。默认 root/default color 的序列化不插入新字段，保证历史 transfer v1 的规范 JSON 摘要可验证；旧版本不能携带树扩展字段。旧摘要/AAD 验证成功后才进入规范树模型。
+- 父节点先映射，身份匹配为 stable ID 或映射后 parent+name；ID 与同级名称命中不同对象时明确拒绝。skip 保留本地对象，overwrite 使用导入属性；映射歧义或最终合并树不合法时拒绝且无数据库变更。
+- preview/apply 共用纯映射规划。应用持 SQLite 写锁后重读本地目录；整树校验通过后再写。为了允许合法的重命名/移动交换，事务内使用临时名称解除中间唯一约束冲突，再按父优先顺序写最终树，连接 FK 的 ID 不变。
+- 保留原文件 fingerprint、导入密码验证、数据库备份及 Vault recovery journal；单测必须包含嵌套空组、跨父同名、旧格式及失败回滚。

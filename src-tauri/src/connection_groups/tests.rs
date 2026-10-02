@@ -318,7 +318,7 @@ fn directory_version_lock_failure_preserves_marker() {
 }
 
 #[test]
-fn legacy_name_and_transfer_never_guess_or_drop_tree_fields() {
+fn legacy_name_never_guesses_between_namesakes() {
     let (repo, _) = repo();
     let a = create(&repo, "A", None);
     let b = create(&repo, "B", None);
@@ -329,12 +329,6 @@ fn legacy_name_and_transfer_never_guess_or_drop_tree_fields() {
             .unwrap_err()
             .code,
         "connection_group_ambiguous"
-    );
-    assert_eq!(
-        require_flat_transfer(repo.sqlite_connection())
-            .unwrap_err()
-            .code,
-        "connection_group_transfer_upgrade_required"
     );
 }
 

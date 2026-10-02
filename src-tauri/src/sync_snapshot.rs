@@ -18,7 +18,10 @@ use crate::storage_sqlite::SQLITE_SCHEMA_VERSION;
 use crate::tunnels::TunnelRule;
 
 pub const SYNC_FORMAT: &str = "mxterm-sync";
-pub const SYNC_PROTOCOL_VERSION: u16 = 2;
+pub const SYNC_PROTOCOL_VERSION: u16 = 3;
+#[cfg(test)]
+#[path = "sync_tree_tests.rs"]
+mod tree_tests;
 pub const DATA_ARTIFACT: &str = "data.enc";
 pub const SECRETS_ARTIFACT: &str = "secrets.enc";
 
@@ -64,10 +67,17 @@ pub struct SyncDataDocument {
 pub struct SyncConnectionGroup {
     pub id: String,
     pub name: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parent_id: Option<String>,
+    #[serde(default = "default_group_color", skip_serializing_if = "is_default_group_color")]
+    pub color: String,
     pub sort_order: i64,
     pub created_at: String,
     pub updated_at: String,
 }
+
+fn default_group_color() -> String { "#64748b".into() }
+fn is_default_group_color(color: &String) -> bool { color == "#64748b" }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
 pub struct SyncConnectionRecord {
@@ -236,7 +246,7 @@ impl SyncSnapshotService {
             &bundle.remote_data_enc,
             password,
         )?;
-        if data.version != SYNC_PROTOCOL_VERSION {
+        if data.version != bundle.manifest.protocol_version {
             return Err(sync_snapshot_incompatible(format!(
                 "unsupported data version {}",
                 data.version
@@ -255,10 +265,7 @@ impl SyncSnapshotService {
             None => None,
         };
 
-        if let Some(secrets) = secrets.as_ref() {
-            repository.import_sync_secrets(secrets)?;
-        }
-        let stats = repository.replace_sync_data(&data, secrets.is_some())?;
+        let stats = crate::sync_import_transaction::apply(repository, &data, secrets.as_ref())?;
         Ok(SyncImportResult {
             connections: stats.connections,
             credentials: stats.credentials,
@@ -278,8 +285,9 @@ impl SyncSnapshotService {
         let envelope: RemoteDataEnvelope = serde_json::from_slice(encrypted)
             .map_err(sync_snapshot_data_decrypt_failed)?;
         validate_remote_data_envelope(&envelope)?;
+        if envelope.protocol_version != manifest.protocol_version { return Err(sync_snapshot_incompatible("envelope version mismatch")); }
         let plaintext: SyncDataDocument = decrypt_json(
-            &remote_data_aad(&manifest.snapshot_id),
+            &remote_data_aad(&manifest.snapshot_id, manifest.protocol_version),
             sync_password,
             &envelope.encrypted,
         )
@@ -297,13 +305,14 @@ impl SyncSnapshotService {
         let envelope: RemoteSecretsEnvelope = serde_json::from_slice(encrypted)
             .map_err(|error| sync_snapshot_secret_decrypt_failed(error))?;
         validate_remote_secret_envelope(&envelope)?;
+        if envelope.protocol_version != manifest.protocol_version { return Err(sync_snapshot_incompatible("envelope version mismatch")); }
         let plaintext: SyncSecretsPlaintext = decrypt_json(
-            &remote_secret_aad(&manifest.snapshot_id, &sha256_hex(remote_data_enc)),
+            &remote_secret_aad(&manifest.snapshot_id, &sha256_hex(remote_data_enc), manifest.protocol_version),
             sync_password,
             &envelope.encrypted,
         )
         .map_err(sync_snapshot_secret_decrypt_failed)?;
-        if plaintext.version != SYNC_PROTOCOL_VERSION {
+        if plaintext.version != manifest.protocol_version {
             return Err(sync_snapshot_secret_decrypt_failed(format!(
                 "unsupported secrets version {}",
                 plaintext.version
@@ -333,6 +342,7 @@ pub fn validate_bundle_artifacts(
 }
 
 fn validate_sync_data_document(data: &SyncDataDocument) -> Result<(), AppError> {
+    crate::connection_group_transfer::validate(&data.connection_groups, data.version == 2)?;
     for entry in &data.known_hosts {
         validate_host_key_info(&HostKeyInfo {
             host: entry.host.clone(),
@@ -452,7 +462,7 @@ pub fn validate_manifest_summary(manifest: &SyncManifest) -> Result<(), AppError
             manifest.format
         )));
     }
-    if manifest.protocol_version != SYNC_PROTOCOL_VERSION {
+    if !(2..=SYNC_PROTOCOL_VERSION).contains(&manifest.protocol_version) {
         return Err(sync_snapshot_incompatible(format!(
             "unsupported protocol version {}",
             manifest.protocol_version
@@ -521,7 +531,7 @@ fn encrypt_remote_data(
     plaintext: &SyncDataDocument,
 ) -> Result<Vec<u8>, AppError> {
     let encrypted = encrypt_json(
-        &remote_data_aad(snapshot_id),
+        &remote_data_aad(snapshot_id, SYNC_PROTOCOL_VERSION),
         sync_password,
         plaintext,
     )
@@ -535,7 +545,7 @@ fn encrypt_remote_data(
 }
 
 fn validate_remote_data_envelope(envelope: &RemoteDataEnvelope) -> Result<(), AppError> {
-    if envelope.format != SYNC_FORMAT || envelope.protocol_version != SYNC_PROTOCOL_VERSION {
+    if envelope.format != SYNC_FORMAT || !(2..=SYNC_PROTOCOL_VERSION).contains(&envelope.protocol_version) {
         return Err(sync_snapshot_data_decrypt_failed(
             "unsupported remote data envelope",
         ));
@@ -543,8 +553,8 @@ fn validate_remote_data_envelope(envelope: &RemoteDataEnvelope) -> Result<(), Ap
     Ok(())
 }
 
-fn remote_data_aad(snapshot_id: &str) -> Vec<u8> {
-    format!("{SYNC_FORMAT}|{SYNC_PROTOCOL_VERSION}|{snapshot_id}|data").into_bytes()
+fn remote_data_aad(snapshot_id: &str, version: u16) -> Vec<u8> {
+    format!("{SYNC_FORMAT}|{version}|{snapshot_id}|data").into_bytes()
 }
 
 fn required_sync_password(password: Option<&str>) -> Result<&str, AppError> {
@@ -561,7 +571,7 @@ fn encrypt_remote_secrets(
     plaintext: &SyncSecretsPlaintext,
 ) -> Result<Vec<u8>, AppError> {
     let encrypted = encrypt_json(
-        &remote_secret_aad(snapshot_id, data_hash),
+        &remote_secret_aad(snapshot_id, data_hash, SYNC_PROTOCOL_VERSION),
         sync_password,
         plaintext,
     )
@@ -575,7 +585,7 @@ fn encrypt_remote_secrets(
 }
 
 fn validate_remote_secret_envelope(envelope: &RemoteSecretsEnvelope) -> Result<(), AppError> {
-    if envelope.format != SYNC_FORMAT || envelope.protocol_version != SYNC_PROTOCOL_VERSION {
+    if envelope.format != SYNC_FORMAT || !(2..=SYNC_PROTOCOL_VERSION).contains(&envelope.protocol_version) {
         return Err(sync_snapshot_secret_decrypt_failed(
             "unsupported remote secrets envelope",
         ));
@@ -583,8 +593,8 @@ fn validate_remote_secret_envelope(envelope: &RemoteSecretsEnvelope) -> Result<(
     Ok(())
 }
 
-fn remote_secret_aad(snapshot_id: &str, data_hash: &str) -> Vec<u8> {
-    format!("{SYNC_FORMAT}|{SYNC_PROTOCOL_VERSION}|{snapshot_id}|{data_hash}|secrets").into_bytes()
+fn remote_secret_aad(snapshot_id: &str, data_hash: &str, version: u16) -> Vec<u8> {
+    format!("{SYNC_FORMAT}|{version}|{snapshot_id}|{data_hash}|secrets").into_bytes()
 }
 
 pub fn sha256_hex(bytes: &[u8]) -> String {
@@ -674,7 +684,8 @@ impl SyncImportOptions {
 impl SyncSnapshotBundle {
     fn from_data_for_test(data_json: Vec<u8>) -> Self {
         let snapshot_id = uuid::Uuid::new_v4().to_string();
-        let data: SyncDataDocument = serde_json::from_slice(&data_json).unwrap();
+        let mut data: SyncDataDocument = serde_json::from_slice(&data_json).unwrap();
+        data.version = SYNC_PROTOCOL_VERSION;
         let remote_data_enc = encrypt_remote_data(&snapshot_id, "test-password", &data).unwrap();
         let empty_secrets = SyncSecretsPlaintext {
             version: SYNC_PROTOCOL_VERSION,

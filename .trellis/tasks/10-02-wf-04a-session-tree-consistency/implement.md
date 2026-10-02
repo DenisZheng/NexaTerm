@@ -25,10 +25,10 @@
 
 ## 04A-3 Sync + Export / Import
 
-- [ ] 版本化与旧包读取；保留加密、fingerprint、锁、事务、vault recovery。
-- [ ] 父 ID 映射、skip/overwrite 预览与应用一致；合并后冲突/环校验；空组/排序保留。
-- [ ] export/import/reopen 与 sync round trip、旧包 fixture、坏版本/摘要、回滚、映射冲突测试。
-- [ ] 旧 JSON / 第三方 importer 只做 canonical 边界兼容，不扩大导入功能。
+- [x] 版本化与旧包读取；保留加密、fingerprint、锁、事务、vault recovery。
+- [x] 父 ID 映射、skip/overwrite 预览与应用一致；合并后冲突/环校验；空组/排序保留。
+- [x] export/import/reopen 与 sync round trip、旧包 fixture、坏版本/摘要、回滚、映射冲突测试。
+- [x] 旧 JSON / 第三方 importer 只做 canonical 边界兼容，不扩大导入功能。
 
 ## 04A-4 Legacy migration + A07
 
@@ -89,3 +89,12 @@ git diff --check
 - 新增 profile 字段需要更新各协议的测试构造；连接与 RDP 内嵌测试机械移到相邻 tests.rs 以遵守预算，RDP 运行逻辑未改。删除已失去调用者的 connectionToInput/ensure_group。
 - 验证：cargo test --lib 360/360；分组定向 11/11；pnpm test 429 passed / 1 todo；test:scripts 93 passed / 3 skipped；pnpm run check/build、lazy boundary 通过，TerminalPanel/RemoteFileEditor 保持独立 chunk。
 - 相关 duplicate、jump、terminal-encoding、system-icon、dialog-host-key、remote-editor、workspace-activation、transfer source gate 通过；jump gate 的两个旧标识已对照 main 实现纠正，不改跳板行为。全仓已有 fmt 漂移仍不作为本切片清理范围。
+
+
+## 04A-3 实现与证据（2026-10-02）
+
+- 04A-2 commit 96db79c 的 CI run 36969978221 七项通过后开始。
+- 新格式 sync v3 / transfer v2 保留完整树字段；旧 v2 sync / v1 transfer 按原版本验证，旧结构固定字面量测试覆盖 digest/AAD 与默认字段。临时 flat-export guard 已移除。
+- 共用 group transfer model：先父映射、同级名称冲突、最终树验证，事务内按父优先持久化，保留 stable ID/FK/排序/空组。preview 接收 strategy，UI 切换重新预检，失败后仍能更换策略。
+- 审计发现 sync 原先先写 Vault 后替换 SQLite，失败可留下半更新；这会影响 A07 数据安全，当前复用既有 recovery journal + secret restore 修复，新增 SQL 失败回滚测试。没有新增同步合并产品语义，sync 仍是整份替换。
+- 本地证据：完整 Rust lib 367/367；随后补充 ID/同级名称双重冲突案例以 transfer 定向验证；sync 定向 11/11。pnpm check/test/build 与 transfer source gate、line budget 通过，重模块仍独立。真实 GUI/A07 尚未验收。

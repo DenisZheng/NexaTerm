@@ -198,9 +198,9 @@ export function connectionTransferExport(path: string, password: string) {
   });
 }
 
-export function connectionTransferPreview(path: string, password: string) {
+export function connectionTransferPreview(path: string, password: string, strategy: ConnectionTransferConflictStrategy = "skip") {
   return invoke<ConnectionTransferPreviewResult>("connection_transfer_preview", {
-    request: { path, password },
+    request: { path, password, strategy },
   });
 }
 

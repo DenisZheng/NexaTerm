@@ -127,6 +127,8 @@ pub struct ConnectionTransferExportRequest {
 pub struct ConnectionTransferPreviewRequest {
     pub path: String,
     pub password: String,
+    #[serde(default)]
+    pub strategy: ConnectionTransferConflictStrategy,
 }
 
 #[derive(Deserialize)]
@@ -1828,7 +1830,7 @@ pub async fn connection_transfer_preview(
     let _connection_guard = connection_store_lock().lock().await;
     let _credential_guard = credential_store_lock().lock().await;
     let repository = StorageRepository::open_app(&app)?;
-    preview_file(&repository, Path::new(&request.path), &request.password)
+    preview_file(&repository, Path::new(&request.path), &request.password, request.strategy)
 }
 
 #[tauri::command]

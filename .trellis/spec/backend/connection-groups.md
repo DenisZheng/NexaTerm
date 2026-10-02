@@ -23,7 +23,7 @@
 
 目录版本检查先以标准库 `File::lock` 独占 `.data-version.lock`，持锁覆盖读取、判定、备份与原子替换。句柄释放即解锁，不删除锁文件，也不锁会被替换的 `.data-version`。后来者持锁重读，避免重复升级覆盖 `.bak`，以及 Windows 备份/替换句柄争用；锁失败必须在 SQLite 初始化前返回错误。
 
-04A-2 已接通 connection_group_list/save/delete/assign IPC；写操作共用 connection_store_lock。ConnectionProfile/Input.group_id 为规范 ID；存在时不回退名称，不存在时旧 group 名称兼容入口仍拒绝歧义。list/get/stored profile 三条读取路径同步返回 group_id。旧导出遇到 parent 或非默认颜色仍报升级错误，不静默丢字段；04A-3 必须替换该临时保护。
+04A-2 已接通 connection_group_list/save/delete/assign IPC；写操作共用 connection_store_lock。ConnectionProfile/Input.group_id 为规范 ID；存在时不回退名称，不存在时旧 group 名称兼容入口仍拒绝歧义。list/get/stored profile 三条读取路径同步返回 group_id。04A-3 已替换临时导出保护：sync v3 / transfer v2 保留 parent_id/color/sort，兼容读取 sync v2 / transfer v1。旧 transfer 的默认新增字段不参与序列化，保证原摘要与 AAD 校验；包/文档/加密信封版本一致且未知版本拒绝。
 
 ## 4. Validation & Error Matrix
 
@@ -35,7 +35,7 @@
 | 父节点不存在 | connection_group_parent_missing |
 | 编辑/删除目标不存在 | connection_group_missing |
 | 旧名称匹配多个组 | connection_group_ambiguous |
-| 旧格式无法承载树 | connection_group_transfer_upgrade_required |
+| 导入映射冲突、旧包包含树扩展 | connection_transfer_invalid_data |
 | 迁移失败或 schema 过新 | connection_group_migration_failed |
 | SQL 写入/FK 失败 | connection_group_write_failed |
 | 版本锁文件打开或加锁失败 | storage_data_version_lock_failed |
@@ -59,3 +59,12 @@ Correct：canonical ID 关联；只在旧输入兼容入口按名称解析，匹
 Wrong：仅用原子 rename 推断整个“读取→备份→替换”可并发执行。
 
 Correct：先锁稳定的独立文件，再检查版本并写入；保留原子替换保证读者不见半写数据。
+
+
+## 同步与导入事务（04A-3）
+
+- `connection_group_transfer::plan(local, imported, overwrite)`：父优先映射 stable ID 或映射后同级名称。ID/名称命中不同对象、多对一映射、最终环/orphan/同级重名全部拒绝。
+- `persist(db, groups)`：只在调用者事务内使用，先验证最终树，再临时改名并按父优先落库；所有组 ID 与连接 FK 保持，临时态不会提交。
+- `connection_transfer_preview` 请求增加 `strategy`（缺省 skip），前端切换策略重新预检。preview/apply 共用 plan，apply 取得写锁后重读本地目录。
+- `sync_import_transaction::apply` 复用现有 Vault recovery journal，数据库事务带本次 commit 标记；写凭据或数据库失败时恢复原凭据与日志。目录锁与分组操作不承担 Vault 密码内容。
+- 回归包括树文件 export/import/reopen、skip/overwrite 父映射、ID/名称双重冲突、旧 v1 摘要/AAD、旧 v2 sync、数据库失败后的凭据回滚。

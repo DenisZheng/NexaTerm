@@ -342,21 +342,8 @@ impl StorageRepository {
             )
             .map_err(sqlite_repository_error)?;
 
-        for group in &data.connection_groups {
-            self.connection
-                .execute(
-                    "INSERT INTO connection_groups(id, name, sort_order, created_at, updated_at)
-                     VALUES (?1, ?2, ?3, ?4, ?5)",
-                    params![
-                        group.id,
-                        group.name,
-                        group.sort_order,
-                        group.created_at,
-                        group.updated_at,
-                    ],
-                )
-                .map_err(sqlite_repository_error)?;
-        }
+        let groups = data.connection_groups.iter().map(crate::connection_group_transfer::canonical).collect::<Vec<_>>();
+        crate::connection_group_transfer::persist(&self.connection, &groups)?;
 
         for credential in &data.credentials {
             let secret_ref = if restore_secret_refs {
@@ -534,26 +521,7 @@ impl StorageRepository {
     }
 
     fn export_sync_groups(&self) -> Result<Vec<SyncConnectionGroup>, AppError> {
-        crate::connection_groups::require_flat_transfer(&self.connection)?;
-        let mut statement = self
-            .connection
-            .prepare(
-                "SELECT id, name, sort_order, created_at, updated_at
-                   FROM connection_groups ORDER BY sort_order ASC, created_at ASC, name ASC",
-            )
-            .map_err(sqlite_repository_error)?;
-        let rows = statement
-            .query_map([], |row| {
-                Ok(SyncConnectionGroup {
-                    id: row.get(0)?,
-                    name: row.get(1)?,
-                    sort_order: row.get(2)?,
-                    created_at: row.get(3)?,
-                    updated_at: row.get(4)?,
-                })
-            })
-            .map_err(sqlite_repository_error)?;
-        collect_rows(rows)
+        Ok(self.connection_groups()?.into_iter().map(crate::connection_group_transfer::exported).collect())
     }
 
     fn export_sync_credentials(&self) -> Result<Vec<SyncCredentialRecord>, AppError> {

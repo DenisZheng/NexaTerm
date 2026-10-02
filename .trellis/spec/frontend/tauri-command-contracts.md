@@ -2377,7 +2377,7 @@ Process termination remains an explicit user decision.
 ### 2. Signatures
 
 - `connectionTransferExport(path: string, password: string): Promise<ConnectionTransferExportResult>`
-- `connectionTransferPreview(path: string, password: string): Promise<ConnectionTransferPreviewResult>`
+- `connectionTransferPreview(path: string, password: string, strategy?: "skip" | "overwrite"): Promise<ConnectionTransferPreviewResult>`
 - `connectionTransferImport(path: string, password: string, fingerprint: string, strategy: "skip" | "overwrite"): Promise<ConnectionTransferImportResult>`
 - `selectConnectionTransferImportPath(): Promise<string | null>`
 - `selectConnectionTransferExportPath(): Promise<string | null>`
@@ -2390,6 +2390,7 @@ Process termination remains an explicit user decision.
 - File-picker cancellation returns `null` and must not invoke a backend command.
 - Export requires a non-empty password and matching confirmation before invoke. Password values remain component state only and are cleared when the dialog closes.
 - Import selects a file, accepts a password, runs preview, displays counts and private-key warnings, defaults conflict handling to `skip`, and requires an explicit select change for `overwrite`.
+- Changing strategy invalidates the previous preview and re-runs preflight; strategy selection remains available after errors.
 - Import passes the preview fingerprint unchanged. Only a successful import awaits the existing connection/group reload callback; cancellation, preview failure, and apply failure do not reload.
 - Busy state disables duplicate actions. Errors stay visible in the dialog and do not close it. Long private-key paths wrap.
 - Use shared Radix dialog patterns, Lucide icons, `AppSelect`, shared input attributes, and global `--mx-*` tokens. The workflow must work in light, explicit dark, and system-dark themes.
