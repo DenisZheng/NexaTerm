@@ -1017,11 +1017,14 @@ LocalPathMetadataResult {
 - Blank `connection_id` returns `remote_file_connection_missing`. Blank `path` returns `remote_file_path_missing`.
 - All remote paths interpolated into shell commands must use `quote_posix_shell`. Do not interpolate unquoted paths.
 - `remote_file_read` must read metadata before content. Metadata must reject non-regular files through `build_remote_metadata_command`.
+- 编辑器元数据由 `remote_files/metadata.rs` 解析：仅 shell 命令以 exit 4 结束（无法取得 mtime，例如远端未安装 `stat`）时，才通过 `ReusableSftpSession::connect_resolved` 读取 SFTP 属性；沿用原凭据、跳板机和 Host Key 校验，读取成功或失败后均关闭该临时会话。路径/读取失败、缺少 exit status 或输出解析失败不能触发此兼容路径。
+- SFTP 编辑器元数据必须明确提供普通文件类型、`size` 和 `mtime`；缺失版本字段返回 `remote_file_metadata_incomplete`，不能以零值代替。服务器明确返回的 `Some(0)` 合法。此契约不改变属性弹窗使用的独立 `remote_file_metadata` / `entry_metadata` 路径。
 - `REMOTE_FILE_EDIT_LIMIT_BYTES` is `2 * 1024 * 1024`. Files larger than this return `remote_file_too_large` before `cat`.
 - `looks_like_binary` must reject content with NUL bytes in the inspected prefix. UTF-8 decoding failures return `remote_file_not_utf8`.
 - `remote_file_write` must compare current metadata with `expected_mtime` and `expected_size`. If either differs and `overwrite == false`, return `remote_file_conflict` before writing.
 - File content must never be embedded in a shell command string. Save and upload must call `exec_with_reconnect_stdin(..., content.as_bytes())` or `exec_with_reconnect_stdin(..., content)` and send bytes through the SSH channel stdin.
 - `build_remote_write_command` writes stdin to a same-directory hidden temp file, tries to preserve mode from the existing file, then moves the temp file over the target path. Cleanup must remove the temp file on command failure where possible.
+- 编辑保存将刚读取的 `current.mode` 传给 `build_remote_write_command`，保证缺少 `stat` 时仍能保留文件权限；没有已知 mode 的归档调用继续沿用原 GNU/BSD 探测。已知 mode 的 `chmod` 失败必须清理临时文件并报错，不得覆盖原文件。
 - `ReusableExecSession::exec_with_stdin` must send `channel.data_bytes(stdin)` and then `channel.eof()` before collecting stdout, stderr, and exit status.
 - Transfer commands with `transfer_id` must emit `remote_file:transfer_progress` events from Rust while bytes move. SFTP transfers emit `{ loaded_bytes, total_bytes }` from bounded read/write chunks; legacy exec archive uploads may still emit stdin progress.
 - SFTP upload and download progress events must include `total_bytes` once the backend has scanned the source file or directory. Directory progress is global: completed previous files plus the current file's loaded bytes.
@@ -1062,6 +1065,7 @@ LocalPathMetadataResult {
 | `path` / `new_path` is blank | `remote_file_path_missing` | true |
 | No password or private key is available after loading profile | `terminal_auth_missing` | true |
 | Remote metadata command fails or path is not a regular file | `remote_file_metadata_failed` | true |
+| SFTP 编辑器属性未提供 `size` 或 `mtime` | `remote_file_metadata_incomplete` | true |
 | Remote metadata output cannot parse | `remote_file_metadata_parse_failed` | true |
 | File size exceeds `REMOTE_FILE_EDIT_LIMIT_BYTES` | `remote_file_too_large` | true |
 | Remote read command exits non-zero | `remote_file_read_failed` | true |
@@ -1116,6 +1120,8 @@ LocalPathMetadataResult {
 
 - Unit-test `quote_posix_shell` for normal paths, empty strings, and single quotes.
 - Unit-test `parse_remote_file_metadata` for NUL-delimited path, size, mtime, empty mode, and present mode.
+- `remote_files/metadata/tests.rs` 覆盖无 `stat` 的真实 shell、仅 exit 4 触发 SFTP、其它失败不切换通道、SFTP 错误传播、缺失字段/非普通文件拒绝及显式零值。版本校验分别覆盖仅 mtime 变化、仅 size 变化和显式 overwrite。
+- 用真实 shell 验证无 `stat` 时保存保留 `600`、内容只经 stdin 传输；`chmod` 失败保持原文件并清理临时文件。
 - Unit-test `looks_like_binary` for plain text and NUL-containing bytes.
 - Unit-test `build_remote_write_command` to assert it creates a temp file, uses `cat > "$tmp"`, moves the temp file to the target, and does not contain literal content.
 - Unit-test `build_remote_path_check_command` and `parse_remote_path_check_output` for missing targets, existing file/directory/symlink targets, quoted paths, and no directory listing/archive work.

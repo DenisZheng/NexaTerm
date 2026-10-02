@@ -8217,6 +8217,8 @@ export function WorkspaceShell() {
         <SecretVaultGate
           error={secretVault.error}
           loading={secretVault.loading}
+          masterPasswordEnabled={settings.security.masterPasswordEnabled}
+          onRetry={secretVault.retry}
           onUnlock={secretVault.unlock}
           status={secretVault.status}
           unlocking={secretVault.unlocking}

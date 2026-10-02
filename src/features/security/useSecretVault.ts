@@ -25,13 +25,15 @@ export function useSecretVault({
 }) {
   const isTauri = hasTauriRuntime();
   const canAutoUnlockLocal = isTauri && !masterPasswordEnabled;
-  const [status, setStatus] = useState<SecretVaultStatus>(
-    isTauri ? { initialized: false, unlocked: false } : previewStatus,
+  // 未查询成功与确实不存在是两种状态，不能因读取失败提示用户重建保险库。
+  const [status, setStatus] = useState<SecretVaultStatus | null>(
+    isTauri ? null : previewStatus,
   );
   const [loading, setLoading] = useState(isTauri);
   const [unlocking, setUnlocking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const localAutoUnlockAttemptedRef = useRef(false);
+  const localUnlockInFlightRef = useRef(false);
 
   const refresh = useCallback(async () => {
     if (!isTauri) {
@@ -95,17 +97,25 @@ export function useSecretVault({
       return previewStatus;
     }
 
+    if (localUnlockInFlightRef.current) {
+      return null;
+    }
+    localUnlockInFlightRef.current = true;
     setUnlocking(true);
     setLoading(true);
-    setError(null);
+    // 重试期间保留错误门禁，避免清空 error 后短暂露出未解锁的工作区。
     try {
-      const nextStatus = await secretVaultUnlockLocal();
+      const currentStatus = await secretVaultStatus();
+      setStatus(currentStatus);
+      const nextStatus = currentStatus.unlocked ? currentStatus : await secretVaultUnlockLocal();
       setStatus(nextStatus);
+      setError(null);
       return nextStatus;
     } catch (nextError) {
       setError(formatError(nextError));
       return null;
     } finally {
+      localUnlockInFlightRef.current = false;
       setUnlocking(false);
       setLoading(false);
     }
@@ -143,7 +153,7 @@ export function useSecretVault({
       masterPasswordEnabled ||
       loading ||
       unlocking ||
-      status.unlocked ||
+      status?.unlocked ||
       localAutoUnlockAttemptedRef.current
     ) {
       return;
@@ -155,13 +165,13 @@ export function useSecretVault({
     isTauri,
     loading,
     masterPasswordEnabled,
-    status.unlocked,
+    status?.unlocked,
     unlockLocal,
     unlocking,
   ]);
 
   useEffect(() => {
-    if (!isTauri || !masterPasswordEnabled || !status.unlocked || autoLockMinutes === 0) {
+    if (!isTauri || !masterPasswordEnabled || !status?.unlocked || autoLockMinutes === 0) {
       return;
     }
 
@@ -184,7 +194,7 @@ export function useSecretVault({
       window.removeEventListener("pointerdown", resetTimer);
       window.removeEventListener("wheel", resetTimer);
     };
-  }, [autoLockMinutes, isTauri, lock, masterPasswordEnabled, status.unlocked]);
+  }, [autoLockMinutes, isTauri, lock, masterPasswordEnabled, status?.unlocked]);
 
   const enableMasterPassword = useCallback(
     async (masterPassword: string) => {
@@ -236,14 +246,16 @@ export function useSecretVault({
       error,
       loading,
       lock,
-      ready: !isTauri || status.unlocked,
-      requiresUnlock: isTauri && !status.unlocked && (masterPasswordEnabled || Boolean(error)),
+      ready: !isTauri || Boolean(status?.unlocked),
+      requiresUnlock: isTauri && !status?.unlocked && (masterPasswordEnabled || Boolean(error)),
       refresh,
+      retry: canAutoUnlockLocal ? unlockLocal : refresh,
       status,
       unlock,
       unlocking,
     }),
     [
+      canAutoUnlockLocal,
       disableMasterPassword,
       enableMasterPassword,
       error,
@@ -254,6 +266,7 @@ export function useSecretVault({
       refresh,
       status,
       unlock,
+      unlockLocal,
       unlocking,
     ],
   );
