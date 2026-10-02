@@ -8279,6 +8279,8 @@ export function WorkspaceShell() {
               onEdit={editConnection}
               groups={connectionGroupCatalog.groups}
               groupReady={connectionGroupCatalog.ready}
+              migration={connectionGroupCatalog.migration}
+              onResolveMigration={connectionGroupCatalog.resolveMigration}
               groupBusy={connectionGroupCatalog.busy}
               onSaveGroup={connectionGroupCatalog.save}
               onDeleteGroup={connectionGroupCatalog.remove}

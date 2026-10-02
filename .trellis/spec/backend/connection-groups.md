@@ -68,3 +68,13 @@ Correct：先锁稳定的独立文件，再检查版本并写入；保留原子�
 - `connection_transfer_preview` 请求增加 `strategy`（缺省 skip），前端切换策略重新预检。preview/apply 共用 plan，apply 取得写锁后重读本地目录。
 - `sync_import_transaction::apply` 复用现有 Vault recovery journal，数据库事务带本次 commit 标记；写凭据或数据库失败时恢复原凭据与日志。目录锁与分组操作不承担 Vault 密码内容。
 - 回归包括树文件 export/import/reopen、skip/overwrite 父映射、ID/名称双重冲突、旧 v1 摘要/AAD、旧 v2 sync、数据库失败后的凭据回滚。
+
+## 旧 WebView 分组迁移（04A-4）
+
+- `connection_group_migrate_legacy(raw?: string, resolutions?: LegacyResolution[])` 返回 `LegacyReport`。`complete=false` 是待处理报告，不能当成功；SQL/备份失败为 `connection_group_legacy_failed`。
+- repository 先取得 SQLite 写锁并读取 `app_meta.wf04a_legacy_groups_complete`。完成后直接返回保存的报告，不重放 localStorage；树、映射和完成标记同一事务提交。
+- 原文按 SHA-256 保存到 `legacy-groups-<digest>.json`；已存在时逐字校验、不覆盖。解析失败保留原文；16 MiB / 5000 行上限阻止不受控迁移。
+- 自动路径仅允许无歧义 ID/旧名称映射；重复 ID/名称、多对一及已存在层级/颜色冲突交由显式映射。WS-G 允许的 orphan/环修复逐项报告。显式映射覆盖每一行，最终树仍通过同一 `validate_tree`。
+- UI 通过报告入口提交 index/name/parent_index/target_id，不猜测重名映射。失败保留草稿；迁移前原文变化时拒绝使用旧草稿。选择既有 ID 保留连接 FK，新建不转移其它组的连接。
+- 展开状态只迁移至 `mxterm.connectionExpandedFolders.v2`，保留旧 v1 和旧分组原文。ConnectionPane 等 canonical ready 后先读取迁移结果再写；禁止挂载时先写默认展开状态。
+- 回归：原文备份、空组/顺序/颜色/FK、orphan/环、重复歧义/显式映射、SQL 回滚重试、重开不重放、并发幂等，以及前端错误/展开状态迁移。自动化成功不替代真实 A07。

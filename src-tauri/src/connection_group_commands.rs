@@ -8,6 +8,20 @@ use crate::{
 use tauri::AppHandle;
 
 #[tauri::command]
+pub async fn connection_group_migrate_legacy(
+    app: AppHandle,
+    raw: Option<String>,
+    resolutions: Option<Vec<crate::connection_group_legacy::LegacyResolution>>,
+) -> Result<crate::connection_group_legacy::LegacyReport, AppError> {
+    let _guard = connection_store_lock().lock().await;
+    StorageRepository::open_app(&app)?.migrate_legacy_groups(
+        raw.as_deref(),
+        resolutions.as_deref(),
+        &now_timestamp()?,
+    )
+}
+
+#[tauri::command]
 pub async fn connection_group_list(app: AppHandle) -> Result<Vec<ConnectionGroup>, AppError> {
     StorageRepository::open_app(&app)?.connection_groups()
 }

@@ -58,3 +58,12 @@ SQLite v3 通过独立迁移模块重建 groups，保留 ID/name/sort/timestamps
 - 父节点先映射，身份匹配为 stable ID 或映射后 parent+name；ID 与同级名称命中不同对象时明确拒绝。skip 保留本地对象，overwrite 使用导入属性；映射歧义或最终合并树不合法时拒绝且无数据库变更。
 - preview/apply 共用纯映射规划。应用持 SQLite 写锁后重读本地目录；整树校验通过后再写。为了允许合法的重命名/移动交换，事务内使用临时名称解除中间唯一约束冲突，再按父优先顺序写最终树，连接 FK 的 ID 不变。
 - 保留原文件 fingerprint、导入密码验证、数据库备份及 Vault recovery journal；单测必须包含嵌套空组、跨父同名、旧格式及失败回滚。
+
+## 04A-4 legacy 一次性迁移边界
+
+- 迁移入口接收旧 localStorage 原文，先按 SHA-256 保存不可覆盖的 UTF-8 备份；原 key 保留。解析失败不能清空旧数据，也不能阻断连接/Vault 启动，仅阻止未完成迁移的树写入。
+- 以旧 ID/唯一旧名称映射 SQLite 既有平面组，保持连接 FK；仅为空组分配新 canonical ID。数组次序成为同级排序，颜色和 parent 转入 SQLite。
+- orphan 提升 root；环按输入行顺序确定性断边，逐条记录修复。重复 ID、同名歧义、多个旧组映射一个 canonical ID 不猜测；解析成功的冲突行允许维护者显式选择目标 ID、父行及名称后再校验。
+- 持 SQLite 写锁后重读已有树/完成标记，树写入、ID 映射、修复报告、完成标记同一事务。失败可重试；成功后再次打开不重新应用旧树，后续 rename/move/import 不会被旧 localStorage 覆盖。
+- 展开状态独立迁移到 presentation v2 key，旧 v1 保留；迁移成功前 ConnectionPane 不写该 key，避免默认展开状态抢先覆盖迁移结果。
+- 自动化覆盖正常层级/空组/FK/排序/颜色、orphan/cycle、歧义不写、显式映射、失败回滚、重试与重启幂等。A07 仍须独立真实 Tauri 数据环境验收。

@@ -1,10 +1,12 @@
 import { AppSelect } from "../../shared/ui/AppSelect";
-import { groupOptions, groupDescendants, type ConnectionGroup as CustomGroup, type ConnectionGroupInput } from "./connectionGroupModel";
+import { groupOptions, groupDescendants, type ConnectionGroup as CustomGroup, type ConnectionGroupInput, type LegacyGroupReport, type LegacyGroupResolution } from "./connectionGroupModel";
 import { groupErrorMessage } from "./useConnectionGroups";
 import * as ContextMenu from "@radix-ui/react-context-menu";
 import * as Dialog from "@radix-ui/react-dialog";
 import {
   FormEvent,
+  lazy,
+  Suspense,
   useEffect,
   useMemo,
   useState,
@@ -48,6 +50,8 @@ interface ConnectionPaneProps {
   onEdit: (connection: ConnectionProfile) => void;
   groups: CustomGroup[];
   groupReady: boolean;
+  migration?: LegacyGroupReport | null;
+  onResolveMigration?: (resolutions?: LegacyGroupResolution[]) => Promise<unknown>;
   groupBusy: boolean;
   onSaveGroup: (input: ConnectionGroupInput) => Promise<unknown>;
   onDeleteGroup: (id: string) => Promise<unknown>;
@@ -95,7 +99,8 @@ const systemFolders: SystemFolder[] = [
   { id: "recent", color: "#64748b", icon: Clock3, label: "最近" },
 ];
 
-const expandedFolderStorageKey = "mxterm.connectionExpandedFolders.v1";
+const LegacyGroupMigrationNotice = lazy(() => import("./LegacyGroupMigrationNotice"));
+const expandedFolderStorageKey = "mxterm.connectionExpandedFolders.v2";
 const groupPalette = ["#64748b", "#2563eb", "#4f7d63", "#c47c2c", "#8b5cf6", "#d14d72"];
 const connectionDragDataType = "application/x-mxterm-connection-id";
 
@@ -110,6 +115,8 @@ export function ConnectionPane({
   onEdit,
   groups: customGroups,
   groupReady,
+  migration,
+  onResolveMigration,
   groupBusy,
   onSaveGroup,
   onDeleteGroup,
@@ -139,6 +146,7 @@ export function ConnectionPane({
   const [dropTargetId, setDropTargetId] = useState<DropTargetId | null>(null);
   const [mouseDrag, setMouseDrag] = useState<MouseDragState | null>(null);
   const [quickSelectedId, setQuickSelectedId] = useState<string | null>(null);
+  const [expansionLoaded, setExpansionLoaded] = useState(false);
   const [expandedFolders, setExpandedFolders] = useState<Record<FolderId, boolean>>(
     readStoredExpandedFolders,
   );
@@ -168,8 +176,14 @@ export function ConnectionPane({
     : null;
 
   useEffect(() => {
+    if (!groupReady) return;
+    if (!expansionLoaded) {
+      setExpandedFolders(readStoredExpandedFolders());
+      setExpansionLoaded(true);
+      return;
+    }
     writeStoredExpandedFolders(expandedFolders);
-  }, [expandedFolders]);
+  }, [expandedFolders, groupReady, expansionLoaded]);
 
   useEffect(() => {
     if (!mouseDrag) {
@@ -230,6 +244,7 @@ export function ConnectionPane({
       <aside className="connection-pane app-sidebar" aria-label="连接仓库">
         <section className="pane-scroll connection-tree" aria-label="连接树">
           {loading ? <p className="pane-note">加载连接中...</p> : null}
+          {migration && onResolveMigration ? <Suspense fallback={null}><LegacyGroupMigrationNotice report={migration} groups={customGroups} onResolve={onResolveMigration} /></Suspense> : null}
           {error || groupError ? <p className="pane-error" role="alert">{groupError || error}</p> : null}
 
           <div className="tree-block" aria-label="固定分组">

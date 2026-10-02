@@ -6,6 +6,7 @@ mod connection_group_schema;
 pub mod connection_groups;
 mod connection_group_commands;
 mod connection_group_transfer;
+mod connection_group_legacy;
 mod connection_transfer;
 mod connection_transfer_recovery;
 mod connections;
@@ -93,6 +94,7 @@ pub fn run() {
             commands::connection_transfer_import,
             mobaxterm_import::mobaxterm_import_preview,
             mobaxterm_import::mobaxterm_import_apply,
+            connection_group_commands::connection_group_migrate_legacy,
             connection_group_commands::connection_group_list,
             connection_group_commands::connection_group_save,
             connection_group_commands::connection_group_delete,

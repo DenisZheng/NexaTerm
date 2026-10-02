@@ -1,4 +1,4 @@
-import type { ConnectionGroupInput, StoredConnectionGroup } from "../../features/connections/connectionGroupModel";
+import type { ConnectionGroupInput, StoredConnectionGroup, LegacyGroupReport, LegacyGroupResolution } from "../../features/connections/connectionGroupModel";
 import { invoke } from "@tauri-apps/api/core";
 import type {
   ConnectionRuntimeCredentialRequest,
@@ -1319,3 +1319,5 @@ export function connectionGroupList() { return invoke<StoredConnectionGroup[]>("
 export function connectionGroupSave(request: ConnectionGroupInput) { return invoke<StoredConnectionGroup>("connection_group_save", { request }); }
 export function connectionGroupDelete(id: string) { return invoke<void>("connection_group_delete", { id }); }
 export function connectionGroupAssign(connectionId: string, groupId: string | null) { return invoke<void>("connection_group_assign", { connectionId, groupId }); }
+
+export function connectionGroupMigrateLegacy(raw: string | null, resolutions?: LegacyGroupResolution[]) { return invoke<LegacyGroupReport>("connection_group_migrate_legacy", { raw, resolutions }); }

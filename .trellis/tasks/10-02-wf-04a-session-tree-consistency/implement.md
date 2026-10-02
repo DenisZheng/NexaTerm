@@ -32,7 +32,7 @@
 
 ## 04A-4 Legacy migration + A07
 
-- [ ] 原文备份、映射/修复报告与完成标记；解析/写入失败、重复 ID/名称、orphan/cycle、重试/重启幂等测试。
+- [x] 原文备份、映射/修复报告与完成标记；解析/写入失败、重复 ID/名称、orphan/cycle、重试/重启幂等测试。
 - [ ] 在独立数据环境执行 PRD 的 A07 流程，保存 GUI、导出数据和重启比对证据。
 - [ ] 四维证据齐全再评估 A07，不以 unit/mock 或 CI 代替 GUI PASS。
 
@@ -98,3 +98,11 @@ git diff --check
 - 共用 group transfer model：先父映射、同级名称冲突、最终树验证，事务内按父优先持久化，保留 stable ID/FK/排序/空组。preview 接收 strategy，UI 切换重新预检，失败后仍能更换策略。
 - 审计发现 sync 原先先写 Vault 后替换 SQLite，失败可留下半更新；这会影响 A07 数据安全，当前复用既有 recovery journal + secret restore 修复，新增 SQL 失败回滚测试。没有新增同步合并产品语义，sync 仍是整份替换。
 - 本地证据：完整 Rust lib 367/367；随后补充 ID/同级名称双重冲突案例以 transfer 定向验证；sync 定向 11/11。pnpm check/test/build 与 transfer source gate、line budget 通过，重模块仍独立。真实 GUI/A07 尚未验收。
+
+## 04A-4 实现与证据（2026-10-02）
+
+- 04A-3 commit 8e6d444 / CI run 36979404915 七项通过后开始。
+- 旧 localStorage 原文备份、事务迁移、完成报告、歧义显式逐行映射已接通；原始 key 保留。并发持锁重读，完成后不重放，后续 rename/move 不被旧树覆盖。
+- 前端只在迁移完成后开放树写入；迁移失败不阻止其它启动流程，提供报告与重试。展开状态独立迁移到 v2；成功前不写默认值，旧 v1 保留。
+- 本地验证：Rust lib 374/374；frontend 432 passed / 1 todo；scripts 93 passed / 3 skipped；pnpm check/build、transfer/startup source gate、line budget、git diff --check 通过。新模块 rustfmt；已有全仓 fmt 漂移不扩展处理。
+- 真实 GUI / 数据证据仍待执行，当前不宣称 A07 PASS。平台：macOS 本地；Windows/Linux 以本切片新 CI 为准。
