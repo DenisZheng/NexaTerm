@@ -21,6 +21,7 @@ export interface TerminalTab<TStep = unknown> {
   requestId?: string;
   sessionId?: string;
   status: string;
+  temporaryContextRef?: string;
   title: string;
   type: "connecting" | "terminal";
   warmupOutput: number[];

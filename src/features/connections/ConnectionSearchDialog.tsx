@@ -6,12 +6,18 @@ import {
   useState,
   type KeyboardEvent,
 } from "react";
-import { Search, Star, X } from "lucide-react";
+import { Search, SquareTerminal, Star, X } from "lucide-react";
 
 import { ConnectionSystemLogo } from "./ConnectionSystemLogo";
 import type { ConnectionProfile } from "./connectionTypes";
 import { buildConnectionSearchEntries, type ConnectionSearchEntry } from "./connectionSearch";
+import {
+  parseQuickConnectAddress,
+  shouldOfferQuickConnect,
+  type QuickConnectTarget,
+} from "./quickConnect";
 import { Keybinding } from "../../shared/ui/Keybinding";
+import { useI18n } from "../../shared/i18n";
 
 interface ConnectionSearchDialogProps {
   activeConnectionId: string | null;
@@ -20,6 +26,7 @@ interface ConnectionSearchDialogProps {
   query: string;
   onOpenChange: (open: boolean) => void;
   onQueryChange: (value: string) => void;
+  onQuickConnect: (target: QuickConnectTarget) => void;
   onSelectConnection: (connection: ConnectionProfile) => void;
 }
 
@@ -30,8 +37,10 @@ export function ConnectionSearchDialog({
   query,
   onOpenChange,
   onQueryChange,
+  onQuickConnect,
   onSelectConnection,
 }: ConnectionSearchDialogProps) {
+  const { t } = useI18n();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const entries = useMemo(
@@ -41,6 +50,19 @@ export function ConnectionSearchDialog({
   const selectedIndex = Math.min(activeIndex, Math.max(0, entries.length - 1));
   const selectedEntry = entries[selectedIndex] || null;
   const hasQuery = query.trim().length > 0;
+  const quickConnect = useMemo(() => parseQuickConnectAddress(query), [query]);
+  const showQuickConnect = shouldOfferQuickConnect(query, entries.length);
+  const quickTarget = showQuickConnect && quickConnect.kind === "valid" ? quickConnect.target : null;
+  const quickError =
+    showQuickConnect && quickConnect.kind === "invalid"
+      ? t(
+          quickConnect.code === "password"
+            ? "quickConnect.error.password"
+            : quickConnect.code === "port"
+              ? "quickConnect.error.port"
+              : "quickConnect.error.address",
+        )
+      : null;
 
   useEffect(() => {
     if (!open) {
@@ -72,6 +94,11 @@ export function ConnectionSearchDialog({
     onSelectConnection(entry.connection);
   }
 
+  function handleQuickConnect(target: QuickConnectTarget) {
+    handleOpenChange(false);
+    onQuickConnect(target);
+  }
+
   function handleInputKeyDown(event: KeyboardEvent<HTMLInputElement>) {
     if ((event.ctrlKey || event.metaKey) && /^[1-9]$/.test(event.key)) {
       const targetIndex = Number.parseInt(event.key, 10) - 1;
@@ -95,9 +122,14 @@ export function ConnectionSearchDialog({
       return;
     }
 
-    if (event.key === "Enter" && selectedEntry) {
-      event.preventDefault();
-      handleSelect(selectedEntry);
+    if (event.key === "Enter") {
+      if (selectedEntry) {
+        event.preventDefault();
+        handleSelect(selectedEntry);
+      } else if (quickTarget) {
+        event.preventDefault();
+        handleQuickConnect(quickTarget);
+      }
     }
   }
 
@@ -134,6 +166,21 @@ export function ConnectionSearchDialog({
             placeholder="搜索连接、地址、用户、备注"
           />
         </label>
+
+        {quickTarget ? (
+          <button className="connection-search-result" type="button" onClick={() => handleQuickConnect(quickTarget)}>
+            <SquareTerminal className="ui-icon" aria-hidden="true" />
+            <span className="connection-search-result-main">
+              <strong>{t("quickConnect.connectTemporary")}</strong>
+              <small>{quickTarget.canonicalAddress}</small>
+            </span>
+            <span className="connection-search-result-side">
+              <span className="connection-search-badge">{t("quickConnect.temporary")}</span>
+            </span>
+          </button>
+        ) : quickError ? (
+          <p className="connection-search-empty">{quickError}</p>
+        ) : null}
 
         <div className="connection-search-section-title">
           <span>{hasQuery ? "搜索结果" : "最近连接"}</span>

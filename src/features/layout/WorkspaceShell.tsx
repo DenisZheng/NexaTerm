@@ -90,6 +90,9 @@ import {
   formatVncRunnerKind,
 } from "../connections/connectionTypes";
 import { connectionTimestampOf, sortConnectionsByRecent } from "../connections/connectionSearch";
+import { isQuickConnectCredentialError, type QuickConnectTarget } from "../connections/quickConnect";
+import { connectTemporaryQuickTerminal, createTemporaryQuickConnectProfile, prepareTemporaryQuickConnectCredentials, releaseTemporaryQuickConnectRefs, saveTemporaryQuickConnectProfile } from "../connections/quickConnectRuntime";
+import { finalTemporaryContextRefs, rebindConnectionItems, rebindTemporaryTerminalTab } from "../connections/quickConnectSession";
 import { connectionInfoFromVncProfile } from "../connections/vncConnectionInfo";
 import { createMiddleClickCloseHandler } from "../../shared/ui/tabEvents";
 // RemoteFileEditor 内部静态 import 了 monaco-editor（主体约 4MB）及其 5 个 worker
@@ -587,6 +590,9 @@ interface ConnectionStepState {
   password: string;
   privateKeyPassphrase: string;
   privateKeyPath: string;
+  temporary?: boolean;
+  temporaryContextRef?: string | null;
+  temporaryCredentialsReady?: boolean;
   sessionId?: string | null;
   status: ConnectionStepStatus;
 }
@@ -961,6 +967,7 @@ export function WorkspaceShell() {
     useState<LoadedConnectionDialogComponent | null>(null);
   const [connectionSearchOpen, setConnectionSearchOpen] = useState(false);
   const [connectionSearchQuery, setConnectionSearchQuery] = useState("");
+  const [temporaryConnections, setTemporaryConnections] = useState<ConnectionProfile[]>([]);
   const [editingConnection, setEditingConnection] = useState<ConnectionProfile | null>(null);
   const [duplicatingConnection, setDuplicatingConnection] = useState(false);
   const [selectedConnectionId, setSelectedConnectionId] = useState<string | null>(null);
@@ -1315,9 +1322,7 @@ export function WorkspaceShell() {
     settings.localTerminal.hiddenProfileIds,
   ]);
 
-  const connectionById = useMemo(() => {
-    return new Map(connections.map((connection) => [connection.id, connection]));
-  }, [connections]);
+  const connectionById = useMemo(() => new Map([...connections, ...temporaryConnections].map((connection) => [connection.id, connection])), [connections, temporaryConnections]);
 
   const activeConnection = activeConnectionId
     ? connectionById.get(activeConnectionId) || null
@@ -4044,6 +4049,11 @@ export function WorkspaceShell() {
     void copyText(path);
   }
 
+  async function openQuickConnect(target: QuickConnectTarget) {
+    const connection = await createTemporaryQuickConnectProfile(target);
+    setTemporaryConnections((items) => [...items, connection]); startConnectionStep(connection, "terminal");
+  }
+
   async function createConnection(groupName?: string) {
     setLeftPaneCollapsed(false);
     setPendingConnectionGroupName(groupName || null);
@@ -4136,6 +4146,7 @@ export function WorkspaceShell() {
       id: `connection-${connection.id}-${step.id.toString()}`,
       ordinal,
       status: connectionStepStatusTitle(step),
+      temporaryContextRef: step.temporaryContextRef || undefined,
       title: step.mode === "terminal" ? "连接准备" : "连接测试",
       type: "connecting",
       warmupOutput: [],
@@ -5111,6 +5122,12 @@ export function WorkspaceShell() {
     );
   }
 
+  async function saveTemporaryQuickConnectTab(tab: TerminalTab) {
+    const ref = tab.temporaryContextRef; if (!ref) return;
+    const profile = await saveTemporaryQuickConnectProfile(ref, connectionById.get(tab.connectionId)?.name); await reload(); const rebound = rebindTemporaryTerminalTab(tab, profile);
+    const next = terminalTabsRef.current.map((item) => item.id === tab.id ? rebound : item); terminalTabsRef.current = next; setTerminalTabs(next);
+    setRemoteFileTabs((items) => rebindConnectionItems(items, ref, profile.id)); setTemporaryConnections((items) => items.filter((item) => item.id !== ref)); activateTerminalTab(rebound);
+  }
   function renderSshTerminalSubtab(tab: TerminalTab, index: number) {
     const sshMenuCtx: TerminalSubtabMenuContext<TerminalTab> = {
       tabs: activeConnectionTabs,
@@ -5134,7 +5151,7 @@ export function WorkspaceShell() {
             })
         : undefined,
     };
-    const actions = buildTerminalSubtabActions(sshMenuCtx, terminalSplitCanAddPane);
+    const actions = buildTerminalSubtabActions(sshMenuCtx, terminalSplitCanAddPane, { prepend: tab.temporaryContextRef === tab.connectionId ? [{ label: t("quickConnect.saveSession"), onSelect: () => void saveTemporaryQuickConnectTab(tab) }] : undefined });
     return (
       <TabContextMenu key={tab.id} actions={actions}>
         <div
@@ -7130,9 +7147,9 @@ export function WorkspaceShell() {
         .map((tab) => tab.connectionId)
         .filter((connectionId) => !nextTabs.some((tab) => tab.connectionId === connectionId)),
     );
-    finalClosedConnectionIds.forEach((connectionId) => {
-      invalidateDockerExecConnection(connectionId);
-    });
+    finalClosedConnectionIds.forEach(invalidateDockerExecConnection);
+    releaseTemporaryQuickConnectRefs(finalTemporaryContextRefs(closingTabs, nextTabs));
+    setTemporaryConnections((items) => items.filter((item) => !finalClosedConnectionIds.has(item.id)));
     terminalTabsRef.current = nextTabs;
     setTerminalTabs(nextTabs);
     // 文件列表按原实现取渲染态 remoteFileTabs（closeConnectionSessions / deleteConnection 用清理后的列表）。
@@ -7528,6 +7545,9 @@ export function WorkspaceShell() {
       password: "",
       privateKeyPassphrase: "",
       privateKeyPath: "",
+      temporary: connection.created_at === "temporary",
+      temporaryContextRef: connection.created_at === "temporary" ? connection.id : null,
+      temporaryCredentialsReady: false,
       oldHostKeyFingerprint: null,
       sessionId: null,
       status: connection.credential_mode === "prompt" ? "prompt" : "idle",
@@ -7550,6 +7570,7 @@ export function WorkspaceShell() {
   async function runConnectionStep(tabId: string, step: ConnectionStepState) {
     const runningStep: ConnectionStepState = {
       ...step,
+      ...(step.temporary ? { password: "", privateKeyPassphrase: "", privateKeyPath: "" } : {}),
       activeStepIndex: 1,
       errorDetail: null,
       error: null,
@@ -7573,7 +7594,7 @@ export function WorkspaceShell() {
         status: "success" as ConnectionStepStatus,
       };
       if (step.mode === "terminal") {
-        void markConnected(step.connection.id);
+        if (!step.temporary) void markConnected(step.connection.id);
         replaceConnectingTabWithTerminal(tabId, `preview-${Date.now().toString()}`);
       } else {
         updateConnectingTabStep(tabId, previewStep);
@@ -7587,6 +7608,11 @@ export function WorkspaceShell() {
     let handoffComplete = false;
 
     try {
+      if (step.temporary && step.temporaryContextRef && !step.temporaryCredentialsReady) {
+        await prepareTemporaryQuickConnectCredentials(step.temporaryContextRef, step.connection.username, step);
+        runningStep.temporaryCredentialsReady = true;
+        updateConnectingTabStep(tabId, runningStep);
+      }
       if (step.mode === "terminal") {
         stopWarmupCapture = await listenTerminalOutput((event: TerminalOutputEvent) => {
           if (event.request_id !== prepareRequestId) {
@@ -7618,25 +7644,28 @@ export function WorkspaceShell() {
         return;
       }
 
-      const sessionId = await terminalConnect({
-        auth_kind: step.connection.credential_mode === "prompt" ? step.authKind : undefined,
-        cols: 80,
-        connection_id: step.connection.id,
-        host: step.connection.host,
-        password: step.password || undefined,
-        port: step.connection.port,
-        private_key_path: step.privateKeyPath || undefined,
-        private_key_passphrase: step.privateKeyPassphrase || undefined,
-        request_id: prepareRequestId,
-        rows: 24,
-        username: step.connection.username,
-      });
+      const sessionId =
+        step.temporary && step.temporaryContextRef
+          ? await connectTemporaryQuickTerminal(step.temporaryContextRef, prepareRequestId)
+          : await terminalConnect({
+              auth_kind: step.connection.credential_mode === "prompt" ? step.authKind : undefined,
+              cols: 80,
+              connection_id: step.connection.id,
+              host: step.connection.host,
+              password: step.password || undefined,
+              port: step.connection.port,
+              private_key_path: step.privateKeyPath || undefined,
+              private_key_passphrase: step.privateKeyPassphrase || undefined,
+              request_id: prepareRequestId,
+              rows: 24,
+              username: step.connection.username,
+            });
       if (!connectingTabExists(tabId)) {
         stopTerminalWarmupCapture(tabId);
         await terminalClose(sessionId).catch(() => {});
         return;
       }
-      void refreshConnectedProfile(step.connection.id, runtimeCredentialRequest(step));
+      if (!step.temporary) void refreshConnectedProfile(step.connection.id, runtimeCredentialRequest(step));
       handoffComplete = true;
       replaceConnectingTabWithTerminal(tabId, sessionId, [...warmupOutput], prepareRequestId);
       window.setTimeout(() => {
@@ -7677,6 +7706,10 @@ export function WorkspaceShell() {
   }
 
   function retryConnectionStep(tabId: string, step: ConnectionStepState) {
+    if (step.temporary && isQuickConnectCredentialError(step.errorDetail?.code)) {
+      updateConnectingTabStep(tabId, { ...resetConnectionStepForRetry(step), status: "prompt", temporaryCredentialsReady: false });
+      return;
+    }
     void runConnectionStep(tabId, resetConnectionStepForRetry(step));
   }
 
@@ -8563,6 +8596,7 @@ export function WorkspaceShell() {
                         onEdit={(connection) => {
                           editConnection(connection);
                         }}
+                        onPromptUsernameChange={(username) => updateConnectingTabStep(tab.id, { ...tabStep, connection: { ...tabStep.connection, username } })}
                         onPromptAuthKindChange={(authKind) =>
                           updateConnectingTabStep(tab.id, {
                             ...tabStep,
@@ -9253,6 +9287,7 @@ export function WorkspaceShell() {
             query={connectionSearchQuery}
             onOpenChange={setConnectionSearchOpen}
             onQueryChange={setConnectionSearchQuery}
+            onQuickConnect={(target) => void openQuickConnect(target)}
             onSelectConnection={openConnectionSession}
           />
         </Suspense>
@@ -10683,6 +10718,7 @@ function ConnectionStepPanel({
   onPaneFocus,
   onCancel,
   onEdit,
+  onPromptUsernameChange,
   onPromptAuthKindChange,
   onPromptPasswordChange,
   onPromptPrivateKeyPathChange,
@@ -10699,6 +10735,7 @@ function ConnectionStepPanel({
   onPaneFocus?: () => void;
   onCancel: () => void;
   onEdit: (connection: ConnectionProfile) => void;
+  onPromptUsernameChange: (username: string) => void;
   onPromptAuthKindChange: (authKind: ConnectionAuthKind) => void;
   onPromptPasswordChange: (password: string) => void;
   onPromptPrivateKeyPathChange: (path: string) => void;
@@ -10709,6 +10746,7 @@ function ConnectionStepPanel({
   style?: CSSProperties;
   visible?: boolean;
 }) {
+  const { t } = useI18n();
   const hostKeyChanged = step.hostKeyDecision === "changed";
   const activeStepIndex = currentConnectionStepIndex(step);
   const closeLabel = step.status === "running" ? "取消" : "关闭";
@@ -10750,7 +10788,7 @@ function ConnectionStepPanel({
       <div className="connection-step-body">
         <section className="connection-step-shell">
           <div className="connection-step-actions">
-            {step.status === "success" ? (
+            {step.status === "success" && !step.temporary ? (
               <button
                 type="button"
                 aria-label="编辑连接"
@@ -10846,6 +10884,13 @@ function ConnectionStepPanel({
                       <small>这部分不会保存到连接配置。</small>
                     </span>
                   </header>
+                  {step.temporary ? (
+                    <label>
+                      <span>{t("quickConnect.username")}</span>
+                      <input required value={step.connection.username} placeholder={t("quickConnect.usernamePlaceholder")}
+                        onChange={(event) => onPromptUsernameChange(event.currentTarget.value)} />
+                    </label>
+                  ) : null}
                   <label>
                     <span>认证方式</span>
                     <AppSelect
@@ -10943,14 +10988,12 @@ function ConnectionStepPanel({
                       <RefreshCw className="ui-icon" aria-hidden="true" />
                       <span>重试</span>
                     </button>
-                    <button
-                      className="connection-step-secondary-button"
-                      type="button"
-                      onClick={() => onEdit(step.connection)}
-                    >
-                      <Pencil className="ui-icon" aria-hidden="true" />
-                      <span>编辑连接</span>
-                    </button>
+                    {!step.temporary ? (
+                      <button className="connection-step-secondary-button" type="button" onClick={() => onEdit(step.connection)}>
+                        <Pencil className="ui-icon" aria-hidden="true" />
+                        <span>编辑连接</span>
+                      </button>
+                    ) : null}
                   </div>
                 </div>
               ) : null}

@@ -81,7 +81,9 @@ export function connectionTimestampOf(value?: string | null) {
 }
 
 export function formatConnectionAddress(connection: ConnectionProfile) {
-  const address = `${connection.username}@${connection.host}:${connection.port.toString()}`;
+  const address = connection.username
+    ? `${connection.username}@${connection.host}:${connection.port.toString()}`
+    : `${connection.host}:${connection.port.toString()}`;
   switch (connection.protocol || "ssh") {
     case "rdp":
       return `RDP · ${address}`;

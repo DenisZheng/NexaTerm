@@ -28,7 +28,7 @@
   "newSession.localTerminals": "Local terminals",
   "newSession.noProfiles": "No local terminals detected",
   "newSession.profilesLoading": "Detecting terminals…",
-  "newSession.quickOpen": "Open saved connection…",
+  "newSession.quickOpen": "Quick Connect…",
   "newSession.title": "New session",
   "titlebar.appUpdate": "App update",
   "titlebar.close": "Close",
@@ -74,5 +74,13 @@
   "settings.locale.description": "Language used by the new workspace entry surfaces.",
   "settings.locale.system": "System",
   "settings.locale.en": "English",
-  "settings.locale.zhCN": "Simplified Chinese"
+  "settings.locale.zhCN": "Simplified Chinese",
+  "quickConnect.connectTemporary": "Connect temporarily",
+  "quickConnect.temporary": "Temporary",
+  "quickConnect.username": "Username",
+  "quickConnect.usernamePlaceholder": "SSH username",
+  "quickConnect.error.password": "Passwords are not allowed in Quick Connect addresses.",
+  "quickConnect.error.port": "SSH port must be between 1 and 65535.",
+  "quickConnect.error.address": "Enter user@host or ssh://user@host:port.",
+  "quickConnect.saveSession": "Save as session"
 }

@@ -86,6 +86,9 @@ jobs:
       - name: WF-02A save-and-connect policy
         run: pnpm run check:wf02a-save-connect
 
+      - name: WF-02B Quick Connect temporary context
+        run: pnpm run check:wf02b-quick-connect
+
   security:
     name: Security evidence
     runs-on: ubuntu-22.04

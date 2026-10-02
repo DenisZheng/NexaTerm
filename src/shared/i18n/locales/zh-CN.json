@@ -28,7 +28,7 @@
   "newSession.localTerminals": "本地终端",
   "newSession.noProfiles": "未检测到本地终端",
   "newSession.profilesLoading": "正在探测终端类型…",
-  "newSession.quickOpen": "打开已保存的连接…",
+  "newSession.quickOpen": "快速连接…",
   "newSession.title": "新建会话",
   "titlebar.appUpdate": "应用更新",
   "titlebar.close": "关闭",
@@ -74,5 +74,13 @@
   "settings.locale.description": "控制新工作区入口界面的显示语言。",
   "settings.locale.system": "跟随系统",
   "settings.locale.en": "English",
-  "settings.locale.zhCN": "简体中文"
+  "settings.locale.zhCN": "简体中文",
+  "quickConnect.connectTemporary": "临时连接",
+  "quickConnect.temporary": "临时",
+  "quickConnect.username": "用户名",
+  "quickConnect.usernamePlaceholder": "SSH 用户名",
+  "quickConnect.error.password": "Quick Connect 地址不接受密码。",
+  "quickConnect.error.port": "SSH 端口必须在 1 到 65535 之间。",
+  "quickConnect.error.address": "请输入 user@host 或 ssh://user@host:port。",
+  "quickConnect.saveSession": "保存为会话"
 }

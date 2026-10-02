@@ -19,7 +19,7 @@ use crate::ssh_config::ResolvedSshConfig;
 use crate::terminal::session::{
     ExecOutput, ExecProgressCallback, ReusableExecSession, ReusableSftpSession,
 };
-
+mod lifecycle;
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum RemoteFileKind {

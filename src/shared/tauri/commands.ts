@@ -534,6 +534,45 @@ export function terminalConnect(request: TerminalConnectRequest) {
   return invoke<string>("terminal_connect", { request });
 }
 
+export function temporaryConnectionCreate(request: {
+  owner_instance_id: string;
+  host: string;
+  port: number;
+  username?: string;
+}) {
+  return invoke<string>("temporary_connection_create", { request });
+}
+
+export function temporaryConnectionSetCredentials(request: {
+  context_ref: string;
+  username: string;
+  auth_kind: "password" | "private_key";
+  password?: string;
+  private_key_path?: string;
+  private_key_passphrase?: string;
+}) {
+  return invoke<void>("temporary_connection_set_credentials", { request });
+}
+
+export function temporaryConnectionSave(contextRef: string, name?: string) {
+  return invoke<ConnectionProfile>("temporary_connection_save", {
+    request: { context_ref: contextRef, name },
+  });
+}
+
+export function temporaryConnectionTerminalConnect(request: {
+  context_ref: string;
+  request_id?: string;
+  cols: number;
+  rows: number;
+}) {
+  return invoke<string>("temporary_connection_terminal_connect", { request });
+}
+
+export function temporaryConnectionRelease(contextRef: string) {
+  return invoke<boolean>("temporary_connection_release", { request: { context_ref: contextRef } });
+}
+
 export function terminalWrite(sessionId: string, data: string) {
   return invoke<void>("terminal_write", {
     request: {

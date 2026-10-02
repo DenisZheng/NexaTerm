@@ -14,6 +14,7 @@
     "check:i18n-new-entry": "node scripts/check-i18n-new-entry-source.mjs",
     "check:workspace-snapshot": "node scripts/check-workspace-snapshot-contract-source.mjs",
     "check:wf02a-save-connect": "node scripts/check-wf02a-save-connect-source.mjs",
+    "check:wf02b-quick-connect": "node scripts/check-wf02b-quick-connect-source.mjs",
     "check:middle-click-tabs": "node scripts/check-middle-click-close-tabs-source.mjs",
     "check:tauri-capabilities": "node scripts/check-tauri-capabilities.mjs",
     "check:tauri-csp": "node scripts/check-tauri-csp.mjs",

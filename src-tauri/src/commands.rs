@@ -71,6 +71,7 @@ use crate::storage_vault::{VaultState, VaultStatus};
 use crate::terminal::local::list_profiles as list_local_profiles;
 pub use crate::terminal::local_profiles::{LocalTerminalProfile, LocalTerminalProfileInput};
 use crate::terminal::manager::TerminalManager;
+use crate::temporary_connections::resolve_remote_connection_profile;
 pub use crate::terminal::serial::{SerialPortEntry, SerialTerminalOpenRequest};
 use crate::terminal::session::ExecProgressCallback;
 pub use crate::terminal::telnet::TelnetTerminalOpenRequest;
@@ -668,7 +669,7 @@ pub async fn remote_file_list(
     manager: State<'_, RemoteFileManager>,
     request: RemoteFileListRequest,
 ) -> Result<Vec<RemoteFileEntry>, AppError> {
-    let profile = resolve_remote_connection_profile(&app, &request.connection_id)?;
+    let profile = resolve_remote_connection_profile(&app, &request.connection_id).await?;
     let path = request
         .path
         .as_ref()
@@ -1142,7 +1143,7 @@ pub async fn remote_file_read(
     manager: State<'_, RemoteFileManager>,
     request: RemoteFileReadRequest,
 ) -> Result<RemoteFileReadResult, AppError> {
-    let profile = resolve_remote_connection_profile(&app, &request.connection_id)?;
+    let profile = resolve_remote_connection_profile(&app, &request.connection_id).await?;
     let path = require_remote_path(&request.path)?;
     manager.read_file(&app, profile, path).await
 }
@@ -1153,7 +1154,7 @@ pub async fn remote_file_write(
     manager: State<'_, RemoteFileManager>,
     request: RemoteFileWriteRequest,
 ) -> Result<RemoteFileWriteResult, AppError> {
-    let profile = resolve_remote_connection_profile(&app, &request.connection_id)?;
+    let profile = resolve_remote_connection_profile(&app, &request.connection_id).await?;
     let path = require_remote_path(&request.path)?;
     manager
         .write_file(
@@ -1174,7 +1175,7 @@ pub async fn remote_file_create_file(
     manager: State<'_, RemoteFileManager>,
     request: RemoteFilePathRequest,
 ) -> Result<RemoteFileMetadata, AppError> {
-    let profile = resolve_remote_connection_profile(&app, &request.connection_id)?;
+    let profile = resolve_remote_connection_profile(&app, &request.connection_id).await?;
     let path = require_remote_path(&request.path)?;
     manager.create_file(&app, profile, path).await
 }
@@ -1185,7 +1186,7 @@ pub async fn remote_file_create_directory(
     manager: State<'_, RemoteFileManager>,
     request: RemoteFilePathRequest,
 ) -> Result<(), AppError> {
-    let profile = resolve_remote_connection_profile(&app, &request.connection_id)?;
+    let profile = resolve_remote_connection_profile(&app, &request.connection_id).await?;
     let path = require_remote_path(&request.path)?;
     manager.create_directory(&app, profile, path).await
 }
@@ -1196,7 +1197,7 @@ pub async fn remote_file_rename(
     manager: State<'_, RemoteFileManager>,
     request: RemoteFileRenameRequest,
 ) -> Result<(), AppError> {
-    let profile = resolve_remote_connection_profile(&app, &request.connection_id)?;
+    let profile = resolve_remote_connection_profile(&app, &request.connection_id).await?;
     let path = require_remote_path(&request.path)?;
     let new_path = require_remote_path(&request.new_path)?;
     manager.rename_entry(&app, profile, path, new_path).await
@@ -1208,7 +1209,7 @@ pub async fn remote_file_delete(
     manager: State<'_, RemoteFileManager>,
     request: RemoteFileDeleteRequest,
 ) -> Result<(), AppError> {
-    let profile = resolve_remote_connection_profile(&app, &request.connection_id)?;
+    let profile = resolve_remote_connection_profile(&app, &request.connection_id).await?;
     let path = require_remote_path(&request.path)?;
     manager
         .delete_entry(&app, profile, path, request.recursive)
@@ -1221,7 +1222,7 @@ pub async fn remote_file_metadata(
     manager: State<'_, RemoteFileManager>,
     request: RemoteFilePathRequest,
 ) -> Result<RemoteFileEntryMetadata, AppError> {
-    let profile = resolve_remote_connection_profile(&app, &request.connection_id)?;
+    let profile = resolve_remote_connection_profile(&app, &request.connection_id).await?;
     let path = require_remote_path(&request.path)?;
     manager.entry_metadata(&app, profile, path).await
 }
@@ -1232,7 +1233,7 @@ pub async fn remote_file_check_path(
     manager: State<'_, RemoteFileManager>,
     request: RemoteFilePathRequest,
 ) -> Result<RemoteFilePathCheckResult, AppError> {
-    let profile = resolve_remote_connection_profile(&app, &request.connection_id)?;
+    let profile = resolve_remote_connection_profile(&app, &request.connection_id).await?;
     let path = require_remote_path(&request.path)?;
     manager.check_path(&app, profile, path).await
 }
@@ -1243,7 +1244,7 @@ pub async fn remote_file_upload_file(
     manager: State<'_, RemoteFileManager>,
     request: RemoteFileUploadFileRequest,
 ) -> Result<RemoteFileUploadResult, AppError> {
-    let profile = resolve_remote_connection_profile(&app, &request.connection_id)?;
+    let profile = resolve_remote_connection_profile(&app, &request.connection_id).await?;
     let path = require_remote_path(&request.path)?;
     let total_bytes = request.content.len() as u64;
     let progress = remote_transfer_progress_callback(
@@ -1270,7 +1271,7 @@ pub async fn remote_file_upload_local_file(
     manager: State<'_, RemoteFileManager>,
     request: RemoteFileUploadLocalFileRequest,
 ) -> Result<RemoteFileUploadResult, AppError> {
-    let profile = resolve_remote_connection_profile(&app, &request.connection_id)?;
+    let profile = resolve_remote_connection_profile(&app, &request.connection_id).await?;
     let path = require_remote_path(&request.path)?;
     let local_path = require_existing_local_file_path(&request.local_path)?;
     let total_bytes = fs::metadata(&local_path)
@@ -1313,7 +1314,7 @@ pub async fn remote_file_upload_archive(
     manager: State<'_, RemoteFileManager>,
     request: RemoteFileUploadArchiveRequest,
 ) -> Result<RemoteFileArchiveUploadResult, AppError> {
-    let profile = resolve_remote_connection_profile(&app, &request.connection_id)?;
+    let profile = resolve_remote_connection_profile(&app, &request.connection_id).await?;
     let target_dir = require_remote_path(&request.target_dir)?;
     let root_name = require_safe_name(&request.root_name, "remote_file_archive_root_missing")?;
     let total_bytes = request.archive_content.len() as u64;
@@ -1343,7 +1344,7 @@ pub async fn remote_file_upload_local_archive(
     manager: State<'_, RemoteFileManager>,
     request: RemoteFileUploadLocalArchiveRequest,
 ) -> Result<RemoteFileArchiveUploadResult, AppError> {
-    let profile = resolve_remote_connection_profile(&app, &request.connection_id)?;
+    let profile = resolve_remote_connection_profile(&app, &request.connection_id).await?;
     let target_dir = require_remote_path(&request.target_dir)?;
     let requested_root_name =
         require_safe_name(&request.root_name, "remote_file_archive_root_missing")?;
@@ -1573,7 +1574,7 @@ pub async fn remote_file_download(
     manager: State<'_, RemoteFileManager>,
     request: RemoteFilePathRequest,
 ) -> Result<RemoteFileDownloadResult, AppError> {
-    let profile = resolve_remote_connection_profile(&app, &request.connection_id)?;
+    let profile = resolve_remote_connection_profile(&app, &request.connection_id).await?;
     let path = require_remote_path(&request.path)?;
     let content = manager.download_file(&app, profile, path, None).await?;
     Ok(RemoteFileDownloadResult {
@@ -1592,7 +1593,7 @@ pub async fn remote_file_check_download_target(
     app: AppHandle,
     request: RemoteFileDownloadTargetCheckRequest,
 ) -> Result<RemoteFileDownloadTargetCheckResult, AppError> {
-    let _profile = load_connection_profile(&app, request.connection_id.trim())?;
+    let _profile = resolve_remote_connection_profile(&app, &request.connection_id).await?;
     let path = require_remote_path(&request.path)?;
     let name = remote_path_name(path);
     let local_directory = resolve_download_directory_parts(
@@ -1623,7 +1624,7 @@ pub async fn remote_file_download_to_local(
     request: RemoteFileDownloadToLocalRequest,
 ) -> Result<RemoteFileDownloadToLocalResult, AppError> {
     let keep_archives = request.keep_archives;
-    let profile = resolve_remote_connection_profile(&app, &request.connection_id)?;
+    let profile = resolve_remote_connection_profile(&app, &request.connection_id).await?;
     let path = require_remote_path(&request.path)?;
     let name = remote_path_name(path);
     let policy = TransferConflictPolicy::from_request(request.conflict_policy.as_deref());
@@ -2141,23 +2142,6 @@ pub async fn connection_probe_latency(
                 true,
             )
         })
-}
-
-fn resolve_remote_connection_profile(
-    app: &AppHandle,
-    connection_id: &str,
-) -> Result<ResolvedSshConfig, AppError> {
-    let connection_id = connection_id.trim();
-    if connection_id.is_empty() {
-        return Err(AppError::new(
-            "remote_file_connection_missing",
-            "请选择活动连接。",
-            "connection_id is empty",
-            false,
-        ));
-    }
-
-    resolve_saved_connection(app, connection_id, None)
 }
 
 fn resolve_remote_monitor_connection(
