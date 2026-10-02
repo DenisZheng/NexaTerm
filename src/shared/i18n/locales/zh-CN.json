@@ -108,5 +108,7 @@
   "batchConnect.status.waitingUser": "等待用户",
   "batchConnect.subtitle": "“{group}”将先预览再启动；单批最多 {max} 个新会话。",
   "batchConnect.title": "批量连接",
-  "batchConnect.unknownGroup": "未知分组"
+  "batchConnect.unknownGroup": "未知分组",
+  "split.newSshInstanceGroup": "新建 SSH 实例",
+  "split.newCharacterInstanceGroup": "新建 Telnet / 串口实例"
 }

@@ -1989,7 +1989,7 @@ export function WorkspaceShell() {
         .filter(isSshConnection)
         .map((connection) => ({
           connectionId: connection.id,
-          group: "新建 SSH 实例",
+          group: t("split.newSshInstanceGroup"),
           icon: (
             <ConnectionSystemLogo compact connection={connection} decorative />
           ),
@@ -2008,7 +2008,7 @@ export function WorkspaceShell() {
         .filter((connection) => isTelnetConnection(connection) || isSerialConnection(connection))
         .map((connection) => ({
           connectionId: connection.id,
-          group: "新建 Telnet / 串口实例",
+          group: t("split.newCharacterInstanceGroup"),
           icon: <ConnectionSystemLogo compact connection={connection} decorative />,
           label: `${connection.name || connection.host} · ${formatConnectionAddress(connection)}`,
           searchText: [connection.name, connection.host, connection.port?.toString()]

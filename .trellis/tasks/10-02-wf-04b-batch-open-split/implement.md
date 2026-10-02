@@ -28,10 +28,10 @@
 - [x] 一次操作焦点唯一；现有 picker/move binding 行为继续复用。
 
 ## 04B-4 A08 / delivery
-- [ ] 自动化：成功 + 失败 + cancel + retry + pre-existing isolation。
+- [x] 自动化：成功 + 失败 + cancel + retry + pre-existing isolation（model / executor / workspace runtime 测试 + WF-04B source gate）。
 - [ ] 真实 Tauri A08 四维证据。
 - [ ] Split 2/4 pane GUI smoke。
-- [ ] Draft PR；最终 CI 全绿后等待维护者授权 merge。
+- [x] Draft PR 保持未合并；最终 CI 全绿后等待维护者授权 merge。
 
 每个切片：定向测试 → 相关全量 → source gate → line budget → commit → push → CI。不要修改 line-budget.json；不要启动 WF-04C / WS-X04。
 
@@ -54,3 +54,16 @@
 - Split picker 继续列出已打开实例，同时所有 SSH profile 均提供“新建 SSH 实例”；Telnet/Serial 增加显式新建实例入口。批量连接仍不会自动进入 Split。
 - 新增 WF-04B source gate，固定 20/4 限制、实例级 cancel、exact split host、无 numeric anchor 与已确认 WS-X09。
 - `WorkspaceShell.tsx` 预计算版本 13848 行，低于既有 13860 预算；未修改 `scripts/line-budget.json`。
+
+
+## 04B-4 验收准备
+
+- A08 自动化映射：
+  - success + failure / partial failure：`batchConnectExecutor.test.ts`
+  - cancel queued + active 且主动 cancel 不误报 failed：`batchConnectExecutor.test.ts`
+  - failed-only retry：`batchConnectModel.test.ts`
+  - pre-existing 默认跳过：`batchConnectModel.test.ts`
+  - cancel/focus 使用本批 exact instance ID、close plan 不带 connectionId：`batchConnectWorkspaceRuntime.test.ts`
+- `tests/fixtures/README.md` 已给出真实 Tauri A08 场景：同一真实 SSH fixture 下的 pre-existing / success / wrong-user failure / prompt waiting-user 四 profile，以及 Split 2/4 pane smoke。
+- 新增 Split picker 分组文案进入 English/zh-CN i18n；不把本轮新增中文硬编码留在 shell。
+- 真实 A08 与 Split GUI smoke 仍必须人工在 Tauri 窗口完成；自动化证据不能替代真实协议/UI 证据。

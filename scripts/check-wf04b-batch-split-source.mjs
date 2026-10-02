@@ -55,8 +55,8 @@ for (const needle of [
   if (!instances.includes(needle)) throw new Error(`WF-04B split instance projection missing: ${needle}`);
 }
 for (const needle of [
-  'group: "新建 SSH 实例"',
-  'group: "新建 Telnet / 串口实例"',
+  'group: t("split.newSshInstanceGroup")',
+  'group: t("split.newCharacterInstanceGroup")',
   "splitGroupInsertionIndex(",
 ]) {
   if (!shell.includes(needle)) throw new Error(`WF-04B split picker/anchor wiring missing: ${needle}`);

@@ -108,5 +108,7 @@
   "batchConnect.status.waitingUser": "Waiting for you",
   "batchConnect.subtitle": "“{group}” will be previewed before starting; up to {max} new sessions per batch.",
   "batchConnect.title": "Batch connect",
-  "batchConnect.unknownGroup": "Unknown group"
+  "batchConnect.unknownGroup": "Unknown group",
+  "split.newSshInstanceGroup": "New SSH instance",
+  "split.newCharacterInstanceGroup": "New Telnet / Serial instance"
 }
