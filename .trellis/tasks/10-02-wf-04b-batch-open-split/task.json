@@ -16,7 +16,7 @@
   "base_branch": "main",
   "worktree_path": null,
   "commit": null,
-  "pr_url": null,
+  "pr_url": "https://github.com/DenisZheng/NexaTerm/pull/27",
   "subtasks": [],
   "children": [],
   "parent": "09-23-nexaterm-workflow-mainline",
