@@ -96,8 +96,8 @@ for (const needle of [
   if (!transferStore.includes(needle)) throw new Error(`WF-03C transfer ownership missing: ${needle}`);
 }
 for (const needle of [
-  'behavior: "keep-running"',
-  '"confirm-cancel-active"',
+  'behavior: "confirm-cancel-active"',
+  '"keep-running"',
   "planRemoteFileTransferClose",
 ]) {
   if (!transferClosePolicy.includes(needle)) throw new Error(`WF-03C switchable WS-F09 policy missing: ${needle}`);
@@ -142,15 +142,15 @@ for (const needle of [
   if (!transferLifecycleTest.includes(needle)) throw new Error(`WF-03C transfer rebind coverage missing: ${needle}`);
 }
 for (const needle of [
-  "preserves the current keep-running behavior while WS-F09 is pending",
-  "can switch to confirm-and-cancel without changing ownership logic",
+  "defaults to confirm-and-cancel for active transfers after WS-F09 approval",
+  "keeps the explicit keep-running policy available without changing ownership logic",
 ]) {
   if (!transferClosePolicyTest.includes(needle)) throw new Error(`WF-03C close-policy coverage missing: ${needle}`);
 }
 for (const needle of [
   "会丢弃未保存修改时需要确认",
-  "WS-F09 默认 keep-running",
-  "WS-F09 可切到 confirm-cancel-active",
+  "WS-F09 默认 confirm-cancel-active",
+  "WS-F09 没有编辑器时，关闭最后 SSH 仍询问并取消活动传输",
 ]) {
   if (!itemCloseTest.includes(needle)) throw new Error(`WF-03C close regression coverage missing: ${needle}`);
 }

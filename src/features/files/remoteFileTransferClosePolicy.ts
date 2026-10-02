@@ -13,12 +13,9 @@ export interface RemoteFileTransferClosePolicy {
   behavior: RemoteFileTransferCloseBehavior;
 }
 
-/**
- * WS-F09 is still a product decision. Preserve today's behavior while keeping the
- * close-session policy in one switchable place instead of hard-coding it into Shell.
- */
+/** WS-F09 已确认：活动传输先询问，用户确认后取消；策略由关闭计划统一消费。 */
 export const currentRemoteFileTransferClosePolicy: RemoteFileTransferClosePolicy = {
-  behavior: "keep-running",
+  behavior: "confirm-cancel-active",
 };
 
 export interface RemoteFileTransferCloseDecision {

@@ -6,10 +6,8 @@ export interface RemoteFileFollowPolicy {
 }
 
 /**
- * Compatibility policy while WS-F03 is still pending.
- * Keep the pre-WF-03 behavior (manual locate unless the user explicitly enables follow)
- * and keep manual browsing reversible. Product defaults live here so changing WS-F03 later
- * does not require rewriting the Files state model.
+ * WS-F03 已确认默认关闭；手动浏览后是否自动暂停仍待确认，暂保留现有行为。
+ * 策略集中于此，后续确认不需要重写实例状态模型。
  */
 export const currentRemoteFileFollowPolicy: RemoteFileFollowPolicy = {
   defaultEnabled: false,

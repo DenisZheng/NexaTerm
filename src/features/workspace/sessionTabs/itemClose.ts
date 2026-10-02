@@ -144,7 +144,7 @@ export interface ClosePlan {
  *
  * - 连带远程文件：一次关闭后某 SSH 连接不再有任何终端（独立实例或分屏成员）而仍有远程文件 tab 时，
  *   改走连接级关闭，远程文件一并关闭——编辑器属于所属 SSH 工作区（WS-E05），没有终端就没有工作区可回。
- * - 确认：会丢弃未保存修改，或拆除含两个及以上成员的分屏组时需要确认；一次操作只确认一次。
+ * - 确认：会丢弃未保存修改、拆除多个分屏成员或按 WS-F09 取消活动传输时需要确认；一次操作只确认一次。
  */
 export function planClose(
   request: CloseRequest,
@@ -165,15 +165,18 @@ export function planClose(
   const filesByConnection = new Set(context.remoteFileTabs.map((tab) => tab.connectionId));
 
   const connectionIds: string[] = [];
+  // 传输按连接归属，关闭最后一个实例时才释放；是否打开编辑器不影响传输确认。
+  const releasedConnectionIds = new Set<string>();
   for (const tab of closingSsh) {
-    if (connectionIds.includes(tab.connectionId) || !filesByConnection.has(tab.connectionId)) {
+    if (releasedConnectionIds.has(tab.connectionId)) {
       continue;
     }
     const allClosing = context.terminalTabs
       .filter((other) => other.connectionId === tab.connectionId)
       .every((other) => closingSshIds.has(other.id));
     if (allClosing) {
-      connectionIds.push(tab.connectionId);
+      releasedConnectionIds.add(tab.connectionId);
+      if (filesByConnection.has(tab.connectionId)) connectionIds.push(tab.connectionId);
     }
   }
   const cascading = new Set(connectionIds);
@@ -187,7 +190,7 @@ export function planClose(
     .map((tab) => tab.name);
   const transferDecision = planRemoteFileTransferClose(
     context.remoteFileTransfers ?? [],
-    cascading,
+    releasedConnectionIds,
     transferClosePolicy,
   );
 
@@ -195,7 +198,7 @@ export function planClose(
     confirmation:
       dirtyFileNames.length > 0 || splitPaneCount > 1 || transferDecision.requiresConfirmation
         ? {
-            ...(transferDecision.activeTransferIds.length > 0
+            ...(transferDecision.requiresConfirmation
               ? { activeTransferCount: transferDecision.activeTransferIds.length }
               : {}),
             cascadeConnectionCount: connectionIds.length,

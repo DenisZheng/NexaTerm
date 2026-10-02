@@ -2,6 +2,8 @@
 
 日期：2026-10-02。沿用主线任务 `09-23-nexaterm-workflow-mainline` 和子任务 `10-01-wf-03-files-daily-flow`。
 
+本记录保留提交 `bff271a` 的 A05/A06 人工验收快照。验收后维护者确认的 WS-F03 / WS-F09 范围见 [WORKFLOW_SPEC v0.3](../WORKFLOW_SPEC.md)；下文待确认状态指当时状态，不覆盖后续决定。新传输关闭策略已补自动化回归，尚未补真实传输中的关闭验收。
+
 ## 环境与证据边界
 
 - 分支：`feat/wf03a-left-files-view`；修复基线：`87ca9f4194463bb1fbb484c41004d6cde9bf0d8f`。

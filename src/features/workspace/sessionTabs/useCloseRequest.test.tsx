@@ -2,7 +2,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import type { ClosePlan, CloseRequest } from "./itemClose";
+import { planClose, type CloseContext, type ClosePlan, type CloseRequest } from "./itemClose";
 import { useCloseRequest } from "./useCloseRequest";
 
 // WS-F08：一次关闭操作至多一次确认（未保存编辑的关闭确认不能丢失）；取消不关闭任何项，确认时按当时状态重算后一次执行。
@@ -102,5 +102,36 @@ describe("useCloseRequest", () => {
     act(() => hook.result.current.request(request));
     expect(execute).not.toHaveBeenCalled();
     expect(hook.result.current.pending).toBeNull();
+  });
+
+  it("活动传输先询问，取消不执行；确认时排除已完成传输且只执行一次", () => {
+    const context: CloseContext = {
+      localTerminalTabs: [], rdpSessions: [], remoteFileTabs: [],
+      splitMemberIds: [], terminalTabs: [{ id: "t1", connectionId: "a" }], vncSessions: [],
+      remoteFileTransfers: [
+        { connectionId: "a", id: "running", status: "running" },
+        { connectionId: "a", id: "queued", status: "queued" },
+      ],
+    };
+    const execute = vi.fn();
+    const { result } = renderHook(() => useCloseRequest({ execute, plan: (value) => planClose(value, context) }));
+    const close: CloseRequest = { instanceIds: ["ssh:t1"], splitGroup: false };
+    act(() => result.current.request(close));
+    expect(result.current.pending?.confirmation.activeTransferCount).toBe(2);
+    expect(execute).not.toHaveBeenCalled();
+    act(() => result.current.cancel());
+    expect(result.current.pending).toBeNull();
+    expect(execute).not.toHaveBeenCalled();
+    act(() => result.current.request(close));
+    context.remoteFileTransfers = [
+      { connectionId: "a", id: "running", status: "success" },
+      { connectionId: "a", id: "queued", status: "queued" },
+    ];
+    act(() => result.current.confirm());
+    expect(execute).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+      sshTabIds: ["t1"], transferIdsToCancel: ["queued"],
+    }));
+    act(() => result.current.confirm());
+    expect(execute).toHaveBeenCalledTimes(1);
   });
 });

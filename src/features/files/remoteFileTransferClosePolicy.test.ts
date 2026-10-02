@@ -38,26 +38,26 @@ describe("WF-03C active transfer close policy", () => {
     item("b-running", "conn-b", "running"),
   ];
 
-  it("preserves the current keep-running behavior while WS-F09 is pending", () => {
-    expect(currentRemoteFileTransferClosePolicy.behavior).toBe("keep-running");
+  it("defaults to confirm-and-cancel for active transfers after WS-F09 approval", () => {
+    expect(currentRemoteFileTransferClosePolicy.behavior).toBe("confirm-cancel-active");
     expect(
       planRemoteFileTransferClose(transfers, new Set(["conn-a"])),
     ).toEqual({
       activeTransferIds: ["a-running", "a-queued"],
-      cancelTransferIds: [],
-      requiresConfirmation: false,
+      cancelTransferIds: ["a-running", "a-queued"],
+      requiresConfirmation: true,
     });
   });
 
-  it("can switch to confirm-and-cancel without changing ownership logic", () => {
+  it("keeps the explicit keep-running policy available without changing ownership logic", () => {
     expect(
       planRemoteFileTransferClose(transfers, new Set(["conn-a"]), {
-        behavior: "confirm-cancel-active",
+        behavior: "keep-running",
       }),
     ).toEqual({
       activeTransferIds: ["a-running", "a-queued"],
-      cancelTransferIds: ["a-running", "a-queued"],
-      requiresConfirmation: true,
+      cancelTransferIds: [],
+      requiresConfirmation: false,
     });
   });
 
@@ -66,6 +66,14 @@ describe("WF-03C active transfer close policy", () => {
       planRemoteFileTransferClose(transfers, new Set(["conn-b"])),
     ).toMatchObject({
       activeTransferIds: ["b-running"],
+      cancelTransferIds: ["b-running"],
     });
+  });
+
+  it("does not prompt for completed transfers or unrelated connections", () => {
+    expect(planRemoteFileTransferClose(
+      [item("a-done", "conn-a", "success"), item("b-running", "conn-b", "running")],
+      new Set(["conn-a"]),
+    )).toEqual({ activeTransferIds: [], cancelTransferIds: [], requiresConfirmation: false });
   });
 });

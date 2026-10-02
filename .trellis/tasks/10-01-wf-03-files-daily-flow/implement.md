@@ -34,3 +34,11 @@
 - 已将编辑器元数据与版本校验收拢到 `remote_files/metadata.rs`；仅 mtime 探测失败时读取严格校验的 SFTP 属性，保存沿用真实 mode，不降低 mtime/size 冲突检测。
 - 相关 Rust 测试 35/35 通过（新增 11 项），editor / WF-03 / line-budget 门禁通过。Tauri watcher 重编译后，用户确认“能打开，内容正确”；冲突提示及三个入口、取消不覆盖、重新加载、dirty close 取消保留和明确放弃均获真实 GUI 确认，A06 通过。
 - 完整操作、证据与未覆盖边界见 [真实 Tauri 验收记录](../../../docs/research/wf03-real-tauri-acceptance.md)。
+
+## 2026-10-02 验收后策略确认
+
+- 按 WORKFLOW_SPEC v0.3 落实本轮已确认的 WS-F03 / WS-F09 范围；WS-F03 其余待确认部分保持原样。
+- 切换现有 transfer close policy，并修正 `planClose` 仅在打开编辑器时处理传输的遗漏；连接最终释放与编辑器级联关闭分别计算，不改 WorkspaceShell。
+- 回归覆盖默认策略、无编辑器关闭、sibling 共享连接隔离、取消不执行及确认时重算。
+- 验证：定向测试 39/39；`pnpm run check`、`pnpm test`（425 通过、1 既有 todo）、`pnpm run build`、WF-03 / startup / line-budget 门禁通过。重模块保持独立 chunk；无 WorkspaceShell 或预算文件修改。
+- 既有 A05/A06 人工验收对应 `bff271a`；本次策略修改的自动化与后续 GUI 证据独立记录，不追认旧验收覆盖新策略。
