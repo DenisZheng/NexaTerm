@@ -12,6 +12,10 @@ const dialog = readFileSync(
   new URL("../src/features/connections/ConnectionDialog.tsx", import.meta.url),
   "utf8",
 );
+const useConnections = readFileSync(
+  new URL("../src/features/connections/useConnections.ts", import.meta.url),
+  "utf8",
+);
 const x11 = readFileSync(
   new URL("../src-tauri/src/x11_forward.rs", import.meta.url),
   "utf8",
@@ -45,6 +49,14 @@ for (const needle of [
 ]) {
   if (!dialog.includes(needle)) {
     throw new Error(`WF-06C dialog X11 persistence seam missing: ${needle}`);
+  }
+}
+for (const needle of [
+  "x11_forwarding: Boolean(input.advanced?.x11_forwarding)",
+  "x11_display: trim(input.advanced?.x11_display)",
+]) {
+  if (!useConnections.includes(needle)) {
+    throw new Error(`WF-06C connection normalization seam missing: ${needle}`);
   }
 }
 for (const needle of [
