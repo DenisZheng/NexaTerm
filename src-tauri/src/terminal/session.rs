@@ -19,7 +19,8 @@ use uuid::Uuid;
 use crate::app_error::AppError;
 use crate::commands::TerminalConnectRequest;
 use crate::connections::{
-    normalize_terminal_encoding, ConnectionProxyConfig, ConnectionProxyKind,
+    normalize_terminal_encoding, ConnectionAdvancedConfig, ConnectionProxyConfig,
+    ConnectionProxyKind,
 };
 use crate::known_hosts::{host_key_info, KnownHostCheck};
 use crate::ssh_config::{
