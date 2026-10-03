@@ -35,7 +35,10 @@ export function buildWorkspaceRestorePlan(
   const items = snapshot.instances.map((instance): WorkspaceRestoreItem => {
     const status = restoreStatus(instance, availability.profileIds, temporaryTargetIds);
     return {
-      autoReconnect: status === "ready" && availability.autoReconnect,
+      autoReconnect:
+        status === "ready" &&
+        availability.autoReconnect &&
+        (instance.kind === "ssh" || instance.kind === "local"),
       instance,
       status,
     };

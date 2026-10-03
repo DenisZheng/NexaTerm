@@ -10,6 +10,7 @@ import type {
   WorkspaceSnapshotPaneNode,
   WorkspaceSnapshotV1,
 } from "./snapshotTypes";
+import type { WorkspaceRestoreItem, WorkspaceRestorePlan } from "./restorePlan";
 
 export type RestoredTerminalTab = SessionTerminalTab<never>;
 
@@ -111,6 +112,54 @@ export function buildWorkspaceShellHydration(
     splitLayout,
     terminalTabs,
     vncSessions,
+  };
+}
+
+export function applyWorkspaceRestorePlanToHydration(
+  hydration: WorkspaceShellHydration,
+  plan: WorkspaceRestorePlan,
+): WorkspaceShellHydration {
+  const byId = new Map(plan.items.map((item) => [item.instance.id, item]));
+  return {
+    ...hydration,
+    terminalTabs: hydration.terminalTabs.map((tab) => ({
+      ...tab,
+      ...terminalRestoreState(byId.get(`ssh:${tab.id}`)),
+    })),
+    localTerminalTabs: hydration.localTerminalTabs.map((tab) => ({
+      ...tab,
+      ...terminalRestoreState(byId.get(`local:${tab.id}`)),
+    })),
+    rdpSessions: hydration.rdpSessions.map((session) => ({
+      ...session,
+      ...desktopRestoreState(byId.get(`rdp:${session.id}`)),
+    })),
+    vncSessions: hydration.vncSessions.map((session) => ({
+      ...session,
+      ...desktopRestoreState(byId.get(`vnc:${session.id}`)),
+    })),
+  };
+}
+
+function terminalRestoreState(item: WorkspaceRestoreItem | undefined) {
+  if (!item) return { error: "工作区恢复项缺失。", status: "连接失败" };
+  if (item.status === "missing-profile") {
+    return { error: "保存的连接或终端配置已不存在，可修复配置后重试。", status: "连接失败" };
+  }
+  if (item.status === "temporary-auth-required") {
+    return { error: "临时连接凭据不会持久化，请重新建立或认证该连接。", status: "连接失败" };
+  }
+  return item.autoReconnect
+    ? { error: undefined, status: "正在恢复" }
+    : { error: "工作区已恢复；自动重连未开启，可手动重试。", status: "连接失败" };
+}
+
+function desktopRestoreState(item: WorkspaceRestoreItem | undefined) {
+  const state = terminalRestoreState(item);
+  return {
+    error: state.error || null,
+    message: state.error ? null : "工作区已恢复；桌面会话保持停止，可手动重试。",
+    status: "error" as const,
   };
 }
 

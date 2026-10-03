@@ -63,6 +63,7 @@ for (const needle of [
   '"missing-profile"',
   '"temporary-auth-required"',
   "availability.autoReconnect",
+  'instance.kind === "ssh" || instance.kind === "local"',
 ]) {
   if (!planner.includes(needle)) throw new Error(`WF-07 restore planner seam missing: ${needle}`);
 }
@@ -88,13 +89,13 @@ for (const forbidden of ["sessionId", "password", "privateKey", "x11Cookie", "br
     throw new Error("WF-07 snapshot contract lost its explicit whitelist boundary");
   }
 }
-for (const needle of ["toSnapshot(", "useWorkspaceSnapshotLifecycle", "restoreWorkspaceShell", 'setMultiExecMode("off")', "seedWorkspaceRemoteFileDirectories"]) {
-  if (!shell.includes(needle)) throw new Error(`WF-07 shell persistence seam missing: ${needle}`);
+for (const needle of ["toSnapshot(", "useWorkspaceSnapshotLifecycle", "restoreWorkspaceShell", 'setMultiExecMode("off")', "seedWorkspaceRemoteFileDirectories", "buildWorkspaceRestorePlan", "settings.basic.reopenLastTerminal", "requestAnimationFrame", "retryRestoredSshTab", "retryRestoredLocalTab"]) {
+  if (!shell.includes(needle)) throw new Error(`WF-07 shell persistence/reconnect seam missing: ${needle}`);
 }
 for (const needle of ["workspaceSnapshotLoad", "workspaceSnapshotSave", "workspaceSnapshotDebounceMs = 500"]) {
   if (!lifecycle.includes(needle)) throw new Error(`WF-07 snapshot lifecycle seam missing: ${needle}`);
 }
-for (const needle of ["buildWorkspaceShellHydration", "splitLayout", "focusedPaneId"]) {
+for (const needle of ["buildWorkspaceShellHydration", "applyWorkspaceRestorePlanToHydration", "splitLayout", "focusedPaneId"]) {
   if (!hydration.includes(needle)) throw new Error(`WF-07 shell hydration seam missing: ${needle}`);
 }
 for (const needle of ["publishWorkspaceRemoteFileNavigation", "getWorkspaceRemoteFileNavigation"]) {

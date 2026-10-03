@@ -57,3 +57,23 @@ describe("WF-07 restore planner", () => {
     expect(plan.files).toEqual(snapshot.files);
   });
 });
+
+
+it("auto-reconnect applies only to terminal instances, not RDP/VNC runners", () => {
+  const mixed: WorkspaceSnapshotV1 = {
+    ...snapshot,
+    instances: [
+      ...snapshot.instances,
+      { id: "local:local-a", kind: "local", ordinal: 0, source: "local", target: { kind: "profile", profileId: "local-a" } },
+      { id: "rdp:rdp-a", kind: "rdp", target: { kind: "profile", profileId: "rdp-a" } },
+      { id: "vnc:vnc-a", kind: "vnc", target: { kind: "profile", profileId: "vnc-a" } },
+    ],
+  };
+  const plan = buildWorkspaceRestorePlan(mixed, {
+    autoReconnect: true,
+    profileIds: new Set(["profile-a", "local-a", "rdp-a", "vnc-a"]),
+  });
+  expect(plan.items.find((item) => item.instance.id === "local:local-a")?.autoReconnect).toBe(true);
+  expect(plan.items.find((item) => item.instance.id === "rdp:rdp-a")?.autoReconnect).toBe(false);
+  expect(plan.items.find((item) => item.instance.id === "vnc:vnc-a")?.autoReconnect).toBe(false);
+});

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { buildWorkspaceShellHydration } from "./shellHydration";
+import { applyWorkspaceRestorePlanToHydration, buildWorkspaceShellHydration } from "./shellHydration";
+import { buildWorkspaceRestorePlan } from "./restorePlan";
 import type { WorkspaceSnapshotV1 } from "./snapshotTypes";
 
 const snapshot: WorkspaceSnapshotV1 = {
@@ -62,4 +63,35 @@ describe("WF-07 workspace shell hydration", () => {
       }),
     ).toThrow("invalid workspace instance id");
   });
+});
+
+
+it("isolates a missing profile while keeping ready terminal siblings reconnectable", () => {
+  const broken: WorkspaceSnapshotV1 = {
+    ...snapshot,
+    instances: snapshot.instances.map((instance) =>
+      instance.id === "ssh:ssh-a"
+        ? { ...instance, target: { kind: "profile" as const, profileId: "deleted-profile" } }
+        : instance,
+    ),
+  };
+  const plan = buildWorkspaceRestorePlan(broken, {
+    autoReconnect: true,
+    profileIds: new Set(["wsl-a", "rdp-profile", "vnc-profile"]),
+  });
+  const hydration = applyWorkspaceRestorePlanToHydration(
+    buildWorkspaceShellHydration(broken),
+    plan,
+  );
+  expect(hydration.terminalTabs[0]).toMatchObject({
+    error: expect.stringContaining("已不存在"),
+    id: "ssh-a",
+    status: "连接失败",
+  });
+  expect(hydration.localTerminalTabs[0]).toMatchObject({
+    id: "local-a",
+    status: "正在恢复",
+  });
+  expect(hydration.rdpSessions[0]?.status).toBe("error");
+  expect(plan.multiExecMode).toBe("off");
 });
