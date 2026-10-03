@@ -6,11 +6,11 @@
 - [x] 维护者确认 WS-X04；WORKFLOW_SPEC 升 v0.6。
 
 ## 04C-1 状态模型
-- [ ] `off/live/send` 三态。
-- [ ] targets 显式选择后固定。
-- [ ] availability 只收缩，不因焦点自动加 target。
-- [ ] 断线 target 失效；重连同 profile 新实例不自动加入。
-- [ ] source 与 targets 分离测试。
+- [x] `off/live/send` 三态。
+- [x] targets 显式选择后固定。
+- [x] availability 只收缩，不因焦点自动加 target。
+- [x] 断线 target 失效；重连同 profile 新实例不自动加入。
+- [x] source 与 targets 分离的固定目标语义测试。
 
 ## 04C-2 目标投影
 - [ ] SSH / Local / 已验证 Telnet/Serial 实例级 target。
@@ -37,3 +37,12 @@
 - [ ] Draft PR；全绿 + 实测通过后等待维护者授权 merge。
 
 每个切片：定向测试 → 相关全量 → source gate → line budget → commit → push → CI。不要修改 line-budget.json。
+
+
+## 04C-1 自动化证据
+
+- `multiExecReducer` 已支持 `off/live/send`。
+- `setTargets` 是唯一显式增加 target 的 action；`targetsAvailable` 只做失效收缩。
+- 测试覆盖：焦点切换不改变 targets；旧实例断线后新实例即使同 profile 且获得焦点也不会自动加入。
+- 旧 Split Sync 的 `setLive` 与 `splitActive` 自动关闭暂时作为过渡兼容，后续 04C-2/3 迁移到统一 controller 后删除。
+- 新增 `check:wf04c-multiexec` source gate，固定 WS-X04 v0.6，不修改 `scripts/line-budget.json`。
