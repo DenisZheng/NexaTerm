@@ -101,22 +101,27 @@ async fn terminal_pty_round_trip(fixture: &crate::terminal::session::fixture_sup
     assert_chain_active().await;
     channel
         .data_bytes(
-            b"printf 'wf06b-terminal-ok\\n'; printf 'wf06b-files-ok' > /home/testuser/wf06b-files.txt; exit\\n"
+            b"printf 'wf06b-terminal-ok\\n'; printf 'wf06b-files-ok' > /home/testuser/wf06b-files.txt; exit\n"
                 .to_vec(),
         )
         .await
         .expect("write terminal command");
 
-    let mut output = Vec::new();
-    while let Some(message) = channel.wait().await {
-        match message {
-            ChannelMsg::Data { data } | ChannelMsg::ExtendedData { data, .. } => {
-                output.extend_from_slice(&data)
+    let output = tokio::time::timeout(Duration::from_secs(10), async {
+        let mut output = Vec::new();
+        while let Some(message) = channel.wait().await {
+            match message {
+                ChannelMsg::Data { data } | ChannelMsg::ExtendedData { data, .. } => {
+                    output.extend_from_slice(&data)
+                }
+                ChannelMsg::Close => break,
+                _ => {}
             }
-            ChannelMsg::Close => break,
-            _ => {}
         }
-    }
+        output
+    })
+    .await
+    .expect("terminal output timeout");
     let _ = channel.close().await;
     let _ = client
         .disconnect(Disconnect::ByApplication, "", "English")
