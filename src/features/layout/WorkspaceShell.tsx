@@ -7777,7 +7777,7 @@ export function WorkspaceShell() {
         await terminalClose(sessionId).catch(() => {});
         return;
       }
-      if (!step.temporary) void refreshConnectedProfile(step.connection.id, runtimeCredentialRequest(step));
+      if (!step.temporary) void refreshConnectedProfile(step.connection.id, runtimeCredential);
       handoffComplete = true;
       replaceConnectingTabWithTerminal(tabId, sessionId, [...warmupOutput], prepareRequestId);
       window.setTimeout(() => {
