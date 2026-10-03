@@ -168,19 +168,7 @@ pub(super) async fn connect_target_client(
                     "direct_tcpip",
                 )
             })?;
-            client::connect_stream(config, channel.into_stream(), handler)
-                .await
-                .map_err(|error| {
-                    to_russh_error(with_node_context(
-                        app_error_from_russh(
-                            error,
-                            "terminal_connect_failed",
-                            "SSH 连接失败。",
-                        ),
-                        request,
-                        "connect",
-                    ))
-                })
+            client::connect_stream(config, channel.into_stream(), handler).await
         } else {
             connect_ssh_client(config, request, handler).await
         }
