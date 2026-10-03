@@ -28,7 +28,9 @@ test("all production russh client connections stay behind the known-host handler
       source.includes("client::connect_stream(")
     ) {
       const repoPath = relative(".", path).replaceAll("\\", "/");
-      const isProductionSession = repoPath === "src-tauri/src/terminal/session.rs";
+      const isProductionSession =
+        repoPath === "src-tauri/src/terminal/session.rs" ||
+        repoPath === "src-tauri/src/terminal/session/jump_chain.rs";
       const isGuardedX11Fixture =
         repoPath === "src-tauri/src/terminal/x11_fixture.rs" &&
         /#\[cfg\(test\)\]\s*mod x11_fixture;/.test(terminalMod) &&
@@ -61,6 +63,10 @@ test("X11 fixture direct connect is test-only and reuses the production known-ho
 
 test("terminal SSH handler rejects unknown and changed host keys for target and jump paths", () => {
   const source = readFileSync("src-tauri/src/terminal/session.rs", "utf8");
+  const jumpChain = readFileSync(
+    "src-tauri/src/terminal/session/jump_chain.rs",
+    "utf8",
+  );
 
   assert.match(source, /async fn check_server_key/);
   assert.match(
@@ -71,12 +77,19 @@ test("terminal SSH handler rejects unknown and changed host keys for target and 
     source,
     /KnownHostCheck::Changed[\s\S]*app_error_for_host_key_changed/,
   );
-  assert.match(source, /let jump_host_key_handler = KnownHostClient/);
+  assert.match(jumpChain, /let jump_host_key_handler = KnownHostClient/);
   assert.match(
-    source,
+    jumpChain,
     /connect_ssh_client\(jump_ssh_config, &jump, jump_host_key_handler\)/,
   );
-  assert.match(source, /client::connect_stream\(config, channel\.into_stream\(\), handler\)/);
+  assert.match(
+    jumpChain,
+    /client::connect_stream\(jump_ssh_config, channel\.into_stream\(\), jump_host_key_handler\)/,
+  );
+  assert.match(
+    jumpChain,
+    /client::connect_stream\(config, channel\.into_stream\(\), handler\)/,
+  );
 });
 
 test("sqlite host-trust command path validates key material before persistence", () => {
