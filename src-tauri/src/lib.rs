@@ -209,7 +209,7 @@ pub fn run() {
             commands::tunnel_delete,
             commands::tunnel_start,
             commands::tunnel_stop,
-            commands::tunnel_stop_connection,
+            tunnels::tunnel_stop_connection,
             commands::tunnel_autostart,
             commands::command_snippet_list,
             commands::command_snippet_upsert,
