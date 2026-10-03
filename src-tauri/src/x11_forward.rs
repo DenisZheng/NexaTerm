@@ -90,13 +90,13 @@ impl X11ForwardState {
             return;
         };
         let result = async {
-            let mut local = connect_local_target(&config.display.target).await?;
             let setup = read_and_rewrite_setup(
                 &mut remote,
                 &config.fake_cookie,
                 &config.real_cookie,
             )
             .await?;
+            let mut local = connect_local_target(&config.display.target).await?;
             local
                 .write_all(&setup)
                 .await
