@@ -12,7 +12,7 @@
   "branch": "feat/wf04c-unified-multiexec",
   "base_branch": "main",
   "commit": null,
-  "pr_url": null,
+  "pr_url": "https://github.com/DenisZheng/NexaTerm/pull/28",
   "subtasks": [],
   "children": [],
   "parent": "09-23-nexaterm-workflow-mainline",
