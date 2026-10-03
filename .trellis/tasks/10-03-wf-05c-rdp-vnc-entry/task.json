@@ -12,7 +12,7 @@
   "branch": "feat/wf05c-rdp-vnc-entry",
   "base_branch": "feat/wf05b-serial-telnet-entry",
   "commit": null,
-  "pr_url": null,
+  "pr_url": "https://github.com/DenisZheng/NexaTerm/pull/31",
   "subtasks": [],
   "children": [],
   "parent": "09-23-nexaterm-workflow-mainline",
@@ -25,6 +25,6 @@
     "src-tauri/src/vnc.rs",
     "src/features/layout/WorkspaceShell.tsx"
   ],
-  "notes": "Stacked on WF-05B commit bcda79ec1. RDP/VNC remain Experimental/non-blocking. A09/A10/A11 real Tauri acceptance remains deferred for combined validation. Do not modify PR #12 or line-budget.json.",
+  "notes": "Stacked on WF-05B commit bcda79ec1. RDP/VNC remain Experimental/non-blocking. 05C-1 entry/capability and 05C-2 runner ownership/cleanup are implemented. A09/A10/A11 real Tauri acceptance remains deferred for combined validation. Do not modify PR #12 or line-budget.json.",
   "meta": {}
 }
