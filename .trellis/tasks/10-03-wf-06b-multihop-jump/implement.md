@@ -13,9 +13,9 @@
 - [x] unit/source gate/CI。
 
 ## 06B-2 auth / Host Key / UX
-- [ ] 每跳 connect/auth/direct-tcpip 错误定位到具体 connection。
-- [ ] prompt credential 能针对具体 jump node 重试。
-- [ ] ConnectionDialog 展示实际两级 plan 并阻止明显循环。
+- [x] 每跳 connect/auth/direct-tcpip 错误定位到具体 connection。
+- [x] prompt credential 能针对具体 jump node 重试。
+- [x] ConnectionDialog 展示实际两级 plan 并阻止明显循环。
 
 ## 06B-3 real fixture / A12
 - [ ] Docker 两级 Jump → Target 真链路。
@@ -35,4 +35,14 @@
 - TerminalSession、ReusableExecSession、ReusableSftpSession、ReusableForwardSession 全部从单个 `Option<SshHandle>` 升级为 `Vec<SshHandle>` owner。
 - `connect_target_client` 先依次建立 Jump-2、Jump-1，再从最后一个 jump 打开 direct-tcpip 到 Target；四类 session 继续共用同一函数，因此 Terminal / Exec / Files / Tunnel 不会出现不同路由实现。
 - 建链任一阶段失败时会反向 disconnect 已建立的 jump clients；正常 close 也统一反向释放全部 jump clients。
-- 本切片暂不宣称每跳错误文本/credential prompt 已完成；这些属于 06B-2。
+- 06B-1 的 owner/cleanup 基线由 CI #267 全绿确认。
+
+
+## 06B-2 实施证据
+
+- `AppErrorDetails` 新增 `CredentialPromptRequired` 与 `SshNodeFailure`：prompt 缺失时携带 connection_id/host/port/username/auth kind；connect/auth/direct-tcpip 失败携带具体节点与 stage，不再依赖 raw_message 猜测。
+- 单次连接请求支持按 connection_id 保存多组临时 `runtime_credentials`。Target、Jump-1、Jump-2 的 prompt 凭据可逐个补齐，前面已输入的节点凭据在后续重试中保留且不会写入连接配置。
+- Jump Host Key 仍复用既有结构化 HostKey details；因为 HostKeyInfo 自带 host/port，未知或变化指纹仍能精确指向实际 jump 节点。
+- `jumpRuntime.ts` 负责解析具体 prompt/error 节点并构造多节点 runtime credential 请求；单测覆盖两级链逐节点凭据保留和结构化 node context。
+- `jumpPlanPreview.ts` 从保存连接递归计算真实连接顺序；合法两级链显示 `Jump-2 → Jump-1 → Target`，编辑时会排除会回指当前连接或自身已成环的明显循环候选，并在保存/测试前拦截 cycle/depth/missing。
+- `scripts/line-budget.json` 保持未修改；`commands.rs` 新增接线通过压缩回到冻结预算内。

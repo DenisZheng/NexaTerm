@@ -3,6 +3,9 @@ import { readFileSync } from "node:fs";
 const session = readFileSync(new URL("../src-tauri/src/terminal/session.rs", import.meta.url), "utf8");
 const jumpChain = readFileSync(new URL("../src-tauri/src/terminal/session/jump_chain.rs", import.meta.url), "utf8");
 const dialog = readFileSync(new URL("../src/features/connections/ConnectionDialog.tsx", import.meta.url), "utf8");
+const appError = readFileSync(new URL("../src-tauri/src/app_error.rs", import.meta.url), "utf8");
+const jumpRuntime = readFileSync(new URL("../src/features/connections/jumpRuntime.ts", import.meta.url), "utf8");
+const jumpPreview = readFileSync(new URL("../src/features/connections/jumpPlanPreview.ts", import.meta.url), "utf8");
 const plan = readFileSync(new URL("../NEXATERM_WORKFLOW_DELIVERY_PLAN.md", import.meta.url), "utf8");
 const spec = readFileSync(new URL("../docs/WORKFLOW_SPEC.md", import.meta.url), "utf8");
 
@@ -51,6 +54,28 @@ if (!jumpChain.includes("let mut jump_clients: Vec<SshHandle>")) {
 if (!dialog.includes('jump.kind === "ssh_jump"')) {
   throw new Error("WF-06B must continue reusing the existing saved-connection Jump model.");
 }
+for (const needle of ["CredentialPromptRequired", "SshNodeFailure"]) {
+  if (!appError.includes(needle)) throw new Error(`WF-06B structured node error contract missing: ${needle}`);
+}
+for (const needle of [
+  "parseCredentialPromptTarget",
+  "parseSshNodeFailure",
+  "upsertRuntimeCredential",
+  "buildRuntimeCredentialRequest",
+]) {
+  if (!jumpRuntime.includes(needle)) throw new Error(`WF-06B targeted runtime credential seam missing: ${needle}`);
+}
+for (const needle of [
+  "buildJumpPlanPreview",
+  "jumpCandidateWouldCycle",
+  "connection_jump_depth_exceeded",
+  "labels: [...jumps.map(labelForConnection).reverse(), target]",
+]) {
+  if (!jumpPreview.includes(needle)) throw new Error(`WF-06B dialog jump-plan contract missing: ${needle}`);
+}
+if (!dialog.includes("实际连接路径：") || !dialog.includes("validateJumpPlanSelection")) {
+  throw new Error("WF-06B ConnectionDialog must preview and validate the actual two-hop path.");
+}
 if (!plan.includes("当前限制或拒绝嵌套不能算多跳完成")) {
   throw new Error("WF-06B must remain grounded in the Delivery Plan multi-hop requirement.");
 }
@@ -58,4 +83,4 @@ if (!spec.includes("WS-N02") || !spec.includes("每一跳失败能定位到具�
   throw new Error("WF-06B must remain grounded in WS-N02.");
 }
 
-console.log("WF-06B two-hop Jump plan and owner source gate passed");
+console.log("WF-06B two-hop Jump plan, node credential, error context and UX source gate passed");
