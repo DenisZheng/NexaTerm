@@ -95,6 +95,9 @@ jobs:
       - name: WF-04B bounded batch and instance split
         run: pnpm run check:wf04b-batch-split
 
+      - name: WF-04C fixed-target MultiExec
+        run: pnpm run check:wf04c-multiexec
+
   security:
     name: Security evidence
     runs-on: ubuntu-22.04
