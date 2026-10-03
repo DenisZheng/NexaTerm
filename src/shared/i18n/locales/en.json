@@ -122,5 +122,19 @@
   "newSession.wslAvailableHidden": "WSL distributions are available but hidden from this menu",
   "newSession.characterTerminals": "Character terminals",
   "newSession.telnet": "Telnet…",
-  "newSession.serial": "Serial…"
+  "newSession.serial": "Serial…",
+  "newSession.remoteDesktops": "Remote desktops",
+  "newSession.rdp": "RDP…",
+  "newSession.vnc": "VNC…",
+  "newSession.remoteCapabilityProbing": "Detecting available runner…",
+  "newSession.remoteCapabilityProbeFailed": "Capability detection failed; configuration is still available",
+  "newSession.remoteCapabilityUnknown": "Capability is available in the desktop app",
+  "newSession.rdpEmbeddedAvailable": "Embedded RDP available",
+  "newSession.rdpEmbeddedFallbackAvailable": "Embedded RDP available; external fallback detected",
+  "newSession.rdpExternalAvailable": "External RDP client available",
+  "newSession.rdpUnavailable": "No compatible RDP runner detected",
+  "newSession.vncEmbeddedAvailable": "Built-in noVNC bridge available",
+  "newSession.vncEmbeddedFallbackAvailable": "Built-in noVNC bridge available; external viewer detected",
+  "newSession.vncExternalAvailable": "External VNC viewer available",
+  "newSession.vncUnavailable": "No compatible VNC runner detected"
 }
