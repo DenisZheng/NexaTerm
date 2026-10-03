@@ -12,7 +12,7 @@
   "branch": "feat/wf06a-tunnel-management",
   "base_branch": "feat/wf05c-rdp-vnc-entry",
   "commit": null,
-  "pr_url": null,
+  "pr_url": "https://github.com/DenisZheng/NexaTerm/pull/32",
   "subtasks": [],
   "children": [],
   "parent": "09-23-nexaterm-workflow-mainline",
@@ -25,6 +25,6 @@
     "src/features/shortcuts/actionRegistry.ts",
     "src-tauri/src/tunnels.rs"
   ],
-  "notes": "Stacked on WF-05C commit 48579d839. A09/A10/A11 remain PENDING by maintainer decision. WF-06A targets A12 tunnel portion only; Jump is WF-06B, X11 is WF-06C. Do not modify PR #12 or line-budget.json.",
+  "notes": "Stacked on WF-05C commit 48579d839. WF-06A-1 connection lifecycle is implemented. A09/A10/A11 remain PENDING by maintainer decision. A12 tunnel phase is pending after 06A-2/3. Jump is WF-06B; X11 is WF-06C. Do not modify PR #12 or line-budget.json.",
   "meta": {}
 }
