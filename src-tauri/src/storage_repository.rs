@@ -7,7 +7,7 @@ use rusqlite::{params, Connection, OptionalExtension};
 use serde::{de::DeserializeOwned, Serialize};
 use tauri::{AppHandle, Manager};
 
-use crate::app_error::AppError;
+use crate::app_error::{AppError, AppErrorDetails};
 use crate::command_library::{
     normalize_command_history_limit, normalize_command_snippet_group,
     validate_command_history_record, validate_command_snippet_input, CommandHistoryEntry,
@@ -1615,6 +1615,10 @@ impl StorageRepository {
                     )
                 }
                 ConnectionCredentialMode::Prompt => {
+                    let preferred_auth_kind = profile
+                        .prompt_auth_kind
+                        .clone()
+                        .unwrap_or(ConnectionAuthKind::Password);
                     let prompt = prompt.ok_or_else(|| {
                         AppError::new(
                             "credential_prompt_required",
@@ -1622,11 +1626,19 @@ impl StorageRepository {
                             format!("connection_id={}", profile.id),
                             true,
                         )
+                        .with_details(AppErrorDetails::CredentialPromptRequired {
+                            connection_id: profile.id.clone(),
+                            auth_kind: match &preferred_auth_kind {
+                                ConnectionAuthKind::Password => "password",
+                                ConnectionAuthKind::PrivateKey => "private_key",
+                            }
+                            .to_string(),
+                            host: profile.host.clone(),
+                            port: profile.port,
+                            username: profile.username.clone(),
+                        })
                     })?;
-                    let auth_kind = prompt
-                        .auth_kind
-                        .or(profile.prompt_auth_kind.clone())
-                        .unwrap_or(ConnectionAuthKind::Password);
+                    let auth_kind = prompt.auth_kind.unwrap_or(preferred_auth_kind);
                     (
                         auth_kind,
                         prompt.password,

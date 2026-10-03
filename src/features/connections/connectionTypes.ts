@@ -344,12 +344,16 @@ export interface RevealedCredentialSecret {
   private_key_passphrase?: string | null;
 }
 
-export interface ConnectionRuntimeCredentialRequest {
-  connection_id: string;
+export interface RuntimeCredentialInput {
   auth_kind?: ConnectionAuthKind;
   password?: string;
   private_key_path?: string;
   private_key_passphrase?: string;
+}
+
+export interface ConnectionRuntimeCredentialRequest extends RuntimeCredentialInput {
+  connection_id: string;
+  runtime_credentials?: Record<string, RuntimeCredentialInput>;
 }
 
 export interface HostKeyInfo {

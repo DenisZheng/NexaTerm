@@ -62,7 +62,7 @@ use crate::scheduled_tasks::{
 };
 use crate::ssh_config::{
     load_connection_profile, resolve_saved_connection, resolve_transient_connection,
-    ResolvedSshConfig, RuntimeCredentialInput,
+    ResolvedSshConfig, RuntimeCredentialInput, RuntimeCredentialMap,
 };
 use crate::storage_repository::{
     RevealedConnectionSecret, RevealedCredentialSecret, StorageRepository,
@@ -75,7 +75,7 @@ pub use crate::terminal::local_profiles::{
 use crate::terminal::manager::TerminalManager;
 use crate::temporary_connections::resolve_remote_connection_profile;
 pub use crate::terminal::serial::{SerialPortEntry, SerialTerminalOpenRequest};
-use crate::terminal::session::ExecProgressCallback;
+use crate::terminal::session::{ExecProgressCallback, ReusableExecSession};
 pub use crate::terminal::telnet::TelnetTerminalOpenRequest;
 use crate::tunnels::{
     TunnelManager, TunnelRuleIdRequest, TunnelRuleInput, TunnelRuleWithState, TunnelStartRequest,
@@ -113,6 +113,7 @@ pub struct TerminalConnectRequest {
     pub private_key_path: Option<String>,
     #[serde(default)]
     pub private_key_passphrase: Option<String>,
+    #[serde(default)] pub runtime_credentials: RuntimeCredentialMap,
     pub cols: u16,
     pub rows: u16,
     #[serde(skip)]
@@ -152,6 +153,7 @@ pub struct ConnectionRuntimeCredentialRequest {
     pub private_key_path: Option<String>,
     #[serde(default)]
     pub private_key_passphrase: Option<String>,
+    #[serde(default)] pub runtime_credentials: RuntimeCredentialMap,
 }
 
 #[derive(Debug, Deserialize)]
@@ -1973,10 +1975,8 @@ pub async fn connection_test(
         }),
     )?;
 
-    crate::terminal::session::ReusableExecSession::connect_resolved(&app, &config)
-        .await?
-        .close()
-        .await;
+    ReusableExecSession::connect_resolved_with_credentials(&app, &config, request.runtime_credentials)
+        .await?.close().await;
     Ok(ConnectionStepResult {
         ok: true,
         message: "连接测试通过。".to_string(),
@@ -2100,8 +2100,9 @@ pub async fn connection_probe_system(
         }),
     )?;
 
-    let session =
-        crate::terminal::session::ReusableExecSession::connect_resolved(&app, &config).await?;
+    let session = ReusableExecSession::connect_resolved_with_credentials(
+        &app, &config, request.runtime_credentials,
+    ).await?;
     let output = session.exec(REMOTE_SYSTEM_PROBE_COMMAND).await;
     session.close().await;
     let output = output?;

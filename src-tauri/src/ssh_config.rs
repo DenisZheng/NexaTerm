@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use serde::Deserialize;
 use tauri::AppHandle;
 
@@ -16,6 +18,8 @@ pub struct RuntimeCredentialInput {
     pub private_key_path: Option<String>,
     pub private_key_passphrase: Option<String>,
 }
+
+pub type RuntimeCredentialMap = BTreeMap<String, RuntimeCredentialInput>;
 
 #[derive(Clone, Debug)]
 pub struct ResolvedSshConfig {

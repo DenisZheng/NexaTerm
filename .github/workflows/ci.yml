@@ -110,6 +110,9 @@ jobs:
       - name: WF-06A tunnel management lifecycle
         run: pnpm run check:wf06a-tunnels
 
+      - name: WF-06B two-hop Jump plan and owner
+        run: pnpm run check:wf06b-multihop-jump
+
   security:
     name: Security evidence
     runs-on: ubuntu-22.04

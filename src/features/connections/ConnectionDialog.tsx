@@ -83,6 +83,7 @@ import {
 } from "./connectionErrorCodes";
 import { connectionDialogSubmitPolicy, validateConnectionNetworkPath, type ConnectionSaveIntent } from "./connectionDialogSubmit";
 import { serialPortAvailability } from "./serialPortAvailability";
+import { buildJumpPlanPreview, jumpCandidateWouldCycle, validateJumpPlanSelection } from "./jumpPlanPreview";
 import type {
   CharacterBackspaceMode,
   SerialDataBits,
@@ -389,6 +390,7 @@ export function ConnectionDialog({
   const isSerial = protocol === "serial";
   const isCharacterProtocol = isTelnet || isSerial;
   const submitPolicy = connectionDialogSubmitPolicy(Boolean(connection && !duplicate));
+  const currentConnectionId = connection && !duplicate ? connection.id : form.id || "";
   const dialogTabs: Array<[ConnectionDialogTab, string]> = isRdp
     ? [
         ["basic", "基本"],
@@ -458,7 +460,7 @@ export function ConnectionDialog({
   }
 
   async function submitWithIntent(intent: ConnectionSaveIntent) {
-    const validation = isRdp || isVnc || isCharacterProtocol ? null : validateConnectionNetworkPath(form);
+    const validation = isRdp || isVnc || isCharacterProtocol ? null : validateConnectionNetworkPath(form) || validateJumpPlanSelection(form, connections, currentConnectionId);
     if (validation) {
       setActiveTab("proxy");
       setTestState("error");
@@ -500,7 +502,7 @@ export function ConnectionDialog({
       return;
     }
 
-    const validation = validateConnectionNetworkPath(form);
+    const validation = validateConnectionNetworkPath(form) || validateJumpPlanSelection(form, connections, currentConnectionId);
     if (validation) {
       setActiveTab("proxy");
       setTestState("error");
@@ -1776,7 +1778,8 @@ export function ConnectionDialog({
     const jump = form.jump || defaultJumpConfig;
     const networkPathMode: ConnectionNetworkPathMode =
       jump.kind === "ssh_jump" ? "ssh_jump" : proxy.kind === "none" ? "direct" : "proxy";
-    const jumpCandidates = connections.filter((item) => item.id !== connection?.id);
+    const jumpCandidates = connections.filter((item) => item.id !== currentConnectionId && !jumpCandidateWouldCycle(item.id, currentConnectionId, connections));
+    const jumpPlan = buildJumpPlanPreview(form, connections, currentConnectionId);
 
     return (
       <section className="dialog-section dialog-section-last">
@@ -1937,8 +1940,8 @@ export function ConnectionDialog({
                 }
               />
             </label>
-            <p className="connection-dialog-note">
-              当前连接会先登录跳板机，再通过 SSH 通道访问目标主机。
+            <p className={`connection-dialog-note ${jumpPlan.issue ? "form-error" : ""}`}>
+              {jumpPlan.issue ? jumpPlan.issue.detail : `实际连接路径：${jumpPlan.labels.join(" → ")}`}
             </p>
           </>
         ) : null}
@@ -3245,7 +3248,7 @@ function tabForError(error: unknown): ConnectionDialogTab {
     typeof error === "object" && error !== null && "code" in error
       ? String((error as { code: unknown }).code)
       : "";
-  if (code.startsWith("connection_proxy_")) {
+  if (code.startsWith("connection_proxy_") || code.startsWith("connection_jump_")) {
     return "proxy";
   }
   if (code.startsWith("rdp_raw_") || code.startsWith("rdp_runner_")) {
