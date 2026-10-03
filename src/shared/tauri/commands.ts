@@ -1238,6 +1238,14 @@ export function tunnelStop(ruleId: string) {
   });
 }
 
+export function tunnelStopConnection(connectionId: string) {
+  return invoke<TunnelRuleWithState[]>("tunnel_stop_connection", {
+    request: {
+      connection_id: connectionId,
+    },
+  });
+}
+
 export function tunnelAutostart() {
   return invoke<TunnelRuleWithState[]>("tunnel_autostart");
 }
