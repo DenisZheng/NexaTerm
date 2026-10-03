@@ -6,8 +6,9 @@ use uuid::Uuid;
 use crate::app_error::AppError;
 use crate::commands::LocalTerminalOpenRequest;
 use crate::terminal::local_profiles::{
-    build_command, build_pty_size, list_local_terminal_profiles, LocalTerminalProfile,
-    LocalTerminalProfileInput, LocalTerminalProfileQuery,
+    build_command, build_pty_size, list_local_terminal_profiles, probe_wsl_provider_capability,
+    LocalTerminalProfile, LocalTerminalProfileInput, LocalTerminalProfileQuery,
+    WslProviderCapability,
 };
 
 pub struct LocalTerminalSession {
@@ -164,6 +165,10 @@ pub fn list_profiles(
         platform,
         hidden_profile_ids,
     })
+}
+
+pub fn wsl_capability() -> WslProviderCapability {
+    probe_wsl_provider_capability()
 }
 
 fn profile_from_request(
@@ -355,6 +360,56 @@ mod tests {
         receiver
             .recv_timeout(Duration::from_secs(20))
             .expect("reader thread must observe EOF and exit after close()");
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn wsl_profile_uses_shared_local_session_close_lifecycle() {
+        use std::sync::mpsc;
+        use std::time::Duration;
+
+        // CI does not require a real WSL distro for this lifecycle seam. A kind=wsl profile
+        // deliberately runs cmd.exe so this test proves WSL-shaped profiles use the same
+        // LocalTerminalSession close/master-release path; real WSL interop remains A11.
+        let mut profile = sample_profile();
+        profile.id = Some("wsl-fixture".to_string());
+        profile.name = "WSL fixture".to_string();
+        profile.kind = "wsl".to_string();
+        profile.command = "cmd.exe".to_string();
+        profile.args = vec!["/Q".to_string()];
+
+        let opened = LocalTerminalSession::open(LocalTerminalOpenRequest {
+            request_id: Some("wsl-close-test".to_string()),
+            profile: Some(profile),
+            cols: 80,
+            rows: 24,
+            cwd: None,
+        })
+        .unwrap();
+        let session = opened.session.clone();
+        let (sender, receiver) = mpsc::channel();
+        let reader_session = std::sync::Arc::clone(&session);
+        std::thread::spawn(move || {
+            let mut reader = opened.reader;
+            let mut buffer = [0_u8; 1024];
+            loop {
+                match reader.read(&mut buffer) {
+                    Ok(0) | Err(_) => break,
+                    Ok(_) => {}
+                }
+            }
+            let _ = reader_session.wait_exit_status();
+            let _ = sender.send(());
+        });
+
+        tauri::async_runtime::block_on(session.close()).unwrap();
+        assert!(
+            tauri::async_runtime::block_on(session.resize(100, 30)).is_err(),
+            "WSL-shaped local session must release its master PTY on close"
+        );
+        receiver
+            .recv_timeout(Duration::from_secs(20))
+            .expect("WSL-shaped local session reader must exit after close()");
     }
 
     #[cfg(windows)]

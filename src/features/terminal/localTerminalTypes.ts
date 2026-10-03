@@ -25,6 +25,19 @@ export interface LocalTerminalProfile {
   detected: boolean;
 }
 
+export type WslProviderStatus =
+  | "available"
+  | "command_missing"
+  | "no_distribution"
+  | "probe_timeout"
+  | "probe_failed"
+  | "unsupported_platform";
+
+export interface WslProviderCapability {
+  status: WslProviderStatus;
+  distributions: string[];
+}
+
 export interface LocalTerminalProfileInput {
   id?: string;
   name: string;

@@ -108,6 +108,7 @@ import type {
   LocalTerminalOpenRequest,
   LocalTerminalProfile,
   WindowsPtyInfo,
+  WslProviderCapability,
 } from "../../features/terminal/localTerminalTypes";
 import type {
   RemoteMonitorProcessSignalInput,
@@ -607,6 +608,10 @@ export function localTerminalListProfiles(input?: {
       platform: input?.platform,
     },
   });
+}
+
+export function localTerminalWslCapability() {
+  return invoke<WslProviderCapability>("local_terminal_wsl_capability");
 }
 
 export function localTerminalOpen(request: LocalTerminalOpenRequest) {

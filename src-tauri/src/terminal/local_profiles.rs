@@ -60,6 +60,38 @@ pub struct LocalTerminalProfileQuery {
     pub hidden_profile_ids: Vec<String>,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum WslProviderStatus {
+    Available,
+    CommandMissing,
+    NoDistribution,
+    ProbeTimeout,
+    ProbeFailed,
+    UnsupportedPlatform,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct WslProviderCapability {
+    pub status: WslProviderStatus,
+    #[serde(default)]
+    pub distributions: Vec<String>,
+}
+
+pub fn probe_wsl_provider_capability() -> WslProviderCapability {
+    #[cfg(windows)]
+    {
+        return probe_wsl_provider_capability_windows();
+    }
+    #[cfg(not(windows))]
+    {
+        WslProviderCapability {
+            status: WslProviderStatus::UnsupportedPlatform,
+            distributions: Vec::new(),
+        }
+    }
+}
+
 pub fn list_local_terminal_profiles(
     query: LocalTerminalProfileQuery,
 ) -> Result<Vec<LocalTerminalProfile>, AppError> {
@@ -202,22 +234,16 @@ fn detect_windows_profiles() -> Result<Vec<LocalTerminalProfile>, AppError> {
         ));
     }
 
-    let wsl_distributions = detect_wsl_distributions()?;
-    if !wsl_distributions.is_empty() {
+    let wsl_capability = probe_wsl_provider_capability_windows();
+    if wsl_capability.status == WslProviderStatus::Available {
         let wsl_command =
             find_windows_command(&["wsl.exe"]).unwrap_or_else(|| "wsl.exe".to_string());
-        for distro in wsl_distributions {
-            let distro_id = sanitize_profile_token(&distro);
-            profiles.push(build_profile(
-                &format!("wsl-{distro_id}"),
-                &format!("WSL · {distro}"),
-                "wsl",
-                "windows",
-                wsl_command.clone(),
-                vec!["-d".to_string(), distro.clone()],
-                "terminal-wsl",
-            ));
-        }
+        profiles.extend(
+            wsl_capability
+                .distributions
+                .iter()
+                .map(|distro| build_wsl_profile(&wsl_command, distro)),
+        );
     }
 
     Ok(profiles)
@@ -295,20 +321,47 @@ const WSL_DISTRIBUTION_PROBE_TIMEOUT: Duration = Duration::from_millis(1500);
 const WSL_DISTRIBUTION_PROBE_POLL_INTERVAL: Duration = Duration::from_millis(25);
 
 #[cfg(windows)]
-fn detect_wsl_distributions() -> Result<Vec<String>, AppError> {
-    let Some(wsl_command) = find_windows_command(&["wsl.exe"]) else {
-        return Ok(Vec::new());
-    };
-
-    let Some(stdout) = run_wsl_distribution_probe(&wsl_command)? else {
-        return Ok(Vec::new());
-    };
-
-    Ok(parse_wsl_distributions_stdout(&stdout))
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum WslProbeExecution {
+    Success(Vec<u8>),
+    Timeout,
+    Failed,
 }
 
 #[cfg(windows)]
-fn run_wsl_distribution_probe(wsl_command: &str) -> Result<Option<Vec<u8>>, AppError> {
+fn probe_wsl_provider_capability_windows() -> WslProviderCapability {
+    let Some(wsl_command) = find_windows_command(&["wsl.exe"]) else {
+        return WslProviderCapability {
+            status: WslProviderStatus::CommandMissing,
+            distributions: Vec::new(),
+        };
+    };
+
+    match run_wsl_distribution_probe(&wsl_command) {
+        WslProbeExecution::Success(stdout) => {
+            let distributions = parse_wsl_distributions_stdout(&stdout);
+            WslProviderCapability {
+                status: if distributions.is_empty() {
+                    WslProviderStatus::NoDistribution
+                } else {
+                    WslProviderStatus::Available
+                },
+                distributions,
+            }
+        }
+        WslProbeExecution::Timeout => WslProviderCapability {
+            status: WslProviderStatus::ProbeTimeout,
+            distributions: Vec::new(),
+        },
+        WslProbeExecution::Failed => WslProviderCapability {
+            status: WslProviderStatus::ProbeFailed,
+            distributions: Vec::new(),
+        },
+    }
+}
+
+#[cfg(windows)]
+fn run_wsl_distribution_probe(wsl_command: &str) -> WslProbeExecution {
     let mut command = Command::new(wsl_command);
     command
         .args(["-l", "-q"])
@@ -316,40 +369,31 @@ fn run_wsl_distribution_probe(wsl_command: &str) -> Result<Option<Vec<u8>>, AppE
         .stderr(Stdio::piped())
         .creation_flags(CREATE_NO_WINDOW);
 
-    let mut child = command.spawn().map_err(|error| {
-        AppError::new(
-            "local_terminal_profile_detect_failed",
-            "WSL 发行版探测失败。",
-            error,
-            true,
-        )
-    })?;
+    let Ok(mut child) = command.spawn() else {
+        return WslProbeExecution::Failed;
+    };
 
     let started_at = Instant::now();
     loop {
-        if let Some(status) = child.try_wait().map_err(|error| {
-            AppError::new(
-                "local_terminal_profile_detect_failed",
-                "WSL 发行版探测失败。",
-                error,
-                true,
-            )
-        })? {
-            let output = child.wait_with_output().map_err(|error| {
-                AppError::new(
-                    "local_terminal_profile_detect_failed",
-                    "WSL 发行版探测失败。",
-                    error,
-                    true,
-                )
-            })?;
-            return Ok(status.success().then_some(output.stdout));
+        match child.try_wait() {
+            Ok(Some(status)) => {
+                let Ok(output) = child.wait_with_output() else {
+                    return WslProbeExecution::Failed;
+                };
+                return if status.success() {
+                    WslProbeExecution::Success(output.stdout)
+                } else {
+                    WslProbeExecution::Failed
+                };
+            }
+            Ok(None) => {}
+            Err(_) => return WslProbeExecution::Failed,
         }
 
         if started_at.elapsed() >= WSL_DISTRIBUTION_PROBE_TIMEOUT {
             let _ = child.kill();
             let _ = child.wait();
-            return Ok(None);
+            return WslProbeExecution::Timeout;
         }
 
         thread::sleep(WSL_DISTRIBUTION_PROBE_POLL_INTERVAL);
@@ -473,6 +517,19 @@ fn detect_unix_profiles(platform: &str) -> Vec<LocalTerminalProfile> {
     }
 
     dedupe_profiles(profiles)
+}
+
+fn build_wsl_profile(wsl_command: &str, distro: &str) -> LocalTerminalProfile {
+    let distro_id = sanitize_profile_token(distro);
+    build_profile(
+        &format!("wsl-{distro_id}"),
+        &format!("WSL · {distro}"),
+        "wsl",
+        "windows",
+        wsl_command.to_string(),
+        vec!["-d".to_string(), distro.to_string()],
+        "terminal-wsl",
+    )
 }
 
 fn build_profile(
@@ -651,6 +708,19 @@ mod tests {
             command.get_cwd().and_then(|cwd| cwd.to_str()),
             Some("D:\\repo")
         );
+    }
+
+    #[test]
+    fn wsl_profile_identity_is_stable_across_refresh() {
+        let first = build_wsl_profile("wsl.exe", "Ubuntu-24.04");
+        let second = build_wsl_profile("wsl.exe", "Ubuntu-24.04");
+
+        assert_eq!(first.id, "wsl-ubuntu-24-04");
+        assert_eq!(first.id, second.id);
+        assert_eq!(first.name, "WSL · Ubuntu-24.04");
+        assert_eq!(first.name, second.name);
+        assert_eq!(first.args, vec!["-d".to_string(), "Ubuntu-24.04".to_string()]);
+        assert_eq!(first.args, second.args);
     }
 
     #[cfg(windows)]
