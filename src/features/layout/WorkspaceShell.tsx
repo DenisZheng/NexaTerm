@@ -4507,7 +4507,7 @@ export function WorkspaceShell() {
       case "local": dispatchTabs({ type: "tabs/activateLocal", tabId: hydration.active.tabId }); break;
       case "rdp": dispatchTabs({ type: "tabs/activateRdp", connectionId: hydration.active.connectionId, sessionId: hydration.active.sessionId }); break;
       case "vnc": dispatchTabs({ type: "tabs/activateVnc", connectionId: hydration.active.connectionId, sessionId: hydration.active.sessionId }); break;
-      case "split": { const tab = hydration.active.host.kind === "ssh" ? restoredTerminalTabs.find((item) => item.id === hydration.active.host.tabId) : null; dispatchTabs({ type: "tabs/activateSplitHost", host: tab ? { kind: "ssh", connectionId: tab.connectionId } : { kind: "local" } }); dispatchTabs({ type: "tabs/focusPaneBinding", binding: hydration.active.host }); break; }
+      case "split": { const host = hydration.active.host; const tab = host.kind === "ssh" ? restoredTerminalTabs.find((item) => item.id === host.tabId) : null; dispatchTabs({ type: "tabs/activateSplitHost", host: tab ? { kind: "ssh", connectionId: tab.connectionId } : { kind: "local" } }); dispatchTabs({ type: "tabs/focusPaneBinding", binding: host }); break; }
       default: dispatchTabs({ type: "tabs/goHome" });
     }
   }
