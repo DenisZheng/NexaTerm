@@ -98,6 +98,7 @@ import { connectionTimestampOf, sortConnectionsByRecent } from "../connections/c
 import { isQuickConnectCredentialError, type QuickConnectTarget } from "../connections/quickConnect";
 import { connectTemporaryQuickTerminal, createTemporaryQuickConnectProfile, prepareTemporaryQuickConnectCredentials, releaseTemporaryQuickConnectRefs, saveTemporaryQuickConnectProfile } from "../connections/quickConnectRuntime";
 import { finalTemporaryContextRefs, rebindConnectionItems, rebindTemporaryTerminalTab } from "../connections/quickConnectSession";
+import { buildRuntimeCredentialRequest, credentialPromptTargetFromConnection, parseCredentialPromptTarget, parseSshNodeFailure, upsertRuntimeCredential, type CredentialPromptTarget } from "../connections/jumpRuntime";
 import { connectionInfoFromVncProfile } from "../connections/vncConnectionInfo";
 import {
   projectRemoteDesktopEntryCapabilities,
@@ -597,22 +598,19 @@ interface ConnectionStepState {
   activeStepIndex?: number | null;
   authKind: ConnectionAuthKind;
   connection: ConnectionProfile;
-  errorDetail?: ConnectionStepErrorDetail | null;
-  error?: string | null;
+  errorDetail?: ConnectionStepErrorDetail | null; error?: string | null;
   hostKey?: HostKeyInfo | null;
-  hostKeyDecision?: HostKeyDecision | null;
-  oldHostKeyFingerprint?: string | null;
+  hostKeyDecision?: HostKeyDecision | null; oldHostKeyFingerprint?: string | null;
   id: number;
   logs: string[];
   mode: ConnectionStepMode;
   password: string;
   privateKeyPassphrase: string;
   privateKeyPath: string;
-  temporary?: boolean;
-  temporaryContextRef?: string | null;
+  promptTarget?: CredentialPromptTarget | null; runtimeCredentials: NonNullable<ConnectionRuntimeCredentialRequest["runtime_credentials"]>;
+  temporary?: boolean; temporaryContextRef?: string | null;
   temporaryCredentialsReady?: boolean;
-  sessionId?: string | null;
-  status: ConnectionStepStatus;
+  sessionId?: string | null; status: ConnectionStepStatus;
 }
 
 interface ConnectionStepErrorDetail {
@@ -7656,6 +7654,7 @@ export function WorkspaceShell() {
       password: "",
       privateKeyPassphrase: "",
       privateKeyPath: "",
+      promptTarget: connection.credential_mode === "prompt" ? credentialPromptTargetFromConnection(connection) : null, runtimeCredentials: {},
       temporary: connection.created_at === "temporary",
       temporaryContextRef: connection.created_at === "temporary" ? connection.id : null,
       temporaryCredentialsReady: false,
@@ -7741,12 +7740,13 @@ export function WorkspaceShell() {
         });
       }
 
+      const runtimeCredential = buildRuntimeCredentialRequest(step.connection.id, step.runtimeCredentials);
       if (step.mode === "test") {
-        await connectionTest(runtimeCredentialRequest(step));
+        await connectionTest(runtimeCredential);
         if (!connectingTabExists(tabId)) {
           return;
         }
-        void probeSystem(runtimeCredentialRequest(step)).catch(() => null);
+        void probeSystem(runtimeCredential).catch(() => null);
         updateConnectingTabStep(tabId, {
           ...runningStep,
           logs: [...runningStep.logs, "认证通过", "连接测试通过"],
@@ -7759,15 +7759,16 @@ export function WorkspaceShell() {
         step.temporary && step.temporaryContextRef
           ? await connectTemporaryQuickTerminal(step.temporaryContextRef, prepareRequestId)
           : await terminalConnect({
-              auth_kind: step.connection.credential_mode === "prompt" ? step.authKind : undefined,
+              auth_kind: runtimeCredential.auth_kind,
               cols: 80,
               connection_id: step.connection.id,
               host: step.connection.host,
-              password: step.password || undefined,
+              password: runtimeCredential.password,
               port: step.connection.port,
-              private_key_path: step.privateKeyPath || undefined,
-              private_key_passphrase: step.privateKeyPassphrase || undefined,
+              private_key_path: runtimeCredential.private_key_path,
+              private_key_passphrase: runtimeCredential.private_key_passphrase,
               request_id: prepareRequestId,
+              runtime_credentials: runtimeCredential.runtime_credentials,
               rows: 24,
               username: step.connection.username,
             });
@@ -7802,14 +7803,28 @@ export function WorkspaceShell() {
         });
         return;
       }
-
+      const requestedPrompt = parseCredentialPromptTarget(nextError);
+      if (requestedPrompt) {
+        const promptTarget = { ...requestedPrompt, name: connectionById.get(requestedPrompt.connectionId)?.name };
+        updateConnectingTabStep(tabId, { ...runningStep, authKind: promptTarget.authKind, error: errorDetail.message, errorDetail, promptTarget, password: "", privateKeyPassphrase: "", privateKeyPath: "", logs: [...runningStep.logs, `等待 ${promptTarget.name || promptTarget.connectionId} 凭据`], status: "prompt" });
+        return;
+      }
+      const nodeFailure = parseSshNodeFailure(nextError);
+      const retryProfile = nodeFailure?.stage === "auth" ? connectionById.get(nodeFailure.connectionId) : step.connection.credential_mode === "prompt" && connectionStepErrorIndex(errorDetail.code) === 3 ? step.connection : null;
+      if (retryProfile?.credential_mode === "prompt") {
+        const promptTarget = credentialPromptTargetFromConnection(retryProfile);
+        updateConnectingTabStep(tabId, { ...runningStep, authKind: promptTarget.authKind, error: errorDetail.message, errorDetail, promptTarget, password: "", privateKeyPassphrase: "", privateKeyPath: "", logs: [...runningStep.logs, `${promptTarget.name} 认证未通过，等待重新输入`], status: "prompt" });
+        return;
+      }
+      const nodeLabel = nodeFailure ? connectionById.get(nodeFailure.connectionId)?.name || nodeFailure.connectionId : "";
+      const contextualErrorDetail = nodeLabel ? { ...errorDetail, message: `${nodeLabel}：${errorDetail.message}` } : errorDetail;
       updateConnectingTabStep(tabId, {
         ...runningStep,
-        error: errorDetail.message,
-        errorDetail,
+        error: contextualErrorDetail.message,
+        errorDetail: contextualErrorDetail,
         logs: appendUniqueLogs(runningStep.logs, [
-          errorDetail.message,
-          errorDetail.rawMessage,
+          contextualErrorDetail.message,
+          contextualErrorDetail.rawMessage,
         ]),
         status: "error",
       });
@@ -7866,10 +7881,8 @@ export function WorkspaceShell() {
     event: FormEvent<HTMLFormElement>,
   ) {
     event.preventDefault();
-    void runConnectionStep(tabId, {
-      ...step,
-      logs: [...step.logs, "已输入本次凭据"],
-    });
+    const runtimeCredentials = upsertRuntimeCredential(step.runtimeCredentials, step.promptTarget?.connectionId || step.connection.id, step.authKind, step.password, step.privateKeyPath, step.privateKeyPassphrase);
+    void runConnectionStep(tabId, { ...step, runtimeCredentials, logs: [...step.logs, "已输入本次凭据"] });
   }
 
   function handlePaneResizeStart(
@@ -10967,8 +10980,8 @@ function ConnectionStepPanel({
                   <header>
                     <KeyRound className="ui-icon" aria-hidden="true" />
                     <span>
-                      <strong>输入本次凭据</strong>
-                      <small>这部分不会保存到连接配置。</small>
+                      <strong>{step.promptTarget?.connectionId !== step.connection.id ? "输入跳板机凭据" : "输入本次凭据"}</strong>
+                      <small>{step.promptTarget ? `${step.promptTarget.name || step.promptTarget.connectionId} · ${step.promptTarget.username}@${step.promptTarget.host}:${step.promptTarget.port.toString()}` : "这部分不会保存到连接配置。"}</small>
                     </span>
                   </header>
                   {step.temporary ? (
@@ -12156,17 +12169,6 @@ function connectionErrorSummary(code: string, fallback: string) {
     return "主机不可达";
   }
   return fallback;
-}
-
-function runtimeCredentialRequest(step: ConnectionStepState): ConnectionRuntimeCredentialRequest {
-  return {
-    auth_kind: step.connection.credential_mode === "prompt" ? step.authKind : undefined,
-    connection_id: step.connection.id,
-    password: step.authKind === "password" ? step.password || undefined : undefined,
-    private_key_passphrase:
-      step.authKind === "private_key" ? step.privateKeyPassphrase || undefined : undefined,
-    private_key_path: step.authKind === "private_key" ? step.privateKeyPath || undefined : undefined,
-  };
 }
 
 function toWindowsPtyOption(
