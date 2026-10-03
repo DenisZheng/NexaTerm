@@ -43,7 +43,8 @@
     "check:wf04c-multiexec": "node scripts/check-wf04c-multiexec-source.mjs",
     "check:wf05a-local-wsl": "node scripts/check-wf05a-local-wsl-source.mjs",
     "check:wf05b-serial-telnet": "node scripts/check-wf05b-serial-telnet-source.mjs",
-    "check:wf05c-rdp-vnc": "node scripts/check-wf05c-rdp-vnc-source.mjs"
+    "check:wf05c-rdp-vnc": "node scripts/check-wf05c-rdp-vnc-source.mjs",
+    "check:wf06a-tunnels": "node scripts/check-wf06a-tunnels-source.mjs"
   },
   "dependencies": {
     "@novnc/novnc": "^1.7.0",
