@@ -67,7 +67,7 @@ for (const needle of [
 ]) {
   if (!shell.includes(needle)) throw new Error(`WF-06A workspace tunnel cleanup missing: ${needle}`);
 }
-if (!tauriLib.includes("commands::tunnel_stop_connection")) {
+if (!tauriLib.includes("tunnels::tunnel_stop_connection")) {
   throw new Error("WF-06A Tauri tunnel_stop_connection command registration missing.");
 }
 if (!spec.includes("WS-N01") || !spec.includes("连接关闭时的资源生命周期")) {
