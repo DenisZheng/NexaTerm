@@ -500,7 +500,7 @@ import { useSessionTabsController } from "../workspace/sessionTabs/useSessionTab
 import type { CloseSnapshot, SessionRef } from "../workspace/sessionTabs/closeDecision";
 import { buildWorkspaceShellHydration } from "../workspace/restore/shellHydration";
 import { seedWorkspaceRemoteFileDirectories, workspaceRemoteFileDirectories } from "../workspace/restore/remoteFileSnapshotBridge";
-import { toSnapshot, type WorkspaceSnapshotV1 } from "../workspace/restore/snapshotTypes";
+import { snapshotTargetRefs, toSnapshot, type WorkspaceSnapshotV1 } from "../workspace/restore/snapshotTypes";
 import { useWorkspaceSnapshotLifecycle } from "../workspace/restore/useWorkspaceSnapshotLifecycle";
 import type {
   LocalTerminalProfile,
@@ -610,13 +610,11 @@ interface ConnectionGroupCatalog {
   assignments: Record<string, string>;
   groups: ConnectionGroupInfo[];
 }
-
 interface RemoteFileRefreshRequest {
   connectionId: string;
   id: number;
   path: string;
 }
-
 interface RemoteFileLocateRequest {
   connectionId: string;
   id: number;
@@ -966,6 +964,7 @@ export function WorkspaceShell() {
   const [duplicatingConnection, setDuplicatingConnection] = useState(false);
   const [selectedConnectionId, setSelectedConnectionId] = useState<string | null>(null);
   const terminalTabsRef = useRef<TerminalTab[]>([]);
+  const workspaceRestoreTargetRefsRef = useRef(snapshotTargetRefs({ activeItemId: null, files: { directories: {}, followActivePane: true }, instances: [], order: [], panes: null, sidebar: { collapsed: false, view: "sessions" }, version: 1 }));
   const rdpSessionsRef = useRef<RdpSessionTab[]>([]);
   const vncSessionsRef = useRef<VncSessionTab[]>([]);
   const pendingVncRunnerWindowPayloadsRef = useRef(new Map<string, VncRunnerWindowPayload>());
@@ -1779,7 +1778,7 @@ export function WorkspaceShell() {
   );
   const workspaceSnapshot = toSnapshot(
     { activeItemId: activeWorkspaceItemId, files: { directories: workspaceRemoteFileDirectories(terminalTabs.map((tab) => tab.id)), followActivePane: settings.basic.filePanelFollowsActiveConnection }, order: workspaceItemOrder, sidebar: { collapsed: leftPaneCollapsed, view: workspaceSidebarView }, splitLayout: terminalSplitLayout },
-    { localTerminalTabs, rdpSessions, terminalTabs, vncSessions, targetRefs: { connections: Object.fromEntries(temporaryConnections.map((connection) => [connection.id, { kind: "temporary" as const, targetId: connection.id }])) } },
+    { localTerminalTabs, rdpSessions, terminalTabs, vncSessions, targetRefs: { ...workspaceRestoreTargetRefsRef.current, connections: { ...workspaceRestoreTargetRefsRef.current.connections, ...Object.fromEntries(temporaryConnections.map((connection) => [connection.id, { kind: "temporary" as const, targetId: connection.id }])) } } },
   );
   useWorkspaceSnapshotLifecycle({ enabled: storageReady && !loading, onRestore: restoreWorkspaceShell, restoreOnLaunch: settings.basic.restoreWorkspaceOnLaunch, snapshot: workspaceSnapshot });
   const actionExecutor = useWorkspaceActionRuntime({
@@ -4494,6 +4493,7 @@ export function WorkspaceShell() {
   }
 
   function restoreWorkspaceShell(snapshot: WorkspaceSnapshotV1) {
+    workspaceRestoreTargetRefsRef.current = snapshotTargetRefs(snapshot);
     const hydration = buildWorkspaceShellHydration(snapshot, { connectionName: (id) => connectionById.get(id)?.name || null, localProfile: (id) => { const profile = localTerminalProfiles.find((item) => item.id === id); return profile ? { kind: profile.kind, name: profile.name } : null; } });
     const restoredTerminalTabs = hydration.terminalTabs as TerminalTab[];
     terminalTabsRef.current = restoredTerminalTabs; setTerminalTabs(restoredTerminalTabs); localTerminalTabsRef.current = hydration.localTerminalTabs; setLocalTerminalTabs(hydration.localTerminalTabs);
