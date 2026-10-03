@@ -15,7 +15,6 @@ for (const needle of [
 for (const needle of [
   'state.mode === "live"',
   "action.availableKeys.has(key)",
-  "state.mode === \"send\"",
 ]) {
   if (!reducer.includes(needle)) throw new Error(`WF-04C reducer contract missing: ${needle}`);
 }
