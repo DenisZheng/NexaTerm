@@ -297,6 +297,16 @@ impl TerminalSession {
         request: TerminalConnectRequest,
         progress: Option<OpenProgress>,
     ) -> Result<(Self, ChannelReadHalf), AppError> {
+        let context = SshConnectionContext::from_app(&app)?
+            .with_runtime_credentials(request.runtime_credentials.clone());
+        Self::open_with_context(context, request, progress).await
+    }
+
+    pub(crate) async fn open_with_context(
+        context: SshConnectionContext,
+        request: TerminalConnectRequest,
+        progress: Option<OpenProgress>,
+    ) -> Result<(Self, ChannelReadHalf), AppError> {
         let config = resolved_config_from_request(&request);
         let host = config.host.clone();
         let port = config.port;
@@ -340,8 +350,6 @@ impl TerminalSession {
             nodelay: true,
             ..<_>::default()
         });
-        let context = SshConnectionContext::from_app(&app)?
-            .with_runtime_credentials(request.runtime_credentials.clone());
         let host_key_handler = KnownHostClient {
             host: host.clone(),
             port,
