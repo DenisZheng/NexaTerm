@@ -41,7 +41,7 @@ export function multiExecReducer(state: MultiExecState, action: MultiExecAction)
       // send 已是全局模式，不受 Split 是否活动影响。后续统一 controller 后删除此兼容条件。
       const mode =
         state.mode === "live" &&
-        (action.splitActive === false || action.availableKeys.size < 2)
+        (action.splitActive === false || next.size < 2)
           ? "off"
           : state.mode;
       return targets === state.targets && mode === state.mode ? state : { ...state, mode, targets };

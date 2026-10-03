@@ -16,7 +16,7 @@
 - [x] SSH / Local / Telnet/Serial 实例级 target 投影。
 - [x] 同 profile sibling 可同时选择。
 - [x] RDP/VNC 不进入 terminal target 列表。
-- [ ] 删除 Command Sender connectionId→active-tab target owner。
+- [x] 删除 Command Sender connectionId→active-tab target owner；Command Sender 与 Split Sync 共用 MultiExec target Set。
 
 ## 04C-3 live
 - [ ] 单一 source 输入链路。
@@ -56,3 +56,15 @@
 - `selectLiveFanoutTargets` 显式排除 source key，确保 source 自身不被重复写回，同时不修改固定 selected set。
 - RDP/VNC 没有进入此 terminal projection 的输入类型，不能被误加入 MultiExec。
 - 下一步才迁移 WorkspaceShell / Command Sender 的旧 connectionId→active-tab owner；本切片不伪称已完成该迁移。
+
+
+## 04C-2 owner 迁移
+
+- `useTerminalSplitController` 暴露通用 `multiExecTargets / setMultiExecTargets`，旧 Split participant setter 只保留兼容别名。
+- MultiExec availability 从“当前 Split pane”扩大到全部已连接 terminal instance；reconcile 仍只收缩，不读取焦点。
+- Command Sender 删除自己的 `selectedCommandTargetKeys`、`commandSenderTargetTabByConnectionId` 与 `syncCommandSenderTargetTab`。
+- Command Sender 目标 UI 从“每 connection 一行 + 子 tab 下拉”改为“每实例一行”；同 profile 两个实例可以同时勾选。
+- 打开 Command Sender / 插入历史或片段不会自动全选 targets；只有用户显式全选/勾选/取消会增加或删除 target。
+- SSH/Local 的 focus/activate 路径不再修改 targets。
+- 旧 `check-command-sender-active-tab-source.mjs` 改为固定实例 target contract；`check-command-sender-mvp-source.mjs` 同步移除 active-tab selector 旧要求，不删除实际发送/顺序写入/状态反馈门禁。
+- `WorkspaceShell.tsx` 预构建为 13,696 行，低于既有 line budget；未修改 `scripts/line-budget.json`。

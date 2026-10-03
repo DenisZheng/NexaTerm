@@ -450,6 +450,7 @@ import {
   type TerminalSplitHost,
 } from "../workspace/split/useTerminalSplitController";
 import { splitGroupInsertionIndex } from "../workspace/split/anchor";
+import { buildMultiExecTargets } from "../workspace/multiExec/targets";
 import {
   displayOrdinal,
   HOME_ITEM_ID,
@@ -529,14 +530,7 @@ interface TerminalClearRequest {
 type CommandSenderDeliveryStatus = "idle" | "sent" | "failed";
 type CommandSenderTargetKind = "ssh" | "local";
 
-interface CommandSenderTargetTabOption {
-  label: string;
-  sessionId: string;
-  tabId: string;
-}
-
 interface CommandSenderTarget {
-  connectionId: string;
   deliveryMessage?: string;
   deliveryStatus: CommandSenderDeliveryStatus;
   description: string;
@@ -546,7 +540,6 @@ interface CommandSenderTarget {
   historyScope: CommandHistoryScope | null;
   sessionId: string;
   tabId: string;
-  tabs: CommandSenderTargetTabOption[];
   tabTitle: string;
 }
 
@@ -704,7 +697,6 @@ const defaultEditorTerminalSplitPercent = 44;
 const commandSnippetRootGroup = "";
 const commandSnippetRootGroupLabel = "根目录";
 const legacyCommandSnippetGroup = "未分组";
-const localCommandSenderTargetId = "__local_terminal__";
 const commandHistoryAllScopeKey = "all";
 const commandHistorySshScopePrefix = "ssh:";
 const commandHistoryLocalScopePrefix = "local:";
@@ -1052,9 +1044,6 @@ export function WorkspaceShell() {
   const [commandHistoryClearOpen, setCommandHistoryClearOpen] = useState(false);
   const [commandSenderLastSentLabel, setCommandSenderLastSentLabel] =
     useState("上次发送：尚未发送");
-  const [selectedCommandTargetKeys, setSelectedCommandTargetKeys] = useState<string[]>([]);
-  const [commandSenderTargetTabByConnectionId, setCommandSenderTargetTabByConnectionId] =
-    useState<Record<string, string>>({});
   const [commandSenderDeliveryByKey, setCommandSenderDeliveryByKey] =
     useState<Record<string, { message?: string; status: CommandSenderDeliveryStatus }>>({});
   const [terminalSearchByTabId, setTerminalSearchByTabId] =
@@ -1385,8 +1374,10 @@ export function WorkspaceShell() {
     focusedTerminalPaneId,
     focusedTerminalSplitBinding,
     focusedTerminalSplitPane,
+    multiExecTargets,
     nextTerminalSplitId,
     setFocusedTerminalPaneId,
+    setMultiExecTargets,
     setTerminalSplitAutoCreateSameSession,
     setTerminalSplitHost,
     setTerminalSplitLayout,
@@ -1474,30 +1465,21 @@ export function WorkspaceShell() {
   const commandSenderTargets = useMemo(
     () =>
       buildCommandSenderTargets({
-        activeTabByConnectionId,
-        activeLocalTerminalTabId,
         connectionById,
         deliveryByKey: commandSenderDeliveryByKey,
         localTerminalProfiles,
         localTerminalTabs,
-        selectedTabByConnectionId: commandSenderTargetTabByConnectionId,
         terminalTabs,
       }),
     [
-      activeTabByConnectionId,
-      activeLocalTerminalTabId,
       commandSenderDeliveryByKey,
-      commandSenderTargetTabByConnectionId,
       connectionById,
       localTerminalProfiles,
       localTerminalTabs,
       terminalTabs,
     ],
   );
-  const selectedCommandTargetKeySet = useMemo(
-    () => new Set(selectedCommandTargetKeys),
-    [selectedCommandTargetKeys],
-  );
+  const selectedCommandTargetKeySet = multiExecTargets;
   const selectedCommandTargets = commandSenderTargets.filter((target) =>
     selectedCommandTargetKeySet.has(target.key),
   );
@@ -1515,12 +1497,6 @@ export function WorkspaceShell() {
   );
   useEffect(() => {
     const availableKeys = new Set(commandSenderTargets.map((target) => target.key));
-
-    setSelectedCommandTargetKeys((keys) => {
-      const nextKeys = keys.filter((key) => availableKeys.has(key));
-      return nextKeys.length === keys.length ? keys : nextKeys;
-    });
-
     setCommandSenderDeliveryByKey((deliveryByKey) => {
       const entries = Object.entries(deliveryByKey).filter(([key]) => availableKeys.has(key));
       return entries.length === Object.keys(deliveryByKey).length
@@ -4345,18 +4321,6 @@ export function WorkspaceShell() {
     return terminalTabsRef.current.some((tab) => tab.id === tabId);
   }
 
-  function syncCommandSenderTargetTab(connectionId: string, tabId: string) {
-    setCommandSenderTargetTabByConnectionId((tabs) =>
-      tabs[connectionId] === tabId ? tabs : { ...tabs, [connectionId]: tabId },
-    );
-    setSelectedCommandTargetKeys((keys) =>
-      keys.map((key) => {
-        const [keyConnectionId] = key.split(":", 2);
-        return keyConnectionId === connectionId ? commandSenderTargetKey(connectionId, tabId) : key;
-      }),
-    );
-  }
-
   function setConnectionTerminalFileLayout(connectionId: string, mode: RemoteFileOpenMode) {
     setTerminalFileLayoutByConnectionId((layouts) =>
       layouts[connectionId] === mode ? layouts : { ...layouts, [connectionId]: mode },
@@ -4493,14 +4457,12 @@ export function WorkspaceShell() {
       const tab = terminalTabs.find((item) => item.id === pane.binding?.tabId);
       if (tab) {
         dispatchTabs({ type: "tabs/focusPaneBinding", binding: { kind: "ssh", tabId: tab.id } });
-        syncCommandSenderTargetTab(tab.connectionId, tab.id);
       }
       return;
     }
     const tab = localTerminalTabs.find((item) => item.id === pane.binding?.tabId);
     if (tab) {
       dispatchTabs({ type: "tabs/focusPaneBinding", binding: { kind: "local", tabId: tab.id } });
-      syncCommandSenderTargetTab(localCommandSenderTargetId, tab.id);
     }
   }
 
@@ -4831,7 +4793,6 @@ export function WorkspaceShell() {
       tabId: tab.id,
       rememberUnified: isConnectionTerminalFileUnified(tab.connectionId),
     });
-    syncCommandSenderTargetTab(tab.connectionId, tab.id);
   }
 
   function activateTerminalTab(tab: TerminalTab) {
@@ -5504,18 +5465,7 @@ export function WorkspaceShell() {
 
   function prepareCommandSenderTargets() {
     void loadCommandLibrary();
-    const availableKeys = commandSenderTargets.map((target) => target.key);
-    const availableKeySet = new Set(availableKeys);
-    const retainedKeys = selectedCommandTargetKeys.filter((key) => availableKeySet.has(key));
-    const nextKeys = retainedKeys.length > 0 ? retainedKeys : availableKeys;
-    const nextKeySet = new Set(nextKeys);
-
-    setSelectedCommandTargetKeys((keys) => {
-      const retainedKeys = keys.filter((key) => availableKeySet.has(key));
-      return retainedKeys.length > 0 ? retainedKeys : availableKeys;
-    });
-
-    return commandSenderTargets.filter((target) => nextKeySet.has(target.key));
+    return selectedCommandTargets;
   }
 
   function openCommandSenderAndPrepareTargets() {
@@ -5583,25 +5533,17 @@ export function WorkspaceShell() {
       }
       const profile = localTerminalProfiles.find((item) => item.id === activeLocalTerminalTab.profileId);
       return {
-        connectionId: localCommandSenderTargetId,
         deliveryStatus: "idle",
         description: profile?.name || activeLocalTerminalTab.title,
         historyScope: {
           scope_kind: "local_profile",
           scope_id: activeLocalTerminalTab.profileId,
         },
-        key: commandSenderTargetKey(localCommandSenderTargetId, activeLocalTerminalTab.id),
+        key: terminalPaneBindingKey({ kind: "local", tabId: activeLocalTerminalTab.id }),
         kind: "local",
         label: "当前激活终端",
         sessionId: activeLocalTerminalTab.sessionId,
         tabId: activeLocalTerminalTab.id,
-        tabs: [
-          {
-            label: activeLocalTerminalTab.title,
-            sessionId: activeLocalTerminalTab.sessionId,
-            tabId: activeLocalTerminalTab.id,
-          },
-        ],
         tabTitle: activeLocalTerminalTab.title,
       };
     }
@@ -5615,7 +5557,6 @@ export function WorkspaceShell() {
         return null;
       }
       return {
-        connectionId: activeConnectedTerminalTab.connectionId,
         deliveryStatus: "idle",
         description: connection
           ? formatConnectionAddress(connection)
@@ -5624,18 +5565,11 @@ export function WorkspaceShell() {
           scope_kind: "ssh_connection",
           scope_id: activeConnectedTerminalTab.connectionId,
         },
-        key: commandSenderTargetKey(activeConnectedTerminalTab.connectionId, activeConnectedTerminalTab.id),
+        key: terminalPaneBindingKey({ kind: "ssh", tabId: activeConnectedTerminalTab.id }),
         kind: "ssh",
         label: connection?.name || "当前激活终端",
         sessionId: activeConnectedTerminalTab.sessionId,
         tabId: activeConnectedTerminalTab.id,
-        tabs: [
-          {
-            label: activeConnectedTerminalTab.title,
-            sessionId: activeConnectedTerminalTab.sessionId,
-            tabId: activeConnectedTerminalTab.id,
-          },
-        ],
         tabTitle: activeConnectedTerminalTab.title,
       };
     }
@@ -6015,36 +5949,22 @@ export function WorkspaceShell() {
   }
 
   function toggleCommandSenderAllTargets() {
-    setSelectedCommandTargetKeys(
-      commandSenderAllSelected ? [] : commandSenderTargets.map((target) => target.key),
+    setMultiExecTargets(
+      commandSenderAllSelected
+        ? new Set()
+        : new Set(commandSenderTargets.map((target) => target.key)),
     );
   }
 
   function toggleCommandSenderTarget(target: CommandSenderTarget) {
-    setSelectedCommandTargetKeys((keys) =>
-      keys.includes(target.key)
-        ? keys.filter((key) => key !== target.key)
-        : [...keys, target.key],
-    );
+    setMultiExecTargets((keys) => {
+      const next = new Set(keys);
+      if (next.has(target.key)) next.delete(target.key);
+      else next.add(target.key);
+      return next;
+    });
   }
 
-  function selectCommandSenderTargetTab(target: CommandSenderTarget, tabId: string) {
-    const nextTab = target.tabs.find((tab) => tab.tabId === tabId);
-    if (!nextTab) {
-      return;
-    }
-
-    const nextKey = commandSenderTargetKey(target.connectionId, tabId);
-    setCommandSenderTargetTabByConnectionId((tabs) => ({
-      ...tabs,
-      [target.connectionId]: tabId,
-    }));
-    setSelectedCommandTargetKeys((keys) =>
-      keys.includes(target.key)
-        ? keys.map((key) => (key === target.key ? nextKey : key))
-        : keys,
-    );
-  }
 
   function activateCommandSenderTarget(target: CommandSenderTarget) {
     if (target.kind === "local") {
@@ -6177,7 +6097,6 @@ export function WorkspaceShell() {
     setTerminalSplitSyncEnabled(false);
     setSettingsSectionRequest(undefined);
     dispatchTabs({ type: "tabs/activateLocal", tabId: tab.id });
-    syncCommandSenderTargetTab(localCommandSenderTargetId, tab.id);
   }
 
   function resolveDefaultLocalTerminalProfile() {
@@ -8111,7 +8030,7 @@ export function WorkspaceShell() {
                           target.deliveryStatus === "failed" ? "has-failed-delivery" : ""
                         }`}
                         data-delivery={target.deliveryStatus}
-                        key={target.connectionId}
+                        key={target.key}
                       >
                         <label className="command-target-select">
                           <input
@@ -8128,17 +8047,7 @@ export function WorkspaceShell() {
                         <span className="command-target-meta">
                           <span className="command-target-terminal-shell">
                             <SquareTerminal className="ui-icon" aria-hidden="true" />
-                            <AppSelect
-                              ariaLabel={`${target.label} 子 tab`}
-                              className="command-target-terminal-select"
-                              menuMinWidth={176}
-                              value={target.tabId}
-                              options={target.tabs.map((tab) => ({
-                                label: tab.label,
-                                value: tab.tabId,
-                              }))}
-                              onChange={(tabId) => selectCommandSenderTargetTab(target, tabId)}
-                            />
+                            <span className="command-target-terminal-instance">{target.tabTitle}</span>
                           </span>
                           <span className="command-target-state">在线</span>
                           <button
@@ -13044,124 +12953,63 @@ function uniqueCommandHistoryScopes(scopes: CommandHistoryScope[]) {
 }
 
 function buildCommandSenderTargets({
-  activeTabByConnectionId,
-  activeLocalTerminalTabId,
   connectionById,
   deliveryByKey,
   localTerminalProfiles,
   localTerminalTabs,
-  selectedTabByConnectionId,
   terminalTabs,
 }: {
-  activeTabByConnectionId: Record<string, string>;
-  activeLocalTerminalTabId: string | null;
   connectionById: Map<string, ConnectionProfile>;
   deliveryByKey: Record<string, { message?: string; status: CommandSenderDeliveryStatus }>;
   localTerminalProfiles: LocalTerminalProfile[];
   localTerminalTabs: LocalTerminalTab[];
-  selectedTabByConnectionId: Record<string, string>;
   terminalTabs: TerminalTab[];
 }): CommandSenderTarget[] {
-  const tabsByConnection = new Map<string, ConnectedTerminalTab[]>();
-
-  terminalTabs.forEach((tab) => {
-    if (tab.type !== "terminal" || !tab.sessionId) {
-      return;
+  const localById = new Map(localTerminalTabs.map((tab) => [tab.id, tab]));
+  return buildMultiExecTargets({
+    localTabs: localTerminalTabs,
+    sshTabs: terminalTabs,
+  }).map((target): CommandSenderTarget => {
+    const delivery = deliveryByKey[target.key];
+    if (target.kind === "ssh") {
+      const connection = connectionById.get(target.ownerId) || null;
+      return {
+        deliveryMessage: delivery?.message,
+        deliveryStatus: delivery?.status || "idle",
+        description: connection ? formatConnectionAddress(connection) : target.title,
+        historyScope: {
+          scope_kind: "ssh_connection",
+          scope_id: target.ownerId,
+        },
+        key: target.key,
+        kind: "ssh",
+        label: connection?.name || target.title,
+        sessionId: target.sessionId,
+        tabId: target.tabId,
+        tabTitle: target.title,
+      };
     }
 
-    const connectedTab = tab as ConnectedTerminalTab;
-    const tabs = tabsByConnection.get(tab.connectionId) || [];
-    tabs.push(connectedTab);
-    tabsByConnection.set(tab.connectionId, tabs);
-  });
-
-  const targets = Array.from(tabsByConnection.entries()).flatMap(([connectionId, tabs]) => {
-    const selectedTabId =
-      selectedTabByConnectionId[connectionId] || activeTabByConnectionId[connectionId];
-    const selectedTab = tabs.find((tab) => tab.id === selectedTabId) || tabs[0];
-    const connection = connectionById.get(connectionId) || null;
-    if (connection && !isSshConnection(connection)) {
-      return [];
-    }
-    const key = commandSenderTargetKey(connectionId, selectedTab.id);
-    const delivery = deliveryByKey[key];
-    const tabCountText = tabs.length > 1 ? `${tabs.length.toString()} 个子 tab` : "1 个子 tab";
-
-    return [{
-      connectionId,
+    const localTab = localById.get(target.tabId) || null;
+    const profile = localTerminalProfiles.find((item) => item.id === target.ownerId) || null;
+    const kindLabel =
+      target.kind === "telnet" ? "Telnet" : target.kind === "serial" ? "Serial" : "Local";
+    return {
       deliveryMessage: delivery?.message,
       deliveryStatus: delivery?.status || "idle",
-      description: connection
-        ? `${formatConnectionAddress(connection)} · ${tabCountText}`
-        : `当前连接 · ${tabCountText}`,
-      key,
-      kind: "ssh" as const,
-      label: connection?.name || selectedTab.title,
+      description: `${kindLabel} · ${profile?.name || localTab?.title || target.title}`,
       historyScope: {
-        scope_kind: "ssh_connection" as const,
-        scope_id: connectionId,
+        scope_kind: "local_profile",
+        scope_id: target.ownerId,
       },
-      sessionId: selectedTab.sessionId,
-      tabId: selectedTab.id,
-      tabs: tabs.map((tab) => ({
-        label: tab.title,
-        sessionId: tab.sessionId,
-        tabId: tab.id,
-      })),
-      tabTitle: selectedTab.title,
-    }];
+      key: target.key,
+      kind: "local",
+      label: localTab?.title || target.title,
+      sessionId: target.sessionId,
+      tabId: target.tabId,
+      tabTitle: target.title,
+    };
   });
-
-  const connectedLocalTabs = localTerminalTabs.filter(
-    (tab): tab is LocalTerminalTab & { sessionId: string } => Boolean(tab.sessionId),
-  );
-  if (connectedLocalTabs.length === 0) {
-    return targets;
-  }
-
-  const selectedLocalTabId =
-    selectedTabByConnectionId[localCommandSenderTargetId] || activeLocalTerminalTabId;
-  const selectedLocalTab =
-    connectedLocalTabs.find((tab) => tab.id === selectedLocalTabId) || connectedLocalTabs[0];
-  const profile = localTerminalProfiles.find((item) => item.id === selectedLocalTab.profileId) || null;
-  const localTargetLabel = connectedLocalTabs.some((tab) => tab.source && tab.source !== "local")
-    ? "字符终端"
-    : "本地终端";
-  const key = commandSenderTargetKey(localCommandSenderTargetId, selectedLocalTab.id);
-  const delivery = deliveryByKey[key];
-  const tabCountText =
-    connectedLocalTabs.length > 1
-      ? `${connectedLocalTabs.length.toString()} 个本地 tab`
-      : "1 个本地 tab";
-
-  return [
-    ...targets,
-    {
-      connectionId: localCommandSenderTargetId,
-      deliveryMessage: delivery?.message,
-      deliveryStatus: delivery?.status || "idle",
-      description: `${profile?.name || selectedLocalTab.title} · ${tabCountText}`,
-      key,
-      kind: "local" as const,
-      label: localTargetLabel,
-      historyScope: {
-        scope_kind: "local_profile" as const,
-        scope_id: selectedLocalTab.profileId,
-      },
-      sessionId: selectedLocalTab.sessionId,
-      tabId: selectedLocalTab.id,
-      tabs: connectedLocalTabs.map((tab) => ({
-        label: tab.title,
-        sessionId: tab.sessionId,
-        tabId: tab.id,
-      })),
-      tabTitle: selectedLocalTab.title,
-    },
-  ];
-}
-
-function commandSenderTargetKey(connectionId: string, tabId: string) {
-  return `${connectionId}:${tabId}`;
 }
 
 function commandSenderDeliveryLabel(status: CommandSenderDeliveryStatus) {

@@ -179,7 +179,7 @@ describe("超过 pane 上限时重建四宫格（原 1459 行 effect）", () => 
 });
 
 describe("同步输入参与者（原 1500 行 effect）", () => {
-  it("开启同步后，焦点 pane 自动成为参与者", () => {
+  it("开启同步后只保留显式选择的参与者", () => {
     const { result } = setup();
     openTwoPanes(result);
     act(() => {
@@ -188,6 +188,18 @@ describe("同步输入参与者（原 1500 行 effect）", () => {
     });
     expect(result.current.terminalSplitSyncEnabled).toBe(true);
     expect(result.current.terminalSplitSyncParticipantKeys).toEqual(new Set(["ssh:a", "ssh:b"]));
+  });
+
+  it("切换焦点不会暗中增加或替换 MultiExec targets", () => {
+    const { result } = setup();
+    openTwoPanes(result);
+    act(() => {
+      result.current.setTerminalSplitSyncEnabled(true);
+      result.current.setTerminalSplitSyncParticipantKeys(new Set(["ssh:a"]));
+      result.current.setFocusedTerminalPaneId("terminal-pane-2");
+    });
+    expect(result.current.focusedTerminalSplitBinding).toEqual(ssh("b"));
+    expect(result.current.terminalSplitSyncParticipantKeys).toEqual(new Set(["ssh:a"]));
   });
 
   it("未连接的会话不能是参与者：参与者集合按已连接会话收缩", () => {

@@ -11,7 +11,8 @@ for (const needle of [
   "CommandSenderTarget",
   "commandSenderOpen",
   "commandSenderTargets",
-  "selectedCommandTargetKeys",
+  "multiExecTargets",
+  "setMultiExecTargets",
   "commandSenderInput",
   "commandSenderHistory",
   "commandSenderRisky",
@@ -77,8 +78,15 @@ for (const needle of [
   }
 }
 
-if (/syncInput|同步输入中：/.test(workspaceShell)) {
-  throw new Error("Command Sender MVP must not implement real Sync Input behavior.");
+for (const legacy of [
+  "commandSenderTargetTabByConnectionId",
+  "syncCommandSenderTargetTab(",
+  "selectCommandSenderTargetTab(",
+  "target.tabs",
+]) {
+  if (workspaceShell.includes(legacy)) {
+    throw new Error(`WF-04C Command Sender must use instance targets, not active-tab target switching: ${legacy}`);
+  }
 }
 
 for (const needle of [
@@ -89,11 +97,9 @@ for (const needle of [
   "optionCount * optionHeight + menuChromeHeight",
   "handleMenuWheel",
   "onWheel={handleMenuWheel}",
-  "menuMinWidth={176}",
 ]) {
-  const source = needle === "menuMinWidth={176}" ? workspaceShell : appSelect;
-  if (!source.includes(needle)) {
-    throw new Error(`Command Sender compact selects must support wider menus: ${needle}`);
+  if (!appSelect.includes(needle)) {
+    throw new Error(`Shared AppSelect menus must keep Command Sender-compatible scrolling: ${needle}`);
   }
 }
 
@@ -157,4 +163,4 @@ if (!/setCommandSenderLastSentLabel\([\s\S]*?\);\s*setCommandSenderInput\(""\);/
   throw new Error("Command Sender must clear the input after a completed send attempt.");
 }
 
-console.log("Command Sender MVP source check passed.");
+console.log("Command Sender instance-target MVP source check passed.");

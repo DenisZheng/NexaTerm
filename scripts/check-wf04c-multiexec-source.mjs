@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 const actions = readFileSync(new URL("../src/features/workspace/multiExec/actions.ts", import.meta.url), "utf8");
 const reducer = readFileSync(new URL("../src/features/workspace/multiExec/reducer.ts", import.meta.url), "utf8");
 const targets = readFileSync(new URL("../src/features/workspace/multiExec/targets.ts", import.meta.url), "utf8");
+const shell = readFileSync(new URL("../src/features/layout/WorkspaceShell.tsx", import.meta.url), "utf8");
 const spec = readFileSync(new URL("../docs/WORKFLOW_SPEC.md", import.meta.url), "utf8");
 
 for (const needle of [
@@ -33,6 +34,24 @@ for (const needle of [
   "target.key !== sourceKey",
 ]) {
   if (!targets.includes(needle)) throw new Error(`WF-04C instance target projection missing: ${needle}`);
+}
+
+for (const needle of [
+  "multiExecTargets",
+  "setMultiExecTargets",
+  "buildMultiExecTargets({",
+  "command-target-terminal-instance",
+]) {
+  if (!shell.includes(needle)) throw new Error(`WF-04C Command Sender unified target wiring missing: ${needle}`);
+}
+for (const legacy of [
+  "selectedCommandTargetKeys",
+  "commandSenderTargetTabByConnectionId",
+  "syncCommandSenderTargetTab(",
+  "selectCommandSenderTargetTab(",
+  "target.tabs",
+]) {
+  if (shell.includes(legacy)) throw new Error(`WF-04C legacy Command Sender target ownership remains: ${legacy}`);
 }
 
 if (!spec.includes("| WS-X04 | 已确认（v0.6） | WF-04C |")) {
