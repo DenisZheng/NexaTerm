@@ -119,16 +119,31 @@ function parseInstance(value: unknown): WorkspaceSnapshotInstance {
   const id = nonEmptyString(item.id, "instance.id");
   const target = parseTarget(item.target);
   if (item.kind === "ssh") {
+    requireInstancePrefix(id, "ssh");
     return { id, kind: "ssh", ordinal: ordinal(item.ordinal), target };
   }
   if (item.kind === "local") {
+    requireInstancePrefix(id, "local");
     const source =
       item.source === "telnet" || item.source === "serial" ? item.source : "local";
     return { id, kind: "local", ordinal: ordinal(item.ordinal), source, target };
   }
-  if (item.kind === "rdp") return { id, kind: "rdp", target };
-  if (item.kind === "vnc") return { id, kind: "vnc", target };
+  if (item.kind === "rdp") {
+    requireInstancePrefix(id, "rdp");
+    return { id, kind: "rdp", target };
+  }
+  if (item.kind === "vnc") {
+    requireInstancePrefix(id, "vnc");
+    return { id, kind: "vnc", target };
+  }
   throw new Error(`unsupported workspace instance kind: ${String(item.kind)}`);
+}
+
+function requireInstancePrefix(id: string, kind: WorkspaceSnapshotInstance["kind"]) {
+  const prefix = `${kind}:`;
+  if (!id.startsWith(prefix) || id.length === prefix.length) {
+    throw new Error(`invalid workspace instance id for ${kind}: ${id}`);
+  }
 }
 
 function parseTarget(value: unknown): WorkspaceSnapshotTargetRef {
