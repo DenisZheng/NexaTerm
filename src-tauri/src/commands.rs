@@ -78,7 +78,8 @@ pub use crate::terminal::serial::{SerialPortEntry, SerialTerminalOpenRequest};
 use crate::terminal::session::ExecProgressCallback;
 pub use crate::terminal::telnet::TelnetTerminalOpenRequest;
 use crate::tunnels::{
-    TunnelManager, TunnelRuleIdRequest, TunnelRuleInput, TunnelRuleWithState, TunnelStartRequest,
+    TunnelConnectionRequest, TunnelManager, TunnelRuleIdRequest, TunnelRuleInput,
+    TunnelRuleWithState, TunnelStartRequest,
 };
 use crate::vnc::{
     VncConnectionRequest, VncLaunchPreview, VncLaunchResult, VncRunnerProbeRequest,
@@ -983,6 +984,15 @@ pub async fn tunnel_stop(
     request: TunnelRuleIdRequest,
 ) -> Result<TunnelRuleWithState, AppError> {
     manager.stop(&app, &request.rule_id).await
+}
+
+#[tauri::command]
+pub async fn tunnel_stop_connection(
+    app: AppHandle,
+    manager: State<'_, TunnelManager>,
+    request: TunnelConnectionRequest,
+) -> Result<Vec<TunnelRuleWithState>, AppError> {
+    manager.stop_connection(&app, &request.connection_id).await
 }
 
 #[tauri::command]
