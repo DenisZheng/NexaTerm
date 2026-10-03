@@ -130,7 +130,9 @@ mod tests {
     #[test]
     fn rejects_runtime_and_secret_fields_recursively() {
         for key in ["password", "sessionId", "private_key", "x11Cookie", "runtime_credentials", "broadcastState", "token"] {
-            let value = json!({"version": 1, "nested": {key: "forbidden"}});
+            let mut nested = serde_json::Map::new();
+            nested.insert(key.to_string(), json!("forbidden"));
+            let value = json!({"version": 1, "nested": nested});
             assert_eq!(
                 validate_workspace_snapshot_value(&value).unwrap_err().code,
                 "workspace_snapshot_rejected"
