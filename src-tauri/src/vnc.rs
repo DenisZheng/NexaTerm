@@ -2,7 +2,7 @@ use std::env;
 use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use futures_util::{SinkExt, StreamExt};
@@ -108,7 +108,7 @@ pub struct VncSessionManager {
 #[derive(Debug)]
 struct ManagedVncSession {
     bridge_handle: Option<JoinHandle<()>>,
-    external_child: Option<Child>,
+    external_child: Option<Arc<Mutex<Child>>>,
 }
 
 struct ResolvedVncConnection {
@@ -251,7 +251,10 @@ pub async fn launch_connection(
     launch_external_runner(manager, resolved, selected)
 }
 
-fn terminate_external_child(child: &mut Child) -> Result<(), String> {
+fn terminate_external_child(child: &Arc<Mutex<Child>>) -> Result<(), String> {
+    let mut child = child
+        .lock()
+        .map_err(|error| format!("external runner process lock failed: {error}"))?;
     match child.try_wait() {
         Ok(Some(_)) => Ok(()),
         Ok(None) => {
@@ -281,7 +284,7 @@ pub fn close_session(
             }
             let process_result = session
                 .external_child
-                .as_mut()
+                .as_ref()
                 .map(terminate_external_child)
                 .unwrap_or(Ok(()));
             match process_result {
@@ -395,7 +398,7 @@ fn launch_external_runner(
         session_id.clone(),
         ManagedVncSession {
             bridge_handle: None,
-            external_child: Some(child),
+            external_child: Some(Arc::new(Mutex::new(child))),
         },
     ) {
         return Err(error);
@@ -823,6 +826,7 @@ mod tests {
     use std::future;
     use std::io;
     use std::process::{Child, Command};
+    use std::sync::{Arc, Mutex};
     use std::time::Duration;
 
     #[test]
@@ -868,9 +872,9 @@ mod tests {
     #[test]
     fn close_external_vnc_session_terminates_owned_process_and_keeps_sibling() {
         let manager = VncSessionManager::default();
-        let first = spawn_long_lived_test_child();
-        let first_pid = first.id();
-        let second = spawn_long_lived_test_child();
+        let first = Arc::new(Mutex::new(spawn_long_lived_test_child()));
+        let first_handle = first.clone();
+        let second = Arc::new(Mutex::new(spawn_long_lived_test_child()));
 
         manager
             .insert(
@@ -914,7 +918,15 @@ mod tests {
                 .contains_key("vnc-external-a"),
             "closed external VNC session must be removed from owner map"
         );
-        assert!(first_pid > 0);
+        assert!(
+            first_handle
+                .lock()
+                .expect("first VNC child lock")
+                .try_wait()
+                .expect("first VNC child status")
+                .is_some(),
+            "owned external VNC process must have exited after close"
+        );
         assert!(
             close_session(
                 &manager,
