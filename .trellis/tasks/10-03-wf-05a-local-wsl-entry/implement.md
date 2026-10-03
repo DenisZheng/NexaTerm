@@ -18,9 +18,9 @@
 - [x] WSL distribution identity / label 不因 profile 刷新漂移。
 
 ## 05A-3 workspace integration
-- [ ] Local/WSL instance Split 接线与回归。
-- [ ] Local/WSL MultiExec target 接线与回归。
-- [ ] A11 自动化边界准备；真实 A09/A10/A11 延后集中验收。
+- [x] Local/WSL instance Split 接线与回归。
+- [x] Local/WSL MultiExec target 接线与回归。
+- [x] A11 自动化边界准备；真实 A09/A10/A11 延后集中验收。
 
 每个切片：定向测试 → 全量相关检查 → source gate → line budget → commit → push → CI。不要修改 `scripts/line-budget.json`。
 
@@ -43,3 +43,13 @@
 - Windows CI 新增 `kind=wsl` 的共享 `LocalTerminalSession` close/master-release lifecycle 测试。该测试故意用 cmd.exe 作为可控进程，只证明 WSL-shaped profile 复用相同 PTY 清理边界；不冒充真实 WSL 互操作，真实发行版启动仍归 A11。
 - New Session UI 对 command missing / no distro / timeout / probe failure 提供精确提示；若 backend 报 available 但 profile 被用户隐藏，则单独显示“可用但已隐藏”，避免误报未安装。
 - 未修改 `scripts/line-budget.json`，未进入 Serial/Telnet/RDP/VNC。
+
+
+## 05A-3 实施证据
+
+- Split/MultiExec 继续只按 terminal instance binding 工作；WSL 不建立第二套 workspace owner。现有 WSL tab 仍是 `LocalTerminalTab(source=local, profileKind=wsl)`。
+- Split picker 对 `profileKind=wsl` 明确显示 `WSL` source/group，不再把 WSL 实例泛化显示为“本地”。
+- 新增 `wf05aLocalWsl.integration.test.tsx`：同一 split 中 Local + WSL 各自保持独立 `local:<tabId>` binding，同时进入固定 MultiExec target Set；关闭 WSL tab 后 Split 收缩且旧 WSL target 被移除。
+- 同一 WSL distro profile 的两个实例拥有相同 owner/profileId，但 tab key 和 runtime sessionId 分离，MultiExec 不按 distro/profile 合并。
+- A11 只准备 Local/WSL phase 的自动化与真实操作步骤；正式 A11 还包含 Serial/Telnet/RDP/VNC，因此保持 PENDING，等 WF-05B/05C 后与 A09/A10 一起集中验收。
+- 未修改 `scripts/line-budget.json`，未启动 WF-05B/05C。

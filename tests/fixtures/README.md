@@ -225,3 +225,52 @@ When finished:
 ```sh
 node tests/fixtures/fixtures.mjs down
 ```
+
+
+## WF-05 A11 combined GUI acceptance
+
+A11 is intentionally executed only after WF-05A/05B/05C are all implemented. This
+section starts the combined checklist with the Local/WSL phase. **A11 remains PENDING**
+until the later Serial/Telnet/RDP/VNC phases are appended and the maintainer runs the
+whole matrix.
+
+### Phase 1: Local / WSL
+
+Windows real-Tauri requirements:
+
+1. Open **New session** and confirm native Local shells and **WSL** are separate sections.
+2. Confirm each installed WSL distribution appears by its real distribution name. Open one
+   distribution twice and verify two independent top-level instances are created.
+3. Run `echo $$` in both WSL terminals and keep the two Linux shell PIDs for the close check.
+4. Put one WSL instance and one native Local terminal into a 2-pane Split. In the pane picker,
+   the WSL instance must be labeled as **WSL**, not merely as Local.
+5. Select both instances as MultiExec targets. Run one harmless send command such as
+   `echo A11-WF05A`; both explicitly selected terminal instances receive it once.
+6. Close only the first WSL instance. The sibling WSL instance and native Local instance stay
+   open; the closed instance disappears from Split/MultiExec targets and is not substituted by
+   its same-distribution sibling.
+7. From the surviving WSL instance, run `ps -p <closed-shell-pid>`. The closed shell PID must
+   no longer exist. Do not require the whole WSL VM/distribution to stop because other WSL
+   processes may legitimately keep it running.
+8. Close the remaining WSL and Local tabs normally. No stale terminal pane or MultiExec target
+   may remain.
+
+Capability-negative checks on Windows:
+
+- On a machine without `wsl.exe`, the WSL section states that WSL is unavailable.
+- With WSL installed but no distribution, the UI states that no distribution is available.
+- Probe timeout/failure is shown as such and must not hide otherwise usable PowerShell/cmd/Git
+  Bash profiles.
+
+macOS/Linux Local smoke for the combined matrix:
+
+1. Open an available detected Local shell from New session.
+2. Put it into Split with another terminal instance and verify instance identity remains stable.
+3. Close it and confirm the pane/target is removed and the sibling survives.
+
+Automated evidence already covers provider status classification, stable distro profile identity,
+shared PTY close/master release, Local/WSL Split binding, MultiExec instance targeting, and
+target shrink on close. These checks do not replace the real Windows WSL run above.
+
+Later WF-05B/05C work must append the Serial/Telnet/RDP/VNC phases here before A11 can be
+recorded PASS.

@@ -7,6 +7,8 @@ const localProfiles = readFileSync(new URL("../src-tauri/src/terminal/local_prof
 const localRuntime = readFileSync(new URL("../src-tauri/src/terminal/local.rs", import.meta.url), "utf8");
 const commands = readFileSync(new URL("../src/shared/tauri/commands.ts", import.meta.url), "utf8");
 const tauriLib = readFileSync(new URL("../src-tauri/src/lib.rs", import.meta.url), "utf8");
+const workspaceIntegration = readFileSync(new URL("../src/features/workspace/wf05aLocalWsl.integration.test.tsx", import.meta.url), "utf8");
+const fixtureReadme = readFileSync(new URL("../tests/fixtures/README.md", import.meta.url), "utf8");
 const plan = readFileSync(new URL("../NEXATERM_WORKFLOW_DELIVERY_PLAN.md", import.meta.url), "utf8");
 
 for (const needle of [
@@ -68,6 +70,32 @@ for (const needle of [
   '"availableHidden"',
 ]) {
   if (!model.includes(needle)) throw new Error(`WF-05A exact WSL entry reason missing: ${needle}`);
+}
+for (const needle of [
+  'tab.profileKind === "wsl"',
+  '? "WSL"',
+]) {
+  if (!shell.includes(needle)) throw new Error(`WF-05A WSL Split presentation missing: ${needle}`);
+}
+for (const needle of [
+  "keeps Local and WSL instances independently addressable in Split and MultiExec",
+  "keeps sibling WSL instances distinct even when they share one distro profile",
+  '"local:wsl-ubuntu-1"',
+  '"local:wsl-ubuntu-2"',
+  "setMultiExecTargets(",
+]) {
+  if (!workspaceIntegration.includes(needle)) {
+    throw new Error(`WF-05A workspace integration evidence missing: ${needle}`);
+  }
+}
+for (const needle of [
+  "## WF-05 A11 combined GUI acceptance",
+  "### Phase 1: Local / WSL",
+  "A11 remains PENDING",
+]) {
+  if (!fixtureReadme.includes(needle)) {
+    throw new Error(`WF-05A A11 deferred acceptance instructions missing: ${needle}`);
+  }
 }
 if (!plan.includes("### WF-05：把已有协议带入统一入口")) {
   throw new Error("WF-05A must remain under the 2026-09-23 WF-05 delivery package.");
