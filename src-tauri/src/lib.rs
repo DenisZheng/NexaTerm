@@ -125,6 +125,7 @@ pub fn run() {
             commands::credential_reveal_secret,
             commands::known_host_trust,
             commands::local_terminal_list_profiles,
+            commands::local_terminal_wsl_capability,
             commands::local_terminal_open,
             commands::telnet_terminal_open,
             commands::serial_list_ports,

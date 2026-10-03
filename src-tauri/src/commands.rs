@@ -68,8 +68,10 @@ use crate::storage_repository::{
     RevealedConnectionSecret, RevealedCredentialSecret, StorageRepository,
 };
 use crate::storage_vault::{VaultState, VaultStatus};
-use crate::terminal::local::list_profiles as list_local_profiles;
-pub use crate::terminal::local_profiles::{LocalTerminalProfile, LocalTerminalProfileInput};
+use crate::terminal::local::{list_profiles as list_local_profiles, wsl_capability as local_wsl_capability};
+pub use crate::terminal::local_profiles::{
+    LocalTerminalProfile, LocalTerminalProfileInput, WslProviderCapability,
+};
 use crate::terminal::manager::TerminalManager;
 use crate::temporary_connections::resolve_remote_connection_profile;
 pub use crate::terminal::serial::{SerialPortEntry, SerialTerminalOpenRequest};
@@ -584,6 +586,11 @@ pub fn local_terminal_list_profiles(
     request: LocalTerminalListProfilesRequest,
 ) -> Result<Vec<LocalTerminalProfile>, AppError> {
     list_local_profiles(request.hidden_profile_ids, request.platform)
+}
+
+#[tauri::command]
+pub fn local_terminal_wsl_capability() -> WslProviderCapability {
+    local_wsl_capability()
 }
 
 #[tauri::command]

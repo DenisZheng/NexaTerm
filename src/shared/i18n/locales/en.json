@@ -110,5 +110,14 @@
   "batchConnect.title": "Batch connect",
   "batchConnect.unknownGroup": "Unknown group",
   "split.newSshInstanceGroup": "New SSH instance",
-  "split.newCharacterInstanceGroup": "New Telnet / Serial instance"
+  "split.newCharacterInstanceGroup": "New Telnet / Serial instance",
+  "newSession.wsl": "WSL",
+  "newSession.wslProfilesLoading": "Detecting WSL distributions…",
+  "newSession.wslDetectionFailed": "WSL availability could not be detected",
+  "newSession.wslNotDetected": "WSL is unavailable or no distribution is installed",
+  "newSession.wslCommandMissing": "WSL is not installed or wsl.exe is unavailable",
+  "newSession.wslNoDistribution": "WSL is installed, but no distribution is available",
+  "newSession.wslProbeTimeout": "WSL distribution detection timed out",
+  "newSession.wslProbeFailed": "WSL distribution detection failed",
+  "newSession.wslAvailableHidden": "WSL distributions are available but hidden from this menu"
 }
