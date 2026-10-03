@@ -1,33 +1,54 @@
 import { readFileSync } from "node:fs";
 
 const workspaceShell = readFileSync("src/features/layout/WorkspaceShell.tsx", "utf8");
+const multiExecTargets = readFileSync("src/features/workspace/multiExec/targets.ts", "utf8");
 
-for (const needle of [
+for (const legacy of [
   "function syncCommandSenderTargetTab(",
-  "setCommandSenderTargetTabByConnectionId((tabs) =>",
-  "setSelectedCommandTargetKeys((keys) =>",
-  "syncCommandSenderTargetTab(tab.connectionId, tab.id);",
-  "syncCommandSenderTargetTab(localCommandSenderTargetId, tab.id);",
+  "commandSenderTargetTabByConnectionId",
+  "setCommandSenderTargetTabByConnectionId",
+  "selectedCommandTargetKeys",
+  "setSelectedCommandTargetKeys",
+  "selectCommandSenderTargetTab(",
 ]) {
-  if (!workspaceShell.includes(needle)) {
-    throw new Error(`WorkspaceShell should keep Command Sender target tab aligned with active tabs: ${needle}`);
+  if (workspaceShell.includes(legacy)) {
+    throw new Error(`WF-04C fixed targets must remove legacy active-tab target ownership: ${legacy}`);
   }
 }
 
-if (
-  !/function activateTerminalTab\(tab: TerminalTab\) \{[\s\S]*?rememberActiveTab\(tab\);[\s\S]*?syncCommandSenderTargetTab\(tab\.connectionId, tab\.id\);[\s\S]*?\}/.test(
-    workspaceShell,
-  )
-) {
-  throw new Error("SSH terminal activation should sync the Command Sender target tab.");
+for (const needle of [
+  "multiExecTargets",
+  "setMultiExecTargets",
+  "buildMultiExecTargets({",
+  "key={target.key}",
+  "command-target-terminal-instance",
+]) {
+  if (!workspaceShell.includes(needle)) {
+    throw new Error(`WF-04C Command Sender instance target wiring missing: ${needle}`);
+  }
 }
 
-if (
-  !/function activateLocalTerminalTab\(tab: LocalTerminalTab\) \{[\s\S]*?setActiveLocalTerminalTabId\(tab\.id\);[\s\S]*?syncCommandSenderTargetTab\(localCommandSenderTargetId, tab\.id\);[\s\S]*?\}/.test(
-    workspaceShell,
-  )
-) {
-  throw new Error("Local terminal activation should sync the Command Sender target tab.");
+for (const needle of [
+  "terminalPaneBindingKey(binding)",
+  "target.key !== sourceKey",
+]) {
+  if (!multiExecTargets.includes(needle)) {
+    throw new Error(`WF-04C instance target projection missing: ${needle}`);
+  }
 }
 
-console.log("Command Sender active-tab source check passed.");
+const sshActivation = workspaceShell.match(
+  /function activateStandaloneTerminalTab\(tab: TerminalTab\) \{[\s\S]*?\n  \}\n\n  function activateTerminalTab/,
+)?.[0];
+if (!sshActivation || sshActivation.includes("setMultiExecTargets")) {
+  throw new Error("SSH focus/activation must not mutate MultiExec targets.");
+}
+
+const localActivation = workspaceShell.match(
+  /function activateStandaloneLocalTerminalTab\(tab: LocalTerminalTab\) \{[\s\S]*?\n  \}\n\n  function resolveDefaultLocalTerminalProfile/,
+)?.[0];
+if (!localActivation || localActivation.includes("setMultiExecTargets")) {
+  throw new Error("Local focus/activation must not mutate MultiExec targets.");
+}
+
+console.log("Command Sender fixed-instance target source check passed.");

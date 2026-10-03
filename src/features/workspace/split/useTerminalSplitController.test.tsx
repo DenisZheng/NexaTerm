@@ -179,7 +179,7 @@ describe("超过 pane 上限时重建四宫格（原 1459 行 effect）", () => 
 });
 
 describe("同步输入参与者（原 1500 行 effect）", () => {
-  it("开启同步后，焦点 pane 自动成为参与者", () => {
+  it("开启同步后只保留显式选择的参与者", () => {
     const { result } = setup();
     openTwoPanes(result);
     act(() => {
@@ -190,6 +190,18 @@ describe("同步输入参与者（原 1500 行 effect）", () => {
     expect(result.current.terminalSplitSyncParticipantKeys).toEqual(new Set(["ssh:a", "ssh:b"]));
   });
 
+  it("切换焦点不会暗中增加或替换 MultiExec targets", () => {
+    const { result } = setup();
+    openTwoPanes(result);
+    act(() => {
+      result.current.setTerminalSplitSyncEnabled(true);
+      result.current.setTerminalSplitSyncParticipantKeys(new Set(["ssh:a"]));
+      result.current.setFocusedTerminalPaneId("terminal-pane-2");
+    });
+    expect(result.current.focusedTerminalSplitBinding).toEqual(ssh("b"));
+    expect(result.current.terminalSplitSyncParticipantKeys).toEqual(new Set(["ssh:a"]));
+  });
+
   it("未连接的会话不能是参与者：参与者集合按已连接会话收缩", () => {
     const { result, rerender, initial } = setup();
     openTwoPanes(result);
@@ -198,13 +210,13 @@ describe("同步输入参与者（原 1500 行 effect）", () => {
       result.current.setTerminalSplitSyncParticipantKeys(new Set(["ssh:a", "ssh:b"]));
     });
     rerender({ ...initial, terminalTabs: [connected("a"), connecting("b"), connected("c")] });
-    // b 仍在布局里（tab 存在），但不再是同步参与者；可用参与者 < 2 → 同步自动关闭。
+    // b 仍在布局里（tab 存在），但不再是同步参与者；剩余显式目标 a 时 live 继续有效。
     expect(result.current.terminalSplitPanes).toHaveLength(2);
     expect(result.current.terminalSplitSyncParticipantKeys).toEqual(new Set(["ssh:a"]));
-    expect(result.current.terminalSplitSyncEnabled).toBe(false);
+    expect(result.current.terminalSplitSyncEnabled).toBe(true);
   });
 
-  it("分屏 tab 不活动时同步被关闭", () => {
+  it("切离分屏不会关闭 live 或改变固定 targets", () => {
     const { result } = setup();
     openTwoPanes(result);
     act(() => {
@@ -212,7 +224,8 @@ describe("同步输入参与者（原 1500 行 effect）", () => {
       result.current.setTerminalSplitSyncParticipantKeys(new Set(["ssh:a", "ssh:b"]));
     });
     act(() => result.current.setTerminalSplitTabActive(false));
-    expect(result.current.terminalSplitSyncEnabled).toBe(false);
+    expect(result.current.terminalSplitSyncEnabled).toBe(true);
+    expect(result.current.terminalSplitSyncParticipantKeys).toEqual(new Set(["ssh:a", "ssh:b"]));
   });
 
   it("参与者集合无变化时保持同一引用（避免多余渲染）", () => {

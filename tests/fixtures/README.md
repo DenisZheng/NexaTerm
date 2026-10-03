@@ -168,3 +168,60 @@ When finished:
 ```sh
 node tests/fixtures/fixtures.mjs down
 ```
+
+
+## WF-04C A09 / A10 GUI acceptance
+
+Use the direct SSH fixture on `127.0.0.1:2222`. Start it first:
+
+```sh
+node tests/fixtures/fixtures.mjs up
+```
+
+Create or reuse one saved SSH profile with host `127.0.0.1`, port `2222`, user
+`testuser`, and the generated `tests/fixtures/keys/test_key` private key. Open four
+terminal instances from that profile (or use three SSH instances plus one Local terminal)
+and place them into a 4-pane Split. Name them by visible instance order as A, B, C, D for
+the acceptance run.
+
+### A09 fixed targets + live/send
+
+1. Open MultiExec and explicitly select only A and B. Leave C and D unselected.
+2. Enable live input with focus on A. Type a unique command such as
+   `echo A09-LIVE-A` and press Enter.
+3. Confirm A receives the normal focused input once, B receives the fan-out once, and
+   C/D do not receive that command.
+4. Change focus to B without touching target checkboxes. Confirm A/B remain the selected
+   target set. Type `echo A09-LIVE-B`; B receives normal input once, A receives fan-out
+   once, C/D remain untouched.
+5. Switch to Command Sender / send mode without changing targets. Send
+   `echo A09-SEND` with Enter.
+6. Confirm A and B each receive the command once and C/D receive nothing. Switching pane
+   focus before another send must not replace either selected target.
+
+A09 passes only if target identity is by terminal instance, each selected target receives
+at most one delivery per action, unselected panes are not fan-out destinations, and focus
+changes do not silently mutate the selected set.
+
+### A10 disconnect + reconnect
+
+1. Keep A and B explicitly selected. Send `echo A10-BEFORE` once and confirm both receive it.
+2. Close/disconnect B while MultiExec remains available. Confirm the UI updates B as
+   unavailable/removed rather than silently substituting another instance.
+3. Reopen the same saved SSH profile, producing a new terminal instance B2. Focus B2.
+4. Confirm B2 is not automatically selected. A remains selected if it stayed connected.
+5. Send `echo A10-AFTER`. Confirm only the still-selected target(s) receive it; B2 must
+   not receive the command until explicitly selected.
+6. Confirm no earlier command is automatically replayed into B2 after reconnect. If a
+   send attempt reports a disconnected/failed target, leave it as an explicit result;
+   there must be no automatic retry.
+
+A10 passes only if disconnect state is visible, reconnect creates a new instance identity,
+the replacement does not silently rejoin targets, and no uncertain/failed command is
+automatically resent.
+
+When finished:
+
+```sh
+node tests/fixtures/fixtures.mjs down
+```
