@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 
 const workspaceShell = readFileSync("src/features/layout/WorkspaceShell.tsx", "utf8");
+const multiExecSend = readFileSync("src/features/workspace/multiExec/send.ts", "utf8");
 const appSelect = readFileSync("src/shared/ui/AppSelect.tsx", "utf8");
 const appCss = readFileSync("src/styles/app.css", "utf8");
 const remoteFilePanel = readFileSync("src/features/files/RemoteFilePanel.tsx", "utf8");
@@ -18,7 +19,8 @@ for (const needle of [
   "commandSenderRisky",
   "sendCommandToTargets",
   "buildCommandSenderTargets",
-  "terminalWrite(target.sessionId, payload)",
+  "writeMultiExecCommand",
+  "resolveCurrentMultiExecTarget",
   "activateCommandSenderTarget",
   "command-sender-toggle",
   "terminal-subtab-actions",
@@ -151,12 +153,17 @@ if (!workspaceShell.includes("void sendCommandToTargets(true);")) {
   throw new Error("Command Sender Ctrl/Cmd+Enter should send with Enter by default.");
 }
 
-if (workspaceShell.includes("const results = await Promise.all")) {
+if (multiExecSend.includes("Promise.all")) {
   throw new Error("Command Sender sequential mode must not dispatch target writes with Promise.all.");
 }
 
-if (!/for \(const target of targets\)[\s\S]*await terminalWrite\(target\.sessionId, payload\)/.test(workspaceShell)) {
-  throw new Error("Command Sender sequential mode must await terminalWrite per target.");
+if (!/for \(const key of input\.targetKeys\)[\s\S]*await input\.write\(target\.sessionId, input\.data\)/.test(multiExecSend)) {
+  throw new Error("Command Sender sequential mode must await exactly one write per resolved target.");
+}
+for (const needle of ['status: "written"', 'status: "failed"', 'status: "disconnected"']) {
+  if (!multiExecSend.includes(needle)) {
+    throw new Error(`Command Sender send result contract missing: ${needle}`);
+  }
 }
 
 if (!/setCommandSenderLastSentLabel\([\s\S]*?\);\s*setCommandSenderInput\(""\);/.test(workspaceShell)) {

@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 const actions = readFileSync(new URL("../src/features/workspace/multiExec/actions.ts", import.meta.url), "utf8");
 const reducer = readFileSync(new URL("../src/features/workspace/multiExec/reducer.ts", import.meta.url), "utf8");
 const live = readFileSync(new URL("../src/features/workspace/multiExec/live.ts", import.meta.url), "utf8");
+const send = readFileSync(new URL("../src/features/workspace/multiExec/send.ts", import.meta.url), "utf8");
 const targets = readFileSync(new URL("../src/features/workspace/multiExec/targets.ts", import.meta.url), "utf8");
 const shell = readFileSync(new URL("../src/features/layout/WorkspaceShell.tsx", import.meta.url), "utf8");
 const spec = readFileSync(new URL("../docs/WORKFLOW_SPEC.md", import.meta.url), "utf8");
@@ -76,6 +77,26 @@ if (shell.includes("handleTerminalSplitUserInput")) {
 }
 if (shell.includes("setTerminalSplitSyncParticipantKeys(new Set())")) {
   throw new Error("Closing/resetting Split must not erase fixed MultiExec target selection.");
+}
+
+for (const needle of [
+  'status: "written"',
+  'status: "failed"',
+  'status: "disconnected"',
+  "for (const key of input.targetKeys)",
+  "await input.write(target.sessionId, input.data)",
+]) {
+  if (!send.includes(needle)) throw new Error(`WF-04C send executor contract missing: ${needle}`);
+}
+if (send.includes("Promise.all")) {
+  throw new Error("WF-04C send executor must keep ordered one-write-per-target delivery.");
+}
+for (const needle of [
+  "writeMultiExecCommand({",
+  'setMultiExecMode("send")',
+  'delivery.status === "disconnected"',
+]) {
+  if (!shell.includes(needle)) throw new Error(`WF-04C send wiring missing: ${needle}`);
 }
 
 if (!spec.includes("| WS-X04 | 已确认（v0.6） | WF-04C |")) {

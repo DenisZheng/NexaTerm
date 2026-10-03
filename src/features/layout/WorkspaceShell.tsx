@@ -456,6 +456,10 @@ import {
 } from "../workspace/multiExec/targets";
 import { writeMultiExecLiveInput } from "../workspace/multiExec/live";
 import {
+  writeMultiExecCommand,
+  type MultiExecSendDeliveryStatus,
+} from "../workspace/multiExec/send";
+import {
   displayOrdinal,
   HOME_ITEM_ID,
   SPLIT_ITEM_ID,
@@ -531,7 +535,7 @@ interface TerminalClearRequest {
   tabId: string;
 }
 
-type CommandSenderDeliveryStatus = "idle" | "sent" | "failed";
+type CommandSenderDeliveryStatus = "idle" | MultiExecSendDeliveryStatus;
 type CommandSenderTargetKind = "ssh" | "local";
 
 interface CommandSenderTarget {
@@ -1663,8 +1667,11 @@ export function WorkspaceShell() {
   useEffect(() => {
     if (isUnifiedFileTabActive && commandSenderOpen) {
       setCommandSenderOpen(false);
+      if (multiExecMode === "send") {
+        setMultiExecMode("off");
+      }
     }
-  }, [commandSenderOpen, isUnifiedFileTabActive]);
+  }, [commandSenderOpen, isUnifiedFileTabActive, multiExecMode, setMultiExecMode]);
   const activeWorkbenchSurface =
     isUnifiedFileTabActive
       ? "panel"
@@ -5467,6 +5474,7 @@ export function WorkspaceShell() {
   }
 
   function prepareCommandSenderTargets() {
+    setMultiExecMode("send");
     void loadCommandLibrary();
     return selectedCommandTargets;
   }
@@ -5526,6 +5534,7 @@ export function WorkspaceShell() {
     setSelectedCommandHistoryId(null);
     await sendCommandTextToTargets(command, true, null, [target], {
       clearInput: false,
+      setSendMode: false,
     });
   }
 
@@ -5941,14 +5950,20 @@ export function WorkspaceShell() {
     setCommandLibraryError(formatError(error));
   }
 
+  function closeCommandSender() {
+    setCommandSenderOpen(false);
+    if (multiExecMode === "send") {
+      setMultiExecMode("off");
+    }
+  }
+
   function openCommandSender() {
-    setCommandSenderOpen((open) => {
-      const nextOpen = !open;
-      if (nextOpen) {
-        prepareCommandSenderTargets();
-      }
-      return nextOpen;
-    });
+    if (commandSenderOpen) {
+      closeCommandSender();
+      return;
+    }
+    setCommandSenderOpen(true);
+    prepareCommandSenderTargets();
   }
 
   function toggleCommandSenderAllTargets() {
@@ -5984,12 +5999,21 @@ export function WorkspaceShell() {
     }
   }
 
+  function resolveCurrentMultiExecTarget(key: string) {
+    return (
+      buildMultiExecTargets({
+        localTabs: localTerminalTabsRef.current,
+        sshTabs: terminalTabsRef.current,
+      }).find((target) => target.key === key) || null
+    );
+  }
+
   async function sendCommandTextToTargets(
     command: string,
     appendEnter: boolean,
     snippetId: string | null,
     targetsOverride?: CommandSenderTarget[],
-    options: { clearInput?: boolean } = {},
+    options: { clearInput?: boolean; setSendMode?: boolean } = {},
   ) {
     const historyCommand = command.trim();
     const targets = targetsOverride ?? selectedCommandTargets;
@@ -5997,7 +6021,11 @@ export function WorkspaceShell() {
       return;
     }
 
+    if (options.setSendMode ?? true) {
+      setMultiExecMode("send");
+    }
     const payload = appendEnter ? `${command}\r` : command;
+    const targetByKey = new Map(targets.map((target) => [target.key, target]));
 
     setCommandSenderDeliveryByKey((deliveryByKey) => {
       const nextDeliveryByKey = { ...deliveryByKey };
@@ -6007,30 +6035,54 @@ export function WorkspaceShell() {
       return nextDeliveryByKey;
     });
 
-    const successfulTargets: CommandSenderTarget[] = [];
-    for (const target of targets) {
-      try {
+    const deliveries = await writeMultiExecCommand({
+      data: payload,
+      resolveTarget: resolveCurrentMultiExecTarget,
+      targetKeys: targets.map((target) => target.key),
+      write: async (sessionId, data) => {
         if (!hasTauriRuntime()) {
           throw new Error("当前环境无法写入终端输入流。");
         }
-        await terminalWrite(target.sessionId, payload);
-        setCommandSenderDeliveryByKey((deliveryByKey) => ({
-          ...deliveryByKey,
-          [target.key]: { status: "sent" },
-        }));
-        successfulTargets.push(target);
-      } catch (error) {
-        setCommandSenderDeliveryByKey((deliveryByKey) => ({
-          ...deliveryByKey,
-          [target.key]: { message: formatError(error), status: "failed" },
-        }));
-      }
-    }
+        await terminalWrite(sessionId, data);
+      },
+    });
+
+    setCommandSenderDeliveryByKey((deliveryByKey) => {
+      const nextDeliveryByKey = { ...deliveryByKey };
+      deliveries.forEach((delivery) => {
+        nextDeliveryByKey[delivery.key] =
+          delivery.status === "failed"
+            ? { message: formatError(delivery.error), status: "failed" }
+            : delivery.status === "disconnected"
+              ? { message: "目标在发送前已断线或关闭。", status: "disconnected" }
+              : { status: "written" };
+      });
+      return nextDeliveryByKey;
+    });
+
+    const successfulTargets = deliveries.flatMap((delivery) => {
+      if (delivery.status !== "written") return [];
+      const target = targetByKey.get(delivery.key);
+      return target ? [target] : [];
+    });
     const successCount = successfulTargets.length;
-    const failedCount = targets.length - successCount;
+    const failedCount = deliveries.filter((delivery) => delivery.status === "failed").length;
+    const disconnectedKeys = new Set(
+      deliveries
+        .filter((delivery) => delivery.status === "disconnected")
+        .map((delivery) => delivery.key),
+    );
+    const disconnectedCount = disconnectedKeys.size;
+
+    if (disconnectedCount > 0) {
+      setMultiExecTargets(
+        (current) => new Set(Array.from(current).filter((key) => !disconnectedKeys.has(key))),
+      );
+    }
+
     setCommandSenderLastSentLabel(
-      failedCount > 0
-        ? `上次发送：写入 ${successCount.toString()}，失败 ${failedCount.toString()}`
+      failedCount > 0 || disconnectedCount > 0
+        ? `上次发送：写入 ${successCount.toString()}，失败 ${failedCount.toString()}，断线 ${disconnectedCount.toString()}`
         : `上次发送：已写入 ${successCount.toString()} 个目标`,
     );
     if (options.clearInput ?? true) {
@@ -7979,7 +8031,7 @@ export function WorkspaceShell() {
                 className="command-console-toggle command-sender-close"
                 type="button"
                 aria-label="关闭命令操作台"
-                onClick={() => setCommandSenderOpen(false)}
+                onClick={closeCommandSender}
               >
                 <X className="ui-icon" aria-hidden="true" />
                 <span className="command-close-text">关闭</span>
@@ -8029,7 +8081,9 @@ export function WorkspaceShell() {
                         className={`command-target command-sender-target ${
                           selected ? "selected" : ""
                         } ${hasDelivery ? "has-delivery" : ""} ${
-                          target.deliveryStatus === "failed" ? "has-failed-delivery" : ""
+                          target.deliveryStatus === "failed" || target.deliveryStatus === "disconnected"
+                            ? "has-failed-delivery"
+                            : ""
                         }`}
                         data-delivery={target.deliveryStatus}
                         key={target.key}
@@ -8051,7 +8105,9 @@ export function WorkspaceShell() {
                             <SquareTerminal className="ui-icon" aria-hidden="true" />
                             <span className="command-target-terminal-instance">{target.tabTitle}</span>
                           </span>
-                          <span className="command-target-state">在线</span>
+                          <span className="command-target-state">
+                            {target.deliveryStatus === "disconnected" ? "断开" : "在线"}
+                          </span>
                           <button
                             className={`command-target-delivery command-sender-status ${target.deliveryStatus}`}
                             type="button"
@@ -13012,11 +13068,14 @@ function buildCommandSenderTargets({
 }
 
 function commandSenderDeliveryLabel(status: CommandSenderDeliveryStatus) {
-  if (status === "sent") {
+  if (status === "written") {
     return "已写入";
   }
   if (status === "failed") {
     return "发送失败";
+  }
+  if (status === "disconnected") {
+    return "已断线";
   }
   return "未发送";
 }

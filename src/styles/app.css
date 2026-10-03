@@ -7019,12 +7019,13 @@ button {
   white-space: nowrap;
 }
 
-.command-target-delivery.sent {
+.command-target-delivery.written {
   color: var(--mx-success);
   background: color-mix(in srgb, var(--mx-success) 13%, var(--mx-panel));
 }
 
-.command-target-delivery.failed {
+.command-target-delivery.failed,
+.command-target-delivery.disconnected {
   color: var(--mx-danger);
   background: color-mix(in srgb, var(--mx-danger) 12%, var(--mx-panel));
 }

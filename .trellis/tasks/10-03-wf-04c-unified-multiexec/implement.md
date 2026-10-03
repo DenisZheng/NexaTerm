@@ -25,10 +25,10 @@
 - [x] 写入失败 target 从固定集合收缩；其它目标继续，全部目标失效时 live 自动关闭。
 
 ## 04C-4 send
-- [ ] Command Sender 使用统一 targets。
-- [ ] written / failed / disconnected 逐项目标结果。
-- [ ] 未知结果不自动重发。
-- [ ] history/snippets 继续复用，不扩范围。
+- [x] Command Sender 使用统一 targets。
+- [x] written / failed / disconnected 逐项目标结果。
+- [x] 未知结果不自动重发。
+- [x] history/snippets 继续复用，不扩范围。
 
 ## 04C-5 A09/A10
 - [ ] 自动化边界覆盖。
@@ -84,3 +84,13 @@
 - 离开 Split / 激活 standalone terminal 不再自动关闭 live；Split reset 只结束 live mode，不清空 target Set。
 - live 部分写入失败时移除失败 target 并保留其余 targets；不自动重试。
 - `WorkspaceShell.tsx` 预构建 13,699 行，未修改 line budget。
+
+
+## 04C-4 send 实施证据
+
+- 新增 `multiExec/send.ts`：按显式 target key 顺序逐个解析当前 runtime instance，每个目标最多写入一次。
+- runtime target 在轮到发送前已关闭/断线时返回 `disconnected`，不会尝试写入；write reject 返回 `failed`；成功仅表示 `written`。
+- executor 不使用 `Promise.all`、不重试失败/断线/未知结果；后续目标仍继续一次。
+- Command Sender 发送时进入统一 `send` mode，关闭面板后从 `send` 回到 `off`；AI 单目标直接发送不改变 MultiExec mode。
+- history/snippets 仍只记录实际 `written` 的目标，失败/断线不计入成功 target_count，也不触发自动重发。
+- 新增 `send.test.ts` 覆盖顺序一次写入、断线不写、部分失败继续且零重试；source gate 已迁移到新 executor。
