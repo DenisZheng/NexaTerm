@@ -68,6 +68,7 @@ import { resolveWorkspaceSidebarFileContext } from "./workspaceSidebarContext";
 import { ConnectionSystemLogo } from "../connections/ConnectionSystemLogo";
 import type {
   ConnectionAuthKind,
+  ConnectionProtocol,
   ConnectionProfile,
   ConnectionProfileInput,
   ConnectionRuntimeCredentialRequest,
@@ -967,6 +968,8 @@ export function WorkspaceShell() {
     useState<SettingsSectionId | undefined>();
   const [settingsSectionRequestKey, setSettingsSectionRequestKey] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [pendingConnectionProtocol, setPendingConnectionProtocol] =
+    useState<ConnectionProtocol | null>(null);
   const [connectionTransferMode, setConnectionTransferMode] =
     useState<ConnectionTransferMode | null>(null);
   const [LoadedConnectionDialog, setLoadedConnectionDialog] =
@@ -1805,7 +1808,7 @@ export function WorkspaceShell() {
     localProfilesError: localTerminalProfilesError,
     localProfilesLoading: localTerminalProfilesLoading,
     wslProviderStatus,
-    onCreateConnection: () => createConnection(),
+    onCreateConnection: (protocol?: ConnectionProtocol) => createConnection(undefined, protocol),
     onOpenLocalProfile: (profile: LocalTerminalProfile) => void openLocalTerminalByProfile(profile),
     onQuickOpen: () => setConnectionSearchOpen(true),
   };
@@ -4112,9 +4115,13 @@ export function WorkspaceShell() {
     setTemporaryConnections((items) => [...items, connection]); startConnectionStep(connection, "terminal");
   }
 
-  async function createConnection(groupName?: string) {
+  async function createConnection(
+    groupName?: string,
+    initialProtocol?: ConnectionProtocol,
+  ) {
     setLeftPaneCollapsed(false);
     setPendingConnectionGroupId(groupName || null);
+    setPendingConnectionProtocol(initialProtocol || null);
     setEditingConnection(null);
     setDuplicatingConnection(false);
     await ensureConnectionDialogLoaded();
@@ -4123,6 +4130,7 @@ export function WorkspaceShell() {
 
   async function editConnection(connection: ConnectionProfile) {
     setPendingConnectionGroupId(null);
+    setPendingConnectionProtocol(null);
     setEditingConnection(connection);
     setDuplicatingConnection(false);
     await ensureConnectionDialogLoaded();
@@ -4131,6 +4139,7 @@ export function WorkspaceShell() {
 
   async function duplicateConnection(connection: ConnectionProfile) {
     setPendingConnectionGroupId(null);
+    setPendingConnectionProtocol(null);
     setEditingConnection(connection);
     setDuplicatingConnection(true);
     await ensureConnectionDialogLoaded();
@@ -9251,6 +9260,7 @@ export function WorkspaceShell() {
             defaultGroup={pendingConnectionGroupId}
             duplicate={duplicatingConnection}
             groups={connectionGroupCatalog.groups}
+            initialProtocol={pendingConnectionProtocol}
             onClose={closeConnectionDialog}
             onDelete={deleteConnection}
             onManageCredentials={openCredentialSettings}
@@ -9269,6 +9279,7 @@ export function WorkspaceShell() {
               defaultGroup={pendingConnectionGroupId}
               duplicate={duplicatingConnection}
               groups={connectionGroupCatalog.groups}
+              initialProtocol={pendingConnectionProtocol}
               onClose={closeConnectionDialog}
               onDelete={deleteConnection}
               onManageCredentials={openCredentialSettings}
@@ -9930,6 +9941,7 @@ export function WorkspaceShell() {
   function closeConnectionDialog() {
     setDialogOpen(false);
     setPendingConnectionGroupId(null);
+    setPendingConnectionProtocol(null);
     setDuplicatingConnection(false);
   }
 }

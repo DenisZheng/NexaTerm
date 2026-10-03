@@ -82,6 +82,7 @@ import {
   errorDiagnosticId,
 } from "./connectionErrorCodes";
 import { connectionDialogSubmitPolicy, validateConnectionNetworkPath, type ConnectionSaveIntent } from "./connectionDialogSubmit";
+import { serialPortAvailability } from "./serialPortAvailability";
 import type {
   CharacterBackspaceMode,
   SerialDataBits,
@@ -99,6 +100,7 @@ interface ConnectionDialogProps {
   defaultGroup?: string | null;
   duplicate?: boolean;
   groups: ConnectionDialogGroup[];
+  initialProtocol?: ConnectionProtocol | null;
   allowPasswordReveal: boolean;
   open: boolean;
   onClose: () => void;
@@ -317,6 +319,7 @@ export function ConnectionDialog({
   defaultGroup,
   duplicate = false,
   groups,
+  initialProtocol,
   allowPasswordReveal,
   open,
   onClose,
@@ -429,9 +432,14 @@ export function ConnectionDialog({
         ? duplicate
           ? duplicateFormFromConnection(connection, connections, groups)
           : formFromConnection(connection, groups)
-        : { ...emptyForm, group_id: defaultGroup || "" },
+        : {
+            ...emptyForm,
+            group_id: defaultGroup || "",
+            port: protocolDefaultPorts[initialProtocol || "ssh"],
+            protocol: initialProtocol || "ssh",
+          },
     );
-  }, [connection, connections, defaultGroup, duplicate, groups, open]);
+  }, [connection, connections, defaultGroup, duplicate, groups, initialProtocol, open]);
 
   useEffect(() => {
     if (!open || protocol !== "serial") {
@@ -1064,6 +1072,19 @@ export function ConnectionDialog({
 
     if (isSerial) {
       const serial = withDefaultSerialConfig(form.serial);
+      const serialAvailability = serialPortAvailability({
+        error: serialPortsError,
+        loading: serialPortsLoading,
+        ports: serialPorts,
+      });
+      const serialAvailabilityMessage =
+        serialAvailability.status === "loading"
+          ? "正在读取串口设备…"
+          : serialAvailability.status === "list_failed"
+            ? `串口列表读取失败：${serialAvailability.error || "未知错误"}`
+            : serialAvailability.status === "no_ports"
+              ? "未检测到可用串口设备。连接设备后可点击刷新重试。"
+              : `已检测到 ${serialAvailability.count.toString()} 个串口设备。`;
       const serialPortOptions =
         serialPorts.length > 0
           ? serialPorts.map((port) => ({
@@ -1073,7 +1094,12 @@ export function ConnectionDialog({
           : [
               {
                 disabled: true,
-                label: serialPortsLoading ? "正在读取串口" : "暂无可用串口",
+                label:
+                  serialAvailability.status === "loading"
+                    ? "正在读取串口"
+                    : serialAvailability.status === "list_failed"
+                      ? "串口读取失败"
+                      : "暂无可用串口",
                 value: "",
               },
             ];
@@ -1111,7 +1137,7 @@ export function ConnectionDialog({
               <span>串口</span>
               <AppSelect
                 ariaLabel="串口"
-                disabled={serialPortsLoading || serialPorts.length === 0}
+                disabled={serialAvailability.status !== "available"}
                 value={serial.port_name}
                 options={serialPortOptions}
                 menuMinWidth={220}
@@ -1215,9 +1241,12 @@ export function ConnectionDialog({
               />
             </label>
           </div>
-          {serialPortsError ? (
-            <p className="connection-dialog-note">{serialPortsError}</p>
-          ) : null}
+          <p
+            className="connection-dialog-note"
+            data-serial-availability={serialAvailability.status}
+          >
+            {serialAvailabilityMessage}
+          </p>
           <label>
             <span>说明</span>
             <textarea

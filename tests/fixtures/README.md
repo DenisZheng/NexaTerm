@@ -274,3 +274,64 @@ target shrink on close. These checks do not replace the real Windows WSL run abo
 
 Later WF-05B/05C work must append the Serial/Telnet/RDP/VNC phases here before A11 can be
 recorded PASS.
+
+
+### Phase 2: Serial / Telnet
+
+This phase is appended by WF-05B. **A11 remains PENDING** until WF-05C adds and passes
+the RDP/VNC phase.
+
+#### Telnet
+
+Start the deterministic local TCP echo fixture in a separate terminal:
+
+```sh
+node tests/fixtures/telnet-loopback.mjs
+```
+
+The default endpoint is `127.0.0.1:2323`. You may override it with
+`NEXATERM_TELNET_FIXTURE_HOST` / `NEXATERM_TELNET_FIXTURE_PORT`.
+
+1. In **New session**, choose **Telnet…** and confirm ConnectionDialog opens already set to Telnet.
+2. Create/save a profile for `127.0.0.1:2323`. Keep the configured enter/backspace modes visible
+   in the acceptance notes.
+3. Open the profile and confirm the terminal receives `NexaTerm Telnet fixture ready`.
+4. Type a unique line such as `A11-TELNET-ONE` and confirm the fixture echoes it back.
+5. Explicitly open a **new instance** of the same Telnet profile. Confirm a sibling tab with a
+   different instance ordinal is created rather than focus jumping to the first tab.
+6. Put one Telnet instance and one other terminal instance into Split. The picker must label the
+   Character instance as **Telnet**.
+7. Select the Telnet instance as a MultiExec target and send a harmless line. It must receive one
+   delivery and remain identified by that exact instance.
+8. Close only the first Telnet instance. Its pane/target disappears; the same-profile sibling stays
+   connected and is not silently substituted into the selected target set.
+9. Stop the Node fixture with Ctrl+C after all Telnet tabs are closed.
+
+#### Serial
+
+Real Serial interoperability must use either a physical serial device or an explicitly documented
+simulated serial-port pair. Record the platform, port name(s), device/simulator, baud rate, data
+bits, parity, stop bits, and flow control used. Do **not** substitute SSH/Telnet or a pure mocked
+provider for this acceptance.
+
+1. In **New session**, choose **Serial…** and confirm ConnectionDialog opens already set to Serial.
+2. Observe port enumeration:
+   - while refreshing: loading state is visible;
+   - successful empty enumeration: no-device state is visible;
+   - enumeration failure: failure state is distinguishable from no-device;
+   - with the acceptance device attached: available state lists the real/simulated port.
+3. Configure the documented framing and open the Serial connection. Confirm real bidirectional
+   bytes with the device/simulated peer.
+4. Explicitly open a second instance of the same Serial profile if the device/simulator supports
+   multiple opens; otherwise document the single-open limitation and use a second Serial profile/
+   endpoint for the Split check.
+5. Put Serial and Telnet (or another terminal instance) into Split. The picker must label the
+   Character instance as **串口 / Serial**.
+6. Select Serial as a MultiExec target and send only a harmless payload expected by the device.
+   Confirm exactly one delivery to the explicitly selected instance.
+7. Close the Serial instance. Confirm its pane/target disappears, no stale writable instance remains,
+   and the port/handle can be reopened according to the device/simulator's documented behavior.
+
+Automated evidence covers Telnet real loopback lifecycle, Serial availability classification,
+Serial reader close signaling, Character Split/MultiExec instance identity, sibling separation,
+and target shrink on close. It does not replace real Serial hardware/simulator behavior.

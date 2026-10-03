@@ -358,6 +358,84 @@ mod tests {
     use super::*;
 
     #[test]
+    fn loopback_open_write_close_releases_socket_and_reader() {
+        tauri::async_runtime::block_on(async {
+            use tokio::io::{AsyncReadExt, AsyncWriteExt};
+            use tokio::net::TcpListener;
+            use tokio::sync::oneshot;
+            use tokio::time::{timeout, Duration};
+
+            let listener = TcpListener::bind(("127.0.0.1", 0))
+                .await
+                .expect("bind telnet loopback");
+            let port = listener.local_addr().expect("loopback address").port();
+            let (received_tx, received_rx) = oneshot::channel::<Vec<u8>>();
+            let (closed_tx, closed_rx) = oneshot::channel::<usize>();
+
+            tauri::async_runtime::spawn(async move {
+                let (mut socket, _) = listener.accept().await.expect("accept telnet client");
+                socket
+                    .write_all(b"READY\r\n")
+                    .await
+                    .expect("write loopback greeting");
+
+                let mut buffer = vec![0_u8; 128];
+                let read = socket.read(&mut buffer).await.expect("read telnet command");
+                let _ = received_tx.send(buffer[..read].to_vec());
+
+                let mut eof = [0_u8; 1];
+                let closed = socket.read(&mut eof).await.expect("read telnet close EOF");
+                let _ = closed_tx.send(closed);
+            });
+
+            let opened = TelnetTerminalSession::open(TelnetTerminalOpenRequest {
+                request_id: Some("wf05b-loopback".to_string()),
+                host: "127.0.0.1".to_string(),
+                port,
+                enter_mode: Some(TelnetEnterMode::CrLf),
+                backspace_mode: Some(TelnetBackspaceMode::Del),
+            })
+            .await
+            .expect("open telnet loopback");
+            let mut reader = opened.reader;
+
+            let greeting = timeout(Duration::from_secs(5), reader.recv())
+                .await
+                .expect("telnet greeting timeout")
+                .expect("telnet greeting");
+            assert_eq!(greeting, b"READY\r\n");
+
+            opened
+                .session
+                .write("status\r".to_string())
+                .await
+                .expect("write telnet loopback");
+            let received = timeout(Duration::from_secs(5), received_rx)
+                .await
+                .expect("telnet write timeout")
+                .expect("telnet write capture");
+            assert_eq!(received, b"status\r\n");
+
+            opened.session.close().await.expect("close telnet loopback");
+            let eof = timeout(Duration::from_secs(5), closed_rx)
+                .await
+                .expect("telnet close timeout")
+                .expect("telnet close capture");
+            assert_eq!(eof, 0);
+
+            let reader_closed = timeout(Duration::from_secs(5), reader.recv())
+                .await
+                .expect("telnet reader close timeout");
+            assert!(reader_closed.is_none());
+
+            assert!(
+                opened.session.write("after-close".to_string()).await.is_err(),
+                "closed telnet actor must reject new writes"
+            );
+        });
+    }
+
+    #[test]
     fn transform_input_uses_configured_enter_and_backspace_modes() {
         let config = TelnetSessionConfig {
             backspace_mode: TelnetBackspaceMode::CtrlH,

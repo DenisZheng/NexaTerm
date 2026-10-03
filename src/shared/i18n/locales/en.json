@@ -119,5 +119,8 @@
   "newSession.wslNoDistribution": "WSL is installed, but no distribution is available",
   "newSession.wslProbeTimeout": "WSL distribution detection timed out",
   "newSession.wslProbeFailed": "WSL distribution detection failed",
-  "newSession.wslAvailableHidden": "WSL distributions are available but hidden from this menu"
+  "newSession.wslAvailableHidden": "WSL distributions are available but hidden from this menu",
+  "newSession.characterTerminals": "Character terminals",
+  "newSession.telnet": "Telnet…",
+  "newSession.serial": "Serial…"
 }

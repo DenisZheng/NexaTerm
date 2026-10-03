@@ -101,6 +101,9 @@ jobs:
       - name: WF-05A Local and WSL unified entry
         run: pnpm run check:wf05a-local-wsl
 
+      - name: WF-05B Serial and Telnet unified entry
+        run: pnpm run check:wf05b-serial-telnet
+
   security:
     name: Security evidence
     runs-on: ubuntu-22.04
