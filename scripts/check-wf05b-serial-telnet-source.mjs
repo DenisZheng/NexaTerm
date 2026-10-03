@@ -8,6 +8,9 @@ const serialAvailability = readFileSync(new URL("../src/features/connections/ser
 const telnet = readFileSync(new URL("../src-tauri/src/terminal/telnet.rs", import.meta.url), "utf8");
 const serial = readFileSync(new URL("../src-tauri/src/terminal/serial.rs", import.meta.url), "utf8");
 const manager = readFileSync(new URL("../src-tauri/src/terminal/manager.rs", import.meta.url), "utf8");
+const workspaceIntegration = readFileSync(new URL("../src/features/workspace/wf05bSerialTelnet.integration.test.tsx", import.meta.url), "utf8");
+const telnetFixture = readFileSync(new URL("../tests/fixtures/telnet-loopback.mjs", import.meta.url), "utf8");
+const fixtureReadme = readFileSync(new URL("../tests/fixtures/README.md", import.meta.url), "utf8");
 const plan = readFileSync(new URL("../NEXATERM_WORKFLOW_DELIVERY_PLAN.md", import.meta.url), "utf8");
 
 for (const needle of [
@@ -71,6 +74,37 @@ for (const needle of [
   "while !close_signal.is_closed()",
 ]) {
   if (!manager.includes(needle)) throw new Error(`WF-05B manager close/reader contract missing: ${needle}`);
+}
+for (const needle of [
+  "keeps Telnet and Serial instances independently addressable in Split and MultiExec",
+  "keeps same-profile Character sibling instances distinct by tab and session identity",
+  '"telnet"',
+  '"serial"',
+  '"local:telnet-a-1"',
+  '"local:serial-a-1"',
+]) {
+  if (!workspaceIntegration.includes(needle)) {
+    throw new Error(`WF-05B workspace integration evidence missing: ${needle}`);
+  }
+}
+for (const needle of [
+  'net.createServer',
+  'NexaTerm Telnet fixture ready',
+  '127.0.0.1',
+  '2323',
+]) {
+  if (!telnetFixture.includes(needle)) {
+    throw new Error(`WF-05B Telnet GUI fixture missing: ${needle}`);
+  }
+}
+for (const needle of [
+  "### Phase 2: Serial / Telnet",
+  "node tests/fixtures/telnet-loopback.mjs",
+  "A11 remains PENDING",
+]) {
+  if (!fixtureReadme.includes(needle)) {
+    throw new Error(`WF-05B A11 Serial/Telnet instructions missing: ${needle}`);
+  }
 }
 if (!plan.includes("Serial/Telnet 已有实现，沿现有 LocalTerminalTab source 适配目标模型")) {
   throw new Error("WF-05B must reuse the existing Serial/Telnet providers under WF-05.");

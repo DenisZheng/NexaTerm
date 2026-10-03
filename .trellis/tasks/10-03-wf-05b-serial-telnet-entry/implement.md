@@ -18,9 +18,9 @@
 - [x] 不把 mock/SSH 冒充真实 Serial 互操作。
 
 ## 05B-3 workspace integration
-- [ ] Serial/Telnet Split instance 回归。
-- [ ] Serial/Telnet MultiExec target 回归。
-- [ ] A11 追加 Serial/Telnet phase；真实 A09/A10/A11 继续集中验收。
+- [x] Serial/Telnet Split instance 回归。
+- [x] Serial/Telnet MultiExec target 回归。
+- [x] A11 追加 Serial/Telnet phase；真实 A09/A10/A11 继续集中验收。
 
 每个切片：定向测试 → 相关全量检查 → source gate → line budget → commit → push → CI。不要修改 `scripts/line-budget.json`。
 
@@ -40,3 +40,14 @@
 - TerminalManager 的 `close()` 仍先从 session store 移除实例，再调用具体 provider close；reader 稍后收尾不会让已关闭实例继续作为可写 session。
 - Serial 真正端口打开、设备回显和物理句柄释放仍必须用真实设备或明确记录的模拟串口做 A11；本阶段没有用 SSH、cmd 或纯 mock 冒充真实 Serial 互操作。
 - 未修改 `scripts/line-budget.json`，未进入 WF-05B-3。
+
+
+## 05B-3 实施证据
+
+- 新增 `wf05bSerialTelnet.integration.test.tsx`：Telnet + Serial 共享既有 local pane binding，但 MultiExec target kind 分别保持 `telnet` / `serial`，owner 仍是 connection/profile id，instance key 始终是 `local:<tabId>`。
+- 同一 Telnet profile 的 sibling instances 具有相同 ownerId，但 tab key / sessionId 独立；不会因 profile 相同被合并。
+- 在 2-pane Split 中关闭 Telnet instance 后，Split 收缩且旧 Telnet target 从 MultiExec Set 移除，Serial sibling 保留；不会拿同 profile 的其它 instance 静默替换。
+- 现有 Split picker 已明确显示 `Telnet` / `串口`，并且 Character picker 的 new-instance seam 继续调用 `openCharacterTerminalInConnection`。
+- 新增 `tests/fixtures/telnet-loopback.mjs`，集中验收时可用 Node 在 `127.0.0.1:2323` 启动可回显的真实 TCP fixture，不依赖外部 Telnet 服务。
+- A11 README 已追加 Phase 2：Telnet 使用 loopback fixture 做真实 Tauri I/O；Serial 必须使用真实设备或明确记录的模拟串口，不能以 Telnet/SSH/mocked provider 代替。
+- A11 仍保持 PENDING，等待 WF-05C 的 RDP/VNC Phase 3 后与 A09/A10 一起集中验收。
