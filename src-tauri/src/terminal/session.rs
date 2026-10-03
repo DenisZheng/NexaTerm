@@ -25,6 +25,7 @@ use crate::connections::{
 use crate::known_hosts::{host_key_info, KnownHostCheck};
 use crate::ssh_config::{
     app_error_for_host_key_changed, app_error_for_host_key_unknown, ResolvedSshConfig,
+    RuntimeCredentialMap,
 };
 use crate::storage_repository::StorageRepository;
 use crate::storage_vault::{SecretStore, VaultState};
@@ -184,6 +185,7 @@ fn ssh_app_data_dir(app: &AppHandle) -> Result<std::path::PathBuf, AppError> {
 pub struct SshConnectionContext {
     app_data_dir: std::path::PathBuf,
     secret_store: Arc<dyn SecretStore>,
+    runtime_credentials: RuntimeCredentialMap,
 }
 
 impl SshConnectionContext {
@@ -191,6 +193,7 @@ impl SshConnectionContext {
         Ok(Self {
             app_data_dir: ssh_app_data_dir(app)?,
             secret_store: vault_secret_store(app)?,
+            runtime_credentials: RuntimeCredentialMap::new(),
         })
     }
 
@@ -201,7 +204,13 @@ impl SshConnectionContext {
         Self {
             app_data_dir: app_data_dir.into(),
             secret_store,
+            runtime_credentials: RuntimeCredentialMap::new(),
         }
+    }
+
+    pub fn with_runtime_credentials(mut self, runtime_credentials: RuntimeCredentialMap) -> Self {
+        self.runtime_credentials = runtime_credentials;
+        self
     }
 }
 pub(super) enum AuthMethod {
@@ -297,7 +306,8 @@ impl TerminalSession {
             nodelay: true,
             ..<_>::default()
         });
-        let context = SshConnectionContext::from_app(&app)?;
+        let context = SshConnectionContext::from_app(&app)?
+            .with_runtime_credentials(request.runtime_credentials.clone());
         let host_key_handler = KnownHostClient {
             host: host.clone(),
             port,
@@ -462,6 +472,16 @@ impl ReusableExecSession {
         config: &ResolvedSshConfig,
     ) -> Result<Self, AppError> {
         let context = SshConnectionContext::from_app(app)?;
+        Self::connect_resolved_with_context(&context, config).await
+    }
+
+    pub async fn connect_resolved_with_credentials(
+        app: &AppHandle,
+        config: &ResolvedSshConfig,
+        runtime_credentials: RuntimeCredentialMap,
+    ) -> Result<Self, AppError> {
+        let context =
+            SshConnectionContext::from_app(app)?.with_runtime_credentials(runtime_credentials);
         Self::connect_resolved_with_context(&context, config).await
     }
 

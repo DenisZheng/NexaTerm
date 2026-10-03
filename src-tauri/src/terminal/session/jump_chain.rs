@@ -1,10 +1,35 @@
 use super::*;
+use crate::app_error::AppErrorDetails;
 use crate::connections::{
     ConnectionAdvancedConfig, ConnectionAuthKind, ConnectionJumpConfig, ConnectionJumpKind,
     ConnectionProxyConfig,
 };
 
 const MAX_JUMP_HOPS: usize = 2;
+
+fn with_node_context(
+    mut error: AppError,
+    config: &ResolvedSshConfig,
+    stage: &str,
+) -> AppError {
+    if error.details.is_none() {
+        error.details = Some(AppErrorDetails::SshNodeFailure {
+            connection_id: config.connection_id.clone(),
+            host: config.host.clone(),
+            port: config.port,
+            stage: stage.to_string(),
+        });
+    }
+    error
+}
+
+fn to_node_russh_error(
+    error: AppError,
+    config: &ResolvedSshConfig,
+    stage: &str,
+) -> russh::Error {
+    to_russh_error(with_node_context(error, config, stage))
+}
 
 pub(super) async fn disconnect_jump_clients(jump_clients: &[SshHandle]) {
     for jump_client in jump_clients.iter().rev() {
@@ -25,7 +50,8 @@ pub(super) async fn connect_target_client(
 
     let result = async {
         for jump in jump_plan {
-            let jump_auth_method = auth_method(&jump).map_err(to_russh_error)?;
+            let jump_auth_method =
+                auth_method(&jump).map_err(|error| to_node_russh_error(error, &jump, "auth"))?;
             let jump_ssh_config = Arc::new(client::Config {
                 keepalive_interval: Some(duration_from_ms(jump.advanced.keepalive_interval_ms)),
                 keepalive_max: 1,
@@ -54,17 +80,32 @@ pub(super) async fn connect_target_client(
                     ),
                 )
                 .await
-                .map_err(to_russh_error)?
+                .map_err(|error| to_node_russh_error(error, &jump, "direct_tcpip"))?
                 .map_err(|error| {
-                    to_russh_error(AppError::new(
-                        "jump_direct_tcpip_failed",
-                        "跳板机通道打开失败。",
-                        error,
-                        true,
-                    ))
+                    to_node_russh_error(
+                        AppError::new(
+                            "jump_direct_tcpip_failed",
+                            "跳板机通道打开失败。",
+                            error,
+                            true,
+                        ),
+                        &jump,
+                        "direct_tcpip",
+                    )
                 })?;
                 client::connect_stream(jump_ssh_config, channel.into_stream(), jump_host_key_handler)
-                    .await?
+                    .await
+                    .map_err(|error| {
+                        to_russh_error(with_node_context(
+                            app_error_from_russh(
+                                error,
+                                "jump_connect_failed",
+                                "跳板机连接失败。",
+                            ),
+                            &jump,
+                            "connect",
+                        ))
+                    })?
             } else {
                 run_with_timeout(
                     "jump_connect_timeout",
@@ -73,12 +114,16 @@ pub(super) async fn connect_target_client(
                     connect_ssh_client(jump_ssh_config, &jump, jump_host_key_handler),
                 )
                 .await
-                .map_err(to_russh_error)?
+                .map_err(|error| to_node_russh_error(error, &jump, "connect"))?
                 .map_err(|error| {
-                    to_russh_error(app_error_from_russh(
-                        error,
-                        "jump_connect_failed",
-                        "跳板机连接失败。",
+                    to_russh_error(with_node_context(
+                        app_error_from_russh(
+                            error,
+                            "jump_connect_failed",
+                            "跳板机连接失败。",
+                        ),
+                        &jump,
+                        "connect",
                     ))
                 })?
             };
@@ -90,8 +135,10 @@ pub(super) async fn connect_target_client(
                 authenticate(&mut jump_client, &jump.username, jump_auth_method),
             )
             .await
-            .map_err(to_russh_error)?
-            .map_err(|error| to_russh_error(map_jump_auth_error(error)))?;
+            .map_err(|error| to_node_russh_error(error, &jump, "auth"))?
+            .map_err(|error| {
+                to_russh_error(with_node_context(map_jump_auth_error(error), &jump, "auth"))
+            })?;
             jump_clients.push(jump_client);
         }
 
@@ -108,16 +155,32 @@ pub(super) async fn connect_target_client(
                 ),
             )
             .await
-            .map_err(to_russh_error)?
+            .map_err(|error| to_node_russh_error(error, request, "direct_tcpip"))?
             .map_err(|error| {
-                to_russh_error(AppError::new(
-                    "jump_direct_tcpip_failed",
-                    "跳板机通道打开失败。",
-                    error,
-                    true,
-                ))
+                to_node_russh_error(
+                    AppError::new(
+                        "jump_direct_tcpip_failed",
+                        "跳板机通道打开失败。",
+                        error,
+                        true,
+                    ),
+                    request,
+                    "direct_tcpip",
+                )
             })?;
-            client::connect_stream(config, channel.into_stream(), handler).await
+            client::connect_stream(config, channel.into_stream(), handler)
+                .await
+                .map_err(|error| {
+                    to_russh_error(with_node_context(
+                        app_error_from_russh(
+                            error,
+                            "terminal_connect_failed",
+                            "SSH 连接失败。",
+                        ),
+                        request,
+                        "connect",
+                    ))
+                })
         } else {
             connect_ssh_client(config, request, handler).await
         }
@@ -142,7 +205,10 @@ fn resolve_jump_chain(
         Arc::clone(&context.secret_store),
     )?;
     resolve_jump_chain_with(request, |connection_id| {
-        repository.resolve_saved_connection(connection_id, None)
+        repository.resolve_saved_connection(
+            connection_id,
+            context.runtime_credentials.get(connection_id).cloned(),
+        )
     })
 }
 
