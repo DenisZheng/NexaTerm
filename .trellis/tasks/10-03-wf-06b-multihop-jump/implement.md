@@ -18,11 +18,11 @@
 - [x] ConnectionDialog 展示实际两级 plan 并阻止明显循环。
 
 ## 06B-3 real fixture / A12
-- [ ] Docker 两级 Jump → Target 真链路。
-- [ ] Terminal + Files(SFTP) 都走同一路由。
-- [ ] Tunnel 复用同一 chain。
-- [ ] 中间失败/关闭无残留 SSH client/forward。
-- [ ] A12 合并 WF-06A Tunnel + WF-06B Jump。
+- [x] Docker 两级 Jump → Target 真链路。
+- [x] Terminal + Files(SFTP) 都走同一路由。
+- [x] Tunnel 复用同一 chain。
+- [x] 中间失败/关闭无残留 SSH client/forward。
+- [x] A12 合并 WF-06A Tunnel + WF-06B Jump 的自动化证据；真实 Tauri GUI 联合验收按主线集中验收策略后置。
 
 不要修改 `scripts/line-budget.json`。
 
@@ -46,3 +46,18 @@
 - `jumpRuntime.ts` 负责解析具体 prompt/error 节点并构造多节点 runtime credential 请求；单测覆盖两级链逐节点凭据保留和结构化 node context。
 - `jumpPlanPreview.ts` 从保存连接递归计算真实连接顺序；合法两级链显示 `Jump-2 → Jump-1 → Target`，编辑时会排除会回指当前连接或自身已成环的明显循环候选，并在保存/测试前拦截 cycle/depth/missing。
 - `scripts/line-budget.json` 保持未修改；`commands.rs` 新增接线通过压缩回到冻结预算内。
+
+
+## 06B-3 实施证据
+
+- 新增隔离的真实两级拓扑：`host → ssh-jump-outer:2224 (Jump-2) → ssh-jump-inner:22 (Jump-1) → ssh-multihop-target:22 (Target)`。Jump-2 与 Target 不共享 Docker 网络，只能经 Jump-1 到达，不能退化成单跳。
+- 保留既有 `127.0.0.1:2222 → ssh-target` fixture，不影响 WF-03 与 WF-06A 已有验收；WF-06B 使用独立 `2224` 入口与 `wf06b-edge / wf06b-target` 网络。
+- `wf06b_fixture_two_hop_terminal_sftp_and_cleanup` 使用生产 `connect_target_client` 建立真实两级链，实际申请 PTY/shell、写入目标文件，再由 `ReusableSftpSession` 通过同一链读取；随后只破坏 Jump-1 用户名，断言返回 `jump_auth_rejected` 且 `SshNodeFailure.connection_id == wf06b-jump-1`、`stage == auth`。
+- `wf06b_fixture_two_hop_tunnels` 让 Local、Dynamic SOCKS、Remote 三种 Tunnel 都绑定最终 Target profile，因此其 SSH owner 本身先穿过 Jump-2 / Jump-1；Local/Dynamic 读取最终 Target 的真实 SSH banner，Remote 在最终 Target 建 remote-forward 并验证取消后 listener 消失。
+- fixture 在 Rust 测试进程仍存活时，通过容器内 `sshd:` child session 计数验证 Terminal、SFTP、Tunnel 正常关闭及 Jump-1 认证失败后 Jump-2 / Jump-1 / Target 会话全部 drain；Local/Dynamic listener 也验证停止后可重新绑定。
+- CI #278（run `37130507433`，HEAD `14dd41cd8ac4822d6558961f062afbbd647ad950`）全绿。fixture 日志明确记录：
+  - `wf06b_fixture_two_hop_terminal_sftp_and_cleanup ... ok`
+  - `wf06b_fixture_two_hop_tunnels ... ok`
+  - `PASS  NexaTerm true two-hop Terminal/SFTP/Tunnel + cleanup`
+  - `all fixture checks passed`
+- A12 当前状态：**实现与自动化真实协议证据完成；真实 Tauri GUI 联合验收待后续集中人工验收**。不以 CI 替代该人工步骤。
