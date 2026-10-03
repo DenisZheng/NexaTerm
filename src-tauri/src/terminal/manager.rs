@@ -578,6 +578,7 @@ mod tests {
             password: Some("secret".to_string()),
             private_key_path: None,
             private_key_passphrase: None,
+            runtime_credentials: Default::default(),
             cols: 80,
             rows: 24,
             runtime_config: None,
