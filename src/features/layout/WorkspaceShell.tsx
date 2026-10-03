@@ -1991,10 +1991,21 @@ export function WorkspaceShell() {
       }),
       ...localTerminalTabs.map((tab) => {
         const source =
-          tab.source === "telnet" ? "Telnet" : tab.source === "serial" ? "串口" : "本地";
+          tab.profileKind === "wsl"
+            ? "WSL"
+            : tab.source === "telnet"
+              ? "Telnet"
+              : tab.source === "serial"
+                ? "串口"
+                : "本地";
         return {
           binding: { kind: "local" as const, tabId: tab.id },
-          group: tab.source === "local" || !tab.source ? "本地终端" : "Telnet / 串口",
+          group:
+            tab.profileKind === "wsl"
+              ? "WSL"
+              : tab.source === "local" || !tab.source
+                ? "本地终端"
+                : "Telnet / 串口",
           icon: <LocalTerminalIcon className="ui-icon" kind={tab.profileKind} title={tab.title} />,
           label: `${source} · ${tab.title}`,
           searchText: `${source} ${tab.title}`,
