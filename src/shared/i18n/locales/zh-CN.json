@@ -110,5 +110,9 @@
   "batchConnect.title": "批量连接",
   "batchConnect.unknownGroup": "未知分组",
   "split.newSshInstanceGroup": "新建 SSH 实例",
-  "split.newCharacterInstanceGroup": "新建 Telnet / 串口实例"
+  "split.newCharacterInstanceGroup": "新建 Telnet / 串口实例",
+  "newSession.wsl": "WSL",
+  "newSession.wslProfilesLoading": "正在探测 WSL 发行版…",
+  "newSession.wslDetectionFailed": "无法检测 WSL 可用性",
+  "newSession.wslNotDetected": "WSL 不可用或未安装发行版"
 }

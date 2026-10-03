@@ -110,5 +110,9 @@
   "batchConnect.title": "Batch connect",
   "batchConnect.unknownGroup": "Unknown group",
   "split.newSshInstanceGroup": "New SSH instance",
-  "split.newCharacterInstanceGroup": "New Telnet / Serial instance"
+  "split.newCharacterInstanceGroup": "New Telnet / Serial instance",
+  "newSession.wsl": "WSL",
+  "newSession.wslProfilesLoading": "Detecting WSL distributions…",
+  "newSession.wslDetectionFailed": "WSL availability could not be detected",
+  "newSession.wslNotDetected": "WSL is unavailable or no distribution is installed"
 }
