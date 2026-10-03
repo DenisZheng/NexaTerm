@@ -1,7 +1,7 @@
 use std::env;
 use std::future::Future;
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Child, Command};
 use std::sync::Mutex;
 use std::time::Duration;
 
@@ -107,7 +107,8 @@ pub struct VncSessionManager {
 
 #[derive(Debug)]
 struct ManagedVncSession {
-    bridge_handle: JoinHandle<()>,
+    bridge_handle: Option<JoinHandle<()>>,
+    external_child: Option<Child>,
 }
 
 struct ResolvedVncConnection {
@@ -247,7 +248,26 @@ pub async fn launch_connection(
     if matches!(selected.runner, VncRunnerKind::Novnc) {
         return launch_embedded_bridge(manager, resolved, selected).await;
     }
-    launch_external_runner(resolved, selected)
+    launch_external_runner(manager, resolved, selected)
+}
+
+fn terminate_external_child(child: &mut Child) -> Result<(), String> {
+    match child.try_wait() {
+        Ok(Some(_)) => Ok(()),
+        Ok(None) => {
+            if let Err(error) = child.kill() {
+                if child.try_wait().ok().flatten().is_some() {
+                    return Ok(());
+                }
+                return Err(format!("external runner kill failed: {error}"));
+            }
+            child
+                .wait()
+                .map(|_| ())
+                .map_err(|error| format!("external runner wait failed: {error}"))
+        }
+        Err(error) => Err(format!("external runner status failed: {error}")),
+    }
 }
 
 pub fn close_session(
@@ -255,11 +275,27 @@ pub fn close_session(
     request: VncSessionRequest,
 ) -> VncSessionCloseResult {
     match manager.remove(&request.session_id) {
-        Ok(Some(session)) => {
-            session.bridge_handle.abort();
-            VncSessionCloseResult {
-                ok: true,
-                message: format!("VNC 会话 {} 已关闭。", request.session_id),
+        Ok(Some(mut session)) => {
+            if let Some(bridge_handle) = session.bridge_handle.take() {
+                bridge_handle.abort();
+            }
+            let process_result = session
+                .external_child
+                .as_mut()
+                .map(terminate_external_child)
+                .unwrap_or(Ok(()));
+            match process_result {
+                Ok(()) => VncSessionCloseResult {
+                    ok: true,
+                    message: format!("VNC 会话 {} 已关闭。", request.session_id),
+                },
+                Err(error) => VncSessionCloseResult {
+                    ok: false,
+                    message: format!(
+                        "VNC 外部 runner {} 清理失败：{}",
+                        request.session_id, error
+                    ),
+                },
             }
         }
         Ok(None) => VncSessionCloseResult {
@@ -304,7 +340,13 @@ async fn launch_embedded_bridge(
         run_bridge(listener, path, target_host, target_port).await;
     });
 
-    manager.insert(session_id.clone(), ManagedVncSession { bridge_handle })?;
+    manager.insert(
+        session_id.clone(),
+        ManagedVncSession {
+            bridge_handle: Some(bridge_handle),
+            external_child: None,
+        },
+    )?;
 
     Ok(VncLaunchResult {
         session_id,
@@ -324,6 +366,7 @@ async fn launch_embedded_bridge(
 }
 
 fn launch_external_runner(
+    manager: &VncSessionManager,
     resolved: ResolvedVncConnection,
     selected: SelectedVncRunner,
 ) -> Result<VncLaunchResult, AppError> {
@@ -347,10 +390,19 @@ fn launch_external_runner(
         )
     })?;
     let process_id = child.id();
-    drop(child);
+    let session_id = format!("vnc-{}", uuid::Uuid::new_v4());
+    if let Err(error) = manager.insert(
+        session_id.clone(),
+        ManagedVncSession {
+            bridge_handle: None,
+            external_child: Some(child),
+        },
+    ) {
+        return Err(error);
+    }
 
     Ok(VncLaunchResult {
-        session_id: format!("vnc-{}", uuid::Uuid::new_v4()),
+        session_id,
         connection_id: resolved.profile.id,
         launched: true,
         embedded: false,
@@ -770,6 +822,7 @@ mod tests {
     };
     use std::future;
     use std::io;
+    use std::process::{Child, Command};
     use std::time::Duration;
 
     #[test]
@@ -778,7 +831,13 @@ mod tests {
             let manager = VncSessionManager::default();
             let bridge_handle = tokio::spawn(std::future::pending::<()>());
             manager
-                .insert("vnc-test".to_string(), ManagedVncSession { bridge_handle })
+                .insert(
+                    "vnc-test".to_string(),
+                    ManagedVncSession {
+                        bridge_handle: Some(bridge_handle),
+                        external_child: None,
+                    },
+                )
                 .expect("session should be registered");
 
             let request = VncSessionRequest {
@@ -787,6 +846,84 @@ mod tests {
             assert!(close_session(&manager, request.clone()).ok);
             assert!(!close_session(&manager, request).ok);
         });
+    }
+
+    fn spawn_long_lived_test_child() -> Child {
+        #[cfg(windows)]
+        {
+            return Command::new("cmd")
+                .args(["/C", "ping -n 30 127.0.0.1 >NUL"])
+                .spawn()
+                .expect("spawn Windows test child");
+        }
+        #[cfg(not(windows))]
+        {
+            Command::new("sh")
+                .args(["-c", "sleep 30"])
+                .spawn()
+                .expect("spawn Unix test child")
+        }
+    }
+
+    #[test]
+    fn close_external_vnc_session_terminates_owned_process_and_keeps_sibling() {
+        let manager = VncSessionManager::default();
+        let first = spawn_long_lived_test_child();
+        let first_pid = first.id();
+        let second = spawn_long_lived_test_child();
+
+        manager
+            .insert(
+                "vnc-external-a".to_string(),
+                ManagedVncSession {
+                    bridge_handle: None,
+                    external_child: Some(first),
+                },
+            )
+            .expect("register first external VNC");
+        manager
+            .insert(
+                "vnc-external-b".to_string(),
+                ManagedVncSession {
+                    bridge_handle: None,
+                    external_child: Some(second),
+                },
+            )
+            .expect("register second external VNC");
+
+        let result = close_session(
+            &manager,
+            VncSessionRequest {
+                session_id: "vnc-external-a".to_string(),
+            },
+        );
+        assert!(result.ok, "{}", result.message);
+        assert!(
+            manager
+                .sessions
+                .lock()
+                .expect("VNC session test lock")
+                .contains_key("vnc-external-b"),
+            "closing one external VNC session must keep sibling ownership"
+        );
+        assert!(
+            !manager
+                .sessions
+                .lock()
+                .expect("VNC session test lock")
+                .contains_key("vnc-external-a"),
+            "closed external VNC session must be removed from owner map"
+        );
+        assert!(first_pid > 0);
+        assert!(
+            close_session(
+                &manager,
+                VncSessionRequest {
+                    session_id: "vnc-external-b".to_string(),
+                },
+            )
+            .ok
+        );
     }
 
     #[test]
