@@ -16,6 +16,8 @@ const useConnections = readFileSync(
   new URL("../src/features/connections/useConnections.ts", import.meta.url),
   "utf8",
 );
+const en = readFileSync(new URL("../src/shared/i18n/locales/en.json", import.meta.url), "utf8");
+const zhCN = readFileSync(new URL("../src/shared/i18n/locales/zh-CN.json", import.meta.url), "utf8");
 const x11 = readFileSync(
   new URL("../src-tauri/src/x11_forward.rs", import.meta.url),
   "utf8",
@@ -46,9 +48,16 @@ for (const needle of [
 for (const needle of [
   "x11_forwarding: Boolean(form.advanced.x11_forwarding)",
   "x11_display: form.advanced.x11_display?.trim() || undefined",
+  't("connection.x11.enable")',
+  't("connection.x11.display")',
 ]) {
   if (!dialog.includes(needle)) {
-    throw new Error(`WF-06C dialog X11 persistence seam missing: ${needle}`);
+    throw new Error(`WF-06C dialog X11 persistence/UX seam missing: ${needle}`);
+  }
+}
+for (const needle of ["connection.x11.windows", "connection.x11.macos", "connection.x11.linux"]) {
+  if (!en.includes(needle) || !zhCN.includes(needle)) {
+    throw new Error(`WF-06C platform X11 i18n guidance missing: ${needle}`);
   }
 }
 for (const needle of [

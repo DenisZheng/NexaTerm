@@ -31,6 +31,7 @@ import {
   resolveDesktopPlatform,
 } from "../../shared/tauri/platformCapabilities";
 import { hasTauriRuntime } from "../../shared/tauri/runtime";
+import { useI18n } from "../../shared/i18n";
 import { selectLocalPrivateKeyFile } from "../../shared/tauri/dialog";
 import type {
   ConnectionAuthKind,
@@ -356,6 +357,7 @@ export function ConnectionDialog({
     () => buildGroupOptions(groups, form.group_id || ""),
     [form.group_id, groups],
   );
+  const { t } = useI18n();
   const desktopPlatform = useMemo(() => resolveDesktopPlatform(), []);
   const platformCapabilities = useMemo(
     () => getPlatformCapabilities(desktopPlatform),
@@ -2651,6 +2653,35 @@ export function ConnectionDialog({
             />
           </label>
         </div>
+        <div className="connection-dialog-checks">
+          <label>
+            <input
+              type="checkbox"
+              checked={advanced.x11_forwarding}
+              onChange={(event) =>
+                setForm({ ...form, advanced: { ...advanced, x11_forwarding: event.target.checked } })
+              }
+            />
+            <span>{t("connection.x11.enable")}</span>
+          </label>
+        </div>
+        {advanced.x11_forwarding ? (
+          <>
+            <label>
+              <span>{t("connection.x11.display")}</span>
+              <input
+                value={advanced.x11_display || ""}
+                onChange={(event) =>
+                  setForm({ ...form, advanced: { ...advanced, x11_display: event.target.value } })
+                }
+                placeholder={t("connection.x11.displayPlaceholder")}
+              />
+            </label>
+            <p className="connection-dialog-note">
+              {t(desktopPlatform === "windows" ? "connection.x11.windows" : desktopPlatform === "macos" ? "connection.x11.macos" : desktopPlatform === "linux" ? "connection.x11.linux" : "connection.x11.unknown")}
+            </p>
+          </>
+        ) : null}
       </section>
     );
   }

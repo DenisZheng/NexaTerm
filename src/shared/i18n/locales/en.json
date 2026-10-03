@@ -136,5 +136,12 @@
   "newSession.vncEmbeddedAvailable": "Built-in noVNC bridge available",
   "newSession.vncEmbeddedFallbackAvailable": "Built-in noVNC bridge available; external viewer detected",
   "newSession.vncExternalAvailable": "External VNC viewer available",
-  "newSession.vncUnavailable": "No compatible VNC runner detected"
+  "newSession.vncUnavailable": "No compatible VNC runner detected",
+  "connection.x11.enable": "Enable X11 forwarding (Experimental)",
+  "connection.x11.display": "Local DISPLAY override",
+  "connection.x11.displayPlaceholder": "Auto: use local DISPLAY",
+  "connection.x11.windows": "Windows requires a compatible external X server. NexaTerm does not bundle or auto-install one in this phase.",
+  "connection.x11.macos": "macOS requires XQuartz to be installed and running; NexaTerm uses its DISPLAY and xauth data.",
+  "connection.x11.linux": "Linux uses the current Xorg/XWayland DISPLAY and xauth cookie. The connection fails closed if they are unavailable.",
+  "connection.x11.unknown": "X11 requires a local X server, DISPLAY, and xauth. Platform support is still experimental."
 }
