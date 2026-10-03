@@ -18,9 +18,9 @@
 - [x] rule 与 active/saved connection 展示关联回归。
 
 ## 06A-3 A12 tunnel phase
-- [ ] local/remote/dynamic 真实 fixture。
-- [ ] 关闭/取消后无 listener / remote-forward / SSH resource 残留。
-- [ ] A12 tunnel phase 记录，等待 WF-06B 两级 Jump 一起验收。
+- [x] local/remote/dynamic 真实 fixture。
+- [x] 关闭/取消后无 listener / remote-forward / SSH resource 残留。
+- [x] A12 tunnel phase 记录，等待 WF-06B 两级 Jump 一起验收。
 
 不要修改 `scripts/line-budget.json`。
 
@@ -43,3 +43,15 @@
 - 新增 `tunnelRuleConnectionState.ts`：rule 根据持久化 `connection_id` 解析 saved SSH connection。若 connection 已不存在，列表明确显示“连接不存在”且禁用“启动”，避免 orphan rule 点击后才由 backend 报错。
 - WorkspaceShell 仍只把 `connections.filter(isSshConnection)` 传入 TunnelPanel，非 SSH profile 不会成为 tunnel rule 目标。
 - 这些测试验证状态/交互契约，不冒充真实 SSH 凭据或真实 Host Key 互操作；真实 tunnel 连接留给 06A-3 / A12。
+
+
+## 06A-3 实施证据
+
+- 新增 ignored Linux fixture test `tunnel_fixture_local_dynamic_remote_real_ssh`，由现有 Docker fixture smoke 显式运行；普通三平台 Rust test 只编译、不依赖 Docker。
+- test-only `ReusableForwardSession::connect_fixture` 仍使用生产 `KnownHostClient`、真实 host-key trust、russh public-key authentication 和生产 forwarding methods；不是 mock SSH transport。
+- Local：生产 `run_tunnel_accept_loop -> forward_tcp_stream -> direct-tcpip` 访问 Docker 网络中的 `ssh-target:22`，读取真实 OpenSSH banner；`stop_running` 后同一 local port 必须可重新 bind。
+- Dynamic：通过生产 SOCKS5 parser/CONNECT 打到 `ssh-target:22` 并读取真实 OpenSSH banner；`stop_running` 后 SOCKS listener 必须释放。
+- Remote：生产 `set_remote_forward_target + request_remote_forward` 创建真实服务器端监听，从第二条真实 SSH session 在 jump host 内回连，数据穿过 forwarded-tcpip 到本机 TCP echo target；`stop_running` 执行 `cancel_remote_forward + clear target + close SSH`，第二条 SSH session 随后确认远端监听已不可连接。
+- `tests/fixtures/fixtures.mjs smoke` 现通过 host key scan 启动该 ignored Rust test；密钥继续运行时生成、未提交 secret。
+- 新增 `tests/fixtures/tunnel-probe.mjs` 供后续 GUI A12 集中验收使用：Local 读 banner、Dynamic 做真实 SOCKS5 CONNECT、Remote 可启动本机 echo target。
+- 这些自动化证明底层三类 tunnel 真实数据流和 cleanup seam；A12 仍 PENDING，等待 WF-06B 两级 Jump 完成后一起做真实 Tauri/UI 验收。

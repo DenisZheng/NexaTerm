@@ -25,6 +25,6 @@
     "src/features/shortcuts/actionRegistry.ts",
     "src-tauri/src/tunnels.rs"
   ],
-  "notes": "Stacked on WF-05C commit 48579d839. WF-06A-1 connection lifecycle is implemented. A09/A10/A11 remain PENDING by maintainer decision. A12 tunnel phase is pending after 06A-2/3. Jump is WF-06B; X11 is WF-06C. Do not modify PR #12 or line-budget.json.",
+  "notes": "Stacked on WF-05C commit 48579d839. WF-06A-1/2/3 implementation is complete pending final CI. A12 Tunnel Phase has real SSH fixture coverage but A12 remains PENDING until WF-06B two-hop Jump and combined real-Tauri acceptance. X11 is WF-06C. Do not modify PR #12 or line-budget.json.",
   "meta": {}
 }

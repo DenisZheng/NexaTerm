@@ -414,3 +414,109 @@ Record separate results for:
 A missing Experimental runner is acceptable as a documented capability limitation, but a platform
 must not be marked supported without a corresponding real run. Automated tests cover instance
 identity and owner cleanup seams; they do not replace this real platform evidence.
+
+
+## WF-06 A12 Tunnel Phase
+
+WF-06A prepares the tunnel half of A12. **A12 remains PENDING** until WF-06B adds the
+two-hop Jump phase and the maintainer runs the combined real-Tauri acceptance.
+
+Start the existing fixtures:
+
+```sh
+node tests/fixtures/fixtures.mjs up
+```
+
+Create or reuse one saved SSH profile:
+
+- host: `127.0.0.1`
+- port: `2222`
+- user: `testuser`
+- private key: `tests/fixtures/keys/test_key`
+
+Open **Tools → Tunnels / 隧道** from the top-level action and verify Local, Dynamic SOCKS and
+Remote are available from the same panel.
+
+### Local forwarding
+
+Create and start:
+
+- kind: Local
+- SSH connection: the `127.0.0.1:2222` fixture profile
+- local listener: `127.0.0.1:15422`
+- remote target: `ssh-target:22`
+
+Probe it:
+
+```sh
+node tests/fixtures/tunnel-probe.mjs local 15422
+```
+
+Pass: the helper prints an `SSH-2.0-` banner from the real `ssh-target` container. Stop the
+rule and run the same command again; it must fail because the local listener is gone. Starting the
+rule again must be able to bind `15422` without restarting NexaTerm.
+
+### Dynamic SOCKS
+
+Create and start:
+
+- kind: Dynamic
+- SSH connection: the same fixture profile
+- SOCKS listener: `127.0.0.1:11080`
+
+Probe it:
+
+```sh
+node tests/fixtures/tunnel-probe.mjs socks 11080 ssh-target 22
+```
+
+Pass: the helper completes a real SOCKS5 no-auth handshake, CONNECTs to `ssh-target:22` through
+NexaTerm and prints an `SSH-2.0-` banner. Stop the rule; the same probe must fail and `11080`
+must be reusable.
+
+### Remote forwarding
+
+In a separate terminal, start the local echo target:
+
+```sh
+node tests/fixtures/tunnel-probe.mjs echo 18081
+```
+
+Create and start:
+
+- kind: Remote
+- SSH connection: the same fixture profile
+- local target: `127.0.0.1:18081`
+- remote listener: `127.0.0.1:19080`
+
+From another terminal, connect to the server-side listener through the fixture SSH host:
+
+```sh
+ssh -i tests/fixtures/keys/test_key \
+  -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+  -p 2222 testuser@127.0.0.1 \
+  "bash -lc 'exec 3<>/dev/tcp/127.0.0.1/19080; printf A12-REMOTE >&3; head -c 10 <&3'"
+```
+
+Pass: output is exactly `A12-REMOTE`. Stop the Remote rule and repeat the command; it must fail,
+showing that `cancel_remote_forward` removed the server-side listener. The local echo helper can
+then be stopped with Ctrl+C.
+
+### Lifecycle / error checks
+
+During the same run:
+
+1. Start a rule on an already occupied local port and confirm the rule becomes **failed** with the
+   port-bind error attached to that rule.
+2. Use a prompt-credential SSH profile and confirm the rule becomes **credential required**, then
+   resumes the same rule after entering credentials.
+3. Exercise an unknown/changed Host Key only on a disposable fixture identity. The trust dialog
+   must name the same tunnel rule; explicit trust retries that rule rather than creating another.
+4. Close all sessions for the fixture SSH connection. All running rules bound to that connection
+   must stop; rules belonging to another SSH connection must remain untouched.
+5. Delete the fixture SSH connection only after stopping/closing its tunnel resources. Any orphan
+   saved rule must show **连接不存在** and its Start action must be disabled.
+
+Automated CI already runs the real Local/Dynamic/Remote SSH data paths and verifies listener /
+remote-forward cleanup. The GUI checks above validate the actual TunnelPanel, saved-connection
+binding and user-visible lifecycle. Keep A12 PENDING until the WF-06B Jump phase is added.

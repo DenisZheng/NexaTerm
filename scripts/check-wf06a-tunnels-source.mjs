@@ -8,6 +8,10 @@ const registry = readFileSync(new URL("../src/features/shortcuts/actionRegistry.
 const presentation = readFileSync(new URL("../src/features/shortcuts/actionPresentation.ts", import.meta.url), "utf8");
 const shell = readFileSync(new URL("../src/features/layout/WorkspaceShell.tsx", import.meta.url), "utf8");
 const backend = readFileSync(new URL("../src-tauri/src/tunnels.rs", import.meta.url), "utf8");
+const fixtureTest = readFileSync(new URL("../src-tauri/src/tunnels/fixture_tests.rs", import.meta.url), "utf8");
+const fixtureOrchestrator = readFileSync(new URL("../tests/fixtures/fixtures.mjs", import.meta.url), "utf8");
+const fixtureProbe = readFileSync(new URL("../tests/fixtures/tunnel-probe.mjs", import.meta.url), "utf8");
+const fixtureReadme = readFileSync(new URL("../tests/fixtures/README.md", import.meta.url), "utf8");
 const commands = readFileSync(new URL("../src/shared/tauri/commands.ts", import.meta.url), "utf8");
 const tauriLib = readFileSync(new URL("../src-tauri/src/lib.rs", import.meta.url), "utf8");
 const plan = readFileSync(new URL("../NEXATERM_WORKFLOW_DELIVERY_PLAN.md", import.meta.url), "utf8");
@@ -99,6 +103,43 @@ for (const needle of [
 ]) {
   if (!shell.includes(needle)) throw new Error(`WF-06A workspace tunnel cleanup missing: ${needle}`);
 }
+for (const needle of [
+  "tunnel_fixture_local_dynamic_remote_real_ssh",
+  "local_forward_reaches_real_ssh_target_and_releases_listener",
+  "dynamic_socks_reaches_real_ssh_target_and_releases_listener",
+  "remote_forward_reaches_local_echo_and_cancel_removes_listener",
+  "manager.stop_running(&rule.id).await",
+  "request_remote_forward(FIXTURE_HOST, 0)",
+  "cancel_remote_forward must remove the server-side listener",
+]) {
+  if (!fixtureTest.includes(needle)) throw new Error(`WF-06A real tunnel fixture missing: ${needle}`);
+}
+for (const needle of [
+  "tunnel_fixture_local_dynamic_remote_real_ssh",
+  "NEXATERM_FIXTURE_TUNNEL_KEY",
+  "NEXATERM_FIXTURE_TUNNEL_HOST_KEY",
+  "NexaTerm tunnel runtime local/dynamic/remote over real SSH",
+]) {
+  if (!fixtureOrchestrator.includes(needle)) {
+    throw new Error(`WF-06A fixture smoke wiring missing: ${needle}`);
+  }
+}
+for (const needle of [
+  'mode === "local"',
+  'mode === "socks"',
+  'mode === "echo"',
+  "SSH-2.0-",
+]) {
+  if (!fixtureProbe.includes(needle)) throw new Error(`WF-06A manual tunnel probe missing: ${needle}`);
+}
+for (const needle of [
+  "## WF-06 A12 Tunnel Phase",
+  "node tests/fixtures/tunnel-probe.mjs local 15422",
+  "node tests/fixtures/tunnel-probe.mjs socks 11080 ssh-target 22",
+  "A12 remains PENDING",
+]) {
+  if (!fixtureReadme.includes(needle)) throw new Error(`WF-06A A12 tunnel instructions missing: ${needle}`);
+}
 if (!tauriLib.includes("tunnels::tunnel_stop_connection")) {
   throw new Error("WF-06A Tauri tunnel_stop_connection command registration missing.");
 }
@@ -109,4 +150,4 @@ if (!plan.includes("WF-06A 隧道管理") || !plan.includes("不要重做已存�
   throw new Error("WF-06A must reuse the existing tunnel state model.");
 }
 
-console.log("WF-06A tunnel entry and connection lifecycle source gate passed");
+console.log("WF-06A tunnel entry, lifecycle and real-fixture source gate passed");
