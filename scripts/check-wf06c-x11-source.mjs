@@ -26,6 +26,10 @@ const session = readFileSync(
   new URL("../src-tauri/src/terminal/session.rs", import.meta.url),
   "utf8",
 );
+const x11Fixture = readFileSync(
+  new URL("../src-tauri/src/terminal/x11_fixture.rs", import.meta.url),
+  "utf8",
+);
 
 for (const needle of [
   "pub x11_forwarding: bool",
@@ -90,5 +94,14 @@ for (const needle of [
     throw new Error(`WF-06C Terminal X11 owner seam missing: ${needle}`);
   }
 }
+for (const needle of [
+  "TerminalSession::open_with_context",
+  "x11_forwarding: true",
+  "nexaterm-x11-production-ok",
+]) {
+  if (!x11Fixture.includes(needle)) {
+    throw new Error(`WF-06C production X11 fixture seam missing: ${needle}`);
+  }
+}
 
-console.log("WF-06C X11 production config, fake-cookie security and Terminal owner source gate passed");
+console.log("WF-06C X11 production config, fake-cookie security, UX and real Terminal fixture source gate passed");
