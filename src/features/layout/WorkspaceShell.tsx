@@ -450,7 +450,11 @@ import {
   type TerminalSplitHost,
 } from "../workspace/split/useTerminalSplitController";
 import { splitGroupInsertionIndex } from "../workspace/split/anchor";
-import { buildMultiExecTargets } from "../workspace/multiExec/targets";
+import {
+  buildMultiExecTargets,
+  type MultiExecTarget,
+} from "../workspace/multiExec/targets";
+import { writeMultiExecLiveInput } from "../workspace/multiExec/live";
 import {
   displayOrdinal,
   HOME_ITEM_ID,
@@ -1372,9 +1376,11 @@ export function WorkspaceShell() {
     focusedTerminalPaneId,
     focusedTerminalSplitBinding,
     focusedTerminalSplitPane,
+    multiExecMode,
     multiExecTargets,
     nextTerminalSplitId,
     setFocusedTerminalPaneId,
+    setMultiExecMode,
     setMultiExecTargets,
     setTerminalSplitAutoCreateSameSession,
     setTerminalSplitHost,
@@ -1460,21 +1466,29 @@ export function WorkspaceShell() {
     ],
     [commandSnippetGroups],
   );
+  const multiExecRuntimeTargets = useMemo(
+    () =>
+      buildMultiExecTargets({
+        localTabs: localTerminalTabs,
+        sshTabs: terminalTabs,
+      }),
+    [localTerminalTabs, terminalTabs],
+  );
   const commandSenderTargets = useMemo(
     () =>
       buildCommandSenderTargets({
         connectionById,
         deliveryByKey: commandSenderDeliveryByKey,
+        instanceTargets: multiExecRuntimeTargets,
         localTerminalProfiles,
         localTerminalTabs,
-        terminalTabs,
       }),
     [
       commandSenderDeliveryByKey,
       connectionById,
       localTerminalProfiles,
       localTerminalTabs,
-      terminalTabs,
+      multiExecRuntimeTargets,
     ],
   );
   const selectedCommandTargetKeySet = multiExecTargets;
@@ -2037,7 +2051,7 @@ export function WorkspaceShell() {
           label: `${option?.label || `终端 ${(index + 1).toString()}`}${
             terminalSplitSyncEnabled && key === focusedKey ? " · 主输入" : ""
           }`,
-          locked: terminalSplitSyncEnabled && key === focusedKey,
+          locked: false,
         },
       ];
     });
@@ -4672,72 +4686,67 @@ export function WorkspaceShell() {
   function setTerminalSplitSyncState(enabled: boolean) {
     setTerminalSplitSyncError(null);
     if (!enabled) {
-      setTerminalSplitSyncEnabled(false);
+      setMultiExecMode("off");
       return;
     }
-    const connectedKeys = new Set(
-      terminalSplitPanes.flatMap((pane) =>
-        pane.binding && terminalSessionIdForBinding(pane.binding)
-          ? [terminalPaneBindingKey(pane.binding)]
-          : [],
-      ),
-    );
-    if (connectedKeys.size < 2) {
-      setTerminalSplitSyncEnabled(false);
-      setTerminalSplitSyncError("至少需要两个已连接终端才能同步输入。");
+    if (multiExecTargets.size === 0) {
+      setMultiExecMode("off");
+      setTerminalSplitSyncError("请先明确选择至少一个同步目标。");
       return;
     }
-    setTerminalSplitSyncParticipantKeys(connectedKeys);
-    setTerminalSplitSyncEnabled(true);
+    setMultiExecMode("live");
   }
 
   function setTerminalSplitSyncParticipant(key: string, participant: boolean) {
-    setTerminalSplitSyncParticipantKeys((current) => {
+    setMultiExecTargets((current) => {
       const next = new Set(current);
-      if (participant) {
-        next.add(key);
-      } else {
-        next.delete(key);
-      }
-      if (terminalSplitSyncEnabled && next.size < 2) {
-        setTerminalSplitSyncEnabled(false);
+      if (participant) next.add(key);
+      else next.delete(key);
+      if (multiExecMode === "live" && next.size === 0) {
+        setMultiExecMode("off");
       }
       return next;
     });
     setTerminalSplitSyncError(null);
   }
 
-  function handleTerminalSplitUserInput(tabId: string, data: string) {
-    if (!terminalSplitActive || !terminalSplitSyncEnabled || !focusedTerminalSplitBinding) {
+  function handleMultiExecUserInput(tabId: string, data: string) {
+    if (multiExecMode !== "live" || activeTerminalToolbarTabId !== tabId) {
       return;
     }
-    const sourceKey = terminalPaneBindingKey(focusedTerminalSplitBinding);
-    if (focusedTerminalSplitBinding.tabId !== tabId || !terminalSplitSyncParticipantKeys.has(sourceKey)) {
+    const source = multiExecRuntimeTargets.find((target) => target.tabId === tabId) || null;
+    if (!source) {
       return;
     }
-    const targetSessionIds = terminalSplitPanes.flatMap((pane) => {
-      if (!pane.binding) {
-        return [];
+
+    void writeMultiExecLiveInput({
+      data,
+      selectedKeys: multiExecTargets,
+      sourceKey: source.key,
+      targets: multiExecRuntimeTargets,
+      write: terminalWrite,
+    }).then((deliveries) => {
+      const failedKeys = new Set(
+        deliveries
+          .filter((delivery) => delivery.status === "failed")
+          .map((delivery) => delivery.key),
+      );
+      if (failedKeys.size === 0) {
+        return;
       }
-      const key = terminalPaneBindingKey(pane.binding);
-      if (key === sourceKey || !terminalSplitSyncParticipantKeys.has(key)) {
-        return [];
-      }
-      const sessionId = terminalSessionIdForBinding(pane.binding);
-      return sessionId ? [sessionId] : [];
-    });
-    if (targetSessionIds.length === 0) {
-      setTerminalSplitSyncState(false);
-      return;
-    }
-    void Promise.allSettled(targetSessionIds.map((sessionId) => terminalWrite(sessionId, data))).then(
-      (results) => {
-        if (results.some((result) => result.status === "rejected")) {
-          setTerminalSplitSyncEnabled(false);
-          setTerminalSplitSyncError("同步输入失败，已自动关闭。");
+      setMultiExecTargets((current) => {
+        const next = new Set(
+          Array.from(current).filter((key) => !failedKeys.has(key)),
+        );
+        if (multiExecMode === "live" && next.size === 0) {
+          setMultiExecMode("off");
         }
-      },
-    );
+        return next;
+      });
+      setTerminalSplitSyncError(
+        `同步输入有 ${failedKeys.size.toString()} 个目标写入失败，已从本次目标移除。`,
+      );
+    });
   }
 
   function requestCloseTerminalSplitGroup() {
@@ -4756,8 +4765,7 @@ export function WorkspaceShell() {
     setFocusedTerminalPaneId(null);
     setTerminalSplitPickerOpenRequest(null);
     terminalSplitPickerPendingPaneRef.current = null;
-    setTerminalSplitSyncEnabled(false);
-    setTerminalSplitSyncParticipantKeys(new Set());
+    setMultiExecMode("off");
     setTerminalSplitSyncError(null);
   }
 
@@ -4783,7 +4791,6 @@ export function WorkspaceShell() {
 
   function activateStandaloneTerminalTab(tab: TerminalTab) {
     setTerminalSplitTabActive(false);
-    setTerminalSplitSyncEnabled(false);
     setSettingsSectionRequest(undefined);
     dispatchTabs({
       type: "tabs/activateTerminal",
@@ -6092,7 +6099,6 @@ export function WorkspaceShell() {
 
   function activateStandaloneLocalTerminalTab(tab: LocalTerminalTab) {
     setTerminalSplitTabActive(false);
-    setTerminalSplitSyncEnabled(false);
     setSettingsSectionRequest(undefined);
     dispatchTabs({ type: "tabs/activateLocal", tabId: tab.id });
   }
@@ -8631,7 +8637,7 @@ export function WorkspaceShell() {
                               ? (tabId, command) => void recordTerminalInputHistoryCommand(tabId, command)
                               : undefined
                           }
-                          onUserInput={handleTerminalSplitUserInput}
+                          onUserInput={handleMultiExecUserInput}
                           onWarmupCaptureReady={stopTerminalWarmupCapture}
                           searchCaseSensitive={Boolean(terminalSearchByTabId[tab.id]?.caseSensitive)}
                           searchNavigationRequest={terminalSearchNavigationRequest}
@@ -8714,7 +8720,7 @@ export function WorkspaceShell() {
                                       void recordTerminalInputHistoryCommand(tabId, command)
                                   : undefined
                               }
-                              onUserInput={handleTerminalSplitUserInput}
+                              onUserInput={handleMultiExecUserInput}
                               onWarmupCaptureReady={stopTerminalWarmupCapture}
                               searchCaseSensitive={Boolean(terminalSearchByTabId[tab.id]?.caseSensitive)}
                               searchNavigationRequest={terminalSearchNavigationRequest}
@@ -12953,21 +12959,18 @@ function uniqueCommandHistoryScopes(scopes: CommandHistoryScope[]) {
 function buildCommandSenderTargets({
   connectionById,
   deliveryByKey,
+  instanceTargets,
   localTerminalProfiles,
   localTerminalTabs,
-  terminalTabs,
 }: {
   connectionById: Map<string, ConnectionProfile>;
   deliveryByKey: Record<string, { message?: string; status: CommandSenderDeliveryStatus }>;
+  instanceTargets: readonly MultiExecTarget[];
   localTerminalProfiles: LocalTerminalProfile[];
   localTerminalTabs: LocalTerminalTab[];
-  terminalTabs: TerminalTab[];
 }): CommandSenderTarget[] {
   const localById = new Map(localTerminalTabs.map((tab) => [tab.id, tab]));
-  return buildMultiExecTargets({
-    localTabs: localTerminalTabs,
-    sshTabs: terminalTabs,
-  }).map((target): CommandSenderTarget => {
+  return instanceTargets.map((target): CommandSenderTarget => {
     const delivery = deliveryByKey[target.key];
     if (target.kind === "ssh") {
       const connection = connectionById.get(target.ownerId) || null;

@@ -19,10 +19,10 @@
 - [x] 删除 Command Sender connectionId→active-tab target owner；Command Sender 与 Split Sync 共用 MultiExec target Set。
 
 ## 04C-3 live
-- [ ] 单一 source 输入链路。
-- [ ] source 在 targets 时不重复写回。
-- [ ] 每目标每次输入最多写一次。
-- [ ] 目标断线立即失效并更新 UI。
+- [x] 单一 source 输入链路：当前活动 terminal instance。
+- [x] source 在 targets 时不重复写回。
+- [x] 每目标每次输入最多写一次。
+- [x] 写入失败 target 从固定集合收缩；其它目标继续，全部目标失效时 live 自动关闭。
 
 ## 04C-4 send
 - [ ] Command Sender 使用统一 targets。
@@ -68,3 +68,19 @@
 - SSH/Local 的 focus/activate 路径不再修改 targets。
 - 旧 `check-command-sender-active-tab-source.mjs` 改为固定实例 target contract；`check-command-sender-mvp-source.mjs` 同步移除 active-tab selector 旧要求，不删除实际发送/顺序写入/状态反馈门禁。
 - `WorkspaceShell.tsx` 预构建为 13,696 行，低于既有 line budget；未修改 `scripts/line-budget.json`。
+
+
+## 04C-3 live 实施准备
+
+- 新增 `multiExec/live.ts`，从固定 selected keys 解析 fan-out；source key 始终排除。
+- 单测覆盖：
+  - source 本身被选中时不重复写回；
+  - source 未被选中时仍可向固定 targets 广播；
+  - 两个目标各写一次；
+  - 单个目标失败不会重放成功目标。
+- live source 使用 `activeTerminalToolbarTabId`：普通终端为当前实例，Split 为当前焦点 pane；切焦点只改变 source，不改 targets。
+- “开启同步输入”不再自动全选 Split panes；没有显式 target 时拒绝开启并提示先选择目标。
+- source target checkbox 不再锁定；source 与 target 是两个独立概念。
+- 离开 Split / 激活 standalone terminal 不再自动关闭 live；Split reset 只结束 live mode，不清空 target Set。
+- live 部分写入失败时移除失败 target 并保留其余 targets；不自动重试。
+- `WorkspaceShell.tsx` 预构建 13,699 行，未修改 line budget。

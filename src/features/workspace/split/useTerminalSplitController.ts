@@ -192,9 +192,8 @@ export function useTerminalSplitController(inputs: TerminalSplitControllerInputs
     dispatchMultiExec({
       type: "multiExec/targetsAvailable",
       availableKeys: new Set(connectedKeysSignature ? connectedKeysSignature.split("\0") : []),
-      splitActive: terminalSplitActive,
     });
-  }, [connectedKeysSignature, multiExec.mode, terminalSplitActive]);
+  }, [connectedKeysSignature, multiExec.mode]);
 
   // ---- 过渡层：与 1a 同名的 setter，内部转 dispatch。第二刀逐个替换为意图型 action 后删除。 ----
   const setTerminalSplitLayout: Dispatch<SetStateAction<TerminalSplitNode | null>> = useCallback(

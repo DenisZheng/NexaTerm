@@ -84,7 +84,7 @@ describe("multiExecReducer", () => {
     expect(next.mode).toBe("send");
   });
 
-  it("legacy split availability can turn live off but never changes send mode", () => {
+  it("split/focus changes do not close live; losing every target does", () => {
     const live = {
       error: null,
       mode: "live" as const,
@@ -96,7 +96,18 @@ describe("multiExecReducer", () => {
         availableKeys: new Set(["ssh:a", "ssh:b"]),
         splitActive: false,
       }).mode,
-    ).toBe("off");
+    ).toBe("live");
+
+    expect(
+      multiExecReducer(live, {
+        type: "multiExec/targetsAvailable",
+        availableKeys: new Set(),
+        splitActive: false,
+      }),
+    ).toMatchObject({
+      mode: "off",
+      targets: new Set(),
+    });
 
     const send = { ...live, mode: "send" as const };
     expect(

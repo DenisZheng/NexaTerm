@@ -210,13 +210,13 @@ describe("同步输入参与者（原 1500 行 effect）", () => {
       result.current.setTerminalSplitSyncParticipantKeys(new Set(["ssh:a", "ssh:b"]));
     });
     rerender({ ...initial, terminalTabs: [connected("a"), connecting("b"), connected("c")] });
-    // b 仍在布局里（tab 存在），但不再是同步参与者；可用参与者 < 2 → 同步自动关闭。
+    // b 仍在布局里（tab 存在），但不再是同步参与者；剩余显式目标 a 时 live 继续有效。
     expect(result.current.terminalSplitPanes).toHaveLength(2);
     expect(result.current.terminalSplitSyncParticipantKeys).toEqual(new Set(["ssh:a"]));
-    expect(result.current.terminalSplitSyncEnabled).toBe(false);
+    expect(result.current.terminalSplitSyncEnabled).toBe(true);
   });
 
-  it("分屏 tab 不活动时同步被关闭", () => {
+  it("切离分屏不会关闭 live 或改变固定 targets", () => {
     const { result } = setup();
     openTwoPanes(result);
     act(() => {
@@ -224,7 +224,8 @@ describe("同步输入参与者（原 1500 行 effect）", () => {
       result.current.setTerminalSplitSyncParticipantKeys(new Set(["ssh:a", "ssh:b"]));
     });
     act(() => result.current.setTerminalSplitTabActive(false));
-    expect(result.current.terminalSplitSyncEnabled).toBe(false);
+    expect(result.current.terminalSplitSyncEnabled).toBe(true);
+    expect(result.current.terminalSplitSyncParticipantKeys).toEqual(new Set(["ssh:a", "ssh:b"]));
   });
 
   it("参与者集合无变化时保持同一引用（避免多余渲染）", () => {
