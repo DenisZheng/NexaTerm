@@ -124,7 +124,8 @@ pub(crate) async fn prepare_x11_forwarding(
 ) -> Result<PreparedX11Forwarding, X11SpikeError> {
     let display_text = effective_display(configured_display)?;
     let display = parse_display(&display_text)?;
-    let real_cookie = read_local_x11_auth_cookie(&display_text).await?;
+    let real_cookie =
+        read_local_x11_auth_cookie(&display_text, display.display_number).await?;
     if real_cookie.len() != X11_COOKIE_BYTES {
         return Err(X11SpikeError(format!(
             "X11 MIT-MAGIC-COOKIE-1 cookie must be {X11_COOKIE_BYTES} bytes, got {}",
@@ -168,21 +169,23 @@ fn generate_fake_cookie() -> Result<Vec<u8>, X11SpikeError> {
     Ok(cookie)
 }
 
-async fn read_local_x11_auth_cookie(display: &str) -> Result<Vec<u8>, X11SpikeError> {
+async fn read_local_x11_auth_cookie(
+    display: &str,
+    display_number: u16,
+) -> Result<Vec<u8>, X11SpikeError> {
     let executable = if cfg!(target_os = "macos") && Path::new("/opt/X11/bin/xauth").exists() {
         "/opt/X11/bin/xauth"
     } else {
         "xauth"
     };
     let executable = executable.to_string();
-    let display = display.to_string();
+    let display_arg = display.to_string();
     let output = timeout(
         XAUTH_TIMEOUT,
         tokio::task::spawn_blocking(move || {
             Command::new(executable)
                 .arg("list")
-                .arg(&display)
-                .env("DISPLAY", &display)
+                .env("DISPLAY", &display_arg)
                 .output()
         }),
     )
@@ -197,24 +200,33 @@ async fn read_local_x11_auth_cookie(display: &str) -> Result<Vec<u8>, X11SpikeEr
         )));
     }
     let stdout = String::from_utf8_lossy(&output.stdout);
-    parse_xauth_cookie(&stdout).ok_or_else(|| {
+    parse_xauth_cookie(&stdout, display_number).ok_or_else(|| {
         X11SpikeError(format!(
             "xauth returned no MIT-MAGIC-COOKIE-1 entry for DISPLAY {display}"
         ))
     })
 }
 
-fn parse_xauth_cookie(output: &str) -> Option<Vec<u8>> {
+fn parse_xauth_cookie(output: &str, display_number: u16) -> Option<Vec<u8>> {
     output.lines().find_map(|line| {
         let mut parts = line.split_whitespace();
-        let _display = parts.next()?;
+        let display_name = parts.next()?;
         let protocol = parts.next()?;
         let cookie = parts.next()?;
-        if protocol != "MIT-MAGIC-COOKIE-1" {
+        if protocol != "MIT-MAGIC-COOKIE-1"
+            || xauth_display_number(display_name) != Some(display_number)
+        {
             return None;
         }
         decode_cookie_hex(cookie).ok()
     })
+}
+
+fn xauth_display_number(display_name: &str) -> Option<u16> {
+    display_name
+        .rsplit_once(':')
+        .and_then(|(_, suffix)| suffix.split('.').next())
+        .and_then(|value| value.parse::<u16>().ok())
 }
 
 async fn connect_local_target(target: &X11LocalTarget) -> Result<BoxedX11Stream, X11SpikeError> {
@@ -494,9 +506,10 @@ mod tests {
     fn parses_xauth_cookie_and_generates_128_bit_fake_cookie() {
         let output = "host/unix:0  MIT-MAGIC-COOKIE-1  00112233445566778899aabbccddeeff\n";
         assert_eq!(
-            parse_xauth_cookie(output).unwrap(),
+            parse_xauth_cookie(output, 0).unwrap(),
             decode_cookie_hex("00112233445566778899aabbccddeeff").unwrap()
         );
+        assert!(parse_xauth_cookie(output, 1).is_none());
         let fake = generate_fake_cookie().unwrap();
         assert_eq!(fake.len(), 16);
         assert_eq!(encode_cookie_hex(&fake).len(), 32);
