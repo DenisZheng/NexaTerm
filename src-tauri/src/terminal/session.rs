@@ -1001,6 +1001,91 @@ impl ReusableForwardSession {
                 .await;
         }
     }
+
+    #[cfg(test)]
+    pub(crate) async fn connect_fixture(
+        host: &str,
+        port: u16,
+        username: &str,
+        key_path: String,
+        host_key_text: &str,
+        root: std::path::PathBuf,
+    ) -> Self {
+        let secrets: Arc<dyn SecretStore> =
+            Arc::new(crate::storage_vault::InMemorySecretStore::default());
+        let repository = StorageRepository::open_root(root.clone(), Arc::clone(&secrets))
+            .expect("open tunnel fixture store");
+        let public_key = russh::keys::ssh_key::PublicKey::from_openssh(host_key_text)
+            .expect("fixture host public key should parse");
+        repository
+            .known_host_trust(
+                host_key_info(host, port, &public_key),
+                "2026-10-03T00:00:00Z",
+            )
+            .expect("pre-trust tunnel fixture host key");
+
+        let remote_forward = RemoteForwardState::default();
+        let handler = KnownHostClient {
+            host: host.to_string(),
+            port,
+            app_data_dir: root,
+            secret_store: secrets,
+            remote_forward: remote_forward.clone(),
+            x11_forward: X11ForwardState::default(),
+        };
+        let config = Arc::new(client::Config {
+            inactivity_timeout: Some(Duration::from_secs(30)),
+            nodelay: true,
+            ..<_>::default()
+        });
+        let mut client = client::connect(config, (host, port), handler)
+            .await
+            .expect("russh connects to tunnel fixture");
+        authenticate(
+            &mut client,
+            username,
+            AuthMethod::PrivateKey {
+                path: key_path,
+                passphrase: None,
+            },
+        )
+        .await
+        .expect("tunnel fixture public-key authentication succeeds");
+
+        Self {
+            client,
+            jump_client: None,
+            remote_forward,
+        }
+    }
+
+    #[cfg(test)]
+    pub(crate) async fn exec_fixture_command(&self, command: &str) -> (Vec<u8>, Option<u32>) {
+        let mut channel = self
+            .client
+            .channel_open_session()
+            .await
+            .expect("open tunnel fixture command channel");
+        channel
+            .exec(true, command)
+            .await
+            .expect("start tunnel fixture command");
+        let mut output = Vec::new();
+        let mut exit_status = None;
+        while let Some(message) = channel.wait().await {
+            match message {
+                ChannelMsg::Data { data } | ChannelMsg::ExtendedData { data, .. } => {
+                    output.extend_from_slice(&data)
+                }
+                ChannelMsg::ExitStatus { exit_status: code } => exit_status = Some(code),
+                ChannelMsg::Close => break,
+                _ => {}
+            }
+        }
+        let _ = channel.close().await;
+        (output, exit_status)
+    }
+
 }
 
 impl ReusableSftpSession {
