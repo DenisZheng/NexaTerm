@@ -47,6 +47,7 @@ import {
   type TerminalSemanticHighlighter,
 } from "./terminalSemanticHighlight";
 import { normalizeStartupOutput } from "./terminalStartupOutput";
+import { isTerminalImeKeyboardEvent } from "./terminalIme";
 import {
   createTerminalOutputSchedule,
   TerminalOutputQueue,
@@ -305,6 +306,10 @@ export function TerminalPanel({
     // 因此必须在 capture 阶段抢先拦截：阻止 xterm 处理，主动读剪贴板并写入终端。
     // 关闭模式仍由下方 attachCustomKeyEventHandler 处理（发送 \x16 交给 shell/Vim）。
     const interceptCtrlVPaste = (event: KeyboardEvent) => {
+      // Never steal IME composition/process-key events from xterm's hidden textarea.
+      if (isTerminalImeKeyboardEvent(event)) {
+        return;
+      }
       if (!ctrlVPasteRef.current || !isTerminalPasteShortcut(event)) {
         return;
       }
@@ -325,6 +330,11 @@ export function TerminalPanel({
     };
     hostRef.current.addEventListener("keydown", interceptCtrlVPaste, true);
     terminal.attachCustomKeyEventHandler((event) => {
+      // Linux IBus/Fcitx and other platform IMEs use composition events and may
+      // surface keyCode 229. Let xterm own that entire path.
+      if (isTerminalImeKeyboardEvent(event)) {
+        return true;
+      }
       if (isTerminalPasteShortcut(event) && !ctrlVPasteRef.current) {
         event.preventDefault();
         suppressNextNativePasteRef.current = true;

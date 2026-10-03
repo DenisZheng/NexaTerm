@@ -245,6 +245,64 @@ jobs:
         working-directory: src-tauri
         run: cargo test --workspace --locked
 
+  linux-ime:
+    name: Linux IME ${{ matrix.engine }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        engine: [ibus, fcitx5]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.22.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Linux IME and Tauri dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            dbus-x11 \
+            fcitx5 \
+            fcitx5-chinese-addons \
+            fcitx5-frontend-gtk3 \
+            ibus \
+            ibus-libpinyin \
+            libayatana-appindicator3-dev \
+            libudev-dev \
+            librsvg2-dev \
+            libssl-dev \
+            libwebkit2gtk-4.1-dev \
+            libxdo-dev \
+            patchelf \
+            pkg-config \
+            xauth \
+            xdotool \
+            xvfb
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run native WebKitGTK IME smoke
+        env:
+          LANG: C.UTF-8
+          LC_ALL: C.UTF-8
+        run: xvfb-run -a dbus-run-session -- node scripts/linux-ime-smoke.mjs ${{ matrix.engine }}
+
   # 真实环境测试夹具：docker-compose 起 OpenSSH（含双跳链）+ xrdp + VNC，
   # 验收项 A12/A13 只有对着真实服务器才真正"可验收"。
   # SSH 密钥由 fixtures.mjs 在运行时生成（gitignored），仓库不提交任何私钥。
