@@ -1781,7 +1781,7 @@ export function WorkspaceShell() {
   const newSessionEntry = {
     desktopPlatform,
     localProfiles: localTerminalProfiles,
-    localProfilesError,
+    localProfilesError: localTerminalProfilesError,
     localProfilesLoading: localTerminalProfilesLoading,
     onCreateConnection: () => createConnection(),
     onOpenLocalProfile: (profile: LocalTerminalProfile) => void openLocalTerminalByProfile(profile),
