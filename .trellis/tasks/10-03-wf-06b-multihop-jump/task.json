@@ -26,6 +26,6 @@
     "tests/fixtures/docker-compose.yml",
     "tests/fixtures/fixtures.mjs"
   ],
-  "notes": "Stacked on WF-06A head e7bf637b9. WF-06A final CI remains red/untriaged due infrastructure visibility problems; PR #32 stays Draft/unmerged per maintainer decision. WF-06B does not waive A12; it completes the Jump half before combined real-Tauri acceptance. Do not modify PR #12 or line-budget.json.",
+  "notes": "Stacked on WF-06A head e7bf637b9. WF-06A final CI remains red/untriaged and PR #32 stays Draft/unmerged by maintainer decision. WF-06B-1 two-hop plan/owner is implemented; per-hop auth/Host Key UX is 06B-2 and real two-hop Docker evidence is 06B-3. Do not modify PR #12 or line-budget.json.",
   "meta": {}
 }
