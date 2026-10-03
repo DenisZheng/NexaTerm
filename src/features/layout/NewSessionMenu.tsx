@@ -1,11 +1,12 @@
 import "../../styles/actionbar.css";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import * as Menubar from "@radix-ui/react-menubar";
-import { ChevronRight, FolderOpen, Plus, SquarePlus } from "lucide-react";
+import { Cable, ChevronRight, FolderOpen, Plus, SquarePlus, TerminalSquare } from "lucide-react";
 import { useI18n } from "../../shared/i18n";
 import { Tooltip } from "../../shared/ui/Tooltip";
 import { LocalTerminalIcon } from "../terminal/LocalTerminalIcons";
 import type { DesktopPlatform } from "../../shared/tauri/platformCapabilities";
+import type { ConnectionProtocol } from "../connections/connectionTypes";
 import type { LocalTerminalProfile, WslProviderStatus } from "../terminal/localTerminalTypes";
 import { buildNewSessionTerminalSections, type WslEntryReason } from "./newSessionLocalEntries";
 
@@ -15,7 +16,7 @@ export interface NewSessionMenuProps {
   localProfilesError?: string | null;
   localProfilesLoading: boolean;
   wslProviderStatus?: WslProviderStatus | null;
-  onCreateConnection: () => void;
+  onCreateConnection: (protocol?: ConnectionProtocol) => void;
   onOpenLocalProfile: (profile: LocalTerminalProfile) => void;
   onQuickOpen: () => void;
 }
@@ -76,7 +77,15 @@ export function NewSessionMenuItems({ variant = "dropdown", ...props }: NewSessi
         </>
       ) : null}
       <Menu.Separator className="context-menu-separator" />
-      <Menu.Item className="dropdown-menu-item" onSelect={props.onCreateConnection}>
+      <Menu.Label className="title-new-session-menu-heading">{t("newSession.characterTerminals")}</Menu.Label>
+      <Menu.Item className="dropdown-menu-item" onSelect={() => props.onCreateConnection("telnet")}>
+        <TerminalSquare className="ui-icon" aria-hidden="true" />{t("newSession.telnet")}
+      </Menu.Item>
+      <Menu.Item className="dropdown-menu-item" onSelect={() => props.onCreateConnection("serial")}>
+        <Cable className="ui-icon" aria-hidden="true" />{t("newSession.serial")}
+      </Menu.Item>
+      <Menu.Separator className="context-menu-separator" />
+      <Menu.Item className="dropdown-menu-item" onSelect={() => props.onCreateConnection()}>
         <SquarePlus className="ui-icon" aria-hidden="true" />{t("newSession.createConnection")}
       </Menu.Item>
       <Menu.Item className="dropdown-menu-item" onSelect={props.onQuickOpen}>

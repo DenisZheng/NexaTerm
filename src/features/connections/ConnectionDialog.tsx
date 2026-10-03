@@ -99,6 +99,7 @@ interface ConnectionDialogProps {
   defaultGroup?: string | null;
   duplicate?: boolean;
   groups: ConnectionDialogGroup[];
+  initialProtocol?: ConnectionProtocol | null;
   allowPasswordReveal: boolean;
   open: boolean;
   onClose: () => void;
@@ -317,6 +318,7 @@ export function ConnectionDialog({
   defaultGroup,
   duplicate = false,
   groups,
+  initialProtocol,
   allowPasswordReveal,
   open,
   onClose,
@@ -429,9 +431,14 @@ export function ConnectionDialog({
         ? duplicate
           ? duplicateFormFromConnection(connection, connections, groups)
           : formFromConnection(connection, groups)
-        : { ...emptyForm, group_id: defaultGroup || "" },
+        : {
+            ...emptyForm,
+            group_id: defaultGroup || "",
+            port: protocolDefaultPorts[initialProtocol || "ssh"],
+            protocol: initialProtocol || "ssh",
+          },
     );
-  }, [connection, connections, defaultGroup, duplicate, groups, open]);
+  }, [connection, connections, defaultGroup, duplicate, groups, initialProtocol, open]);
 
   useEffect(() => {
     if (!open || protocol !== "serial") {

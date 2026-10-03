@@ -119,5 +119,8 @@
   "newSession.wslNoDistribution": "已安装 WSL，但没有可用发行版",
   "newSession.wslProbeTimeout": "WSL 发行版探测超时",
   "newSession.wslProbeFailed": "WSL 发行版探测失败",
-  "newSession.wslAvailableHidden": "检测到 WSL 发行版，但已从此菜单隐藏"
+  "newSession.wslAvailableHidden": "检测到 WSL 发行版，但已从此菜单隐藏",
+  "newSession.characterTerminals": "字符终端",
+  "newSession.telnet": "Telnet…",
+  "newSession.serial": "串口…"
 }
