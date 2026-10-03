@@ -567,8 +567,6 @@ interface TerminalSearchState {
   query: string;
 }
 
-type ConnectedTerminalTab = TerminalTab & { sessionId: string; type: "terminal" };
-
 type ConnectionStepMode = "test" | "terminal";
 type ConnectionStepStatus = "idle" | "running" | "waiting_host_key" | "prompt" | "success" | "error";
 
