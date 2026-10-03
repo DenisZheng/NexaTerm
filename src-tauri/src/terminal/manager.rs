@@ -12,7 +12,7 @@ use crate::commands::{
 use crate::events::{TerminalConnectProgressEvent, TerminalOutputEvent, TerminalStateChangedEvent};
 use crate::terminal::local::{LocalTerminalSession, OpenLocalSession};
 use crate::terminal::serial::{
-    OpenSerialSession, SerialTerminalOpenRequest, SerialTerminalSession,
+    OpenSerialSession, SerialCloseSignal, SerialTerminalOpenRequest, SerialTerminalSession,
 };
 use crate::terminal::session::{
     OpenProgress, TerminalOutputBatcher, TerminalOutputDecoder, TerminalSession,
@@ -143,16 +143,17 @@ impl TerminalManager {
             request_id,
         } = SerialTerminalSession::open(request)?;
         let session_id = session.id.clone();
+        let close_signal = session.close_signal();
         self.sessions.lock().await.insert(
             session_id.clone(),
-            ManagedTerminalSession::Serial(session.clone()),
+            ManagedTerminalSession::Serial(session),
         );
         spawn_serial_reader(
             app,
             session_id.clone(),
             request_id,
             reader,
-            session,
+            close_signal,
             self.sessions.clone(),
         );
         Ok(session_id)
@@ -484,7 +485,7 @@ fn spawn_serial_reader(
     session_id: String,
     request_id: Option<String>,
     mut reader: Box<dyn serialport::SerialPort>,
-    session: Arc<SerialTerminalSession>,
+    close_signal: SerialCloseSignal,
     sessions: SessionStore,
 ) {
     let app_for_thread = app.clone();
@@ -493,7 +494,7 @@ fn spawn_serial_reader(
 
     std::thread::spawn(move || {
         let mut buffer = vec![0_u8; 8192];
-        while !session.is_closed() {
+        while !close_signal.is_closed() {
             match reader.read(&mut buffer) {
                 Ok(0) => {}
                 Ok(read) => {
