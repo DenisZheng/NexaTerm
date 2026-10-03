@@ -1,6 +1,7 @@
 use std::env;
 use std::fmt;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 use std::sync::Arc;
 
 use russh::{client, Channel};
@@ -8,7 +9,6 @@ use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use tokio::net::TcpStream;
 #[cfg(unix)]
 use tokio::net::UnixStream;
-use tokio::process::Command;
 use tokio::sync::RwLock;
 use tokio::time::{timeout, Duration};
 
@@ -174,12 +174,22 @@ async fn read_local_x11_auth_cookie(display: &str) -> Result<Vec<u8>, X11SpikeEr
     } else {
         "xauth"
     };
-    let mut command = Command::new(executable);
-    command.arg("list").arg(display).env("DISPLAY", display).kill_on_drop(true);
-    let output = timeout(XAUTH_TIMEOUT, command.output())
-        .await
-        .map_err(|_| X11SpikeError(format!("xauth timed out after {XAUTH_TIMEOUT:?}")))?
-        .map_err(|error| X11SpikeError(format!("run xauth failed: {error}")))?;
+    let executable = executable.to_string();
+    let display = display.to_string();
+    let output = timeout(
+        XAUTH_TIMEOUT,
+        tokio::task::spawn_blocking(move || {
+            Command::new(executable)
+                .arg("list")
+                .arg(&display)
+                .env("DISPLAY", &display)
+                .output()
+        }),
+    )
+    .await
+    .map_err(|_| X11SpikeError(format!("xauth timed out after {XAUTH_TIMEOUT:?}")))?
+    .map_err(|error| X11SpikeError(format!("xauth worker failed: {error}")))?
+    .map_err(|error| X11SpikeError(format!("run xauth failed: {error}")))?;
     if !output.status.success() {
         return Err(X11SpikeError(format!(
             "xauth list failed with status {}",
