@@ -118,3 +118,53 @@ ssh -X -i tests/fixtures/keys/test_key -p 2223 testuser@127.0.0.1 xterm
 
 RDP: connect an RDP client to `127.0.0.1:3389`, log in as `testuser`/`testpass`.
 VNC: connect a VNC viewer to `127.0.0.1:5901`, password `testpass`.
+
+
+## WF-04B A08 / Split GUI acceptance
+
+Use the direct SSH fixture on `127.0.0.1:2222`. Start it first:
+
+```sh
+node tests/fixtures/fixtures.mjs up
+```
+
+The generated private key is `tests/fixtures/keys/test_key`. In NexaTerm create a parent group such as `A08 Batch` and these saved SSH profiles inside it:
+
+| Profile | Host / port | User | Authentication | Purpose |
+| --- | --- | --- | --- | --- |
+| `A08-existing` | `127.0.0.1:2222` | `testuser` | generated private key | open this before the batch; it must survive cancel/failure |
+| `A08-success` | `127.0.0.1:2222` | `testuser` | generated private key | deterministic success |
+| `A08-fail` | `127.0.0.1:2222` | `wronguser` | generated private key | deterministic SSH authentication failure |
+| `A08-wait` | `127.0.0.1:2222` | `testuser` | ask/prompt at connection time | keeps one batch item in waiting-user until handled or cancelled |
+
+If the local UI names the prompt credential mode differently, select the mode that intentionally asks for credentials during connection rather than storing them in the profile.
+
+### A08 batch flow
+
+1. Open `A08-existing` normally and leave that terminal running.
+2. Right-click the `A08 Batch` group and choose **Connect all… / 连接全部…**.
+3. Confirm the preview includes all four profiles, marks `A08-existing` as already open, and leaves it unchecked by default.
+4. Keep `A08-success`, `A08-fail`, and `A08-wait` selected and start the batch.
+5. Confirm per-item states are visible. `A08-success` should succeed, `A08-fail` should fail, and `A08-wait` should reach waiting-user.
+6. While `A08-wait` is still waiting, choose **Cancel remaining**.
+7. Verify the pre-existing `A08-existing` terminal is still alive and usable, and the successful batch terminal is not rolled back.
+8. After the batch settles, choose **Retry failed**. Only `A08-fail` should start again; successful/cancelled items must not be replayed automatically.
+
+A08 passes when every item has an explicit final state, cancel/failure does not close `A08-existing`, successful items remain open, and retry touches failed items only.
+
+### Split 2 / 4 pane smoke
+
+With at least two terminal instances open:
+
+1. Start a 2-pane split from a specific terminal instance. The split group title/anchor must follow that exact instance, not another instance from the same saved profile.
+2. In the pane picker, verify existing terminal instances are selectable by instance.
+3. Verify an SSH profile that already has an open terminal still appears under **New SSH instance / 新建 SSH 实例** and creates a new instance when selected.
+4. If Telnet/Serial profiles exist, verify the picker offers **New Telnet / Serial instance / 新建 Telnet / 串口实例**.
+5. Create a 4-pane layout and confirm pane focus is unique, ratios remain draggable, and batch completion did not automatically modify Split.
+6. Close the original split host while at least two panes remain. The split group must remain usable and re-anchor to a surviving pane instance rather than a same-profile sibling outside the split.
+
+When finished:
+
+```sh
+node tests/fixtures/fixtures.mjs down
+```

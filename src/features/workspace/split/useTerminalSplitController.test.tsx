@@ -47,7 +47,7 @@ function openTwoPanes(result: ReturnType<typeof setup>["result"], first = ssh("a
     const p2 = c.nextTerminalSplitId("terminal-pane");
     const s1 = c.nextTerminalSplitId("terminal-split");
     c.setTerminalSplitLayout(splitTerminalPane(createTerminalSplitLayout(p1, first), p1, "row", s1, p2, second));
-    c.setTerminalSplitHost({ kind: "ssh", connectionId: "conn-1" });
+    c.setTerminalSplitHost(first);
     c.setTerminalSplitTabActive(true);
     c.setFocusedTerminalPaneId(p1);
   });
@@ -130,7 +130,7 @@ describe("binding 失效清理（原 1221 行 effect）", () => {
     const c = result.current;
     expect(c.terminalSplitPanes.map((pane) => pane.binding)).toEqual([ssh("a"), ssh("c")]);
     expect(c.focusedTerminalPaneId).toBe(c.terminalSplitPanes[0]?.id);
-    expect(c.terminalSplitHost).toEqual({ kind: "ssh", connectionId: "conn-1" });
+    expect(c.terminalSplitHost).toEqual(ssh("a"));
   });
 
   it("所有 binding 都消失时全部清空，不回调折叠", () => {
@@ -166,7 +166,7 @@ describe("超过 pane 上限时重建四宫格（原 1459 行 effect）", () => 
       layout = splitTerminalPane(layout, "p3", "row", "s3", "p4", ssh("d"));
       layout = splitTerminalPane(layout, "p4", "column", "s4", "p5", ssh("e"));
       c.setTerminalSplitLayout(layout);
-      c.setTerminalSplitHost({ kind: "ssh", connectionId: "conn-1" });
+      c.setTerminalSplitHost(ssh("a"));
       c.setTerminalSplitTabActive(true);
       c.setFocusedTerminalPaneId("p3");
     });
@@ -270,7 +270,6 @@ describe("其余 setter 透传", () => {
       result.current.setTerminalSplitCloseConfirmOpen(true);
       result.current.setTerminalSplitAutoCreateSameSession(false);
       result.current.setTerminalSplitLayoutRevision((value) => value + 1);
-      result.current.setTerminalSplitAnchorIndex(3);
       result.current.setTerminalSplitSyncError("boom");
     });
     const c = result.current;
@@ -278,7 +277,6 @@ describe("其余 setter 透传", () => {
     expect(c.terminalSplitCloseConfirmOpen).toBe(true);
     expect(c.terminalSplitAutoCreateSameSession).toBe(false);
     expect(c.terminalSplitLayoutRevision).toBe(1);
-    expect(c.terminalSplitAnchorIndex).toBe(3);
     expect(c.terminalSplitSyncError).toBe("boom");
     expect(c.terminalSplitPickerPendingPaneRef.current).toBeNull();
     expect(c.terminalSplitPickerRequestRef.current).toBe(0);

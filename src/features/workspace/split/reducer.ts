@@ -17,7 +17,6 @@ import type {
 } from "./actions";
 
 export interface SplitState {
-  anchorIndex: number;
   autoCreateSameSession: boolean;
   /** 单 pane 收缩后待切回独立 tab 的 binding；controller 消费后 dispatch `collapseHandled` 清除。 */
   collapsedTo: TerminalPaneBinding | null;
@@ -31,7 +30,6 @@ export interface SplitState {
 }
 
 export const initialSplitState: SplitState = {
-  anchorIndex: 0,
   autoCreateSameSession: true,
   collapsedTo: null,
   confirmCloseOpen: false,
@@ -98,6 +96,7 @@ function normalize(
     return cleared(state, null);
   }
   let panes = collectTerminalSplitPanes(layout);
+  let host = resolveHost(state.host, panes);
   let focusedPaneId = state.focusedPaneId;
   if (!focusedPaneId || !panes.some((pane) => pane.id === focusedPaneId)) {
     focusedPaneId = panes[0]?.id || null;
@@ -116,15 +115,42 @@ function normalize(
       layout = four.layout;
       focusedPaneId = four.focusedPaneId;
       panes = collectTerminalSplitPanes(layout);
+      host = resolveHost(host, panes);
     }
   }
   if (panes.length === 1) {
     return cleared(state, panes[0]?.binding || null);
   }
-  if (layout === state.layout && focusedPaneId === state.focusedPaneId) {
+  if (
+    layout === state.layout &&
+    focusedPaneId === state.focusedPaneId &&
+    optionalBindingsEqual(host, state.host)
+  ) {
     return state;
   }
-  return { ...state, focusedPaneId, layout };
+  return { ...state, focusedPaneId, host, layout };
+}
+
+function resolveHost(
+  host: TerminalSplitHost | null,
+  panes: ReturnType<typeof collectTerminalSplitPanes>,
+): TerminalSplitHost | null {
+  if (
+    host &&
+    panes.some(
+      (pane) => pane.binding && terminalPaneBindingsEqual(pane.binding, host),
+    )
+  ) {
+    return host;
+  }
+  return panes.find((pane) => pane.binding)?.binding || null;
+}
+
+function optionalBindingsEqual(
+  first: TerminalSplitHost | null,
+  second: TerminalSplitHost | null,
+) {
+  return first === second || Boolean(first && second && terminalPaneBindingsEqual(first, second));
 }
 
 export function splitReducer(state: SplitState, action: SplitAction): SplitState {
@@ -135,11 +161,9 @@ export function splitReducer(state: SplitState, action: SplitAction): SplitState
       return layout === state.layout ? state : { ...state, layout };
     }
     case "split/setHost":
-      return action.host === state.host ? state : { ...state, host: action.host };
-    case "split/setAnchorIndex":
-      return action.anchorIndex === state.anchorIndex
+      return optionalBindingsEqual(action.host, state.host)
         ? state
-        : { ...state, anchorIndex: action.anchorIndex };
+        : { ...state, host: action.host };
     case "split/setTabActive":
       return action.active === state.tabActive ? state : { ...state, tabActive: action.active };
     case "split/focusPane":

@@ -167,7 +167,7 @@ function collectInstances(collections: InstanceCollections) {
 
 /**
  * 成员为 binding 仍指向现存实例的 pane（按布局顺序）；没有可用成员时不成项。
- * 分屏宿主在代码里是连接级（某个 ssh 连接 / 本地），标题取 pane 顺序中第一个属于宿主的成员，找不到则取第一个成员。
+ * 分屏宿主是具体 terminal binding；标题严格取该实例，宿主已失效时才回退到第一个存活成员。
  */
 function buildSplitGroup(
   split: SplitGroupInput,
@@ -183,12 +183,9 @@ function buildSplitGroup(
   if (members.length === 0) {
     return null;
   }
-  const host = members.find((item) => belongsToHost(item, split.host)) ?? members[0];
+  const hostId = instanceItemId(split.host.kind, split.host.tabId);
+  const host = members.find((item) => item.id === hostId) ?? members[0];
   return { kind: "split", id: SPLIT_ITEM_ID, host, memberIds: members.map((item) => item.id) };
-}
-
-function belongsToHost(item: TerminalInstanceItem, host: TerminalSplitHost) {
-  return host.kind === "ssh" ? item.kind === "ssh" && item.connectionId === host.connectionId : item.kind === "local";
 }
 
 /** 标题查找；名称可能查不到（连接已删除、profile 已隐藏），此时返回 null。 */

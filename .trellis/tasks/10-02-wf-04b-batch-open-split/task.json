@@ -1,0 +1,31 @@
+{
+  "id": "wf-04b-batch-open-split",
+  "name": "wf-04b-batch-open-split",
+  "title": "WF-04B 批量打开与分屏",
+  "description": "从 canonical 会话树安全批量打开连接，并复用现有 2/4 pane Split 将已打开实例或新实例显式放入 pane。",
+  "status": "in_progress",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P2",
+  "creator": "openai",
+  "assignee": "openai",
+  "createdAt": "2026-10-02",
+  "completedAt": null,
+  "branch": "feat/wf04b-batch-open-split",
+  "base_branch": "main",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": "https://github.com/DenisZheng/NexaTerm/pull/27",
+  "subtasks": [],
+  "children": [],
+  "parent": "09-23-nexaterm-workflow-mainline",
+  "relatedFiles": [
+    "docs/WORKFLOW_SPEC.md",
+    "src/features/connections/ConnectionPane.tsx",
+    "src/features/workspace/split/",
+    "src/features/layout/WorkspaceShell.tsx"
+  ],
+  "notes": "A08 only. WS-X09 confirmed in WORKFLOW_SPEC v0.5. WF-04C / WS-X04 not included.",
+  "meta": {}
+}
