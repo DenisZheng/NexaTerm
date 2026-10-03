@@ -46,7 +46,8 @@
     "check:wf05c-rdp-vnc": "node scripts/check-wf05c-rdp-vnc-source.mjs",
     "check:wf06a-tunnels": "node scripts/check-wf06a-tunnels-source.mjs",
     "check:wf06b-multihop-jump": "node scripts/check-wf06b-multihop-jump-source.mjs",
-    "check:wf06c-x11": "node scripts/check-wf06c-x11-source.mjs"
+    "check:wf06c-x11": "node scripts/check-wf06c-x11-source.mjs",
+    "check:wf07-workspace-restore": "node scripts/check-wf07-workspace-restore-source.mjs"
   },
   "dependencies": {
     "@novnc/novnc": "^1.7.0",

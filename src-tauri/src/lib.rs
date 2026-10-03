@@ -33,6 +33,7 @@ pub mod storage_vault;
 pub mod sync_snapshot;
 mod sync_import_transaction;
 mod terminal;
+mod workspace_snapshot;
 mod temporary_connections;
 mod tunnels;
 mod vnc;
@@ -83,6 +84,9 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            workspace_snapshot::workspace_snapshot_load,
+            workspace_snapshot::workspace_snapshot_save,
+            workspace_snapshot::workspace_snapshot_clear,
             commands::secret_vault_status,
             commands::secret_vault_unlock,
             commands::secret_vault_unlock_local,

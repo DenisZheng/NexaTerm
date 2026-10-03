@@ -177,6 +177,36 @@ impl StorageRepository {
         Ok(())
     }
 
+    pub fn workspace_snapshot_get(&self) -> Result<(Option<serde_json::Value>, Option<serde_json::Value>), AppError> {
+        let row = self.connection.query_row(
+            "SELECT current_json, backup_json FROM workspace_snapshots WHERE slot = 1",
+            [],
+            |row| Ok((row.get::<_, Option<String>>(0)?, row.get::<_, Option<String>>(1)?)),
+        ).optional().map_err(sqlite_repository_error)?;
+        let Some((current, backup)) = row else { return Ok((None, None)); };
+        let parse = |value: Option<String>| -> Result<Option<serde_json::Value>, AppError> {
+            value.map(|json| serde_json::from_str(&json).map_err(sqlite_serialize_error)).transpose()
+        };
+        Ok((parse(current)?, parse(backup)?))
+    }
+
+    pub fn workspace_snapshot_save(&self, snapshot: &serde_json::Value, now: &str) -> Result<(), AppError> {
+        let json = serde_json::to_string(snapshot).map_err(sqlite_serialize_error)?;
+        self.connection.execute(
+            "INSERT INTO workspace_snapshots(slot, current_json, backup_json, updated_at) VALUES (1, ?1, NULL, ?2)
+             ON CONFLICT(slot) DO UPDATE SET backup_json = workspace_snapshots.current_json,
+               current_json = excluded.current_json, updated_at = excluded.updated_at",
+            params![json, now],
+        ).map_err(sqlite_repository_error)?;
+        Ok(())
+    }
+
+    pub fn workspace_snapshot_clear(&self) -> Result<(), AppError> {
+        self.connection.execute("DELETE FROM workspace_snapshots WHERE slot = 1", [])
+            .map_err(sqlite_repository_error)?;
+        Ok(())
+    }
+
     pub fn secret_set(&self, reference: &SecretReference, secret: &str) -> Result<(), AppError> {
         self.secret_store.set_secret(reference, secret)
     }

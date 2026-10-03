@@ -1,0 +1,140 @@
+use std::time::{SystemTime, UNIX_EPOCH};
+
+use serde::Serialize;
+use serde_json::Value;
+use tauri::AppHandle;
+
+use crate::app_error::AppError;
+use crate::storage_repository::StorageRepository;
+
+const MAX_WORKSPACE_SNAPSHOT_BYTES: usize = 512 * 1024;
+const MAX_WORKSPACE_SNAPSHOT_DEPTH: usize = 24;
+
+#[derive(Clone, Debug, Serialize)]
+pub struct WorkspaceSnapshotEnvelope {
+    pub current: Option<Value>,
+    pub backup: Option<Value>,
+}
+
+#[tauri::command]
+pub fn workspace_snapshot_load(app: AppHandle) -> Result<WorkspaceSnapshotEnvelope, AppError> {
+    let repository = StorageRepository::open_app(&app)?;
+    let (current, backup) = repository.workspace_snapshot_get()?;
+    Ok(WorkspaceSnapshotEnvelope { current, backup })
+}
+
+#[tauri::command]
+pub fn workspace_snapshot_save(app: AppHandle, snapshot: Value) -> Result<(), AppError> {
+    validate_workspace_snapshot_value(&snapshot)?;
+    StorageRepository::open_app(&app)?.workspace_snapshot_save(&snapshot, &now_timestamp())
+}
+
+#[tauri::command]
+pub fn workspace_snapshot_clear(app: AppHandle) -> Result<(), AppError> {
+    StorageRepository::open_app(&app)?.workspace_snapshot_clear()
+}
+
+fn validate_workspace_snapshot_value(value: &Value) -> Result<(), AppError> {
+    if !value.is_object() {
+        return Err(snapshot_rejected("workspace snapshot root must be an object"));
+    }
+    let size = serde_json::to_vec(value)
+        .map_err(|error| AppError::new("workspace_snapshot_serialize_failed", "工作区快照序列化失败。", error, true))?
+        .len();
+    if size > MAX_WORKSPACE_SNAPSHOT_BYTES {
+        return Err(snapshot_rejected(format!(
+            "workspace snapshot exceeds {MAX_WORKSPACE_SNAPSHOT_BYTES} bytes"
+        )));
+    }
+    reject_sensitive_keys(value, 0)
+}
+
+fn reject_sensitive_keys(value: &Value, depth: usize) -> Result<(), AppError> {
+    if depth > MAX_WORKSPACE_SNAPSHOT_DEPTH {
+        return Err(snapshot_rejected("workspace snapshot nesting is too deep"));
+    }
+    match value {
+        Value::Object(map) => {
+            for (key, child) in map {
+                let normalized = key
+                    .chars()
+                    .filter(|ch| ch.is_ascii_alphanumeric())
+                    .flat_map(char::to_lowercase)
+                    .collect::<String>();
+                if is_sensitive_key(&normalized) {
+                    return Err(snapshot_rejected(format!(
+                        "workspace snapshot contains forbidden field: {key}"
+                    )));
+                }
+                reject_sensitive_keys(child, depth + 1)?;
+            }
+        }
+        Value::Array(items) => {
+            for item in items {
+                reject_sensitive_keys(item, depth + 1)?;
+            }
+        }
+        _ => {}
+    }
+    Ok(())
+}
+
+fn is_sensitive_key(key: &str) -> bool {
+    matches!(
+        key,
+        "password"
+            | "passphrase"
+            | "privatekey"
+            | "privatekeypassphrase"
+            | "sessionid"
+            | "x11cookie"
+            | "runtimecredentials"
+            | "broadcaststate"
+            | "secret"
+            | "token"
+    )
+}
+
+fn snapshot_rejected(detail: impl ToString) -> AppError {
+    AppError::new(
+        "workspace_snapshot_rejected",
+        "工作区快照包含不可持久化的数据。",
+        detail,
+        true,
+    )
+}
+
+fn now_timestamp() -> String {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|value| value.as_secs().to_string())
+        .unwrap_or_else(|_| "0".to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+
+    use super::validate_workspace_snapshot_value;
+
+    #[test]
+    fn accepts_non_sensitive_workspace_shape() {
+        validate_workspace_snapshot_value(&json!({
+            "version": 1,
+            "instances": [{"id": "ssh:a", "target": {"kind": "profile", "profileId": "a"}}],
+            "files": {"directories": {"ssh:a": "/srv/app"}}
+        }))
+        .unwrap();
+    }
+
+    #[test]
+    fn rejects_runtime_and_secret_fields_recursively() {
+        for key in ["password", "sessionId", "private_key", "x11Cookie", "runtime_credentials", "broadcastState", "token"] {
+            let value = json!({"version": 1, "nested": {key: "forbidden"}});
+            assert_eq!(
+                validate_workspace_snapshot_value(&value).unwrap_err().code,
+                "workspace_snapshot_rejected"
+            );
+        }
+    }
+}
