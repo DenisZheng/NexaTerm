@@ -2,9 +2,11 @@ import { readFileSync } from "node:fs";
 
 const actions = readFileSync(new URL("../src/features/workspace/multiExec/actions.ts", import.meta.url), "utf8");
 const reducer = readFileSync(new URL("../src/features/workspace/multiExec/reducer.ts", import.meta.url), "utf8");
+const acceptance = readFileSync(new URL("../src/features/workspace/multiExec/acceptance.test.ts", import.meta.url), "utf8");
 const live = readFileSync(new URL("../src/features/workspace/multiExec/live.ts", import.meta.url), "utf8");
 const send = readFileSync(new URL("../src/features/workspace/multiExec/send.ts", import.meta.url), "utf8");
 const targets = readFileSync(new URL("../src/features/workspace/multiExec/targets.ts", import.meta.url), "utf8");
+const fixtureReadme = readFileSync(new URL("../tests/fixtures/README.md", import.meta.url), "utf8");
 const shell = readFileSync(new URL("../src/features/layout/WorkspaceShell.tsx", import.meta.url), "utf8");
 const spec = readFileSync(new URL("../docs/WORKFLOW_SPEC.md", import.meta.url), "utf8");
 
@@ -97,6 +99,26 @@ for (const needle of [
   'delivery.status === "disconnected"',
 ]) {
   if (!shell.includes(needle)) throw new Error(`WF-04C send wiring missing: ${needle}`);
+}
+
+for (const needle of [
+  "A09: fixed two-instance targets receive live/send once while unselected instances stay out",
+  "A10: disconnect shrinks the target set and same-profile reconnect never auto-joins or replays",
+  'focusedKey: "ssh:b-1"',
+  'focusedKey: "ssh:new-a"',
+]) {
+  if (!acceptance.includes(needle)) {
+    throw new Error(`WF-04C A09/A10 acceptance automation missing: ${needle}`);
+  }
+}
+for (const needle of [
+  "## WF-04C A09 / A10 GUI acceptance",
+  "### A09 fixed targets + live/send",
+  "### A10 disconnect + reconnect",
+]) {
+  if (!fixtureReadme.includes(needle)) {
+    throw new Error(`WF-04C real Tauri acceptance instructions missing: ${needle}`);
+  }
 }
 
 if (!spec.includes("| WS-X04 | 已确认（v0.6） | WF-04C |")) {

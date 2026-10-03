@@ -31,7 +31,7 @@
 - [x] history/snippets 继续复用，不扩范围。
 
 ## 04C-5 A09/A10
-- [ ] 自动化边界覆盖。
+- [x] 自动化边界覆盖。
 - [ ] 真实 Tauri A09。
 - [ ] 真实 Tauri A10。
 - [ ] Draft PR；全绿 + 实测通过后等待维护者授权 merge。
@@ -94,3 +94,11 @@
 - Command Sender 发送时进入统一 `send` mode，关闭面板后从 `send` 回到 `off`；AI 单目标直接发送不改变 MultiExec mode。
 - history/snippets 仍只记录实际 `written` 的目标，失败/断线不计入成功 target_count，也不触发自动重发。
 - 新增 `send.test.ts` 覆盖顺序一次写入、断线不写、部分失败继续且零重试；source gate 已迁移到新 executor。
+
+
+## 04C-5 自动化与实机验收准备
+
+- 新增 `multiExec/acceptance.test.ts`，按 Delivery Plan 的 A09/A10 原文串联 reducer + target projection + live + send，而不是只依赖分散单测。
+- A09 自动化固定四个运行实例、显式选择两个：焦点变化不改 target Set；live 从任一已选 source 输入时只 fan-out 一次到另一个已选目标；send 只向两个已选实例各写一次，未选实例无写入。
+- A10 自动化模拟同 profile 旧实例断线并出现新实例：availability 只移除旧 key；新 key 即使获得焦点也不自动加入。即使 send 拿到旧快照，旧 key 只返回 `disconnected`，不会写新实例、不会重试，剩余有效目标继续一次。
+- `tests/fixtures/README.md` 与 `validation/a09-a10.md` 已写真实 Tauri A09/A10 操作清单；自动化通过不能替代 GUI 结果。真实验收通过前不得把 A09/A10 标记 PASS，也不得合并 PR #28。
