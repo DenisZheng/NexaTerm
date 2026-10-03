@@ -29,7 +29,7 @@ use crate::ssh_config::{
 };
 use crate::storage_repository::StorageRepository;
 use crate::storage_vault::{SecretStore, VaultState};
-use crate::x11_forward::X11ForwardState;
+use crate::x11_forward::{prepare_x11_forwarding, X11ForwardState};
 
 pub use super::forwarding::{RemoteForwardEvent, RemoteForwardEventHandler};
 use super::forwarding::RemoteForwardState;
@@ -251,6 +251,7 @@ pub struct TerminalSession {
     terminal_encoding: String,
     client: SshHandle,
     jump_clients: Vec<SshHandle>,
+    x11_forward: X11ForwardState,
     writer: Mutex<ChannelWriter>,
 }
 
@@ -296,6 +297,16 @@ impl TerminalSession {
         request: TerminalConnectRequest,
         progress: Option<OpenProgress>,
     ) -> Result<(Self, ChannelReadHalf), AppError> {
+        let context = SshConnectionContext::from_app(&app)?
+            .with_runtime_credentials(request.runtime_credentials.clone());
+        Self::open_with_context(context, request, progress).await
+    }
+
+    pub(crate) async fn open_with_context(
+        context: SshConnectionContext,
+        request: TerminalConnectRequest,
+        progress: Option<OpenProgress>,
+    ) -> Result<(Self, ChannelReadHalf), AppError> {
         let config = resolved_config_from_request(&request);
         let host = config.host.clone();
         let port = config.port;
@@ -304,21 +315,48 @@ impl TerminalSession {
         let auth_method = auth_method(&config)?;
         terminal_encoding_for_label(&terminal_encoding)?;
 
+        let x11_forward = X11ForwardState::default();
+        let prepared_x11 = if config.advanced.x11_forwarding {
+            emit_progress(&progress, "x11_preparing", "正在准备本地 X11 转发...");
+            let prepared = prepare_x11_forwarding(config.advanced.x11_display.as_deref())
+                .await
+                .map_err(|error| {
+                    AppError::new(
+                        "terminal_x11_prepare_failed",
+                        "X11 转发准备失败。",
+                        error.to_string(),
+                        true,
+                    )
+                })?;
+            x11_forward
+                .configure(prepared.config.clone())
+                .await
+                .map_err(|error| {
+                    AppError::new(
+                        "terminal_x11_prepare_failed",
+                        "X11 转发准备失败。",
+                        error.to_string(),
+                        true,
+                    )
+                })?;
+            Some(prepared)
+        } else {
+            None
+        };
+
         let ssh_config = Arc::new(client::Config {
             keepalive_interval: Some(duration_from_ms(config.advanced.keepalive_interval_ms)),
             keepalive_max: 3,
             nodelay: true,
             ..<_>::default()
         });
-        let context = SshConnectionContext::from_app(&app)?
-            .with_runtime_credentials(request.runtime_credentials.clone());
         let host_key_handler = KnownHostClient {
             host: host.clone(),
             port,
             app_data_dir: context.app_data_dir.clone(),
             secret_store: Arc::clone(&context.secret_store),
             remote_forward: RemoteForwardState::default(),
-            x11_forward: X11ForwardState::default(),
+            x11_forward: x11_forward.clone(),
         };
 
         emit_progress(&progress, "tcp_connecting", "正在建立 SSH TCP 连接...");
@@ -383,6 +421,39 @@ impl TerminalSession {
         })?;
         emit_progress(&progress, "pty_ready", "远程 PTY 已就绪。");
 
+        if let Some(prepared) = prepared_x11.as_ref() {
+            emit_progress(&progress, "x11_requesting", "正在启用 SSH X11 转发...");
+            let request_result = run_with_timeout(
+                "terminal_x11_request_timeout",
+                "SSH X11 转发请求超时。",
+                Duration::from_secs(20),
+                channel.request_x11(
+                    true,
+                    false,
+                    "MIT-MAGIC-COOKIE-1",
+                    prepared.fake_cookie_hex.clone(),
+                    prepared.config.display.screen_number,
+                ),
+            )
+            .await;
+            match request_result {
+                Ok(Ok(())) => emit_progress(&progress, "x11_ready", "SSH X11 转发已启用。"),
+                Ok(Err(error)) => {
+                    cleanup_x11_open_failure(&x11_forward, &client, &jump_clients).await;
+                    return Err(AppError::new(
+                        "terminal_x11_request_failed",
+                        "SSH 服务器拒绝 X11 转发请求。",
+                        error,
+                        true,
+                    ));
+                }
+                Err(error) => {
+                    cleanup_x11_open_failure(&x11_forward, &client, &jump_clients).await;
+                    return Err(error);
+                }
+            }
+        }
+
         emit_progress(&progress, "shell_starting", "正在启动远程 Shell...");
         let shell_result = run_with_timeout(
             "terminal_shell_timeout",
@@ -412,6 +483,7 @@ impl TerminalSession {
                 terminal_encoding,
                 client,
                 jump_clients,
+                x11_forward,
                 writer: Mutex::new(writer),
             },
             reader,
@@ -443,6 +515,7 @@ impl TerminalSession {
     pub async fn close(&self) -> Result<(), AppError> {
         let writer = self.writer.lock().await;
         let _ = writer.close().await;
+        self.x11_forward.clear().await;
         self.client
             .disconnect(Disconnect::ByApplication, "", "English")
             .await
@@ -1240,6 +1313,18 @@ async fn send_stdin_chunk(
             true,
         )
     })
+}
+
+async fn cleanup_x11_open_failure(
+    x11_forward: &X11ForwardState,
+    client: &SshHandle,
+    jump_clients: &[SshHandle],
+) {
+    x11_forward.clear().await;
+    let _ = client
+        .disconnect(Disconnect::ByApplication, "", "English")
+        .await;
+    disconnect_jump_clients(jump_clients).await;
 }
 
 fn emit_progress(progress: &Option<OpenProgress>, stage: &str, message: &str) {

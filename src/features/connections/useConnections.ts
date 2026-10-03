@@ -647,6 +647,8 @@ export function normalizeConnectionInput(input: ConnectionProfileInput): Connect
         Number(input.advanced?.keepalive_interval_ms) ||
         defaultAdvancedConfig.keepalive_interval_ms,
       terminal_encoding: normalizeTerminalEncoding(input.advanced?.terminal_encoding),
+      x11_forwarding: Boolean(input.advanced?.x11_forwarding),
+      x11_display: trim(input.advanced?.x11_display),
     },
     rdp: undefined,
     vnc: undefined,

@@ -264,10 +264,6 @@ async function cmdSmoke() {
     const display = process.env.DISPLAY || "";
     if (!display) throw new Error("DISPLAY is missing; run smoke under xvfb-run");
 
-    const xauthOutput = sh("xauth", ["list"], { quiet: true, stdio: "pipe" });
-    const cookieMatch = xauthOutput.match(/MIT-MAGIC-COOKIE-1\s+([0-9a-f]+)/i);
-    if (!cookieMatch) throw new Error("could not read MIT-MAGIC-COOKIE-1 from host XAUTHORITY");
-
     const keyscan = sh(
       "ssh-keyscan",
       ["-t", "ed25519", "-p", "2223", "127.0.0.1"],
@@ -300,13 +296,12 @@ async function cmdSmoke() {
           NEXATERM_FIXTURE_X11_KEY: privateKey,
           NEXATERM_FIXTURE_X11_HOST_KEY: hostKey,
           NEXATERM_FIXTURE_X11_DISPLAY: display,
-          NEXATERM_FIXTURE_X11_COOKIE: cookieMatch[1],
         },
       },
     );
-    results.push(["NexaTerm russh X11 reaches host Xvfb", true]);
+    results.push(["NexaTerm production Terminal X11 reaches host Xvfb", true]);
   } catch (e) {
-    results.push(["NexaTerm russh X11 reaches host Xvfb", false]);
+    results.push(["NexaTerm production Terminal X11 reaches host Xvfb", false]);
     const stderr = typeof e.stderr === "string" ? e.stderr.trim() : "";
     console.error(`NexaTerm russh X11 probe failed: ${stderr || e.message.split("\n")[0]}`);
   }

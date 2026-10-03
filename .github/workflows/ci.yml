@@ -113,6 +113,9 @@ jobs:
       - name: WF-06B two-hop Jump plan and owner
         run: pnpm run check:wf06b-multihop-jump
 
+      - name: WF-06C X11 production core
+        run: pnpm run check:wf06c-x11
+
   security:
     name: Security evidence
     runs-on: ubuntu-22.04

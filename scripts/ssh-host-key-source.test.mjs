@@ -50,15 +50,18 @@ test("all production russh client connections stay behind the known-host handler
   );
 });
 
-test("X11 fixture direct connect is test-only and reuses the production known-host handler", () => {
+test("X11 fixture is test-only and exercises the production terminal SSH path", () => {
   const terminalMod = readFileSync("src-tauri/src/terminal/mod.rs", "utf8");
   const fixture = readFileSync("src-tauri/src/terminal/x11_fixture.rs", "utf8");
+  const session = readFileSync("src-tauri/src/terminal/session.rs", "utf8");
 
   assert.match(terminalMod, /#\[cfg\(test\)\]\s*mod x11_fixture;/);
-  assert.match(fixture, /KnownHostClient/);
-  assert.match(fixture, /client::connect\(/);
+  assert.match(fixture, /TerminalSession::open_with_context/);
+  assert.doesNotMatch(fixture, /client::connect\(/);
   assert.match(fixture, /x11_fixture_russh_path_reaches_host_xvfb/);
   assert.match(fixture, /#\[ignore =/);
+  assert.match(session, /let host_key_handler = KnownHostClient/);
+  assert.match(session, /connect_target_client\(&context, ssh_config, &config, host_key_handler\)/);
 });
 
 test("terminal SSH handler rejects unknown and changed host keys for target and jump paths", () => {
