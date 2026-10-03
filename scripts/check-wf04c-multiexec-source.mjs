@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 
 const actions = readFileSync(new URL("../src/features/workspace/multiExec/actions.ts", import.meta.url), "utf8");
 const reducer = readFileSync(new URL("../src/features/workspace/multiExec/reducer.ts", import.meta.url), "utf8");
+const targets = readFileSync(new URL("../src/features/workspace/multiExec/targets.ts", import.meta.url), "utf8");
 const spec = readFileSync(new URL("../docs/WORKFLOW_SPEC.md", import.meta.url), "utf8");
 
 for (const needle of [
@@ -25,6 +26,15 @@ if (/next\.add\(action\.focusedKey\)/.test(reducer)) {
 if (!reducer.includes("availability 只允许移除失效实例")) {
   throw new Error("WF-04C reducer must document shrink-only target reconciliation.");
 }
+for (const needle of [
+  "terminalPaneBindingKey(binding)",
+  'kind: "ssh"',
+  'kind: tab.source === "telnet" ? "telnet" : tab.source === "serial" ? "serial" : "local"',
+  "target.key !== sourceKey",
+]) {
+  if (!targets.includes(needle)) throw new Error(`WF-04C instance target projection missing: ${needle}`);
+}
+
 if (!spec.includes("| WS-X04 | 已确认（v0.6） | WF-04C |")) {
   throw new Error("WF-04C WS-X04 decision must be confirmed in WORKFLOW_SPEC v0.6.");
 }

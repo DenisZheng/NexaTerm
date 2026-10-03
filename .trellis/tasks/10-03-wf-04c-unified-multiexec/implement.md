@@ -13,9 +13,9 @@
 - [x] source 与 targets 分离的固定目标语义测试。
 
 ## 04C-2 目标投影
-- [ ] SSH / Local / 已验证 Telnet/Serial 实例级 target。
-- [ ] 同 profile sibling 可同时选择。
-- [ ] RDP/VNC 不进入 terminal target 列表。
+- [x] SSH / Local / Telnet/Serial 实例级 target 投影。
+- [x] 同 profile sibling 可同时选择。
+- [x] RDP/VNC 不进入 terminal target 列表。
 - [ ] 删除 Command Sender connectionId→active-tab target owner。
 
 ## 04C-3 live
@@ -46,3 +46,13 @@
 - 测试覆盖：焦点切换不改变 targets；旧实例断线后新实例即使同 profile 且获得焦点也不会自动加入。
 - 旧 Split Sync 的 `setLive` 与 `splitActive` 自动关闭暂时作为过渡兼容，后续 04C-2/3 迁移到统一 controller 后删除。
 - 新增 `check:wf04c-multiexec` source gate，固定 WS-X04 v0.6，不修改 `scripts/line-budget.json`。
+
+
+## 04C-2 目标投影准备
+
+- 新增纯 `targets.ts`：只从已连接 SSH terminal 与 Local/Telnet/Serial runtime tab 生成实例 target。
+- target key 严格复用 `terminalPaneBindingKey`：`ssh:<tabId>` / `local:<tabId>`；owner/profile 只保留展示/历史用途，不参与 identity。
+- 同 profile 两个 SSH 实例会同时输出两个 target。
+- `selectLiveFanoutTargets` 显式排除 source key，确保 source 自身不被重复写回，同时不修改固定 selected set。
+- RDP/VNC 没有进入此 terminal projection 的输入类型，不能被误加入 MultiExec。
+- 下一步才迁移 WorkspaceShell / Command Sender 的旧 connectionId→active-tab owner；本切片不伪称已完成该迁移。
