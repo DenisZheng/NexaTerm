@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::async_runtime::JoinHandle;
-use tauri::AppHandle;
+use tauri::{AppHandle, State};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::{Mutex, RwLock};
@@ -246,6 +246,15 @@ impl TunnelStore {
             tunnel_store_error_labels(),
         )
     }
+}
+
+#[tauri::command]
+pub async fn tunnel_stop_connection(
+    app: AppHandle,
+    manager: State<'_, TunnelManager>,
+    request: TunnelConnectionRequest,
+) -> Result<Vec<TunnelRuleWithState>, AppError> {
+    manager.stop_connection(&app, &request.connection_id).await
 }
 
 impl TunnelManager {
