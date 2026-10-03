@@ -19,9 +19,9 @@
 - [x] sibling session 关闭隔离。
 
 ## 05C-3 A11 Phase 3
-- [ ] RDP/VNC instance regression。
-- [ ] A11 追加 Windows embedded RDP、macOS/Linux external RDP、VNC bridge/runner phase。
-- [ ] A09/A10/A11 真实 Tauri 仍延后集中执行。
+- [x] RDP/VNC instance regression。
+- [x] A11 追加 Windows embedded RDP、macOS/Linux external RDP、VNC bridge/runner phase。
+- [x] A09/A10/A11 真实 Tauri 仍延后集中执行。
 
 每个切片：定向测试 → 相关全量检查 → source gate → line budget → commit → push → CI。不要修改 `scripts/line-budget.json`。
 
@@ -47,3 +47,14 @@
 - WorkspaceShell 关闭 VNC 前已清理 `pendingVncRunnerWindowPayloadsRef`，通知 backend `vncCloseSession` 并按需通知 runner host window；RDP 关闭通知 `rdpCloseSession`。source gate 现锁定这些 cleanup seam。
 - 对 macOS RDP 这类通过系统 `open` helper 拉起的 external app，backend 能可靠管理的是其直接 child/helper；真实客户端是否随 helper 退出仍归 A11 平台实测，不在自动化里夸大结论。
 - 未修改 `scripts/line-budget.json`，未进入 05C-3。
+
+
+## 05C-3 实施证据
+
+- 新增 `wf05cRdpVnc.integration.test.ts`：同一 RDP/VNC profile 的 sibling sessions 各自投影为独立顶层 workspace item（`rdp:<sessionId>` / `vnc:<sessionId>`）。
+- 活动 RDP/VNC sibling 被关闭时，session pointer reducer 只切到同 profile 存活 sibling，并只从全局 order 裁剪被关闭实例；不关闭或替换其它实例。
+- 普通 RDP/VNC 打开继续允许聚焦已有 session；明确 new-instance / batch 路径继续调用 `startRdpSession` / `startVncSession` 创建 sibling。
+- MultiExec 仍只从 SSH + Local/WSL/Telnet/Serial terminal runtime 投影目标；RDP/VNC 虽是顶层 workspace item，但不会伪装成 terminal target，符合 WS-X05。
+- A11 README 已追加 Phase 3：Windows embedded RDP、macOS/Linux external RDP、VNC/noVNC bridge 与 external viewer 的真实能力/关闭清理步骤。
+- WF-05A/05B/05C 三个阶段的 A11 自动化边界至此齐全；A11 仍 PENDING，等待维护者按既定决定与 A09/A10 一起做真实 Tauri 集中验收。
+- RDP/VNC 继续 Experimental/non-blocking；没有因为 A11 文档完成而提升为 v1 release blocker。

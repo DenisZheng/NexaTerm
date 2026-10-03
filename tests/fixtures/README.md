@@ -335,3 +335,82 @@ provider for this acceptance.
 Automated evidence covers Telnet real loopback lifecycle, Serial availability classification,
 Serial reader close signaling, Character Split/MultiExec instance identity, sibling separation,
 and target shrink on close. It does not replace real Serial hardware/simulator behavior.
+
+
+### Phase 3: RDP / VNC
+
+WF-05C adds the final A11 protocol phase. **A11 remains PENDING** until the maintainer
+executes Phase 1, Phase 2 and Phase 3 on the documented real platforms/targets.
+
+RDP/VNC are top-level workspace instances. They are **not terminal Split panes or MultiExec
+targets**. Do not expect them in the MultiExec target picker.
+
+#### Windows embedded RDP
+
+Use a reachable Windows RDP target for which interactive testing is authorized. Record the target
+environment, Windows version, NexaTerm runner capability text, and whether the session actually
+uses `mstsc_activex` or falls back to external `mstsc`.
+
+1. In **New session**, inspect the RDP capability text before opening the dialog. On a machine with
+   ActiveX support it must say embedded RDP is available and, when detected, that an external
+   fallback also exists.
+2. Choose **RDP…** and confirm ConnectionDialog opens already set to RDP. Save/connect to the
+   authorized test target.
+3. For an actual embedded/native session, confirm the NexaTerm RDP host opens and the workspace
+   tab represents that exact session instance.
+4. Explicitly open a **new instance** of the same RDP profile. Confirm a second top-level RDP
+   instance is created instead of merely focusing the first.
+5. Close only the first RDP instance. The sibling stays open. The native host must remove only the
+   closed session; if it was the last embedded session, the host may close normally.
+6. Exercise an external fallback once (for example by selecting/forcing a supported external mode
+   in the test profile). Close the NexaTerm RDP tab and verify the directly owned external runner
+   process exits and any generated temporary `.rdp` file is removed.
+7. Confirm RDP never appears in the terminal MultiExec target list.
+
+#### macOS / Linux external RDP
+
+Use a reachable authorized RDP target and a runner actually detected by NexaTerm:
+Windows App/Microsoft Remote Desktop/default `.rdp` handler on macOS, or FreeRDP on Linux.
+
+1. In **New session**, confirm RDP capability reports an **external** runner rather than embedded.
+   If no compatible runner exists, confirm the UI says unavailable and still allows configuration;
+   record that limitation instead of claiming RDP worked.
+2. Open one RDP profile, then explicitly open a second instance of the same profile.
+3. Confirm two top-level NexaTerm workspace instances exist independently.
+4. Close one NexaTerm instance and confirm the sibling remains.
+5. Verify the directly owned runner/helper process and generated temporary file are cleaned up as
+   far as the platform permits. On macOS, if the system `open` helper launches a separate GUI app,
+   explicitly record whether that GUI app remains; do not count helper termination as proof that the
+   GUI client was closed.
+6. Confirm RDP is absent from terminal MultiExec targets.
+
+#### VNC / noVNC bridge
+
+Use a reachable VNC test server for which interactive testing is authorized. Record server type,
+host, port, authentication mode and platform.
+
+1. In **New session**, inspect VNC capability. The built-in noVNC bridge should be reported when
+   available; any RealVNC/TigerVNC/custom viewer is shown only as an external viewer/fallback.
+2. Choose **VNC…**, save/connect, and verify real remote pixels/input through the built-in noVNC
+   path or the explicitly selected external viewer.
+3. Explicitly open a second instance of the same VNC profile and confirm two independent top-level
+   workspace instances exist.
+4. For noVNC/windowed mode, close only the first instance. Confirm the local WebSocket bridge and
+   any runner-host payload for that instance disappear while the sibling remains usable.
+5. For an external viewer mode, close the NexaTerm VNC instance and verify the directly owned
+   viewer child exits. Close one sibling without closing the other.
+6. Confirm VNC never appears in terminal MultiExec targets.
+
+#### Phase 3 result recording
+
+Record separate results for:
+- Windows embedded/native RDP;
+- Windows external fallback RDP if exercised;
+- macOS external RDP;
+- Linux external RDP;
+- built-in noVNC bridge;
+- any external VNC viewer exercised.
+
+A missing Experimental runner is acceptable as a documented capability limitation, but a platform
+must not be marked supported without a corresponding real run. Automated tests cover instance
+identity and owner cleanup seams; they do not replace this real platform evidence.

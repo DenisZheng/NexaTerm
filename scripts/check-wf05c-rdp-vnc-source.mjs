@@ -6,7 +6,10 @@ const shell = readFileSync(new URL("../src/features/layout/WorkspaceShell.tsx", 
 const rdp = readFileSync(new URL("../src-tauri/src/rdp.rs", import.meta.url), "utf8");
 const vnc = readFileSync(new URL("../src-tauri/src/vnc.rs", import.meta.url), "utf8");
 const rdpTests = readFileSync(new URL("../src-tauri/src/rdp/tests.rs", import.meta.url), "utf8");
+const workspaceIntegration = readFileSync(new URL("../src/features/workspace/wf05cRdpVnc.integration.test.ts", import.meta.url), "utf8");
+const fixtureReadme = readFileSync(new URL("../tests/fixtures/README.md", import.meta.url), "utf8");
 const plan = readFileSync(new URL("../NEXATERM_WORKFLOW_DELIVERY_PLAN.md", import.meta.url), "utf8");
+const workflowSpec = readFileSync(new URL("../docs/WORKFLOW_SPEC.md", import.meta.url), "utf8");
 
 for (const needle of [
   '"embedded"',
@@ -87,6 +90,44 @@ for (const needle of [
   "removeVncSessionsLocally(sessionIds)",
 ]) {
   if (!shell.includes(needle)) throw new Error(`WF-05C workspace close cleanup missing: ${needle}`);
+}
+for (const needle of [
+  "openRdpConnectionSession(connection)",
+  "preferredRdpSessionForConnection(connection.id)",
+  "startRdpSession(connection, activate)",
+  "openVncConnectionSession(connection)",
+  "preferredVncSessionForConnection(connection.id)",
+  "startVncSession(connection, activate)",
+]) {
+  if (!shell.includes(needle)) throw new Error(`WF-05C remote instance semantics missing: ${needle}`);
+}
+for (const needle of [
+  "projects same-profile RDP/VNC siblings as distinct top-level workspace instances",
+  "closing an active RDP sibling reselects only the surviving RDP instance",
+  "closing an active VNC sibling reselects only the surviving VNC instance",
+  "keeps RDP/VNC outside terminal MultiExec",
+  '"rdp:rdp-a-1"',
+  '"rdp:rdp-a-2"',
+  '"vnc:vnc-a-1"',
+  '"vnc:vnc-a-2"',
+]) {
+  if (!workspaceIntegration.includes(needle)) {
+    throw new Error(`WF-05C remote instance regression evidence missing: ${needle}`);
+  }
+}
+for (const needle of [
+  "### Phase 3: RDP / VNC",
+  "Windows embedded RDP",
+  "macOS / Linux external RDP",
+  "VNC / noVNC bridge",
+  "A11 remains PENDING",
+]) {
+  if (!fixtureReadme.includes(needle)) {
+    throw new Error(`WF-05C A11 Phase 3 instructions missing: ${needle}`);
+  }
+}
+if (!workflowSpec.includes("RDP/VNC 不伪装成终端广播目标")) {
+  throw new Error("WF-05C must preserve WS-X05: RDP/VNC are not terminal MultiExec targets.");
 }
 if (!plan.includes("RDP 保留 Windows embedded、其它平台 external 的真实差异；VNC 复用现有 noVNC/bridge")) {
   throw new Error("WF-05C must preserve the documented RDP/VNC platform differences.");
