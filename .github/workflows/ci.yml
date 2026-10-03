@@ -104,6 +104,9 @@ jobs:
       - name: WF-05B Serial and Telnet unified entry
         run: pnpm run check:wf05b-serial-telnet
 
+      - name: WF-05C RDP and VNC capability entry
+        run: pnpm run check:wf05c-rdp-vnc
+
   security:
     name: Security evidence
     runs-on: ubuntu-22.04

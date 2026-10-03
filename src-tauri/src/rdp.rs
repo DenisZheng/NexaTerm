@@ -2,9 +2,9 @@ use std::env;
 use std::ffi::OsString;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Child, Command};
 use std::sync::mpsc::{self, Receiver, Sender, SyncSender};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
@@ -141,6 +141,7 @@ struct ManagedRdpSession {
     process_id: Option<u32>,
     cleanup_path: Option<PathBuf>,
     embedded: bool,
+    external_child: Option<Arc<Mutex<Child>>>,
 }
 
 #[cfg(windows)]
@@ -342,6 +343,7 @@ impl Clone for ManagedRdpSession {
             process_id: self.process_id,
             cleanup_path: self.cleanup_path.clone(),
             embedded: self.embedded,
+            external_child: self.external_child.clone(),
         }
     }
 }
@@ -483,7 +485,7 @@ pub async fn launch_connection(
     if matches!(selected.runner, RdpRunnerKind::MstscActiveX) {
         if let Some(reason) = embedded_fallback_reason(&resolved.rdp, requested_bounds.as_ref()) {
             let fallback = select_windows_mstsc_runner()?;
-            return launch_external_runner(app, &resolved, &fallback, Some(reason));
+            return launch_external_runner(app, manager, &resolved, &fallback, Some(reason));
         }
 
         let session_id = format!("rdp-{}", uuid::Uuid::new_v4());
@@ -506,6 +508,7 @@ pub async fn launch_connection(
                         process_id: None,
                         cleanup_path: None,
                         embedded: true,
+                        external_child: None,
                     },
                 )?;
 
@@ -530,6 +533,7 @@ pub async fn launch_connection(
                 let fallback = select_windows_mstsc_runner()?;
                 return launch_external_runner(
                     app,
+                    manager,
                     &resolved,
                     &fallback,
                     Some(format!(
@@ -546,11 +550,12 @@ pub async fn launch_connection(
         .clone()
         .or_else(|| embedded_fallback_reason(&resolved.rdp, requested_bounds.as_ref()));
 
-    launch_external_runner(app, &resolved, &selected, fallback_reason)
+    launch_external_runner(app, manager, &resolved, &selected, fallback_reason)
 }
 
 fn launch_external_runner(
     app: &AppHandle,
+    manager: &RdpSessionManager,
     resolved: &ResolvedRdpConnection,
     selected: &SelectedRunner,
     fallback_reason: Option<String>,
@@ -570,14 +575,34 @@ fn launch_external_runner(
         )
     })?;
     let process_id = child.id();
-    drop(child);
+    let session_id = format!("rdp-{}", uuid::Uuid::new_v4());
+    let external_child = Arc::new(Mutex::new(child));
 
     if let Some(path) = plan.cleanup_path.clone() {
         schedule_temp_file_cleanup(path);
     }
 
+    if let Err(error) = manager.insert(
+        session_id.clone(),
+        ManagedRdpSession {
+            hwnd: 0,
+            session_hwnd: None,
+            parent_hwnd: None,
+            process_id: Some(process_id),
+            cleanup_path: plan.cleanup_path.clone(),
+            embedded: false,
+            external_child: Some(external_child.clone()),
+        },
+    ) {
+        let _ = terminate_external_child(&external_child);
+        if let Some(path) = plan.cleanup_path.as_ref() {
+            let _ = fs::remove_file(path);
+        }
+        return Err(error);
+    }
+
     Ok(RdpLaunchResult {
-        session_id: format!("rdp-{}", uuid::Uuid::new_v4()),
+        session_id,
         connection_id: resolved.profile.id.clone(),
         launched: true,
         embedded: false,
@@ -591,6 +616,28 @@ fn launch_external_runner(
         fallback_reason,
         setup_hint: None,
     })
+}
+
+fn terminate_external_child(child: &Arc<Mutex<Child>>) -> Result<(), String> {
+    let mut child = child
+        .lock()
+        .map_err(|error| format!("external runner process lock failed: {error}"))?;
+    match child.try_wait() {
+        Ok(Some(_)) => Ok(()),
+        Ok(None) => {
+            if let Err(error) = child.kill() {
+                if child.try_wait().ok().flatten().is_some() {
+                    return Ok(());
+                }
+                return Err(format!("external runner kill failed: {error}"));
+            }
+            child
+                .wait()
+                .map(|_| ())
+                .map_err(|error| format!("external runner wait failed: {error}"))
+        }
+        Err(error) => Err(format!("external runner status failed: {error}")),
+    }
 }
 
 pub fn close_session(
@@ -608,12 +655,32 @@ pub fn close_session(
                 message: format!("RDP 会话 {} 已请求关闭。", request.session_id),
             }
         }
-        Ok(Some(_)) | Ok(None) => RdpSessionCloseResult {
+        Ok(Some(session)) => {
+            let process_result = session
+                .external_child
+                .as_ref()
+                .map(terminate_external_child)
+                .unwrap_or(Ok(()));
+            if let Some(path) = session.cleanup_path {
+                let _ = fs::remove_file(path);
+            }
+            match process_result {
+                Ok(()) => RdpSessionCloseResult {
+                    ok: true,
+                    message: format!("RDP 外部 runner {} 已关闭或已退出。", request.session_id),
+                },
+                Err(error) => RdpSessionCloseResult {
+                    ok: false,
+                    message: format!(
+                        "RDP 外部 runner {} 清理失败：{}",
+                        request.session_id, error
+                    ),
+                },
+            }
+        }
+        Ok(None) => RdpSessionCloseResult {
             ok: false,
-            message: format!(
-                "RDP 会话 {} 当前由外部客户端管理，请在客户端窗口中关闭。",
-                request.session_id
-            ),
+            message: format!("RDP 会话 {} 不存在或已关闭。", request.session_id),
         },
         Err(error) => RdpSessionCloseResult {
             ok: false,

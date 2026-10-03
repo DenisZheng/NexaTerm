@@ -122,5 +122,19 @@
   "newSession.wslAvailableHidden": "检测到 WSL 发行版，但已从此菜单隐藏",
   "newSession.characterTerminals": "字符终端",
   "newSession.telnet": "Telnet…",
-  "newSession.serial": "串口…"
+  "newSession.serial": "串口…",
+  "newSession.remoteDesktops": "远程桌面",
+  "newSession.rdp": "RDP…",
+  "newSession.vnc": "VNC…",
+  "newSession.remoteCapabilityProbing": "正在探测可用 runner…",
+  "newSession.remoteCapabilityProbeFailed": "能力探测失败；仍可进入配置",
+  "newSession.remoteCapabilityUnknown": "桌面应用中可检测实际能力",
+  "newSession.rdpEmbeddedAvailable": "可用嵌入式 RDP",
+  "newSession.rdpEmbeddedFallbackAvailable": "可用嵌入式 RDP，并检测到外部回退",
+  "newSession.rdpExternalAvailable": "可用外部 RDP 客户端",
+  "newSession.rdpUnavailable": "未检测到可用 RDP runner",
+  "newSession.vncEmbeddedAvailable": "可用内置 noVNC bridge",
+  "newSession.vncEmbeddedFallbackAvailable": "可用内置 noVNC bridge，并检测到外部 viewer",
+  "newSession.vncExternalAvailable": "可用外部 VNC viewer",
+  "newSession.vncUnavailable": "未检测到可用 VNC runner"
 }

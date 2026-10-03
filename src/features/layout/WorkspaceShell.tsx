@@ -79,10 +79,12 @@ import type {
   RdpCertificatePolicy,
   RdpLaunchPreview,
   RdpRunnerKind,
+  RdpRunnerProbeResult,
   VncLaunchPreview,
   VncLaunchResult,
   VncRunnerWindowPayload,
   VncRunnerKind,
+  VncRunnerProbeResult,
 } from "../connections/connectionTypes";
 import type { ConnectionTransferMode } from "../connections/connectionTransferTypes";
 import type { ConnectionSaveIntent } from "../connections/connectionDialogSubmit";
@@ -97,6 +99,11 @@ import { isQuickConnectCredentialError, type QuickConnectTarget } from "../conne
 import { connectTemporaryQuickTerminal, createTemporaryQuickConnectProfile, prepareTemporaryQuickConnectCredentials, releaseTemporaryQuickConnectRefs, saveTemporaryQuickConnectProfile } from "../connections/quickConnectRuntime";
 import { finalTemporaryContextRefs, rebindConnectionItems, rebindTemporaryTerminalTab } from "../connections/quickConnectSession";
 import { connectionInfoFromVncProfile } from "../connections/vncConnectionInfo";
+import {
+  projectRemoteDesktopEntryCapabilities,
+  unknownRemoteDesktopEntryCapabilities,
+  type RemoteDesktopEntryCapabilities,
+} from "./newSessionRemoteDesktopEntries";
 import { createMiddleClickCloseHandler } from "../../shared/ui/tabEvents";
 // RemoteFileEditor 内部静态 import 了 monaco-editor（主体约 4MB）及其 5 个 worker
 // （合计约 10MB）。用 React.lazy 延迟到真正打开远程文件编辑标签时才加载，
@@ -375,9 +382,11 @@ import {
   rdpPreviewLaunch,
   rdpRevealSession,
   rdpResizeEmbeddedSession,
+  rdpTestRunner,
   vncCloseSession,
   vncLaunchConnection,
   vncPreviewLaunch,
+  vncTestRunner,
   terminalClose,
   terminalConnect,
   terminalWrite,
@@ -1071,6 +1080,8 @@ export function WorkspaceShell() {
   const [localTerminalProfilesLoading, setLocalTerminalProfilesLoading] = useState(false);
   const [localTerminalProfilesError, setLocalTerminalProfilesError] = useState<string | null>(null);
   const [wslProviderStatus, setWslProviderStatus] = useState<WslProviderStatus | null>(null);
+  const [remoteDesktopEntryCapabilities, setRemoteDesktopEntryCapabilities] =
+    useState<RemoteDesktopEntryCapabilities>(unknownRemoteDesktopEntryCapabilities);
   const [terminalClearRequest, setTerminalClearRequest] = useState<TerminalClearRequest | null>(null);
   const terminalClearRequestRef = useRef(0);
   const [terminalDirectories, setTerminalDirectories] = useState<Record<string, string>>({});
@@ -1256,6 +1267,42 @@ export function WorkspaceShell() {
   }, []);
 
   useEffect(() => scheduleWorkspaceModulePrewarm(), []);
+
+  useEffect(() => {
+    let disposed = false;
+    if (!hasTauriRuntime()) {
+      setRemoteDesktopEntryCapabilities(unknownRemoteDesktopEntryCapabilities);
+      return () => {
+        disposed = true;
+      };
+    }
+
+    setRemoteDesktopEntryCapabilities(
+      projectRemoteDesktopEntryCapabilities({
+        rdp: { state: "probing" },
+        vnc: { state: "probing" },
+      }),
+    );
+    void Promise.allSettled([rdpTestRunner(), vncTestRunner()]).then(([rdpProbe, vncProbe]) => {
+      if (disposed) return;
+      setRemoteDesktopEntryCapabilities(
+        projectRemoteDesktopEntryCapabilities({
+          rdp:
+            rdpProbe.status === "fulfilled"
+              ? { state: "ready", result: rdpProbe.value as RdpRunnerProbeResult }
+              : { state: "failed" },
+          vnc:
+            vncProbe.status === "fulfilled"
+              ? { state: "ready", result: vncProbe.value as VncRunnerProbeResult }
+              : { state: "failed" },
+        }),
+      );
+    });
+
+    return () => {
+      disposed = true;
+    };
+  }, [desktopPlatform]);
 
   useEffect(() => {
     if (!hasTauriRuntime() || !storageReady) {
@@ -1807,6 +1854,7 @@ export function WorkspaceShell() {
     localProfiles: localTerminalProfiles,
     localProfilesError: localTerminalProfilesError,
     localProfilesLoading: localTerminalProfilesLoading,
+    remoteDesktopEntryCapabilities,
     wslProviderStatus,
     onCreateConnection: (protocol?: ConnectionProtocol) => createConnection(undefined, protocol),
     onOpenLocalProfile: (profile: LocalTerminalProfile) => void openLocalTerminalByProfile(profile),
