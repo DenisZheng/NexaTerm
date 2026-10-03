@@ -13,9 +13,9 @@
 - [x] source gate + CI。
 
 ## 06A-2 error/capability
-- [ ] 端口冲突错误与 rule 状态关联。
-- [ ] credential_required / Host Key 流程回归。
-- [ ] rule 与 active/saved connection 展示关联回归。
+- [x] 端口冲突错误与 rule 状态关联。
+- [x] credential_required / Host Key 流程回归。
+- [x] rule 与 active/saved connection 展示关联回归。
 
 ## 06A-3 A12 tunnel phase
 - [ ] local/remote/dynamic 真实 fixture。
@@ -33,3 +33,13 @@
 - “关闭该 connection 全部会话”路径在关闭 terminal/RDP/VNC 前触发 `tunnelStopConnection`；单独关闭一个 SSH terminal instance 不停止 connection 级 tunnel，避免兄弟实例误伤。
 - Rust unit test `rules_for_connection_keeps_only_requested_connection` 锁定 connection 过滤边界；source gate 同时锁定顶部 `tools.tunnels` action、三类 tunnel、既有状态枚举、credential/Host Key seam 和 lifecycle wiring。
 - 未修改 `scripts/line-budget.json`。
+
+
+## 06A-2 实施证据
+
+- Rust 单测锁定三类规则级错误状态：本地端口冲突保持 `status=failed + rule_id + tunnel_local_bind_failed`；prompt 凭据保持 `status=credential_required + credential_prompt_required`；Host Key 未信任保持 `status=failed + host_key_unknown`，等待前端显式信任后重试。
+- 实际 start path 仍按原逻辑：`TcpListener::bind` 失败时写入 `failed_state`；`resolve_saved_connection` 返回 prompt 错误时写入 `credential_required_state`；其它连接/Host Key 错误写入 `failed_state` 后向前端抛出结构化错误。
+- TunnelPanel 继续用 `parseHostKeyError` 识别结构化 Host Key payload，用户显式信任后 `knownHostTrust -> startRule` 重试；credential prompt 仍保留当前 rule 上下文并把 runtime credential 传回同一 rule。
+- 新增 `tunnelRuleConnectionState.ts`：rule 根据持久化 `connection_id` 解析 saved SSH connection。若 connection 已不存在，列表明确显示“连接不存在”且禁用“启动”，避免 orphan rule 点击后才由 backend 报错。
+- WorkspaceShell 仍只把 `connections.filter(isSshConnection)` 传入 TunnelPanel，非 SSH profile 不会成为 tunnel rule 目标。
+- 这些测试验证状态/交互契约，不冒充真实 SSH 凭据或真实 Host Key 互操作；真实 tunnel 连接留给 06A-3 / A12。

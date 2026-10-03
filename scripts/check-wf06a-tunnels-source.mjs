@@ -1,6 +1,8 @@
 import { readFileSync } from "node:fs";
 
 const panel = readFileSync(new URL("../src/features/tunnels/TunnelPanel.tsx", import.meta.url), "utf8");
+const association = readFileSync(new URL("../src/features/tunnels/tunnelRuleConnectionState.ts", import.meta.url), "utf8");
+const associationTest = readFileSync(new URL("../src/features/tunnels/tunnelRuleConnectionState.test.ts", import.meta.url), "utf8");
 const types = readFileSync(new URL("../src/features/tunnels/tunnelTypes.ts", import.meta.url), "utf8");
 const registry = readFileSync(new URL("../src/features/shortcuts/actionRegistry.ts", import.meta.url), "utf8");
 const presentation = readFileSync(new URL("../src/features/shortcuts/actionPresentation.ts", import.meta.url), "utf8");
@@ -46,6 +48,32 @@ for (const needle of [
   if (!panel.includes(needle)) throw new Error(`WF-06A TunnelPanel reuse contract missing: ${needle}`);
 }
 for (const needle of [
+  "failed_state_keeps_rule_and_port_conflict_error_context",
+  "credential_required_state_keeps_rule_and_prompt_error_context",
+  "host_key_failure_stays_failed_with_rule_context_until_user_retries",
+  '"tunnel_local_bind_failed"',
+  '"credential_prompt_required"',
+  '"host_key_unknown"',
+]) {
+  if (!backend.includes(needle)) throw new Error(`WF-06A tunnel error-state regression missing: ${needle}`);
+}
+for (const needle of [
+  "resolveTunnelRuleConnection",
+  'label: "连接不存在"',
+  "canStart: false",
+]) {
+  if (!association.includes(needle)) throw new Error(`WF-06A rule/connection association missing: ${needle}`);
+}
+for (const needle of [
+  "marks an orphan rule unavailable instead of letting Start fail later",
+  "uses host and port when the saved connection has no display name",
+]) {
+  if (!associationTest.includes(needle)) throw new Error(`WF-06A rule association test missing: ${needle}`);
+}
+for (const needle of [
+  "connectionState.label",
+  "busy || !connectionState.canStart",
+  "关联的 SSH 连接不存在",
   "TunnelConnectionRequest",
   "pub async fn stop_connection(",
   "rules_for_connection(",

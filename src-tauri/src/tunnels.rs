@@ -1446,6 +1446,64 @@ mod tests {
     }
 
     #[test]
+    fn failed_state_keeps_rule_and_port_conflict_error_context() {
+        let rule = sample_rule("rule-bind-conflict");
+        let error = AppError::new(
+            "tunnel_local_bind_failed",
+            "本地监听端口绑定失败。",
+            "127.0.0.1:15432: address already in use",
+            true,
+        );
+
+        let state = failed_state(&rule, &error);
+
+        assert_eq!(state.rule_id, "rule-bind-conflict");
+        assert_eq!(state.status, TunnelStatus::Failed);
+        assert_eq!(state.last_error.as_deref(), Some("本地监听端口绑定失败。"));
+        assert_eq!(
+            state.last_error_code.as_deref(),
+            Some("tunnel_local_bind_failed")
+        );
+    }
+
+    #[test]
+    fn credential_required_state_keeps_rule_and_prompt_error_context() {
+        let rule = sample_rule("rule-prompt");
+        let error = AppError::new(
+            "credential_prompt_required",
+            "连接需要交互式凭据。",
+            "connection_id=conn-001",
+            true,
+        );
+
+        let state = credential_required_state(&rule, &error);
+
+        assert_eq!(state.rule_id, "rule-prompt");
+        assert_eq!(state.status, TunnelStatus::CredentialRequired);
+        assert_eq!(
+            state.last_error_code.as_deref(),
+            Some("credential_prompt_required")
+        );
+    }
+
+    #[test]
+    fn host_key_failure_stays_failed_with_rule_context_until_user_retries() {
+        let rule = sample_rule("rule-host-key");
+        let error = AppError::new(
+            "host_key_unknown",
+            "主机密钥尚未信任。",
+            "connection_id=conn-001",
+            true,
+        );
+
+        let state = failed_state(&rule, &error);
+
+        assert_eq!(state.rule_id, "rule-host-key");
+        assert_eq!(state.status, TunnelStatus::Failed);
+        assert_eq!(state.last_error_code.as_deref(), Some("host_key_unknown"));
+    }
+
+    #[test]
     fn failed_or_stopped_runtime_can_be_replaced() {
         assert!(should_replace_existing_runtime(Some(&TunnelStatus::Failed)));
         assert!(should_replace_existing_runtime(Some(
