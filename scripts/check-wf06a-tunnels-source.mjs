@@ -74,6 +74,10 @@ for (const needle of [
   "connectionState.label",
   "busy || !connectionState.canStart",
   "关联的 SSH 连接不存在",
+]) {
+  if (!panel.includes(needle)) throw new Error(`WF-06A orphan-rule UI guard missing: ${needle}`);
+}
+for (const needle of [
   "TunnelConnectionRequest",
   "pub async fn stop_connection(",
   "rules_for_connection(",
