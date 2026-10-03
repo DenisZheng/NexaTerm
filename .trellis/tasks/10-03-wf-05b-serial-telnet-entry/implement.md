@@ -12,10 +12,10 @@
 - [x] unit/source gate/CI 接线。
 
 ## 05B-2 capability / lifecycle
-- [ ] Serial port availability 状态明确：loading / available / no ports / list failure。
-- [ ] Telnet 本机 TCP fixture 覆盖 open/write/close。
-- [ ] Serial/Character close 后 terminal manager / reader 收敛证据。
-- [ ] 不把 mock/SSH 冒充真实 Serial 互操作。
+- [x] Serial port availability 状态明确：loading / available / no ports / list failure。
+- [x] Telnet 本机 TCP fixture 覆盖 open/write/close。
+- [x] Serial/Character close 后 terminal manager / reader 收敛证据。
+- [x] 不把 mock/SSH 冒充真实 Serial 互操作。
 
 ## 05B-3 workspace integration
 - [ ] Serial/Telnet Split instance 回归。
@@ -24,7 +24,6 @@
 
 每个切片：定向测试 → 相关全量检查 → source gate → line budget → commit → push → CI。不要修改 `scripts/line-budget.json`。
 
-
 ## 05B-1 实施证据
 
 - New Session 新增 Character terminals 分组，提供 Telnet… / Serial… 直达入口；仍保留通用“新建连接…”。
@@ -32,3 +31,12 @@
 - Shell 用 `pendingConnectionProtocol` 区分新建预选，不污染 edit/duplicate；关闭对话框后清空。
 - 普通 `openCharacterConnectionSession` 继续允许聚焦已有同 profile tab；明确 `openNewConnectionSessionWithActivation` 与 Split picker 继续调用 `openCharacterTerminalInConnection` 创建 sibling instance。
 - 新增 `newSessionCharacterEntries.test.ts` 与 `check:wf05b-serial-telnet` source gate；未修改 `scripts/line-budget.json`。
+
+## 05B-2 实施证据
+
+- 新增 `serialPortAvailability.ts`，将 Serial 枚举结果收敛为 `loading / available / no_ports / list_failed` 四态；ConnectionDialog 使用同一状态控制下拉可用性和显式提示，区分“读取失败”和“成功但没有设备”。
+- Telnet Rust 测试使用 `127.0.0.1:0` 真实 `TcpListener`，覆盖 greeting、输入转换后的 write、close 后 server EOF、reader channel 关闭以及关闭后拒绝新写入；不是 parser-only mock。
+- Serial 将 reader 线程依赖的关闭状态抽成共享 `SerialCloseSignal`。TerminalManager connect 时把 signal 交给 reader；provider close 后 reader loop 观察同一 signal 并退出。单测覆盖共享与幂等关闭。
+- TerminalManager 的 `close()` 仍先从 session store 移除实例，再调用具体 provider close；reader 稍后收尾不会让已关闭实例继续作为可写 session。
+- Serial 真正端口打开、设备回显和物理句柄释放仍必须用真实设备或明确记录的模拟串口做 A11；本阶段没有用 SSH、cmd 或纯 mock 冒充真实 Serial 互操作。
+- 未修改 `scripts/line-budget.json`，未进入 WF-05B-3。
