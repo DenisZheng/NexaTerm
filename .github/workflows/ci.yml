@@ -107,6 +107,9 @@ jobs:
       - name: WF-05C RDP and VNC capability entry
         run: pnpm run check:wf05c-rdp-vnc
 
+      - name: WF-06A tunnel management lifecycle
+        run: pnpm run check:wf06a-tunnels
+
   security:
     name: Security evidence
     runs-on: ubuntu-22.04
