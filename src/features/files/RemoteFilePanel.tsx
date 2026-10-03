@@ -63,6 +63,10 @@ import {
   shouldResetRemoteFileNavigation,
   type RemoteFileDirectoryRequestToken,
 } from "./remoteFileInstanceState";
+import {
+  getWorkspaceRemoteFileNavigation,
+  publishWorkspaceRemoteFileNavigation,
+} from "../workspace/restore/remoteFileSnapshotBridge";
 
 export type RemoteFileTool = "files" | "monitor" | "commands" | "tools" | "ai" | "tunnels";
 
@@ -232,11 +236,25 @@ function RemoteFilePanelComponent({
 }: RemoteFilePanelProps) {
   const connectionId = connection?.id || null;
   const terminalDirectory = terminalPath ? normalizeRemotePath(terminalPath) : null;
+  const restoredNavigation = stateKey ? getWorkspaceRemoteFileNavigation(stateKey) : null;
   const initialStateRef = useRef<RemoteFilePanelStateSnapshot | null>(
-    stateKey ? remoteFilePanelStateCache.get(stateKey) || null : null,
+    stateKey
+      ? remoteFilePanelStateCache.get(stateKey) ||
+          (restoredNavigation
+            ? {
+                activeDirectoryPath: restoredNavigation.path,
+                currentPath: restoredNavigation.path,
+                directoryEntries: {},
+                expandedDirectories: {},
+                followTerminalDirectory: currentRemoteFileFollowPolicy.defaultEnabled,
+                locatedDirectoryPath: null,
+                showHidden: false,
+              }
+            : null)
+      : null,
   );
   const initialState = initialStateRef.current;
-  const [currentPath, setCurrentPath] = useState(defaultRemotePath);
+  const [currentPath, setCurrentPath] = useState(initialState?.currentPath || defaultRemotePath);
   const [activeDirectoryPath, setActiveDirectoryPath] = useState(
     initialState?.activeDirectoryPath || defaultRemotePath,
   );
@@ -355,6 +373,7 @@ function RemoteFilePanelComponent({
       showHidden,
       followTerminalDirectory,
     });
+    publishWorkspaceRemoteFileNavigation(stateKey, currentPath);
   }, [
     activeDirectoryPath,
     currentPath,

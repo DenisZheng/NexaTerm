@@ -54,7 +54,6 @@ import {
   Upload,
   X,
 } from "lucide-react";
-
 import { ConnectionPane } from "../connections/ConnectionPane";
 import { useBatchConnectController } from "../connections/useBatchConnectController";
 import { batchWorkspaceClosePlan, batchWorkspaceItemId, collectBatchOpenConnectionIds, waitForBatchWorkspaceHandle, type BatchWorkspaceHandle } from "../connections/batchConnectWorkspaceRuntime";
@@ -122,22 +121,18 @@ const loadCommandLibraryPanel = () => import("../commands/CommandLibraryPanel");
 const loadAiAssistantPanel = () => import("../ai/AiAssistantPanel");
 const loadVncViewerSurface = () => import("./VncViewerSurface");
 const loadTerminalPanel = () => import("../terminal/TerminalPanel");
-
 type ConnectionDialogModule = typeof import("../connections/ConnectionDialog");
 type LoadedConnectionDialogComponent = ConnectionDialogModule["ConnectionDialog"];
 type SettingsViewModule = typeof import("../settings/SettingsView");
 type LoadedSettingsViewComponent = SettingsViewModule["SettingsView"];
-
 let connectionDialogModulePromise: Promise<ConnectionDialogModule> | null = null;
 let loadedConnectionDialogComponent: LoadedConnectionDialogComponent | null = null;
 let settingsViewModulePromise: Promise<SettingsViewModule> | null = null;
 let loadedSettingsViewComponent: LoadedSettingsViewComponent | null = null;
-
 function preloadConnectionDialogModule() {
   connectionDialogModulePromise ??= loadConnectionDialog();
   return connectionDialogModulePromise;
 }
-
 async function preloadConnectionDialogComponent() {
   if (loadedConnectionDialogComponent) {
     return loadedConnectionDialogComponent;
@@ -146,12 +141,10 @@ async function preloadConnectionDialogComponent() {
   loadedConnectionDialogComponent = module.ConnectionDialog;
   return loadedConnectionDialogComponent;
 }
-
 function preloadSettingsViewModule() {
   settingsViewModulePromise ??= loadSettingsView();
   return settingsViewModulePromise;
 }
-
 async function preloadSettingsViewComponent() {
   if (loadedSettingsViewComponent) {
     return loadedSettingsViewComponent;
@@ -160,7 +153,6 @@ async function preloadSettingsViewComponent() {
   loadedSettingsViewComponent = module.SettingsView;
   return loadedSettingsViewComponent;
 }
-
 const RemoteFileEditor = lazy(async () => {
   const module = await loadRemoteFileEditor();
   return { default: module.RemoteFileEditor };
@@ -214,9 +206,7 @@ const TerminalPanel = lazy(async () => {
   const module = await loadTerminalPanel();
   return { default: module.TerminalPanel };
 });
-
 type LazyModuleLoader = () => Promise<unknown>;
-
 const WORKSPACE_IDLE_PREWARM_BATCHES: Array<{
   timeoutMs: number;
   loaders: LazyModuleLoader[];
@@ -508,6 +498,10 @@ import type {
 } from "../workspace/sessionTabs/types";
 import { useSessionTabsController } from "../workspace/sessionTabs/useSessionTabsController";
 import type { CloseSnapshot, SessionRef } from "../workspace/sessionTabs/closeDecision";
+import { buildWorkspaceShellHydration } from "../workspace/restore/shellHydration";
+import { seedWorkspaceRemoteFileDirectories, workspaceRemoteFileDirectories } from "../workspace/restore/remoteFileSnapshotBridge";
+import { toSnapshot, type WorkspaceSnapshotV1 } from "../workspace/restore/snapshotTypes";
+import { useWorkspaceSnapshotLifecycle } from "../workspace/restore/useWorkspaceSnapshotLifecycle";
 import type {
   LocalTerminalProfile,
   LocalTerminalProfileInput,
@@ -515,7 +509,6 @@ import type {
   WindowsPtyInfo,
   WslProviderStatus,
 } from "../terminal/localTerminalTypes";
-
 type RdpConnectionProfile = ConnectionProfile & { protocol: "rdp" };
 type VncConnectionProfile = ConnectionProfile & { protocol: "vnc" };
 type TelnetConnectionProfile = ConnectionProfile & { protocol: "telnet" };
@@ -523,15 +516,11 @@ type SerialConnectionProfile = ConnectionProfile & { protocol: "serial" };
 type SshConnectionProfile = ConnectionProfile & {
   protocol?: "ssh" | null | undefined;
 };
-
 const VNC_RUNNER_HOST_WINDOW_LABEL = "vnc-runner-host";
-
 type WorkbenchTabDropZone = WorkbenchTabKind | "split-file" | "split-terminal";
-
 interface WorkbenchTabDragPayload extends UnifiedWorkbenchTab {
   connectionId: string;
 }
-
 interface WorkbenchTabMouseDrag {
   active: boolean;
   currentX: number;
@@ -543,15 +532,12 @@ interface WorkbenchTabMouseDrag {
   startX: number;
   startY: number;
 }
-
 interface TerminalClearRequest {
   id: number;
   tabId: string;
 }
-
 type CommandSenderDeliveryStatus = "idle" | MultiExecSendDeliveryStatus;
 type CommandSenderTargetKind = "ssh" | "local";
-
 interface CommandSenderTarget {
   deliveryMessage?: string;
   deliveryStatus: CommandSenderDeliveryStatus;
@@ -564,7 +550,6 @@ interface CommandSenderTarget {
   tabId: string;
   tabTitle: string;
 }
-
 interface CommandSnippetDraft {
   command: string;
   description: string;
@@ -574,7 +559,6 @@ interface CommandSnippetDraft {
   tagsText: string;
   title: string;
 }
-
 interface CommandSnippetGroupDialogState {
   error?: string | null;
   mode: "create" | "rename";
@@ -582,18 +566,14 @@ interface CommandSnippetGroupDialogState {
   selectAfterSave?: boolean;
   value: string;
 }
-
 interface TerminalSearchState {
   caseSensitive: boolean;
   open: boolean;
   query: string;
 }
-
 type ConnectionStepMode = "test" | "terminal";
 type ConnectionStepStatus = "idle" | "running" | "waiting_host_key" | "prompt" | "success" | "error";
-
 type TerminalTab = SessionTerminalTab<ConnectionStepState>;
-
 interface ConnectionStepState {
   activeStepIndex?: number | null;
   authKind: ConnectionAuthKind;
@@ -612,7 +592,6 @@ interface ConnectionStepState {
   temporaryCredentialsReady?: boolean;
   sessionId?: string | null; status: ConnectionStepStatus;
 }
-
 interface ConnectionStepErrorDetail {
   code: string;
   message: string;
@@ -621,14 +600,12 @@ interface ConnectionStepErrorDetail {
   stage: string;
   suggestion: string;
 }
-
 interface ConnectionGroupInfo {
   color: string;
   id: string;
   name: string;
   parentId?: string | null;
 }
-
 interface ConnectionGroupCatalog {
   assignments: Record<string, string>;
   groups: ConnectionGroupInfo[];
@@ -1800,6 +1777,11 @@ export function WorkspaceShell() {
     },
     workspaceItems,
   );
+  const workspaceSnapshot = toSnapshot(
+    { activeItemId: activeWorkspaceItemId, files: { directories: workspaceRemoteFileDirectories(terminalTabs.map((tab) => tab.id)), followActivePane: settings.basic.filePanelFollowsActiveConnection }, order: workspaceItemOrder, sidebar: { collapsed: leftPaneCollapsed, view: workspaceSidebarView }, splitLayout: terminalSplitLayout },
+    { localTerminalTabs, rdpSessions, terminalTabs, vncSessions, targetRefs: { connections: Object.fromEntries(temporaryConnections.map((connection) => [connection.id, { kind: "temporary" as const, targetId: connection.id }])) } },
+  );
+  useWorkspaceSnapshotLifecycle({ enabled: storageReady && !loading, onRestore: restoreWorkspaceShell, restoreOnLaunch: settings.basic.restoreWorkspaceOnLaunch, snapshot: workspaceSnapshot });
   const actionExecutor = useWorkspaceActionRuntime({
     workspaceVisible: activeView !== "settings", activeItemId: activeWorkspaceItemId,
     activePaneId: activeWorkspaceItemId === SPLIT_ITEM_ID ? focusedTerminalPaneId : null,
@@ -4509,6 +4491,25 @@ export function WorkspaceShell() {
     const profile = localTerminalProfiles.find((item) => item.id === sourceTab.profileId) || null;
     const tab = openLocalTerminalByProfile(profile, false);
     return tab ? { kind: "local", tabId: tab.id } : null;
+  }
+
+  function restoreWorkspaceShell(snapshot: WorkspaceSnapshotV1) {
+    const hydration = buildWorkspaceShellHydration(snapshot, { connectionName: (id) => connectionById.get(id)?.name || null, localProfile: (id) => { const profile = localTerminalProfiles.find((item) => item.id === id); return profile ? { kind: profile.kind, name: profile.name } : null; } });
+    const restoredTerminalTabs = hydration.terminalTabs as TerminalTab[];
+    terminalTabsRef.current = restoredTerminalTabs; setTerminalTabs(restoredTerminalTabs); localTerminalTabsRef.current = hydration.localTerminalTabs; setLocalTerminalTabs(hydration.localTerminalTabs);
+    rdpSessionsRef.current = hydration.rdpSessions; setRdpSessions(hydration.rdpSessions); vncSessionsRef.current = hydration.vncSessions; setVncSessions(hydration.vncSessions);
+    snapshot.order.forEach((itemId) => dispatchTabs({ type: "tabs/itemOpened", itemId })); setTerminalSplitLayout(hydration.splitLayout); setTerminalSplitHost(hydration.splitHost); setFocusedTerminalPaneId(hydration.focusedPaneId);
+    setTerminalSplitTabActive(snapshot.activeItemId === SPLIT_ITEM_ID && Boolean(hydration.splitLayout)); setMultiExecMode("off"); setMultiExecTargets(new Set()); setTerminalSplitSyncError(null);
+    setLeftPaneCollapsed(snapshot.sidebar.collapsed); setWorkspaceSidebarView(snapshot.sidebar.view); seedWorkspaceRemoteFileDirectories(snapshot.files.directories);
+    if (settings.basic.filePanelFollowsActiveConnection !== snapshot.files.followActivePane) updateBasic({ filePanelFollowsActiveConnection: snapshot.files.followActivePane });
+    switch (hydration.active.kind) {
+      case "ssh": dispatchTabs({ type: "tabs/activateTerminal", connectionId: hydration.active.connectionId, tabId: hydration.active.tabId, rememberUnified: false }); break;
+      case "local": dispatchTabs({ type: "tabs/activateLocal", tabId: hydration.active.tabId }); break;
+      case "rdp": dispatchTabs({ type: "tabs/activateRdp", connectionId: hydration.active.connectionId, sessionId: hydration.active.sessionId }); break;
+      case "vnc": dispatchTabs({ type: "tabs/activateVnc", connectionId: hydration.active.connectionId, sessionId: hydration.active.sessionId }); break;
+      case "split": { const tab = hydration.active.host.kind === "ssh" ? restoredTerminalTabs.find((item) => item.id === hydration.active.host.tabId) : null; dispatchTabs({ type: "tabs/activateSplitHost", host: tab ? { kind: "ssh", connectionId: tab.connectionId } : { kind: "local" } }); dispatchTabs({ type: "tabs/focusPaneBinding", binding: hydration.active.host }); break; }
+      default: dispatchTabs({ type: "tabs/goHome" });
+    }
   }
 
   function openHome() {

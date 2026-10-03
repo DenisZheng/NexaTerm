@@ -8,6 +8,11 @@ const codec = readFileSync(new URL("../src/features/workspace/restore/snapshotCo
 const planner = readFileSync(new URL("../src/features/workspace/restore/restorePlan.ts", import.meta.url), "utf8");
 const settings = readFileSync(new URL("../src/features/settings/settingsTypes.ts", import.meta.url), "utf8");
 const tauriCommands = readFileSync(new URL("../src/shared/tauri/commands.ts", import.meta.url), "utf8");
+const shell = readFileSync(new URL("../src/features/layout/WorkspaceShell.tsx", import.meta.url), "utf8");
+const remoteFiles = readFileSync(new URL("../src/features/files/RemoteFilePanel.tsx", import.meta.url), "utf8");
+const hydration = readFileSync(new URL("../src/features/workspace/restore/shellHydration.ts", import.meta.url), "utf8");
+const lifecycle = readFileSync(new URL("../src/features/workspace/restore/useWorkspaceSnapshotLifecycle.ts", import.meta.url), "utf8");
+const filesBridge = readFileSync(new URL("../src/features/workspace/restore/remoteFileSnapshotBridge.ts", import.meta.url), "utf8");
 
 for (const needle of [
   "CREATE TABLE IF NOT EXISTS workspace_snapshots",
@@ -83,5 +88,20 @@ for (const forbidden of ["sessionId", "password", "privateKey", "x11Cookie", "br
     throw new Error("WF-07 snapshot contract lost its explicit whitelist boundary");
   }
 }
+for (const needle of ["toSnapshot(", "useWorkspaceSnapshotLifecycle", "restoreWorkspaceShell", 'setMultiExecMode("off")', "seedWorkspaceRemoteFileDirectories"]) {
+  if (!shell.includes(needle)) throw new Error(`WF-07 shell persistence seam missing: ${needle}`);
+}
+for (const needle of ["workspaceSnapshotLoad", "workspaceSnapshotSave", "workspaceSnapshotDebounceMs = 500"]) {
+  if (!lifecycle.includes(needle)) throw new Error(`WF-07 snapshot lifecycle seam missing: ${needle}`);
+}
+for (const needle of ["buildWorkspaceShellHydration", "splitLayout", "focusedPaneId"]) {
+  if (!hydration.includes(needle)) throw new Error(`WF-07 shell hydration seam missing: ${needle}`);
+}
+for (const needle of ["publishWorkspaceRemoteFileNavigation", "getWorkspaceRemoteFileNavigation"]) {
+  if (!remoteFiles.includes(needle)) throw new Error(`WF-07 Files persistence seam missing: ${needle}`);
+}
+for (const needle of ["seedWorkspaceRemoteFileDirectories", "workspaceRemoteFileDirectories"]) {
+  if (!filesBridge.includes(needle)) throw new Error(`WF-07 Files snapshot bridge missing: ${needle}`);
+}
 
-console.log("WF-07 local snapshot storage, rollback, sensitive-data boundary and restore planner source gate passed");
+console.log("WF-07 snapshot storage, safe shell hydration, Files state, debounce persistence and restore planner source gate passed");
