@@ -29,8 +29,8 @@
 
 ## 04B-4 A08 / delivery
 - [x] 自动化：成功 + 失败 + cancel + retry + pre-existing isolation（model / executor / workspace runtime 测试 + WF-04B source gate）。
-- [ ] 真实 Tauri A08 四维证据。
-- [ ] Split 2/4 pane GUI smoke。
+- [x] 真实 Tauri A08 四维证据（2026-10-03，见 [验收记录](validation/a08.md)）。
+- [x] Split 2/4 pane GUI smoke（真实 GUI 记录 + 维护者手动补验）。
 - [x] Draft PR 保持未合并；最终 CI 全绿后等待维护者授权 merge。
 
 每个切片：定向测试 → 相关全量 → source gate → line budget → commit → push → CI。不要修改 line-budget.json；不要启动 WF-04C / WS-X04。
@@ -41,12 +41,12 @@
 - CI #214 @ `5ff62e9` 全绿，确认 WS-X09 文档与 04B-1 初始纯模型基线。
 - 执行器首轮 CI #216 暴露主动 cancel 与 wait rejection 的竞态：active attempt 会被误记为 failed。
 - `771ac08` 修复为先原子记录 cancelled 再调用底层 cancel；CI #217 Frontend / Fixtures / Rust Linux / macOS / Windows / Security / License 全绿。
-- 04B-2 在此基线上新增：预览 UI、20 项选择保护、侧栏批次状态、实例级 focus/cancel、RDP/VNC/SSH/Telnet/Serial 运行态映射；等待当前切片 CI。
+- 04B-2 在此基线上新增：预览 UI、20 项选择保护、侧栏批次状态、实例级 focus/cancel、RDP/VNC/SSH/Telnet/Serial 运行态映射；最终代码基线 CI #223 全绿。
 - `WorkspaceShell.tsx` 保持低于既有 13860 line budget，未修改 `scripts/line-budget.json`。
-- A08 真实 Tauri 尚未执行，不以单元/CI 代替。
+- 此阶段尚未执行真实 Tauri A08；2026-10-03 已完成，证据见 [验收记录](validation/a08.md)。
 
 
-## 04B-3 实施说明（待本切片 CI）
+## 04B-3 实施说明（最终代码基线 CI #223 全绿）
 
 - `TerminalSplitHost` 从 SSH connection / generic local owner 改为具体 `TerminalPaneBinding`，解决同 profile 多实例时标题、宿主和标签锚点歧义。
 - 删除 `anchorIndex` / `split/setAnchorIndex`；分屏组插入位置由 exact host tab + 当前成员集合实时计算，避免前序 tab 关闭/增加后数字索引漂移。
@@ -66,4 +66,4 @@
   - cancel/focus 使用本批 exact instance ID、close plan 不带 connectionId：`batchConnectWorkspaceRuntime.test.ts`
 - `tests/fixtures/README.md` 已给出真实 Tauri A08 场景：同一真实 SSH fixture 下的 pre-existing / success / wrong-user failure / prompt waiting-user 四 profile，以及 Split 2/4 pane smoke。
 - 新增 Split picker 分组文案进入 English/zh-CN i18n；不把本轮新增中文硬编码留在 shell。
-- 真实 A08 与 Split GUI smoke 仍必须人工在 Tauri 窗口完成；自动化证据不能替代真实协议/UI 证据。
+- 真实 A08 与 Split GUI smoke 已在 Tauri 窗口完成；自动化和人工证据分别记录于 [验收记录](validation/a08.md)，不互相替代。
