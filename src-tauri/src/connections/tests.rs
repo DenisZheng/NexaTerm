@@ -181,6 +181,7 @@ fn validation_accepts_proxy_and_advanced() {
             auth_timeout_ms: 20_000,
             keepalive_interval_ms: 30_000,
             terminal_encoding: "gbk".to_string(),
+            ..ConnectionAdvancedConfig::default()
         },
         ..password_input()
     };
