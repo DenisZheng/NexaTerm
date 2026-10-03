@@ -41,7 +41,8 @@
     "check:licenses": "node scripts/license-inventory.mjs --check --out-dir logs/licenses",
     "check:wf04b-batch-split": "node scripts/check-wf04b-batch-split-source.mjs",
     "check:wf04c-multiexec": "node scripts/check-wf04c-multiexec-source.mjs",
-    "check:wf05a-local-wsl": "node scripts/check-wf05a-local-wsl-source.mjs"
+    "check:wf05a-local-wsl": "node scripts/check-wf05a-local-wsl-source.mjs",
+    "check:wf05b-serial-telnet": "node scripts/check-wf05b-serial-telnet-source.mjs"
   },
   "dependencies": {
     "@novnc/novnc": "^1.7.0",

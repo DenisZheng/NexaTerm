@@ -8,6 +8,7 @@ import { LocalTerminalIcon } from "../terminal/LocalTerminalIcons";
 import type { DesktopPlatform } from "../../shared/tauri/platformCapabilities";
 import type { ConnectionProtocol } from "../connections/connectionTypes";
 import type { LocalTerminalProfile, WslProviderStatus } from "../terminal/localTerminalTypes";
+import { newSessionCharacterEntries } from "./newSessionCharacterEntries";
 import { buildNewSessionTerminalSections, type WslEntryReason } from "./newSessionLocalEntries";
 
 export interface NewSessionMenuProps {
@@ -78,12 +79,20 @@ export function NewSessionMenuItems({ variant = "dropdown", ...props }: NewSessi
       ) : null}
       <Menu.Separator className="context-menu-separator" />
       <Menu.Label className="title-new-session-menu-heading">{t("newSession.characterTerminals")}</Menu.Label>
-      <Menu.Item className="dropdown-menu-item" onSelect={() => props.onCreateConnection("telnet")}>
-        <TerminalSquare className="ui-icon" aria-hidden="true" />{t("newSession.telnet")}
-      </Menu.Item>
-      <Menu.Item className="dropdown-menu-item" onSelect={() => props.onCreateConnection("serial")}>
-        <Cable className="ui-icon" aria-hidden="true" />{t("newSession.serial")}
-      </Menu.Item>
+      {newSessionCharacterEntries.map((entry) => (
+        <Menu.Item
+          key={entry.protocol}
+          className="dropdown-menu-item"
+          onSelect={() => props.onCreateConnection(entry.protocol)}
+        >
+          {entry.protocol === "telnet" ? (
+            <TerminalSquare className="ui-icon" aria-hidden="true" />
+          ) : (
+            <Cable className="ui-icon" aria-hidden="true" />
+          )}
+          {t(entry.labelKey)}
+        </Menu.Item>
+      ))}
       <Menu.Separator className="context-menu-separator" />
       <Menu.Item className="dropdown-menu-item" onSelect={() => props.onCreateConnection()}>
         <SquarePlus className="ui-icon" aria-hidden="true" />{t("newSession.createConnection")}
