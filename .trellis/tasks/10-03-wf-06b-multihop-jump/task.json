@@ -26,6 +26,6 @@
     "tests/fixtures/docker-compose.yml",
     "tests/fixtures/fixtures.mjs"
   ],
-  "notes": "Stacked on WF-06A head e7bf637b9. WF-06A final CI remains red/untriaged and PR #32 stays Draft/unmerged by maintainer decision. WF-06B-1 two-hop plan/owner is implemented; per-hop auth/Host Key UX is 06B-2 and real two-hop Docker evidence is 06B-3. Do not modify PR #12 or line-budget.json.",
+  "notes": "Stacked on WF-06A head e7bf637b9. WF-06A PR #32 remains Draft/unmerged. WF-06B-1 two-hop plan/owner is implemented. CI #264 exposed one Rust type inference error plus session.rs line-budget overflow; both were fixed by moving jump-chain logic/tests to terminal/session/jump_chain.rs and typing Vec<SshHandle>. Per-hop auth/Host Key UX is 06B-2 and real two-hop Docker evidence is 06B-3. Do not modify PR #12 or line-budget.json.",
   "meta": {}
 }
