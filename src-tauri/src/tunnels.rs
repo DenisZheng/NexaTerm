@@ -81,6 +81,11 @@ pub struct TunnelRuleIdRequest {
     pub rule_id: String,
 }
 
+#[derive(Clone, Debug, Deserialize)]
+pub struct TunnelConnectionRequest {
+    pub connection_id: String,
+}
+
 #[derive(Clone, Debug, Serialize)]
 pub struct TunnelRuntimeState {
     pub rule_id: String,
@@ -134,6 +139,13 @@ struct RemoteForwardBinding {
 pub(crate) struct Socks5ConnectTarget {
     host: String,
     port: u16,
+}
+
+fn rules_for_connection(rules: Vec<TunnelRule>, connection_id: &str) -> Vec<TunnelRule> {
+    rules
+        .into_iter()
+        .filter(|rule| rule.connection_id == connection_id)
+        .collect()
 }
 
 fn tunnel_store_error_labels() -> JsonStoreErrorLabels {
@@ -302,6 +314,34 @@ impl TunnelManager {
         let rule = resolve_stopped_rule(self.load_rule(app, &rule_id).await, stopped_running_rule)?;
         self.set_state(stopped_state(&rule_id)).await;
         self.attach_state(rule).await
+    }
+
+    pub async fn stop_connection(
+        &self,
+        app: &AppHandle,
+        connection_id: &str,
+    ) -> Result<Vec<TunnelRuleWithState>, AppError> {
+        let connection_id = connection_id.trim();
+        if connection_id.is_empty() {
+            return Err(AppError::new(
+                "tunnel_connection_missing",
+                "隧道关联连接不能为空。",
+                "connection_id is empty",
+                false,
+            ));
+        }
+        let rules = {
+            let _guard = self.store_lock.lock().await;
+            rules_for_connection(
+                StorageRepository::open_app(app)?.tunnel_list()?,
+                connection_id,
+            )
+        };
+        for rule in &rules {
+            let _ = self.stop_running(&rule.id).await;
+            self.set_state(stopped_state(&rule.id)).await;
+        }
+        Ok(self.attach_states(rules).await)
     }
 
     pub async fn autostart(&self, app: &AppHandle) -> Result<Vec<TunnelRuleWithState>, AppError> {
@@ -1167,6 +1207,23 @@ mod tests {
             remote_port: 5432,
             auto_start: true,
         }
+    }
+
+    #[test]
+    fn rules_for_connection_keeps_only_requested_connection() {
+        let mut a1 = sample_rule("a-1");
+        a1.connection_id = "conn-a".to_string();
+        let mut b1 = sample_rule("b-1");
+        b1.connection_id = "conn-b".to_string();
+        let mut a2 = sample_rule("a-2");
+        a2.connection_id = "conn-a".to_string();
+
+        let ids = rules_for_connection(vec![a1, b1, a2], "conn-a")
+            .into_iter()
+            .map(|rule| rule.id)
+            .collect::<Vec<_>>();
+
+        assert_eq!(ids, vec!["a-1".to_string(), "a-2".to_string()]);
     }
 
     #[test]
