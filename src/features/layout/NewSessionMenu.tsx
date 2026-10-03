@@ -5,10 +5,14 @@ import { ChevronRight, FolderOpen, Plus, SquarePlus } from "lucide-react";
 import { useI18n } from "../../shared/i18n";
 import { Tooltip } from "../../shared/ui/Tooltip";
 import { LocalTerminalIcon } from "../terminal/LocalTerminalIcons";
+import type { DesktopPlatform } from "../../shared/tauri/platformCapabilities";
 import type { LocalTerminalProfile } from "../terminal/localTerminalTypes";
+import { buildNewSessionTerminalSections, type WslEntryReason } from "./newSessionLocalEntries";
 
 export interface NewSessionMenuProps {
+  desktopPlatform?: DesktopPlatform;
   localProfiles: readonly LocalTerminalProfile[];
+  localProfilesError?: string | null;
   localProfilesLoading: boolean;
   onCreateConnection: () => void;
   onOpenLocalProfile: (profile: LocalTerminalProfile) => void;
@@ -20,14 +24,25 @@ interface NewSessionItemsProps extends NewSessionMenuProps { variant?: "menubar"
 export function NewSessionMenuItems({ variant = "dropdown", ...props }: NewSessionItemsProps) {
   const { t } = useI18n();
   const Menu = variant === "menubar" ? Menubar : DropdownMenu;
+  const sections = buildNewSessionTerminalSections({
+    platform: props.desktopPlatform || "unknown",
+    profiles: props.localProfiles,
+    profilesFailed: Boolean(props.localProfilesError),
+    profilesLoading: props.localProfilesLoading,
+  });
+  const wslReasonKey = (reason: WslEntryReason) => {
+    if (reason === "loading") return "newSession.wslProfilesLoading" as const;
+    if (reason === "detectionFailed") return "newSession.wslDetectionFailed" as const;
+    return "newSession.wslNotDetected" as const;
+  };
   return (
     <>
       <Menu.Label className="title-new-session-menu-heading">{t("newSession.localTerminals")}</Menu.Label>
-      {props.localProfilesLoading || props.localProfiles.length === 0 ? (
+      {props.localProfilesLoading || sections.localProfiles.length === 0 ? (
         <Menu.Item disabled className="dropdown-menu-item">
           {t(props.localProfilesLoading ? "newSession.profilesLoading" : "newSession.noProfiles")}
         </Menu.Item>
-      ) : props.localProfiles.map((profile) => (
+      ) : sections.localProfiles.map((profile) => (
         <Menu.Item key={profile.id} className="local-terminal-profile-menu-item dropdown-menu-item"
           textValue={profile.name} onSelect={() => props.onOpenLocalProfile(profile)}>
           <span className="local-terminal-menu-label">
@@ -36,6 +51,23 @@ export function NewSessionMenuItems({ variant = "dropdown", ...props }: NewSessi
           </span>
         </Menu.Item>
       ))}
+      {sections.showWslSection ? (
+        <>
+          <Menu.Separator className="context-menu-separator" />
+          <Menu.Label className="title-new-session-menu-heading">{t("newSession.wsl")}</Menu.Label>
+          {sections.wslProfiles.length > 0 ? sections.wslProfiles.map((profile) => (
+            <Menu.Item key={profile.id} className="local-terminal-profile-menu-item dropdown-menu-item"
+              textValue={profile.name} onSelect={() => props.onOpenLocalProfile(profile)}>
+              <span className="local-terminal-menu-label">
+                <LocalTerminalIcon className="ui-icon" kind={profile.kind} title={profile.name} />
+                <span>{profile.name}</span>
+              </span>
+            </Menu.Item>
+          )) : (
+            <Menu.Item disabled className="dropdown-menu-item">{t(wslReasonKey(sections.wslReason))}</Menu.Item>
+          )}
+        </>
+      ) : null}
       <Menu.Separator className="context-menu-separator" />
       <Menu.Item className="dropdown-menu-item" onSelect={props.onCreateConnection}>
         <SquarePlus className="ui-icon" aria-hidden="true" />{t("newSession.createConnection")}

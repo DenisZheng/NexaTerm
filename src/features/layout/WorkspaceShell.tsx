@@ -1779,7 +1779,10 @@ export function WorkspaceShell() {
   useWorkspaceActionShortcuts({ bindings: settings.shortcuts.bindings, executor: actionExecutor });
   const closeShortcutBinding = resolveShortcutBindingById(settings.shortcuts.bindings, "terminal.closeTab");
   const newSessionEntry = {
-    localProfiles: localTerminalProfiles, localProfilesLoading: localTerminalProfilesLoading,
+    desktopPlatform,
+    localProfiles: localTerminalProfiles,
+    localProfilesError,
+    localProfilesLoading: localTerminalProfilesLoading,
     onCreateConnection: () => createConnection(),
     onOpenLocalProfile: (profile: LocalTerminalProfile) => void openLocalTerminalByProfile(profile),
     onQuickOpen: () => setConnectionSearchOpen(true),
