@@ -393,6 +393,7 @@ import {
   serialTerminalOpen,
   telnetTerminalOpen,
   tunnelAutostart,
+  tunnelStopConnection,
 } from "../../shared/tauri/commands";
 import { selectLocalUploadDirectories, selectLocalUploadFiles } from "../../shared/tauri/dialog";
 import {
@@ -4202,6 +4203,9 @@ export function WorkspaceShell() {
   }
 
   async function deleteConnection(connection: ConnectionProfile) {
+    if (hasTauriRuntime() && isSshConnection(connection)) {
+      await tunnelStopConnection(connection.id);
+    }
     await remove(connection.id);
     const remainingRemoteFileTabs = clearRemoteFileSessionStateForConnections(new Set([connection.id]));
     closeRdpSessions(
@@ -7343,6 +7347,9 @@ export function WorkspaceShell() {
     const remainingRemoteFileTabs = clearRemoteFileSessionStateForConnections(closingConnectionIds);
     connectionIds.forEach((connectionId) => {
       invalidateDockerExecConnection(connectionId);
+      if (hasTauriRuntime()) {
+        void tunnelStopConnection(connectionId).catch(() => undefined);
+      }
     });
     closeRdpSessions(
       rdpSessionsRef.current

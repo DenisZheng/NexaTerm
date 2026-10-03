@@ -297,6 +297,54 @@ async function cmdSmoke() {
     console.error(`NexaTerm russh X11 probe failed: ${stderr || e.message.split("\n")[0]}`);
   }
 
+
+  try {
+    requireTool("cargo", ["--version"]);
+    requireTool("ssh-keyscan", ["-h"]);
+
+    const keyscan = sh(
+      "ssh-keyscan",
+      ["-t", "ed25519", "-p", "2222", "127.0.0.1"],
+      { quiet: true, stdio: "pipe" },
+    );
+    const keyLine = keyscan
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .find((line) => line && !line.startsWith("#") && line.includes(" ssh-ed25519 "));
+    if (!keyLine) throw new Error("ssh-keyscan did not return the tunnel fixture ed25519 host key");
+    const keyParts = keyLine.split(/\s+/);
+    const hostKey = keyParts.slice(1).join(" ");
+
+    sh(
+      "cargo",
+      [
+        "test",
+        "--lib",
+        "--locked",
+        "tunnel_fixture_local_dynamic_remote_real_ssh",
+        "--",
+        "--ignored",
+        "--nocapture",
+      ],
+      {
+        cwd: path.join(dir, "..", "..", "src-tauri"),
+        timeout: 10 * 60_000,
+        env: {
+          ...process.env,
+          NEXATERM_FIXTURE_TUNNEL_KEY: privateKey,
+          NEXATERM_FIXTURE_TUNNEL_HOST_KEY: hostKey,
+        },
+      },
+    );
+    results.push(["NexaTerm tunnel runtime local/dynamic/remote over real SSH", true]);
+  } catch (e) {
+    results.push(["NexaTerm tunnel runtime local/dynamic/remote over real SSH", false]);
+    const stderr = typeof e.stderr === "string" ? e.stderr.trim() : "";
+    console.error(
+      `NexaTerm tunnel runtime probe failed: ${stderr || e.message.split("\n")[0]}`,
+    );
+  }
+
   let failed = 0;
   for (const [name, ok] of results) {
     console.log(`${ok ? "PASS" : "FAIL"}  ${name}`);

@@ -29,6 +29,7 @@ import { hasTauriRuntime } from "../../shared/tauri/runtime";
 import { AppSelect } from "../../shared/ui/AppSelect";
 import { ConfirmDialog } from "../../shared/ui/ConfirmDialog";
 import { Tooltip } from "../../shared/ui/Tooltip";
+import { resolveTunnelRuleConnection } from "./tunnelRuleConnectionState";
 import type {
   TunnelKind,
   TunnelRule,
@@ -370,7 +371,7 @@ export function TunnelPanel({ activeConnectionId = null, connections }: TunnelPa
             sortedItems.map((item) => {
               const rule = item.rule;
               const state = item.state;
-              const connection = connectionById.get(rule.connection_id);
+              const connectionState = resolveTunnelRuleConnection(rule, connections);
               const busy = busyRuleId === rule.id || state.status === "starting";
               const running = state.status === "running";
               return (
@@ -392,7 +393,7 @@ export function TunnelPanel({ activeConnectionId = null, connections }: TunnelPa
                     )}
                   </div>
                   <div className="tunnel-meta">
-                    <span>{connection?.name || "连接不存在"}</span>
+                    <span>{connectionState.label}</span>
                     <em>{tunnelKindLabel(rule.kind)}</em>
                     {rule.auto_start ? <em>自动启动</em> : null}
                     {state.active_connections > 0 ? <em>{state.active_connections.toString()} 路连接</em> : null}
@@ -405,7 +406,12 @@ export function TunnelPanel({ activeConnectionId = null, connections }: TunnelPa
                         停止
                       </button>
                     ) : (
-                      <button type="button" disabled={busy} onClick={() => void startRule(rule)}>
+                      <button
+                        type="button"
+                        disabled={busy || !connectionState.canStart}
+                        title={connectionState.canStart ? undefined : "关联的 SSH 连接不存在"}
+                        onClick={() => void startRule(rule)}
+                      >
                         {busy ? <Loader2 className="ui-icon spin" aria-hidden="true" /> : <Play className="ui-icon" aria-hidden="true" />}
                         启动
                       </button>
