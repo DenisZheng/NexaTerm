@@ -22,7 +22,7 @@ for (const needle of [
 ]) {
   if (!menu.includes(needle)) throw new Error(`WF-05A New Session wiring missing: ${needle}`);
 }
-for (const needle of ["desktopPlatform,", "localProfilesError,", "localProfiles: localTerminalProfiles"]) {
+for (const needle of ["desktopPlatform,", "localProfilesError: localTerminalProfilesError,", "localProfiles: localTerminalProfiles"]) {
   if (!shell.includes(needle)) throw new Error(`WF-05A shell entry context missing: ${needle}`);
 }
 if (!plan.includes("### WF-05：把已有协议带入统一入口")) {
