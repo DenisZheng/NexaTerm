@@ -351,6 +351,7 @@ import {
   connectionProbeLatency,
   localTerminalListProfiles,
   localTerminalOpen,
+  localTerminalWslCapability,
   remoteFileCheckPath,
   localPathMetadata,
   remoteFileCheckDownloadTarget,
@@ -500,6 +501,7 @@ import type {
   LocalTerminalProfileInput,
   LocalTerminalTab,
   WindowsPtyInfo,
+  WslProviderStatus,
 } from "../terminal/localTerminalTypes";
 
 type RdpConnectionProfile = ConnectionProfile & { protocol: "rdp" };
@@ -1065,6 +1067,7 @@ export function WorkspaceShell() {
   const localTerminalProfilesRef = useRef<LocalTerminalProfile[]>([]);
   const [localTerminalProfilesLoading, setLocalTerminalProfilesLoading] = useState(false);
   const [localTerminalProfilesError, setLocalTerminalProfilesError] = useState<string | null>(null);
+  const [wslProviderStatus, setWslProviderStatus] = useState<WslProviderStatus | null>(null);
   const [terminalClearRequest, setTerminalClearRequest] = useState<TerminalClearRequest | null>(null);
   const terminalClearRequestRef = useRef(0);
   const [terminalDirectories, setTerminalDirectories] = useState<Record<string, string>>({});
@@ -1276,6 +1279,7 @@ export function WorkspaceShell() {
     async function loadProfiles() {
       setLocalTerminalProfilesLoading(true);
       setLocalTerminalProfilesError(null);
+      setWslProviderStatus(null);
       try {
         const detected = hasTauriRuntime()
           ? await localTerminalListProfiles({
@@ -1286,16 +1290,33 @@ export function WorkspaceShell() {
         if (disposed) {
           return;
         }
-        setLocalTerminalProfiles(
-          mergeLocalTerminalProfiles(
-            detected,
-            settings.localTerminal.customProfiles,
-            settings.localTerminal.hiddenProfileIds,
-          ),
+        const merged = mergeLocalTerminalProfiles(
+          detected,
+          settings.localTerminal.customProfiles,
+          settings.localTerminal.hiddenProfileIds,
         );
+        setLocalTerminalProfiles(merged);
+
+        if (desktopPlatform === "windows") {
+          if (merged.some((profile) => profile.kind === "wsl")) {
+            setWslProviderStatus("available");
+          } else if (hasTauriRuntime()) {
+            try {
+              const capability = await localTerminalWslCapability();
+              if (!disposed) {
+                setWslProviderStatus(capability.status);
+              }
+            } catch {
+              if (!disposed) {
+                setWslProviderStatus("probe_failed");
+              }
+            }
+          }
+        }
       } catch (error) {
         if (!disposed) {
           setLocalTerminalProfilesError(formatError(error));
+          setWslProviderStatus(null);
           setLocalTerminalProfiles(
             mergeLocalTerminalProfiles(
               previewLocalTerminalProfiles(desktopPlatform),
@@ -1783,6 +1804,7 @@ export function WorkspaceShell() {
     localProfiles: localTerminalProfiles,
     localProfilesError: localTerminalProfilesError,
     localProfilesLoading: localTerminalProfilesLoading,
+    wslProviderStatus,
     onCreateConnection: () => createConnection(),
     onOpenLocalProfile: (profile: LocalTerminalProfile) => void openLocalTerminalByProfile(profile),
     onQuickOpen: () => setConnectionSearchOpen(true),

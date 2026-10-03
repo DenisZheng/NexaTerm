@@ -34,13 +34,33 @@ describe("WF-05A Local/WSL new-session projection", () => {
     expect(sections.localProfiles.map((item) => item.id)).toEqual(["bash"]);
   });
 
-  it("distinguishes loading, detection failure and not-detected states", () => {
+  it("maps exact provider capability reasons without inventing availability", () => {
     expect(buildNewSessionTerminalSections({
       platform: "windows", profiles: [], profilesFailed: false, profilesLoading: true,
     }).wslReason).toBe("loading");
     expect(buildNewSessionTerminalSections({
       platform: "windows", profiles: [], profilesFailed: true, profilesLoading: false,
     }).wslReason).toBe("detectionFailed");
+    expect(buildNewSessionTerminalSections({
+      platform: "windows", profiles: [], profilesFailed: false, profilesLoading: false,
+      wslProviderStatus: "command_missing",
+    }).wslReason).toBe("commandMissing");
+    expect(buildNewSessionTerminalSections({
+      platform: "windows", profiles: [], profilesFailed: false, profilesLoading: false,
+      wslProviderStatus: "no_distribution",
+    }).wslReason).toBe("noDistribution");
+    expect(buildNewSessionTerminalSections({
+      platform: "windows", profiles: [], profilesFailed: false, profilesLoading: false,
+      wslProviderStatus: "probe_timeout",
+    }).wslReason).toBe("probeTimeout");
+    expect(buildNewSessionTerminalSections({
+      platform: "windows", profiles: [], profilesFailed: false, profilesLoading: false,
+      wslProviderStatus: "probe_failed",
+    }).wslReason).toBe("probeFailed");
+    expect(buildNewSessionTerminalSections({
+      platform: "windows", profiles: [], profilesFailed: false, profilesLoading: false,
+      wslProviderStatus: "available",
+    }).wslReason).toBe("availableHidden");
     expect(buildNewSessionTerminalSections({
       platform: "windows", profiles: [], profilesFailed: false, profilesLoading: false,
     }).wslReason).toBe("notDetected");

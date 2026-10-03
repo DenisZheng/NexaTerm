@@ -6,7 +6,7 @@ import { useI18n } from "../../shared/i18n";
 import { Tooltip } from "../../shared/ui/Tooltip";
 import { LocalTerminalIcon } from "../terminal/LocalTerminalIcons";
 import type { DesktopPlatform } from "../../shared/tauri/platformCapabilities";
-import type { LocalTerminalProfile } from "../terminal/localTerminalTypes";
+import type { LocalTerminalProfile, WslProviderStatus } from "../terminal/localTerminalTypes";
 import { buildNewSessionTerminalSections, type WslEntryReason } from "./newSessionLocalEntries";
 
 export interface NewSessionMenuProps {
@@ -14,6 +14,7 @@ export interface NewSessionMenuProps {
   localProfiles: readonly LocalTerminalProfile[];
   localProfilesError?: string | null;
   localProfilesLoading: boolean;
+  wslProviderStatus?: WslProviderStatus | null;
   onCreateConnection: () => void;
   onOpenLocalProfile: (profile: LocalTerminalProfile) => void;
   onQuickOpen: () => void;
@@ -29,10 +30,16 @@ export function NewSessionMenuItems({ variant = "dropdown", ...props }: NewSessi
     profiles: props.localProfiles,
     profilesFailed: Boolean(props.localProfilesError),
     profilesLoading: props.localProfilesLoading,
+    wslProviderStatus: props.wslProviderStatus,
   });
   const wslReasonKey = (reason: WslEntryReason) => {
     if (reason === "loading") return "newSession.wslProfilesLoading" as const;
     if (reason === "detectionFailed") return "newSession.wslDetectionFailed" as const;
+    if (reason === "commandMissing") return "newSession.wslCommandMissing" as const;
+    if (reason === "noDistribution") return "newSession.wslNoDistribution" as const;
+    if (reason === "probeTimeout") return "newSession.wslProbeTimeout" as const;
+    if (reason === "probeFailed") return "newSession.wslProbeFailed" as const;
+    if (reason === "availableHidden") return "newSession.wslAvailableHidden" as const;
     return "newSession.wslNotDetected" as const;
   };
   return (

@@ -1,7 +1,16 @@
 import type { DesktopPlatform } from "../../shared/tauri/platformCapabilities";
-import type { LocalTerminalProfile } from "../terminal/localTerminalTypes";
+import type { LocalTerminalProfile, WslProviderStatus } from "../terminal/localTerminalTypes";
 
-export type WslEntryReason = "loading" | "detectionFailed" | "notDetected" | null;
+export type WslEntryReason =
+  | "loading"
+  | "detectionFailed"
+  | "commandMissing"
+  | "noDistribution"
+  | "probeTimeout"
+  | "probeFailed"
+  | "availableHidden"
+  | "notDetected"
+  | null;
 
 export interface NewSessionTerminalSections {
   localProfiles: LocalTerminalProfile[];
@@ -15,6 +24,7 @@ export function buildNewSessionTerminalSections(input: {
   profiles: readonly LocalTerminalProfile[];
   profilesFailed: boolean;
   profilesLoading: boolean;
+  wslProviderStatus?: WslProviderStatus | null;
 }): NewSessionTerminalSections {
   const localProfiles = input.profiles.filter((profile) => profile.kind !== "wsl");
   const wslProfiles = input.profiles.filter((profile) => profile.kind === "wsl");
@@ -22,11 +32,20 @@ export function buildNewSessionTerminalSections(input: {
 
   let wslReason: WslEntryReason = null;
   if (showWslSection && wslProfiles.length === 0) {
-    wslReason = input.profilesLoading
-      ? "loading"
-      : input.profilesFailed
-        ? "detectionFailed"
-        : "notDetected";
+    if (input.profilesLoading) {
+      wslReason = "loading";
+    } else if (input.profilesFailed) {
+      wslReason = "detectionFailed";
+    } else {
+      wslReason = {
+        available: "availableHidden",
+        command_missing: "commandMissing",
+        no_distribution: "noDistribution",
+        probe_failed: "probeFailed",
+        probe_timeout: "probeTimeout",
+        unsupported_platform: "notDetected",
+      }[input.wslProviderStatus || "unsupported_platform"] as WslEntryReason;
+    }
   }
 
   return { localProfiles, showWslSection, wslProfiles, wslReason };
