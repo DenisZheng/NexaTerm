@@ -98,6 +98,9 @@ jobs:
       - name: WF-04C fixed-target MultiExec
         run: pnpm run check:wf04c-multiexec
 
+      - name: WF-05A Local and WSL unified entry
+        run: pnpm run check:wf05a-local-wsl
+
   security:
     name: Security evidence
     runs-on: ubuntu-22.04
