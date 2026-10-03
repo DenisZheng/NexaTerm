@@ -24,8 +24,14 @@ const ownerMatches = session.match(/jump_clients: Vec<SshHandle>/g) || [];
 if (ownerMatches.length < 4) {
   throw new Error(`WF-06B expected Terminal/Exec/SFTP/Forward jump-chain owners, found ${ownerMatches.length}`);
 }
+const ownerCleanupMatches =
+  session.match(/disconnect_jump_clients\(&self\.jump_clients\)\.await/g) || [];
+if (ownerCleanupMatches.length < 4) {
+  throw new Error(
+    `WF-06B expected Terminal/Exec/SFTP/Forward owner cleanup seams, found ${ownerCleanupMatches.length}`,
+  );
+}
 for (const needle of [
-  "disconnect_jump_clients(&self.jump_clients).await",
   "disconnect_jump_clients(&jump_clients).await",
   "for jump_client in jump_clients.iter().rev()",
   "for jump in jump_plan",
