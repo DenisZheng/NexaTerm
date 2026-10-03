@@ -114,5 +114,10 @@
   "newSession.wsl": "WSL",
   "newSession.wslProfilesLoading": "正在探测 WSL 发行版…",
   "newSession.wslDetectionFailed": "无法检测 WSL 可用性",
-  "newSession.wslNotDetected": "WSL 不可用或未安装发行版"
+  "newSession.wslNotDetected": "WSL 不可用或未安装发行版",
+  "newSession.wslCommandMissing": "未安装 WSL 或 wsl.exe 不可用",
+  "newSession.wslNoDistribution": "已安装 WSL，但没有可用发行版",
+  "newSession.wslProbeTimeout": "WSL 发行版探测超时",
+  "newSession.wslProbeFailed": "WSL 发行版探测失败",
+  "newSession.wslAvailableHidden": "检测到 WSL 发行版，但已从此菜单隐藏"
 }
