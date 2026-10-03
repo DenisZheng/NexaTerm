@@ -34,6 +34,10 @@ use crate::x11_forward::X11ForwardState;
 pub use super::forwarding::{RemoteForwardEvent, RemoteForwardEventHandler};
 use super::forwarding::RemoteForwardState;
 mod jump_chain;
+#[cfg(all(test, target_os = "linux"))]
+pub(crate) mod fixture_support;
+#[cfg(all(test, target_os = "linux"))]
+mod fixture_tests;
 use jump_chain::{connect_target_client, disconnect_jump_clients};
 
 const REMOTE_EXEC_TRANSFER_CHUNK_BYTES: usize = 256 * 1024;
@@ -825,6 +829,13 @@ impl ReusableForwardSession {
         config: &ResolvedSshConfig,
     ) -> Result<Self, AppError> {
         let context = SshConnectionContext::from_app(app)?;
+        Self::connect_resolved_with_context(&context, config).await
+    }
+
+    pub async fn connect_resolved_with_context(
+        context: &SshConnectionContext,
+        config: &ResolvedSshConfig,
+    ) -> Result<Self, AppError> {
         let username = config.username.clone();
         let auth_method = auth_method(config).map_err(map_tunnel_auth_error)?;
         let ssh_config = Arc::new(client::Config {
@@ -847,7 +858,7 @@ impl ReusableForwardSession {
             "tunnel_ssh_connect_timeout",
             "SSH 隧道连接超时。",
             duration_from_ms(config.advanced.connect_timeout_ms),
-            connect_target_client(&context, ssh_config, config, host_key_handler),
+            connect_target_client(context, ssh_config, config, host_key_handler),
         )
         .await?
         .map_err(|error| {

@@ -6,6 +6,10 @@ const dialog = readFileSync(new URL("../src/features/connections/ConnectionDialo
 const appError = readFileSync(new URL("../src-tauri/src/app_error.rs", import.meta.url), "utf8");
 const jumpRuntime = readFileSync(new URL("../src/features/connections/jumpRuntime.ts", import.meta.url), "utf8");
 const jumpPreview = readFileSync(new URL("../src/features/connections/jumpPlanPreview.ts", import.meta.url), "utf8");
+const fixtureCompose = readFileSync(new URL("../tests/fixtures/docker-compose.yml", import.meta.url), "utf8");
+const fixtureScript = readFileSync(new URL("../tests/fixtures/fixtures.mjs", import.meta.url), "utf8");
+const sessionFixture = readFileSync(new URL("../src-tauri/src/terminal/session/fixture_tests.rs", import.meta.url), "utf8");
+const tunnelFixture = readFileSync(new URL("../src-tauri/src/tunnels/fixture_tests.rs", import.meta.url), "utf8");
 const plan = readFileSync(new URL("../NEXATERM_WORKFLOW_DELIVERY_PLAN.md", import.meta.url), "utf8");
 const spec = readFileSync(new URL("../docs/WORKFLOW_SPEC.md", import.meta.url), "utf8");
 
@@ -76,6 +80,18 @@ for (const needle of [
 if (!dialog.includes("实际连接路径：") || !dialog.includes("validateJumpPlanSelection")) {
   throw new Error("WF-06B ConnectionDialog must preview and validate the actual two-hop path.");
 }
+for (const needle of ["ssh-jump-outer", "ssh-jump-inner", "ssh-multihop-target", "wf06b-edge", "wf06b-target"]) {
+  if (!fixtureCompose.includes(needle)) throw new Error(`WF-06B real two-hop fixture topology missing: ${needle}`);
+}
+for (const needle of ["wf06b_fixture", "NEXATERM_FIXTURE_WF06B_OUTER_HOST_KEY", "NEXATERM_FIXTURE_WF06B_INNER_HOST_KEY", "NEXATERM_FIXTURE_WF06B_TARGET_HOST_KEY"]) {
+  if (!fixtureScript.includes(needle)) throw new Error(`WF-06B fixture smoke wiring missing: ${needle}`);
+}
+for (const needle of ["wf06b_fixture_two_hop_terminal_sftp_and_cleanup", "Jump-1 authentication must fail", "assert_chain_drained"]) {
+  if (!sessionFixture.includes(needle)) throw new Error(`WF-06B Terminal/SFTP fixture evidence missing: ${needle}`);
+}
+for (const needle of ["wf06b_fixture_two_hop_tunnels", "two_hop_local_forward", "two_hop_dynamic_forward", "two_hop_remote_forward"]) {
+  if (!tunnelFixture.includes(needle)) throw new Error(`WF-06B tunnel fixture evidence missing: ${needle}`);
+}
 if (!plan.includes("当前限制或拒绝嵌套不能算多跳完成")) {
   throw new Error("WF-06B must remain grounded in the Delivery Plan multi-hop requirement.");
 }
@@ -83,4 +99,4 @@ if (!spec.includes("WS-N02") || !spec.includes("每一跳失败能定位到具�
   throw new Error("WF-06B must remain grounded in WS-N02.");
 }
 
-console.log("WF-06B two-hop Jump plan, node credential, error context and UX source gate passed");
+console.log("WF-06B two-hop plan, node UX, real Terminal/SFTP/Tunnel fixture and cleanup source gate passed");

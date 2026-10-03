@@ -1,6 +1,6 @@
 # Test fixtures (docker-compose)
 
-Real servers for acceptance items **A12** (jump-host SSH + Files + the three
+Real servers for acceptance items **A12** (two-level Jump SSH + Files + the three
 tunnel types) and **A13** (SSH X11 launching a remote GUI program), plus RDP
 and VNC targets for the WF-06 remote-desktop work.
 
@@ -8,8 +8,11 @@ and VNC targets for the WF-06 remote-desktop work.
 
 | Service      | Host port | Purpose                                              |
 | ------------ | --------- | ---------------------------------------------------- |
-| `ssh-jump`   | 2222      | Jump host. SSH in here first.                        |
-| `ssh-target` | —         | **No published ports** — reachable only via `ssh-jump`, so it is a genuine double-hop chain. |
+| `ssh-jump`   | 2222      | Legacy one-jump host used by WF-03 / WF-06A.         |
+| `ssh-target` | —         | Legacy target reachable through `ssh-jump`.        |
+| `ssh-jump-outer` | 2224  | WF-06B Jump-2; the only host-published entry to the true two-level chain. |
+| `ssh-jump-inner` | —     | WF-06B Jump-1; bridges the edge and target-only Docker networks. |
+| `ssh-multihop-target` | — | WF-06B Target; shares no network with Jump-2, so Jump-1 cannot be skipped. |
 | `ssh-x11`    | 2223      | sshd with `X11Forwarding yes` for A13.               |
 | `xrdp`       | 3389      | RDP server (xrdp + Xorg + xfce4).                    |
 | `vnc`        | 5901      | TigerVNC server (`:1`, minimal xterm session).       |
@@ -520,3 +523,54 @@ During the same run:
 Automated CI already runs the real Local/Dynamic/Remote SSH data paths and verifies listener /
 remote-forward cleanup. The GUI checks above validate the actual TunnelPanel, saved-connection
 binding and user-visible lifecycle. Keep A12 PENDING until the WF-06B Jump phase is added.
+
+
+## WF-06B A12 two-level Jump phase
+
+The automated fixture now uses an isolated topology:
+
+```text
+NexaTerm / host
+  -> Jump-2  127.0.0.1:2224
+  -> Jump-1  ssh-jump-inner:22
+  -> Target  ssh-multihop-target:22
+```
+
+`ssh-jump-outer` and `ssh-multihop-target` are deliberately on different Docker
+networks. Only `ssh-jump-inner` joins both networks, so the CI path cannot silently
+collapse to one jump.
+
+For the later combined real-Tauri A12 acceptance, create three SSH profiles with the generated
+`tests/fixtures/keys/test_key`:
+
+| Profile | Endpoint | Jump setting |
+| --- | --- | --- |
+| `A12-Jump-2` | `testuser@127.0.0.1:2224` | none |
+| `A12-Jump-1` | `testuser@ssh-jump-inner:22` | `A12-Jump-2` |
+| `A12-Target` | `testuser@ssh-multihop-target:22` | `A12-Jump-1` |
+
+Open `A12-Target` and confirm the dialog shows the actual route
+`A12-Jump-2 → A12-Jump-1 → A12-Target`. On first use, Host Key confirmation may appear
+once for each real node; each prompt must name the host/port of that node.
+
+Deferred combined GUI acceptance:
+
+1. Open an `A12-Target` terminal, run `printf 'A12-TERMINAL\n'`, and browse
+   `/home/testuser` in Files. Terminal and Files must both work without changing the route.
+2. Temporarily change only `A12-Jump-1` to an invalid username. Opening `A12-Target` must
+   identify Jump-1 as the failed authentication node. Restore `testuser` afterward.
+3. Put Jump-1 in **ask every time** credential mode and retry Target. The credential prompt must
+   identify Jump-1; previously supplied Jump-2 credentials must not be requested again in the same
+   attempt.
+4. Run Local, Dynamic SOCKS and Remote tunnel rules with **SSH connection = A12-Target**. For
+   Local/Dynamic, use `127.0.0.1:22` as the remote target so the banner comes from the final
+   Target SSH server. For Remote, use the existing local echo helper and probe the remote listener
+   from the A12-Target terminal.
+5. Stop/close the rules and A12 sessions. Listeners must be reusable and no stale rule/session may
+   remain.
+
+CI runs the same NexaTerm russh two-hop route against Terminal PTY, SFTP, and all three tunnel
+modes. It also injects an intermediate Jump-1 authentication failure and, while the Rust test
+process is still alive, checks the three Docker sshd containers until all child SSH sessions have
+drained. This is automated evidence; the combined GUI run is intentionally deferred until the
+later consolidated manual acceptance requested for the workflow mainline.
