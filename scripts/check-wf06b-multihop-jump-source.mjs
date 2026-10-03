@@ -46,11 +46,15 @@ for (const needle of [
 ]) {
   if (!jumpChain.includes(needle)) throw new Error(`WF-06B jump cleanup/owner seam missing: ${needle}`);
 }
-for (const needle of [
-  "connect_target_client(context, ssh_config, config, host_key_handler)",
-  "connect_target_client(&context, ssh_config, config, host_key_handler)",
-]) {
-  if (!session.includes(needle)) throw new Error(`WF-06B shared route seam missing: ${needle}`);
+if (!session.includes("connect_target_client(&context, ssh_config, &config, host_key_handler)")) {
+  throw new Error("WF-06B Terminal must use the shared two-hop route.");
+}
+const contextRouteMatches =
+  session.match(/connect_target_client\(context, ssh_config, config, host_key_handler\)/g) || [];
+if (contextRouteMatches.length < 3) {
+  throw new Error(
+    `WF-06B expected Exec/SFTP/Forward shared two-hop routes, found ${contextRouteMatches.length}`,
+  );
 }
 if (!jumpChain.includes("let mut jump_clients: Vec<SshHandle>")) {
   throw new Error("WF-06B jump chain must keep an explicit SshHandle owner type.");
