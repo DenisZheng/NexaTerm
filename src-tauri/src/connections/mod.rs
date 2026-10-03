@@ -636,6 +636,10 @@ pub struct ConnectionAdvancedConfig {
     pub keepalive_interval_ms: u64,
     #[serde(default = "default_terminal_encoding")]
     pub terminal_encoding: String,
+    #[serde(default)]
+    pub x11_forwarding: bool,
+    #[serde(default)]
+    pub x11_display: Option<String>,
 }
 
 impl Default for ConnectionAdvancedConfig {
@@ -645,6 +649,8 @@ impl Default for ConnectionAdvancedConfig {
             auth_timeout_ms: 45_000,
             keepalive_interval_ms: 20_000,
             terminal_encoding: default_terminal_encoding(),
+            x11_forwarding: false,
+            x11_display: None,
         }
     }
 }
@@ -2088,12 +2094,15 @@ fn validate_advanced_config(
     }
 
     let terminal_encoding = normalize_terminal_encoding(&input.terminal_encoding)?;
+    let x11_display = trim_optional(input.x11_display.as_ref());
 
     Ok(ConnectionAdvancedConfig {
         connect_timeout_ms: input.connect_timeout_ms,
         auth_timeout_ms: input.auth_timeout_ms,
         keepalive_interval_ms: input.keepalive_interval_ms,
         terminal_encoding,
+        x11_forwarding: input.x11_forwarding,
+        x11_display,
     })
 }
 

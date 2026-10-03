@@ -3145,6 +3145,8 @@ function normalizeForSubmit(
         Number(form.advanced.keepalive_interval_ms) ||
         defaultAdvancedConfig.keepalive_interval_ms,
       terminal_encoding: normalizeTerminalEncoding(form.advanced.terminal_encoding),
+      x11_forwarding: Boolean(form.advanced.x11_forwarding),
+      x11_display: form.advanced.x11_display?.trim() || undefined,
     },
     rdp: undefined,
     vnc: undefined,
