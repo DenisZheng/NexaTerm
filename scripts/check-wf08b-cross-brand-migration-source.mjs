@@ -6,6 +6,7 @@ const lib = readFileSync(new URL("../src-tauri/src/lib.rs", import.meta.url), "u
 const app = readFileSync(new URL("../src/App.tsx", import.meta.url), "utf8");
 const gate = readFileSync(new URL("../src/features/migration/LegacyAppDataMigrationGate.tsx", import.meta.url), "utf8");
 const commands = readFileSync(new URL("../src/shared/tauri/commands.ts", import.meta.url), "utf8");
+const mcp = readFileSync(new URL("../src-tauri/src/mcp.rs", import.meta.url), "utf8");
 
 function requireAll(source, needles, label) {
   for (const needle of needles) {
@@ -23,6 +24,7 @@ requireAll(rust, [
   "brand_migration_database_invalid",
   "MIGRATION_MARKER_FILE",
   "rollback_for_root",
+  '"already-migrated"',
   "secrets.local.key",
   "mxterm.db-wal",
 ], "Rust migration contract");
@@ -58,3 +60,10 @@ if (gate.includes("legacyAppDataMigrationApply();\n  }, []")) {
 }
 
 console.log("PASS  WF-08B cross-brand migration contract");
+
+
+requireAll(mcp, [
+  '"NEXATERM_DATA_DIR"',
+  '"MXTERM_DATA_DIR"',
+  'join("com.nexaterm.app")',
+], "MCP data-dir brand compatibility");
