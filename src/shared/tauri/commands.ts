@@ -161,6 +161,44 @@ export interface AppRuntimeInfo {
   isTauri: boolean;
 }
 
+export interface LegacyAppDataMigrationPreview {
+  available: boolean;
+  blocked: boolean;
+  currentRoot: string;
+  legacyRoot: string | null;
+  legacyIdentifier: string;
+  currentIdentifier: string;
+  files: string[];
+  reason: string | null;
+  targetHasUserData: boolean;
+}
+
+export interface LegacyAppDataMigrationResult {
+  migratedFiles: string[];
+  backupRoot: string | null;
+  legacyRoot: string;
+  currentRoot: string;
+  restartRequired: boolean;
+}
+
+export interface LegacyAppDataRollbackResult {
+  restoredBackup: boolean;
+  preservedMigratedRoot: string;
+  restartRequired: boolean;
+}
+
+export function legacyAppDataMigrationPreview() {
+  return invoke<LegacyAppDataMigrationPreview>("legacy_app_data_migration_preview");
+}
+
+export function legacyAppDataMigrationApply() {
+  return invoke<LegacyAppDataMigrationResult>("legacy_app_data_migration_apply");
+}
+
+export function legacyAppDataMigrationRollback() {
+  return invoke<LegacyAppDataRollbackResult>("legacy_app_data_migration_rollback");
+}
+
 export function secretVaultStatus() {
   return invoke<SecretVaultStatus>("secret_vault_status");
 }
