@@ -152,5 +152,16 @@
   "multiExec.targets": "Targets",
   "multiExec.empty": "No terminal targets yet. Open an SSH or Local terminal first.",
   "multiExec.close": "Collapse MultiExec",
-  "multiExec.liveHint": "Select at least one target to start live input."
+  "multiExec.liveHint": "Select at least one target to start live input.",
+  "brandMigration.title": "Migrate your mXterm data",
+  "brandMigration.description": "NexaTerm found data from the previous mXterm app identity. You can copy it into NexaTerm before the workspace starts. The original mXterm data is left untouched.",
+  "brandMigration.files": "Data found: {count} items",
+  "brandMigration.apply": "Migrate and restart",
+  "brandMigration.skip": "Skip migration and continue",
+  "brandMigration.applying": "Migrating data…",
+  "brandMigration.blockedTitle": "mXterm data found, but NexaTerm already has data",
+  "brandMigration.blockedDescription": "NexaTerm will not overwrite existing user data. Keep using the current data, or export/back it up before attempting a manual migration.",
+  "brandMigration.continue": "Continue with current NexaTerm data",
+  "brandMigration.error": "Migration failed: {message}",
+  "brandMigration.restartFailed": "Migration completed, but automatic restart failed. Please restart NexaTerm manually."
 }
