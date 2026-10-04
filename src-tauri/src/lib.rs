@@ -1,4 +1,5 @@
 mod ai_assistant;
+mod brand_migration;
 pub mod app_error;
 mod command_library;
 mod commands;
@@ -84,6 +85,9 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            brand_migration::legacy_app_data_migration_preview,
+            brand_migration::legacy_app_data_migration_apply,
+            brand_migration::legacy_app_data_migration_rollback,
             workspace_snapshot::workspace_snapshot_load,
             workspace_snapshot::workspace_snapshot_save,
             workspace_snapshot::workspace_snapshot_clear,
