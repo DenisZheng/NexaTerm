@@ -20,7 +20,7 @@
 | A10 | MultiExec 断线/重连 | **阻塞：顶层入口未接入** | 同上 |
 | A11 | 协议/平台矩阵 | **通过**（维护者确认 2026-10-04） | 本报告"集中验收"节 |
 | A12 | 隧道 + 两级 Jump | **通过**（维护者确认 2026-10-04） | 本报告"集中验收"节 |
-| A13 | X11 真 GUI | **环境阻塞** | 失败码 `terminal_x11_prepare_failed`；恢复条件见下 |
+| A13 | X11 真 GUI | **通过**（维护者确认 2026-10-04） | 本报告“A13”节；`10-03-wf-06c-x11-core/A13_EVIDENCE.md` |
 | A14 | 工作区恢复 | 通过（既有记录） | `10-04-wf-07/A14_EVIDENCE.md`（两轮 Windows 重启，A14-01～15） |
 | A15 | 迁移/安装/完整 v1 | **未开始** | 属 WF-08，任务未创建 |
 
@@ -56,7 +56,9 @@
 - Command Sender（send 路径）已由维护者单独确认通过；按现场结论，不能以 Command Sender 替代统一 MultiExec 的 A09/A10 判定。
 - 恢复条件：完成顶层 MultiExec 接入后，按 `a09-a10.md` 清单执行真实 Tauri 验收。
 
-## A13（环境阻塞）
+## A13（2026-10-04 通过）
+
+> 2026-10-04 下午更新：Windows X11 环境已补齐（VcXsrv 21.1.16.1 + xauth + ssh-x11 fixture，链路预检通过），维护者重试确认 **PASS**；环境与证据见 `10-03-wf-06c-x11-core/A13_EVIDENCE.md`。以下为先前失败诊断，保留作记录。
 
 - 现象：连接报错，诊断 ID `74ac051b-ab68-45db-9bad-d38866298b01`。
 - 后端日志：`app_error code=terminal_x11_prepare_failed`；失败发生在**本机 X11 准备阶段**，尚未进入 SSH 连接、认证或远端 sshd。
@@ -72,5 +74,5 @@ WF-08（迁移、安装与完整 v1）尚未创建任务，A15 未开始。
 
 - 本次集中验收在 Codex 会话中进行，结果未在会话中断前落盘（`01a1053e` 于 2026-10-04 13:56 被中止）；本报告为其恢复记录。
 - 运行时现场清单：`.trellis/.runtime/combined-acceptance-2026-10-04.md`（未提交，仅环境与进程线索）。
-- 尚未同步的任务记录文件：`10-03-wf-05a/05b/05c/validation/a11-*.md`、`10-03-wf-06a/validation/a12-tunnels.md`（仍为 PENDING 状态）；`ROADMAP.md` 的"当前工作流进展"段仍停留在 2026-10-02。
-- 后续动作：1) 准备 Windows X11 环境后重试 A13；2) 完成 MultiExec 顶层接入后验收 A09/A10；3) 启动 A15（WF-08 建任务）；4) 同步上述任务记录文件与 ROADMAP。
+- 2026-10-04 已同步：`a11-*.md`×3、`a12-tunnels.md`、`10-03-wf-06c-x11-core/implement.md`、`A13_EVIDENCE.md`。
+- 后续动作：1) 完成 MultiExec 顶层接入后验收 A09/A10；2) 启动 A15（WF-08 建任务）；3) 更新 `ROADMAP.md` 的“当前工作流进展”段（仍停留在 2026-10-02）。

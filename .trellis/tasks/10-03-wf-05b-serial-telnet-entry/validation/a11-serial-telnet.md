@@ -1,6 +1,6 @@
 # WF-05B A11 Serial / Telnet acceptance boundary
 
-Status: **AUTOMATION PREPARED / REAL TAURI PENDING**.
+Status: **AUTOMATION PREPARED / REAL TAURI PASS（维护者确认 2026-10-04）**.
 
 A11 remains an aggregate WF-05 acceptance item. WF-05B adds the Serial/Telnet portion only;
 it must not mark A11 PASS before WF-05C adds RDP/VNC and the maintainer executes the combined
@@ -33,9 +33,16 @@ Detailed combined instructions live in `tests/fixtures/README.md` under
 - [ ] Closing one Character instance removes only that instance and releases its session/reader.
 - [ ] Same-profile sibling remains alive and is not silently substituted into a selected target set.
 
-Result: **PENDING**
+Result: **PASS（维护者确认 2026-10-04）**
 
 ## Combined gate
 
-A11 remains PENDING until WF-05C adds RDP/VNC phases. A09/A10 remain PENDING as previously
-agreed; the maintainer will execute A09/A10/A11 together later.
+A11 已于 2026-10-04 由维护者确认通过（见文末确认节）。A09/A10 仍阻塞于顶层 MultiExec 接入，按 `10-03-wf-04c/validation/a09-a10.md` 后续执行。
+
+## 2026-10-04 维护者确认
+
+维护者在 Windows 集中验收中确认 A11 通过（Codex 会话 `01a1053e`，13:26 +0800：“A11过了”）。
+
+- 覆盖：Local/WSL（同 distro 两实例、shell PID 退出检查、关闭回收）、Telnet 双向 I/O 与 sibling、RDP/VNC fixture 客户端连接与关闭清理；Command Sender send 路径一并确认（不扩展为顶层 MultiExec live）。
+- 边界：Serial 无实物/模拟串口对、macOS/Linux 平台项，按现场记录留待后续单独准备。
+- 权威汇总：`09-23-nexaterm-workflow-mainline/validation/acceptance-report-2026-10-04.md`。
