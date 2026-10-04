@@ -749,10 +749,14 @@ pub fn exposed_connections(
 }
 
 pub fn default_app_data_dir() -> Result<PathBuf, AppError> {
-    if let Ok(value) = env::var("MXTERM_DATA_DIR") {
-        let trimmed = value.trim();
-        if !trimmed.is_empty() {
-            return Ok(PathBuf::from(trimmed));
+    // NEXATERM_DATA_DIR is the canonical override after the brand transition.
+    // Keep MXTERM_DATA_DIR as a compatibility alias for existing scripts.
+    for variable in ["NEXATERM_DATA_DIR", "MXTERM_DATA_DIR"] {
+        if let Ok(value) = env::var(variable) {
+            let trimmed = value.trim();
+            if !trimmed.is_empty() {
+                return Ok(PathBuf::from(trimmed));
+            }
         }
     }
     #[cfg(windows)]
@@ -765,7 +769,7 @@ pub fn default_app_data_dir() -> Result<PathBuf, AppError> {
                 true,
             )
         })?;
-        return Ok(PathBuf::from(appdata).join("com.mxterm.app"));
+        return Ok(PathBuf::from(appdata).join("com.nexaterm.app"));
     }
     #[cfg(target_os = "macos")]
     {
@@ -780,7 +784,7 @@ pub fn default_app_data_dir() -> Result<PathBuf, AppError> {
         return Ok(PathBuf::from(home)
             .join("Library")
             .join("Application Support")
-            .join("com.mxterm.app"));
+            .join("com.nexaterm.app"));
     }
     #[cfg(all(not(windows), not(target_os = "macos")))]
     {
@@ -795,7 +799,7 @@ pub fn default_app_data_dir() -> Result<PathBuf, AppError> {
                     true,
                 )
             })?;
-        Ok(base.join("com.mxterm.app"))
+        Ok(base.join("com.nexaterm.app"))
     }
 }
 
