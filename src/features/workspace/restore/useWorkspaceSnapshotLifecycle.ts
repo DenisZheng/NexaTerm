@@ -1,12 +1,10 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
-import { workspaceSnapshotLoad, workspaceSnapshotSave } from "../../../shared/tauri/commands";
-import { hasTauriRuntime } from "../../../shared/tauri/runtime";
 import {
   getWorkspaceRemoteFileRevision,
   subscribeWorkspaceRemoteFileNavigation,
 } from "./remoteFileSnapshotBridge";
-import { selectWorkspaceSnapshot } from "./snapshotCodec";
+import { selectWorkspaceSnapshot, type WorkspaceSnapshotEnvelope } from "./snapshotCodec";
 import type { WorkspaceSnapshotV1 } from "./snapshotTypes";
 
 export interface WorkspaceSnapshotLifecycleInput {
@@ -14,6 +12,14 @@ export interface WorkspaceSnapshotLifecycleInput {
   onRestore: (snapshot: WorkspaceSnapshotV1) => void;
   restoreOnLaunch: boolean;
   snapshot: WorkspaceSnapshotV1;
+  runtime: WorkspaceSnapshotRuntime | null;
+}
+
+export interface WorkspaceSnapshotRuntime {
+  load: () => Promise<WorkspaceSnapshotEnvelope>;
+  save: (snapshot: WorkspaceSnapshotV1) => Promise<void>;
+  schedule: (callback: () => void, delayMs: number) => () => void;
+  reportError: (operation: "load" | "save", error: unknown) => void;
 }
 
 const workspaceSnapshotDebounceMs = 500;
@@ -24,59 +30,66 @@ export function useWorkspaceSnapshotLifecycle(input: WorkspaceSnapshotLifecycleI
     getWorkspaceRemoteFileRevision,
     () => 0,
   );
-  const restoreRef = useRef(input.onRestore);
-  restoreRef.current = input.onRestore;
-  const startedRef = useRef(false);
+  const inputRef = useRef(input);
+  inputRef.current = input;
+  const restoredRef = useRef(false);
   const lastSavedRef = useRef<string | null>(null);
+  const saveQueueRef = useRef(Promise.resolve());
   const [ready, setReady] = useState(false);
   const serializedSnapshot = JSON.stringify(input.snapshot);
 
   useEffect(() => {
-    if (!input.enabled || startedRef.current) return;
-    startedRef.current = true;
+    if (!input.enabled || restoredRef.current) return;
+    const runtime = input.runtime;
 
-    if (!hasTauriRuntime() || !input.restoreOnLaunch) {
-      lastSavedRef.current = serializedSnapshot;
+    if (!runtime || !input.restoreOnLaunch) {
+      restoredRef.current = true;
+      lastSavedRef.current = JSON.stringify(inputRef.current.snapshot);
       setReady(true);
       return;
     }
 
     let disposed = false;
-    void workspaceSnapshotLoad()
+    void runtime.load()
       .then((envelope) => {
         if (disposed) return;
         const selection = selectWorkspaceSnapshot(envelope);
         if (selection.snapshot) {
-          restoreRef.current(selection.snapshot);
+          inputRef.current.onRestore(selection.snapshot);
           lastSavedRef.current = JSON.stringify(selection.snapshot);
         } else {
-          lastSavedRef.current = serializedSnapshot;
+          lastSavedRef.current = JSON.stringify(inputRef.current.snapshot);
         }
+        restoredRef.current = true;
+        setReady(true);
       })
       .catch((error) => {
-        console.warn("workspace snapshot load failed", error);
-        lastSavedRef.current = serializedSnapshot;
-      })
-      .finally(() => {
-        if (!disposed) setReady(true);
+        if (disposed) return;
+        runtime.reportError("load", error);
+        lastSavedRef.current = JSON.stringify(inputRef.current.snapshot);
+        restoredRef.current = true;
+        setReady(true);
       });
 
     return () => {
       disposed = true;
     };
-  }, [input.enabled, input.restoreOnLaunch, serializedSnapshot]);
+  }, [input.enabled, input.restoreOnLaunch, input.runtime]);
 
   useEffect(() => {
-    if (!ready || !input.enabled || !hasTauriRuntime()) return;
+    const runtime = input.runtime;
+    if (!ready || !input.enabled || !runtime) return;
     if (lastSavedRef.current === serializedSnapshot) return;
 
-    const timer = window.setTimeout(() => {
-      void workspaceSnapshotSave(input.snapshot)
+    const snapshot = inputRef.current.snapshot;
+    return runtime.schedule(() => {
+      // 按内容 debounce；串行写入保证较慢的旧保存不会覆盖新布局。
+      saveQueueRef.current = saveQueueRef.current
+        .then(() => runtime.save(snapshot))
         .then(() => {
           lastSavedRef.current = serializedSnapshot;
         })
-        .catch((error) => console.warn("workspace snapshot save failed", error));
+        .catch((error) => runtime.reportError("save", error));
     }, workspaceSnapshotDebounceMs);
-    return () => window.clearTimeout(timer);
-  }, [input.enabled, input.snapshot, ready, serializedSnapshot]);
+  }, [input.enabled, input.runtime, ready, serializedSnapshot]);
 }

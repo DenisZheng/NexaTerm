@@ -503,6 +503,7 @@ import { buildWorkspaceRestorePlan } from "../workspace/restore/restorePlan";
 import { seedWorkspaceRemoteFileDirectories, workspaceRemoteFileDirectories } from "../workspace/restore/remoteFileSnapshotBridge";
 import { snapshotTargetRefs, toSnapshot, type WorkspaceSnapshotV1 } from "../workspace/restore/snapshotTypes";
 import { useWorkspaceSnapshotLifecycle } from "../workspace/restore/useWorkspaceSnapshotLifecycle";
+import { workspaceSnapshotRuntime } from "./workspaceSnapshotRuntime";
 import type {
   LocalTerminalProfile,
   LocalTerminalProfileInput,
@@ -1754,7 +1755,7 @@ export function WorkspaceShell() {
     { activeItemId: activeWorkspaceItemId, files: { directories: workspaceRemoteFileDirectories(terminalTabs.map((tab) => tab.id)), followActivePane: settings.basic.filePanelFollowsActiveConnection }, order: workspaceItemOrder, sidebar: { collapsed: leftPaneCollapsed, view: workspaceSidebarView }, splitLayout: terminalSplitLayout },
     { localTerminalTabs, rdpSessions, terminalTabs, vncSessions, targetRefs: { ...workspaceRestoreTargetRefsRef.current, connections: { ...workspaceRestoreTargetRefsRef.current.connections, ...Object.fromEntries(temporaryConnections.map((connection) => [connection.id, { kind: "temporary" as const, targetId: connection.id }])) } } },
   );
-  useWorkspaceSnapshotLifecycle({ enabled: storageReady && !loading && !localTerminalProfilesLoading, onRestore: restoreWorkspaceShell, restoreOnLaunch: settings.basic.restoreWorkspaceOnLaunch, snapshot: workspaceSnapshot });
+  useWorkspaceSnapshotLifecycle({ enabled: storageReady && !loading && !localTerminalProfilesLoading, onRestore: restoreWorkspaceShell, restoreOnLaunch: settings.basic.restoreWorkspaceOnLaunch, snapshot: workspaceSnapshot, runtime: hasTauriRuntime() ? workspaceSnapshotRuntime : null });
   const actionExecutor = useWorkspaceActionRuntime({
     workspaceVisible: activeView !== "settings", activeItemId: activeWorkspaceItemId,
     activePaneId: activeWorkspaceItemId === SPLIT_ITEM_ID ? focusedTerminalPaneId : null,
@@ -7718,7 +7719,7 @@ export function WorkspaceShell() {
       return;
     }
 
-    const prepareRequestId = `prepare-${step.id.toString()}`;
+    const prepareRequestId = `prepare-${crypto.randomUUID()}`;
     const warmupOutput: number[] = [];
     let stopWarmupCapture: (() => void) | null = null;
     let handoffComplete = false;

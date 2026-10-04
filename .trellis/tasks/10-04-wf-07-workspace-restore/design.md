@@ -49,3 +49,11 @@ Startup ordering is intentionally two-phase:
 2. schedule reconnect attempts.
 
 This prevents slow network/auth/Host-Key prompts from blocking layout restoration.
+
+## 2026-10-04 验收前审查修复
+
+- 恢复 hook 通过 layout 层提供的 runtime 注入加载、保存、计时与错误报告，workspace 层不直接依赖 Tauri/DOM。
+- 一次性加载只在成功处理结果后完成；就绪条件撤销时丢弃旧结果并允许重试，普通快照变化不取消加载。保存按序列化内容 debounce，不按对象引用重置，并串行提交避免慢请求覆盖新布局。
+- SSH 每次连接 attempt 使用独立请求标识，原位恢复保留逻辑 tab ID；重试和 Host Key/凭据续接也不复用旧 attempt 的输出通道。
+- Files 保存活动浏览目录，重启时恢复从根到该目录的导航，保留现有树形浏览方式。
+- 正常删除 profile 仍关闭对应实例。A14 缺失目标通过应用完全退出后，将一个专用测试实例的快照引用替换为不存在的 profile ID 构造；工具保留原快照到 backup，提供逆向恢复，不删除任何真实 profile 或凭据。

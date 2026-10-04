@@ -12,6 +12,7 @@ const shell = readFileSync(new URL("../src/features/layout/WorkspaceShell.tsx", 
 const remoteFiles = readFileSync(new URL("../src/features/files/RemoteFilePanel.tsx", import.meta.url), "utf8");
 const hydration = readFileSync(new URL("../src/features/workspace/restore/shellHydration.ts", import.meta.url), "utf8");
 const lifecycle = readFileSync(new URL("../src/features/workspace/restore/useWorkspaceSnapshotLifecycle.ts", import.meta.url), "utf8");
+const lifecycleRuntime = readFileSync(new URL("../src/features/layout/workspaceSnapshotRuntime.ts", import.meta.url), "utf8");
 const filesBridge = readFileSync(new URL("../src/features/workspace/restore/remoteFileSnapshotBridge.ts", import.meta.url), "utf8");
 const a14Acceptance = readFileSync(new URL("../src/features/workspace/restore/a14RestartAcceptance.test.ts", import.meta.url), "utf8");
 
@@ -93,8 +94,20 @@ for (const forbidden of ["sessionId", "password", "privateKey", "x11Cookie", "br
 for (const needle of ["toSnapshot(", "useWorkspaceSnapshotLifecycle", "restoreWorkspaceShell", 'setMultiExecMode("off")', "seedWorkspaceRemoteFileDirectories", "buildWorkspaceRestorePlan", "settings.basic.reopenLastTerminal", "requestAnimationFrame", "retryRestoredSshTab", "retryRestoredLocalTab"]) {
   if (!shell.includes(needle)) throw new Error(`WF-07 shell persistence/reconnect seam missing: ${needle}`);
 }
-for (const needle of ["workspaceSnapshotLoad", "workspaceSnapshotSave", "workspaceSnapshotDebounceMs = 500"]) {
+for (const needle of ["runtime.load()", "runtime.save(snapshot)", "runtime.schedule", "workspaceSnapshotDebounceMs = 500"]) {
   if (!lifecycle.includes(needle)) throw new Error(`WF-07 snapshot lifecycle seam missing: ${needle}`);
+}
+for (const needle of ["workspaceSnapshotLoad", "workspaceSnapshotSave", "window.setTimeout", "window.clearTimeout"]) {
+  if (!lifecycleRuntime.includes(needle)) throw new Error(`WF-07 snapshot runtime adapter missing: ${needle}`);
+}
+if (/shared\/tauri|\bwindow\.|\bdocument\./.test(lifecycle)) {
+  throw new Error("WF-07 workspace lifecycle must keep Tauri and DOM in its runtime adapter");
+}
+if (!shell.includes('const prepareRequestId = `prepare-${crypto.randomUUID()}`')) {
+  throw new Error("WF-07 SSH attempts must use unique output correlation ids");
+}
+if (!remoteFiles.includes("publishWorkspaceRemoteFileNavigation(stateKey, activeDirectoryPath)")) {
+  throw new Error("WF-07 Files must persist the active browsing directory rather than the tree root");
 }
 for (const needle of ["buildWorkspaceShellHydration", "applyWorkspaceRestorePlanToHydration", "splitLayout", "focusedPaneId"]) {
   if (!hydration.includes(needle)) throw new Error(`WF-07 shell hydration seam missing: ${needle}`);

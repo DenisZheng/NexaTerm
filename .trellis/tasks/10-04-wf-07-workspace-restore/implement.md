@@ -27,3 +27,14 @@
 - [ ] Record one real Windows Tauri exit/relaunch run using `A14_EVIDENCE.md`.
 
 Do not modify `scripts/line-budget.json`.
+
+## 2026-10-04 审查修复
+
+- [x] 补正式 lifecycle hooks 回归：就绪波动、读取中重渲染、500ms 内容 debounce、顺序保存。
+- [x] 将 Tauri/DOM 副作用注入 workspace hook，修复读取取消后不能恢复与保存被无关 render 推迟。
+- [x] 补 SSH 同毫秒并发输出隔离回归，使用每次 attempt 的唯一标识。
+- [x] 修正 Files 活动目录持久化和重启导航，补组件回归。
+- [x] 提供 A14 专用坏项的离线构造/恢复步骤及脚本测试，保留正常 profile 删除语义。
+- [x] 完整前端 518 PASS / 1 TODO，脚本 96 PASS / 3 既有跳过；Rust 快照 3 PASS；类型、构建、启动边界和行数门禁通过，规范见 `.trellis/spec/frontend/workspace-restore.md`。
+
+修复提交后继续由维护者进行真实 Windows A14，不以自动化替代或归档为已验收完成。
