@@ -152,5 +152,16 @@
   "multiExec.targets": "目标",
   "multiExec.empty": "还没有可用的终端目标：先打开 SSH 或 Local 终端。",
   "multiExec.close": "收起 MultiExec",
-  "multiExec.liveHint": "先勾选至少一个目标再开启同步输入。"
+  "multiExec.liveHint": "先勾选至少一个目标再开启同步输入。",
+  "brandMigration.title": "迁移旧 mXterm 数据",
+  "brandMigration.description": "NexaTerm 检测到旧 mXterm 应用标识下的数据。可在工作区启动前迁移到 NexaTerm；原 mXterm 数据不会被修改。",
+  "brandMigration.files": "检测到 {count} 项数据",
+  "brandMigration.apply": "迁移并重启",
+  "brandMigration.skip": "跳过迁移并继续",
+  "brandMigration.applying": "正在迁移数据…",
+  "brandMigration.blockedTitle": "检测到 mXterm 数据，但 NexaTerm 已有数据",
+  "brandMigration.blockedDescription": "为避免覆盖，NexaTerm 不会自动迁移。请继续使用当前数据，或先导出/备份后再进行人工迁移。",
+  "brandMigration.continue": "继续使用当前 NexaTerm 数据",
+  "brandMigration.error": "迁移失败：{message}",
+  "brandMigration.restartFailed": "迁移已完成，但自动重启失败。请手动重新启动 NexaTerm。"
 }
