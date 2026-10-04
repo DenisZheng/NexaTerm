@@ -20,9 +20,14 @@
 - [ ] WS-N04 Windows X server 分发方案保持显式待决，不伪装成已支持。
 
 ## 06C-3 real A13
-- [ ] Linux Xvfb fixture 改为生产 profile/Terminal 路径。
-- [ ] 真实远端 X client 能连接本地 X server。
-- [ ] cookie mismatch / local server unavailable fail closed。
-- [ ] 后续集中人工验收真实 Tauri GUI window。
+- [x] Linux Xvfb fixture 改为生产 profile/Terminal 路径（提交 aa80845 / 8bac2cb）。
+- [x] 真实远端 X client 能连接本地 X server（2026-10-04 维护者确认，见 A13_EVIDENCE.md）。
+- [x] cookie mismatch / local server unavailable fail closed（单元测试与 Linux fixture 自动化；本地 X server 不可达按设计 fail closed）。
+- [x] 后续集中人工验收真实 Tauri GUI window（2026-10-04 PASS）。
 
 不要修改 `scripts/line-budget.json`。
+
+## 2026-10-04 A13 验收
+
+- 维护者在 Windows 真实 Tauri 中确认 A13 PASS（环境准备、预检与记录见 `A13_EVIDENCE.md`）。
+- 06C-1 / 06C-2 各项实现随 `feat/wf06c-x11-core` 提交与 CI 交付（f5c2c73…8bac2cb）；本文件原勾选未逐项回填。
