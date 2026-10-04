@@ -57,8 +57,13 @@ Run this once on the Windows development machine with WSL available; record the 
 ## Result record
 
 - Commit:
-- CI:
+- CI: pending the evidence commit
 - Windows version:
 - WSL distribution:
 - A14 real restart: PENDING
 - Notes / screenshots:
+
+
+## Completion rule
+
+A14 is not marked fully PASS from mocks/unit tests alone. The automated evidence is the regression gate; the final checkbox requires one real Windows Tauri exit/relaunch run following the checklist above. After that run, replace `PENDING` with `PASS`, record the tested commit/CI and environment, and commit the evidence record.
