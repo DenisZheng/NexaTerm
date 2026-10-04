@@ -10,7 +10,7 @@
 
 WF-04B/04C/05/06/07 已进入集中验收分支，验收基线为 `feat/wf07-workspace-restore` @ `3ff0c8e`（CI #304 SUCCESS）；此处不据此宣称全部已合入 main。维护者在 Windows 真实 Tauri 已确认 A01/A02/A04/A11/A12/A13，通过项及平台边界见 [A01–A15 报告](.trellis/tasks/09-23-nexaterm-workflow-mainline/validation/acceptance-report-2026-10-04.md)；A08、A14 另有既有验收记录。WS-X09 / WS-X04 已在 WORKFLOW_SPEC v0.5 / v0.6 确认。
 
-当前执行顺序（2026-10-04 维护者确认并行）：`10-04-wf04c-multiexec-entry` 已提交并推送 `cc3b8e2`，A09/A10 真实 Tauri 仍待验；与此同时允许从该提交堆叠推进 WF-08 开发。A09/A10 不再阻塞 WF-08A–08D 的实现与自动化，但仍是最终 A15 / v1 sign-off 的前置门禁。WF-08A 从“发布与迁移基线门禁”开始，证据见 `10-04-wf-08a-release-migration-baseline/A15_BASELINE.md`。
+当前执行顺序（2026-10-04 维护者确认并行）：`10-04-wf04c-multiexec-entry` 已提交并推送 `cc3b8e2`，A09/A10 真实 Tauri 仍待验；与此同时允许从该提交堆叠推进 WF-08 开发。A09/A10 不再阻塞 WF-08A–08D 的实现与自动化，但仍是最终 A15 / v1 sign-off 的前置门禁。WF-08A 从“发布与迁移基线门禁”开始，证据见 `10-04-wf-08a-release-migration-baseline/A15_BASELINE.md`。 WF-08B 已启动：先处理 `com.mxterm.app` → `com.nexaterm.app` 核心 App Data 迁移，再单独处理旧 WebView localStorage 设置。
 
 ## 当前评审整改状态
 
