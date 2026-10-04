@@ -116,6 +116,12 @@ jobs:
       - name: WF-06C X11 production core
         run: pnpm run check:wf06c-x11
 
+      - name: WF-07 workspace snapshot contract
+        run: pnpm run check:wf07-workspace-restore
+
+      - name: WF-07 A14 restart acceptance
+        run: pnpm exec vitest run src/features/workspace/restore/a14RestartAcceptance.test.ts
+
   security:
     name: Security evidence
     runs-on: ubuntu-22.04

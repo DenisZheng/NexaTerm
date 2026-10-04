@@ -54,7 +54,6 @@ import {
   Upload,
   X,
 } from "lucide-react";
-
 import { ConnectionPane } from "../connections/ConnectionPane";
 import { useBatchConnectController } from "../connections/useBatchConnectController";
 import { batchWorkspaceClosePlan, batchWorkspaceItemId, collectBatchOpenConnectionIds, waitForBatchWorkspaceHandle, type BatchWorkspaceHandle } from "../connections/batchConnectWorkspaceRuntime";
@@ -122,22 +121,18 @@ const loadCommandLibraryPanel = () => import("../commands/CommandLibraryPanel");
 const loadAiAssistantPanel = () => import("../ai/AiAssistantPanel");
 const loadVncViewerSurface = () => import("./VncViewerSurface");
 const loadTerminalPanel = () => import("../terminal/TerminalPanel");
-
 type ConnectionDialogModule = typeof import("../connections/ConnectionDialog");
 type LoadedConnectionDialogComponent = ConnectionDialogModule["ConnectionDialog"];
 type SettingsViewModule = typeof import("../settings/SettingsView");
 type LoadedSettingsViewComponent = SettingsViewModule["SettingsView"];
-
 let connectionDialogModulePromise: Promise<ConnectionDialogModule> | null = null;
 let loadedConnectionDialogComponent: LoadedConnectionDialogComponent | null = null;
 let settingsViewModulePromise: Promise<SettingsViewModule> | null = null;
 let loadedSettingsViewComponent: LoadedSettingsViewComponent | null = null;
-
 function preloadConnectionDialogModule() {
   connectionDialogModulePromise ??= loadConnectionDialog();
   return connectionDialogModulePromise;
 }
-
 async function preloadConnectionDialogComponent() {
   if (loadedConnectionDialogComponent) {
     return loadedConnectionDialogComponent;
@@ -146,12 +141,10 @@ async function preloadConnectionDialogComponent() {
   loadedConnectionDialogComponent = module.ConnectionDialog;
   return loadedConnectionDialogComponent;
 }
-
 function preloadSettingsViewModule() {
   settingsViewModulePromise ??= loadSettingsView();
   return settingsViewModulePromise;
 }
-
 async function preloadSettingsViewComponent() {
   if (loadedSettingsViewComponent) {
     return loadedSettingsViewComponent;
@@ -160,7 +153,6 @@ async function preloadSettingsViewComponent() {
   loadedSettingsViewComponent = module.SettingsView;
   return loadedSettingsViewComponent;
 }
-
 const RemoteFileEditor = lazy(async () => {
   const module = await loadRemoteFileEditor();
   return { default: module.RemoteFileEditor };
@@ -214,9 +206,7 @@ const TerminalPanel = lazy(async () => {
   const module = await loadTerminalPanel();
   return { default: module.TerminalPanel };
 });
-
 type LazyModuleLoader = () => Promise<unknown>;
-
 const WORKSPACE_IDLE_PREWARM_BATCHES: Array<{
   timeoutMs: number;
   loaders: LazyModuleLoader[];
@@ -508,6 +498,11 @@ import type {
 } from "../workspace/sessionTabs/types";
 import { useSessionTabsController } from "../workspace/sessionTabs/useSessionTabsController";
 import type { CloseSnapshot, SessionRef } from "../workspace/sessionTabs/closeDecision";
+import { applyWorkspaceRestorePlanToHydration, buildWorkspaceShellHydration } from "../workspace/restore/shellHydration";
+import { buildWorkspaceRestorePlan } from "../workspace/restore/restorePlan";
+import { seedWorkspaceRemoteFileDirectories, workspaceRemoteFileDirectories } from "../workspace/restore/remoteFileSnapshotBridge";
+import { snapshotTargetRefs, toSnapshot, type WorkspaceSnapshotV1 } from "../workspace/restore/snapshotTypes";
+import { useWorkspaceSnapshotLifecycle } from "../workspace/restore/useWorkspaceSnapshotLifecycle";
 import type {
   LocalTerminalProfile,
   LocalTerminalProfileInput,
@@ -515,7 +510,6 @@ import type {
   WindowsPtyInfo,
   WslProviderStatus,
 } from "../terminal/localTerminalTypes";
-
 type RdpConnectionProfile = ConnectionProfile & { protocol: "rdp" };
 type VncConnectionProfile = ConnectionProfile & { protocol: "vnc" };
 type TelnetConnectionProfile = ConnectionProfile & { protocol: "telnet" };
@@ -523,15 +517,11 @@ type SerialConnectionProfile = ConnectionProfile & { protocol: "serial" };
 type SshConnectionProfile = ConnectionProfile & {
   protocol?: "ssh" | null | undefined;
 };
-
 const VNC_RUNNER_HOST_WINDOW_LABEL = "vnc-runner-host";
-
 type WorkbenchTabDropZone = WorkbenchTabKind | "split-file" | "split-terminal";
-
 interface WorkbenchTabDragPayload extends UnifiedWorkbenchTab {
   connectionId: string;
 }
-
 interface WorkbenchTabMouseDrag {
   active: boolean;
   currentX: number;
@@ -543,15 +533,12 @@ interface WorkbenchTabMouseDrag {
   startX: number;
   startY: number;
 }
-
 interface TerminalClearRequest {
   id: number;
   tabId: string;
 }
-
 type CommandSenderDeliveryStatus = "idle" | MultiExecSendDeliveryStatus;
 type CommandSenderTargetKind = "ssh" | "local";
-
 interface CommandSenderTarget {
   deliveryMessage?: string;
   deliveryStatus: CommandSenderDeliveryStatus;
@@ -564,7 +551,6 @@ interface CommandSenderTarget {
   tabId: string;
   tabTitle: string;
 }
-
 interface CommandSnippetDraft {
   command: string;
   description: string;
@@ -574,7 +560,6 @@ interface CommandSnippetDraft {
   tagsText: string;
   title: string;
 }
-
 interface CommandSnippetGroupDialogState {
   error?: string | null;
   mode: "create" | "rename";
@@ -582,18 +567,14 @@ interface CommandSnippetGroupDialogState {
   selectAfterSave?: boolean;
   value: string;
 }
-
 interface TerminalSearchState {
   caseSensitive: boolean;
   open: boolean;
   query: string;
 }
-
 type ConnectionStepMode = "test" | "terminal";
 type ConnectionStepStatus = "idle" | "running" | "waiting_host_key" | "prompt" | "success" | "error";
-
 type TerminalTab = SessionTerminalTab<ConnectionStepState>;
-
 interface ConnectionStepState {
   activeStepIndex?: number | null;
   authKind: ConnectionAuthKind;
@@ -612,7 +593,6 @@ interface ConnectionStepState {
   temporaryCredentialsReady?: boolean;
   sessionId?: string | null; status: ConnectionStepStatus;
 }
-
 interface ConnectionStepErrorDetail {
   code: string;
   message: string;
@@ -621,87 +601,72 @@ interface ConnectionStepErrorDetail {
   stage: string;
   suggestion: string;
 }
-
 interface ConnectionGroupInfo {
   color: string;
   id: string;
   name: string;
   parentId?: string | null;
 }
-
 interface ConnectionGroupCatalog {
   assignments: Record<string, string>;
   groups: ConnectionGroupInfo[];
 }
-
 interface RemoteFileRefreshRequest {
   connectionId: string;
   id: number;
   path: string;
 }
-
 interface RemoteFileLocateRequest {
   connectionId: string;
   id: number;
   path: string;
 }
-
 type RemoteFileTextAction =
   | { action: "create-directory"; connectionId: string; parentPath: string }
   | { action: "create-file"; connectionId: string; parentPath: string }
   | { action: "rename"; connectionId: string; entry: RemoteFileEntry };
-
 interface RemoteFileDeleteTarget {
   connectionId: string;
   entries: RemoteFileEntry[];
 }
-
 type ConnectionFilter = "recent" | "all" | "favorites";
-
 type LatencyProbeState =
   | { status: "checking" }
   | { latencyMs: number; status: "ok" }
   | { status: "failed" };
 type ResizablePaneSide = "left" | "right";
 type ResizingPane = ResizablePaneSide | "editor-terminal";
-
 interface RemoteFilePropertiesState {
   entry: RemoteFileEntry;
   error?: string | null;
   loading: boolean;
   metadata?: RemoteFileEntryMetadata | null;
 }
-
 interface TransferConflictPromptState {
   description: string;
   id: string;
   name: string;
   resolve: (policy: RemoteFileTransferConflictPolicy | null) => void;
 }
-
 interface ArchiveBuildProgress {
   archiveBytes: number;
   loadedBytes: number;
   phase: "read" | "compress";
   totalBytes: number;
 }
-
 interface TransferRunOptions {
   connection?: ConnectionProfile;
   conflictPolicy?: RemoteFileTransferConflictPolicy;
   transferId?: string;
 }
-
 interface DirectoryTransferRunOptions extends TransferRunOptions {
   compress?: boolean;
   keepArchive?: boolean;
 }
-
 interface DownloadTransferRunOptions {
   input?: Omit<RemoteFileDownloadToLocalInput, "transferId">;
   transferId?: string;
 }
-
 const defaultLeftPaneWidth = 336;
 const minLeftPaneWidth = 248;
 const maxLeftPaneWidth = 520;
@@ -732,19 +697,16 @@ const uploadTempAppendChunkBytes = fileReadChunkBytes;
 const remoteFileDropTargetAttribute = "data-remote-file-drop-target";
 const tabScrollTolerancePx = 1;
 const tabScrollStateRefreshMs = 180;
-
 interface WorkbenchTabScrollState {
   canScrollLeft: boolean;
   canScrollRight: boolean;
   hasOverflow: boolean;
 }
-
 const defaultWorkbenchTabScrollState: WorkbenchTabScrollState = {
   canScrollLeft: false,
   canScrollRight: false,
   hasOverflow: false,
 };
-
 function useWorkbenchTabScroller({
   activeKey,
   enabled,
@@ -758,7 +720,6 @@ function useWorkbenchTabScroller({
   const [scrollState, setScrollState] = useState<WorkbenchTabScrollState>(
     defaultWorkbenchTabScrollState,
   );
-
   const updateScrollState = useCallback(() => {
     const scroller = scrollerRef.current;
     if (!scroller || !enabled) {
@@ -769,14 +730,12 @@ function useWorkbenchTabScroller({
       );
       return;
     }
-
     const maxScrollLeft = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
     const nextState = {
       canScrollLeft: scroller.scrollLeft > tabScrollTolerancePx,
       canScrollRight: scroller.scrollLeft < maxScrollLeft - tabScrollTolerancePx,
       hasOverflow: maxScrollLeft > tabScrollTolerancePx,
     };
-
     setScrollState((current) =>
       current.canScrollLeft === nextState.canScrollLeft &&
       current.canScrollRight === nextState.canScrollRight &&
@@ -785,14 +744,12 @@ function useWorkbenchTabScroller({
         : nextState,
     );
   }, [enabled]);
-
   useLayoutEffect(() => {
     const scroller = scrollerRef.current;
     if (!scroller || !enabled) {
       updateScrollState();
       return;
     }
-
     let animationFrame = window.requestAnimationFrame(updateScrollState);
     const scheduleScrollStateUpdate = () => {
       window.cancelAnimationFrame(animationFrame);
@@ -802,11 +759,9 @@ function useWorkbenchTabScroller({
       typeof ResizeObserver === "undefined"
         ? null
         : new ResizeObserver(scheduleScrollStateUpdate);
-
     resizeObserver?.observe(scroller);
     scroller.addEventListener("scroll", scheduleScrollStateUpdate, { passive: true });
     window.addEventListener("resize", scheduleScrollStateUpdate);
-
     return () => {
       window.cancelAnimationFrame(animationFrame);
       resizeObserver?.disconnect();
@@ -814,14 +769,12 @@ function useWorkbenchTabScroller({
       window.removeEventListener("resize", scheduleScrollStateUpdate);
     };
   }, [enabled, itemCount, updateScrollState]);
-
   useLayoutEffect(() => {
     const scroller = scrollerRef.current;
     if (!scroller || !enabled || itemCount === 0) {
       updateScrollState();
       return;
     }
-
     const activeTab = scroller.querySelector<HTMLElement>(
       '[data-workbench-tab-active="true"]',
     );
@@ -829,7 +782,6 @@ function useWorkbenchTabScroller({
     const animationFrame = window.requestAnimationFrame(updateScrollState);
     return () => window.cancelAnimationFrame(animationFrame);
   }, [activeKey, enabled, itemCount, updateScrollState]);
-
   const scrollTabs = useCallback(
     (direction: "left" | "right") => {
       const scroller = scrollerRef.current;
@@ -845,7 +797,6 @@ function useWorkbenchTabScroller({
     },
     [updateScrollState],
   );
-
   return {
     canScrollLeft: scrollState.canScrollLeft,
     canScrollRight: scrollState.canScrollRight,
@@ -855,9 +806,7 @@ function useWorkbenchTabScroller({
     scrollRight: () => scrollTabs("right"),
   };
 }
-
 type WorkbenchTabScrollController = ReturnType<typeof useWorkbenchTabScroller>;
-
 type NativeFileDropPosition = Extract<DragDropEvent, { type: "enter" | "over" | "drop" }>["position"];
 
 export function WorkspaceShell() {
@@ -989,6 +938,7 @@ export function WorkspaceShell() {
   const [duplicatingConnection, setDuplicatingConnection] = useState(false);
   const [selectedConnectionId, setSelectedConnectionId] = useState<string | null>(null);
   const terminalTabsRef = useRef<TerminalTab[]>([]);
+  const workspaceRestoreTargetRefsRef = useRef(snapshotTargetRefs({ activeItemId: null, files: { directories: {}, followActivePane: true }, instances: [], order: [], panes: null, sidebar: { collapsed: false, view: "sessions" }, version: 1 }));
   const rdpSessionsRef = useRef<RdpSessionTab[]>([]);
   const vncSessionsRef = useRef<VncSessionTab[]>([]);
   const pendingVncRunnerWindowPayloadsRef = useRef(new Map<string, VncRunnerWindowPayload>());
@@ -1800,6 +1750,11 @@ export function WorkspaceShell() {
     },
     workspaceItems,
   );
+  const workspaceSnapshot = toSnapshot(
+    { activeItemId: activeWorkspaceItemId, files: { directories: workspaceRemoteFileDirectories(terminalTabs.map((tab) => tab.id)), followActivePane: settings.basic.filePanelFollowsActiveConnection }, order: workspaceItemOrder, sidebar: { collapsed: leftPaneCollapsed, view: workspaceSidebarView }, splitLayout: terminalSplitLayout },
+    { localTerminalTabs, rdpSessions, terminalTabs, vncSessions, targetRefs: { ...workspaceRestoreTargetRefsRef.current, connections: { ...workspaceRestoreTargetRefsRef.current.connections, ...Object.fromEntries(temporaryConnections.map((connection) => [connection.id, { kind: "temporary" as const, targetId: connection.id }])) } } },
+  );
+  useWorkspaceSnapshotLifecycle({ enabled: storageReady && !loading && !localTerminalProfilesLoading, onRestore: restoreWorkspaceShell, restoreOnLaunch: settings.basic.restoreWorkspaceOnLaunch, snapshot: workspaceSnapshot });
   const actionExecutor = useWorkspaceActionRuntime({
     workspaceVisible: activeView !== "settings", activeItemId: activeWorkspaceItemId,
     activePaneId: activeWorkspaceItemId === SPLIT_ITEM_ID ? focusedTerminalPaneId : null,
@@ -4509,6 +4464,54 @@ export function WorkspaceShell() {
     const profile = localTerminalProfiles.find((item) => item.id === sourceTab.profileId) || null;
     const tab = openLocalTerminalByProfile(profile, false);
     return tab ? { kind: "local", tabId: tab.id } : null;
+  }
+
+  function restoreWorkspaceShell(snapshot: WorkspaceSnapshotV1) {
+    workspaceRestoreTargetRefsRef.current = snapshotTargetRefs(snapshot);
+    const restorePlan = buildWorkspaceRestorePlan(snapshot, { autoReconnect: settings.basic.reopenLastTerminal, profileIds: new Set([...connections.map((item) => item.id), ...localTerminalProfiles.map((item) => item.id)]) });
+    const hydration = applyWorkspaceRestorePlanToHydration(buildWorkspaceShellHydration(snapshot, { connectionName: (id) => connectionById.get(id)?.name || null, localProfile: (id) => { const profile = localTerminalProfiles.find((item) => item.id === id); return profile ? { kind: profile.kind, name: profile.name } : null; } }), restorePlan);
+    const restoredTerminalTabs = hydration.terminalTabs as TerminalTab[];
+    terminalTabsRef.current = restoredTerminalTabs; setTerminalTabs(restoredTerminalTabs); localTerminalTabsRef.current = hydration.localTerminalTabs; setLocalTerminalTabs(hydration.localTerminalTabs);
+    rdpSessionsRef.current = hydration.rdpSessions; setRdpSessions(hydration.rdpSessions); vncSessionsRef.current = hydration.vncSessions; setVncSessions(hydration.vncSessions);
+    snapshot.order.forEach((itemId) => dispatchTabs({ type: "tabs/itemOpened", itemId })); setTerminalSplitLayout(hydration.splitLayout); setTerminalSplitHost(hydration.splitHost); setFocusedTerminalPaneId(hydration.focusedPaneId);
+    setTerminalSplitTabActive(snapshot.activeItemId === SPLIT_ITEM_ID && Boolean(hydration.splitLayout)); setMultiExecMode("off"); setMultiExecTargets(new Set()); setTerminalSplitSyncError(null);
+    setLeftPaneCollapsed(snapshot.sidebar.collapsed); setWorkspaceSidebarView(snapshot.sidebar.view); seedWorkspaceRemoteFileDirectories(snapshot.files.directories);
+    if (settings.basic.filePanelFollowsActiveConnection !== snapshot.files.followActivePane) updateBasic({ filePanelFollowsActiveConnection: snapshot.files.followActivePane });
+    switch (hydration.active.kind) {
+      case "ssh": dispatchTabs({ type: "tabs/activateTerminal", connectionId: hydration.active.connectionId, tabId: hydration.active.tabId, rememberUnified: false }); break;
+      case "local": dispatchTabs({ type: "tabs/activateLocal", tabId: hydration.active.tabId }); break;
+      case "rdp": dispatchTabs({ type: "tabs/activateRdp", connectionId: hydration.active.connectionId, sessionId: hydration.active.sessionId }); break;
+      case "vnc": dispatchTabs({ type: "tabs/activateVnc", connectionId: hydration.active.connectionId, sessionId: hydration.active.sessionId }); break;
+      case "split": { const host = hydration.active.host; const tab = host.kind === "ssh" ? restoredTerminalTabs.find((item) => item.id === host.tabId) : null; dispatchTabs({ type: "tabs/activateSplitHost", host: tab ? { kind: "ssh", connectionId: tab.connectionId } : { kind: "local" } }); dispatchTabs({ type: "tabs/focusPaneBinding", binding: host }); break; }
+      default: dispatchTabs({ type: "tabs/goHome" });
+    }
+    window.requestAnimationFrame(() => restorePlan.items.filter((item) => item.autoReconnect).forEach((item) => reconnectRestoredWorkspaceItem(item.instance.id)));
+  }
+
+  function reconnectRestoredWorkspaceItem(instanceId: string) {
+    if (instanceId.startsWith("ssh:")) retryRestoredSshTab(instanceId.slice(4));
+    else if (instanceId.startsWith("local:")) retryRestoredLocalTab(instanceId.slice(6));
+  }
+
+  function retryRestoredSshTab(tabId: string) {
+    const tab = terminalTabsRef.current.find((item) => item.id === tabId); const connection = tab ? connectionById.get(tab.connectionId) : null;
+    if (tab && isSshConnection(connection)) { startConnectionStep(connection, "terminal", false, tab.id); return; }
+    if (tab) { const next = terminalTabsRef.current.map((item) => item.id === tabId ? { ...item, error: "保存的 SSH 连接已不存在。", status: "连接失败" } : item); terminalTabsRef.current = next; setTerminalTabs(next); }
+  }
+
+  function retryRestoredLocalTab(tabId: string) {
+    const tab = localTerminalTabsRef.current.find((item) => item.id === tabId); if (!tab) return;
+    const requestId = `restore-${tab.id}-${Date.now().toString()}`;
+    if (tab.source === "telnet" || tab.source === "serial") {
+      const connection = connectionById.get(tab.profileId);
+      if ((tab.source === "telnet" && isTelnetConnection(connection)) || (tab.source === "serial" && isSerialConnection(connection))) {
+        const next = { ...tab, error: undefined, requestId, sessionId: undefined, status: "正在连接", warmupOutput: [] }; const tabs = localTerminalTabsRef.current.map((item) => item.id === tab.id ? next : item); localTerminalTabsRef.current = tabs; setLocalTerminalTabs(tabs); void runCharacterConnectionSession(next, connection); return;
+      }
+    } else {
+      const profile = localTerminalProfilesRef.current.find((item) => item.id === tab.profileId) || null;
+      if (profile) { const next = { ...tab, error: undefined, profileKind: profile.kind, requestId, sessionId: undefined, source: "local" as const, status: "正在连接", title: localTerminalTitle(profile, displayOrdinal(tab.ordinal)), warmupOutput: [] }; const tabs = localTerminalTabsRef.current.map((item) => item.id === tab.id ? next : item); localTerminalTabsRef.current = tabs; setLocalTerminalTabs(tabs); void openRuntimeLocalTerminalSession(next, "local-preview", () => localTerminalOpen({ cols: 80, cwd: profile.cwd || undefined, profile: toLocalTerminalProfileInput(profile), request_id: requestId, rows: 24 })).catch(() => undefined); return; }
+    }
+    const next = localTerminalTabsRef.current.map((item) => item.id === tab.id ? { ...item, error: "保存的本地终端或连接配置已不存在。", status: "连接失败" } : item); localTerminalTabsRef.current = next; setLocalTerminalTabs(next);
   }
 
   function openHome() {
@@ -7629,6 +7632,7 @@ export function WorkspaceShell() {
     connection: ConnectionProfile,
     mode: ConnectionStepMode,
     activate = true,
+    reuseTabId?: string,
   ) {
     if (isRdpConnection(connection)) {
       openRdpConnectionSession(connection);
@@ -7662,9 +7666,11 @@ export function WorkspaceShell() {
       sessionId: null,
       status: connection.credential_mode === "prompt" ? "prompt" : "idle",
     };
-    const tab = buildConnectingTab(terminalTabsRef.current, connection, step);
+    const existingTab = reuseTabId ? terminalTabsRef.current.find((item) => item.id === reuseTabId) || null : null;
+    const builtTab = buildConnectingTab(terminalTabsRef.current, connection, step);
+    const tab = existingTab ? { ...builtTab, id: existingTab.id, ordinal: existingTab.ordinal } : builtTab;
     setTerminalTabs((tabs) => {
-      const nextTabs = [...tabs, tab];
+      const nextTabs = existingTab ? tabs.map((item) => item.id === existingTab.id ? tab : item) : [...tabs, tab];
       terminalTabsRef.current = nextTabs;
       return nextTabs;
     });
@@ -8821,6 +8827,7 @@ export function WorkspaceShell() {
                         {...terminalSplitStatusProps({ kind: "ssh", tabId: tab.id })}
                         connection={connectionById.get(tab.connectionId) || null}
                         error={tab.error || null}
+                        onRetry={() => retryRestoredSshTab(tab.id)}
                         status={tab.status}
                         title={tab.title}
                       />
@@ -8914,14 +8921,7 @@ export function WorkspaceShell() {
                             title={tab.title}
                             key={tab.id}
                             onOpenSettings={openLocalTerminalSettings}
-                            onRetry={
-                              tab.source === "local" || !tab.source
-                                ? () =>
-                                    void openLocalTerminalByProfile(
-                                      localTerminalProfiles.find((profile) => profile.id === tab.profileId) || null,
-                                    )
-                                : undefined
-                            }
+                            onRetry={() => retryRestoredLocalTab(tab.id)}
                           />
                         ),
                       )}
@@ -10667,15 +10667,13 @@ function LocalTerminalStatusPanel({
         <strong>{failed ? `${subject}打开失败` : status}</strong>
         <span>{description}</span>
         {error ? <small>{error}</small> : null}
-        {failed && source === "local" && onRetry ? (
+        {failed && onRetry ? (
           <div className="local-terminal-status-actions">
             <button className="primary-button" type="button" onClick={onRetry}>
               <RefreshCw className="ui-icon" aria-hidden="true" />
               重试
             </button>
-            <button type="button" onClick={onOpenSettings}>
-              打开设置
-            </button>
+            {source === "local" ? <button type="button" onClick={onOpenSettings}>打开设置</button> : null}
           </div>
         ) : null}
       </div>
@@ -10766,6 +10764,7 @@ function DirectTerminalStatusPanel({
   connection,
   error,
   onPaneFocus,
+  onRetry,
   status,
   style,
   title,
@@ -10776,6 +10775,7 @@ function DirectTerminalStatusPanel({
   connection: ConnectionProfile | null;
   error: string | null;
   onPaneFocus?: () => void;
+  onRetry?: () => void;
   status: string;
   style?: CSSProperties;
   title: string;
@@ -10806,6 +10806,7 @@ function DirectTerminalStatusPanel({
             : "当前连接"}
         </span>
         {error ? <small>{error}</small> : null}
+        {failed && onRetry ? <button className="primary-button" type="button" onClick={onRetry}><RefreshCw className="ui-icon" aria-hidden="true" />重试</button> : null}
       </div>
     </section>
   );

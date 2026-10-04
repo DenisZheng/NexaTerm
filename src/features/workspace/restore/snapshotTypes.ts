@@ -123,6 +123,18 @@ export interface WorkspaceSnapshotCollections {
   }[];
 }
 
+export function snapshotTargetRefs(snapshot: WorkspaceSnapshotV1): NonNullable<WorkspaceSnapshotCollections["targetRefs"]> {
+  const connections: Record<string, WorkspaceSnapshotTargetRef> = {};
+  const localProfiles: Record<string, WorkspaceSnapshotTargetRef> = {};
+  for (const instance of snapshot.instances) {
+    const target = copyTargetRef(instance.target);
+    const ownerId = target.kind === "profile" ? target.profileId : target.targetId;
+    if (instance.kind === "local") localProfiles[ownerId] = target;
+    else connections[ownerId] = target;
+  }
+  return { connections, localProfiles };
+}
+
 /**
  * WS-R01 snapshot projection. This function deliberately copies a strict
  * whitelist instead of spreading runtime session objects.

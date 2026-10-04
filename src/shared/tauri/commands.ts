@@ -1334,3 +1334,21 @@ export function connectionGroupDelete(id: string) { return invoke<void>("connect
 export function connectionGroupAssign(connectionId: string, groupId: string | null) { return invoke<void>("connection_group_assign", { connectionId, groupId }); }
 
 export function connectionGroupMigrateLegacy(raw: string | null, resolutions?: LegacyGroupResolution[]) { return invoke<LegacyGroupReport>("connection_group_migrate_legacy", { raw, resolutions }); }
+
+
+export interface WorkspaceSnapshotEnvelope {
+  backup: unknown | null;
+  current: unknown | null;
+}
+
+export function workspaceSnapshotLoad() {
+  return invoke<WorkspaceSnapshotEnvelope>("workspace_snapshot_load");
+}
+
+export function workspaceSnapshotSave(snapshot: unknown) {
+  return invoke<void>("workspace_snapshot_save", { snapshot });
+}
+
+export function workspaceSnapshotClear() {
+  return invoke<void>("workspace_snapshot_clear");
+}
