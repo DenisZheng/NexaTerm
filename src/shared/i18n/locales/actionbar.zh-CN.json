@@ -42,7 +42,7 @@
   "actionBar.reason.noQuery": "请先输入终端搜索内容。",
   "actionBar.reason.unknown": "此操作尚未注册。",
   "actionBar.reason.localOnly": "仅在 AI 输入框内可用。",
-  "actionBar.reason.multiExec": "统一 MultiExec 在 WF-04C 交付；现有 Command Sender 仍为独立功能。",
+  "actionBar.reason.noMultiExecTargets": "还没有可用的终端目标：先打开 SSH 或 Local 终端。",
   "actionBar.reason.noCommandTargets": "没有可接收命令的终端。",
   "actionBar.reason.unbound": "尚未绑定快捷键。",
   "actionBar.reason.inputFocus": "当前输入焦点下不执行此快捷键。",

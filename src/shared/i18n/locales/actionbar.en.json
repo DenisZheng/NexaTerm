@@ -42,7 +42,7 @@
   "actionBar.reason.noQuery": "Enter a terminal search query first.",
   "actionBar.reason.unknown": "This action is not registered.",
   "actionBar.reason.localOnly": "Available only in the AI input box.",
-  "actionBar.reason.multiExec": "Unified MultiExec will be delivered in WF-04C. Command Sender remains available separately.",
+  "actionBar.reason.noMultiExecTargets": "No terminal targets yet. Open an SSH or Local terminal first.",
   "actionBar.reason.noCommandTargets": "No terminals can receive commands.",
   "actionBar.reason.unbound": "No shortcut is assigned.",
   "actionBar.reason.inputFocus": "This shortcut is unavailable at the current input focus.",

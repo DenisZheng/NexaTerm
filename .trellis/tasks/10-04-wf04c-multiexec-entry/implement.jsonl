@@ -1,0 +1,4 @@
+{"file":"docs/WORKFLOW_SPEC.md","reason":"按 v0.6 的 WS-X03–X08 / WS-R02 实现实例目标、控制面与恢复边界"}
+{"file":".trellis/spec/frontend/index.md","reason":"前端开发与质量门禁入口"}
+{"file":".trellis/spec/frontend/state-management.md","reason":"业务状态单一归属与 updater / reducer 纯函数约束"}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"共享控件、全局 token 与三主题约束"}

@@ -9,6 +9,7 @@ import { type KeyboardEvent, type RefObject, useEffect, useRef, useState } from 
 
 import { AnchoredSurfacePortal } from "../../shared/ui/AnchoredSurfacePortal";
 import { Tooltip } from "../../shared/ui/Tooltip";
+import type { TerminalSplitSyncPaneOption } from "../layout/terminalSplitSyncOptions";
 
 interface TerminalSplitMenuProps {
   autoCreateSameSession: boolean;
@@ -20,12 +21,7 @@ interface TerminalSplitMenuProps {
   onSplitRight: () => void;
 }
 
-export interface TerminalSplitSyncPaneOption {
-  disabled?: boolean;
-  key: string;
-  label: string;
-  locked?: boolean;
-}
+export type { TerminalSplitSyncPaneOption };
 
 interface TerminalSplitSyncMenuProps {
   enabled: boolean;

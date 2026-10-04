@@ -47,6 +47,16 @@ describe("multiExecReducer", () => {
     expect(next.targets).toEqual(new Set(["ssh:a", "ssh:b"]));
   });
 
+  it("removing the last explicit target stops live atomically without mutating the previous selection", () => {
+    const state = { error: null, mode: "live" as const, targets: new Set(["ssh:a", "ssh:b"]) };
+    const one = multiExecReducer(state, { type: "multiExec/setTargets", targets: new Set(["ssh:a"]) });
+    expect(one.mode).toBe("live");
+    const none = multiExecReducer(one, { type: "multiExec/setTargets", targets: () => new Set() });
+    expect(none).toMatchObject({ mode: "off", targets: new Set() });
+    expect(state.targets).toEqual(new Set(["ssh:a", "ssh:b"]));
+    expect(multiExecReducer({ ...one, mode: "send" }, { type: "multiExec/setTargets", targets: new Set() }).mode).toBe("send");
+  });
+
   it("focus changes never add or replace explicit targets", () => {
     const state = {
       error: null,

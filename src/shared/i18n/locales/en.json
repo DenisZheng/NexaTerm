@@ -143,5 +143,14 @@
   "connection.x11.windows": "Windows requires a compatible external X server. NexaTerm does not bundle or auto-install one in this phase.",
   "connection.x11.macos": "macOS requires XQuartz to be installed and running; NexaTerm uses its DISPLAY and xauth data.",
   "connection.x11.linux": "Linux uses the current Xorg/XWayland DISPLAY and xauth cookie. The connection fails closed if they are unavailable.",
-  "connection.x11.unknown": "X11 requires a local X server, DISPLAY, and xauth. Platform support is still experimental."
+  "connection.x11.unknown": "X11 requires a local X server, DISPLAY, and xauth. Platform support is still experimental.",
+  "multiExec.title": "MultiExec",
+  "multiExec.live": "Live input",
+  "multiExec.send": "Send command…",
+  "multiExec.stop": "Stop broadcast",
+  "multiExec.active": "Active · {count} targets",
+  "multiExec.targets": "Targets",
+  "multiExec.empty": "No terminal targets yet. Open an SSH or Local terminal first.",
+  "multiExec.close": "Collapse MultiExec",
+  "multiExec.liveHint": "Select at least one target to start live input."
 }

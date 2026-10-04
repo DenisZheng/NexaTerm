@@ -24,7 +24,7 @@ Some bullets in `component-guidelines.md` and `tauri-command-contracts.md` descr
 | [Quality Guidelines](./quality-guidelines.md) | Code standards, forbidden patterns | Partial (testing requirements filled) |
 | [Type Safety](./type-safety.md) | Type patterns, validation | To fill |
 | [Tauri Command Contracts](./tauri-command-contracts.md) | Typed invoke wrappers and frontend/backend payload sync | Active (placement bullets scoped 2026-09-23) |
-| [Workflow Spec (product rules)](../../../docs/WORKFLOW_SPEC.md) | Target interaction rules `WS-xx`, status, owning WF package, superseded-rule table | v0.4 (2026-10-02) |
+| [Workflow Spec (product rules)](../../../docs/WORKFLOW_SPEC.md) | Target interaction rules `WS-xx`, status, owning WF package, superseded-rule table | v0.6 (2026-10-03) |
 
 ---
 

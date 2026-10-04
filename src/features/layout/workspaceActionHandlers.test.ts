@@ -5,7 +5,7 @@ function setup() {
   const operation = () => vi.fn();
   const operations: WorkspaceActionOperations = {
     quickOpen: operation(), openSettings: operation(), toggleSidebar: operation(), toggleTools: operation(),
-    toggleCommandSender: operation(), openTunnels: operation(), closeItem: operation(), closeInstance: operation(),
+    toggleCommandSender: operation(), toggleMultiExec: operation(), openTunnels: operation(), closeItem: operation(), closeInstance: operation(),
     closePane: operation(), closeSplitGroup: operation(), newTerminal: operation(), toggleSearch: operation(),
     searchNext: operation(), searchPrevious: operation(), splitRight: operation(), splitDown: operation(), splitFour: operation(),
   };
@@ -21,12 +21,14 @@ describe("WF-01 4D-1 workspace action business adapter", () => {
     handlers["view.toggleSidebar"](target);
     handlers["view.toggleTools"](target);
     handlers["commandSender.toggle"](target);
+    handlers["terminal.multiExec"](target);
     handlers["tools.tunnels"](target);
     expect(operations.quickOpen).toHaveBeenCalledWith();
     expect(operations.openSettings).toHaveBeenCalledWith();
     expect(operations.toggleSidebar).toHaveBeenCalledWith();
     expect(operations.toggleTools).toHaveBeenCalledWith();
     expect(operations.toggleCommandSender).toHaveBeenCalledWith();
+    expect(operations.toggleMultiExec).toHaveBeenCalledExactlyOnceWith();
     expect(operations.openTunnels).toHaveBeenCalledWith();
   });
 
@@ -66,9 +68,9 @@ describe("WF-01 4D-1 workspace action business adapter", () => {
     expect(operations.splitRight).not.toHaveBeenCalled();
   });
 
-  it("keeps only truly deferred actions unregistered", () => {
+  it("registers the implemented workspace actions", () => {
     const { handlers } = setup();
-    expect(handlers["terminal.multiExec"]).toBeUndefined();
+    expect(handlers["terminal.multiExec"]).toBeTypeOf("function");
     expect(handlers["tools.tunnels"]).toBeTypeOf("function");
     expect(handlers["terminal.closePane"]).toBeTypeOf("function");
     expect(handlers["terminal.closeSplitGroup"]).toBeTypeOf("function");

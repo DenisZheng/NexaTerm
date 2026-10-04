@@ -143,5 +143,14 @@
   "connection.x11.windows": "Windows 需要兼容的外部 X Server；本阶段 NexaTerm 不内置也不自动安装 X Server。",
   "connection.x11.macos": "macOS 需要安装并运行 XQuartz；NexaTerm 使用其 DISPLAY 与 xauth 认证信息。",
   "connection.x11.linux": "Linux 使用当前 Xorg/XWayland 的 DISPLAY 与 xauth cookie；依赖不可用时连接会明确失败，不会静默降级。",
-  "connection.x11.unknown": "X11 需要本地 X Server、DISPLAY 与 xauth；当前平台支持仍为实验性。"
+  "connection.x11.unknown": "X11 需要本地 X Server、DISPLAY 与 xauth；当前平台支持仍为实验性。",
+  "multiExec.title": "MultiExec",
+  "multiExec.live": "同步输入",
+  "multiExec.send": "发送命令…",
+  "multiExec.stop": "停止广播",
+  "multiExec.active": "已激活 · {count} 个目标",
+  "multiExec.targets": "目标",
+  "multiExec.empty": "还没有可用的终端目标：先打开 SSH 或 Local 终端。",
+  "multiExec.close": "收起 MultiExec",
+  "multiExec.liveHint": "先勾选至少一个目标再开启同步输入。"
 }

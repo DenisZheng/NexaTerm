@@ -9,6 +9,23 @@ const targets = readFileSync(new URL("../src/features/workspace/multiExec/target
 const fixtureReadme = readFileSync(new URL("../tests/fixtures/README.md", import.meta.url), "utf8");
 const shell = readFileSync(new URL("../src/features/layout/WorkspaceShell.tsx", import.meta.url), "utf8");
 const spec = readFileSync(new URL("../docs/WORKFLOW_SPEC.md", import.meta.url), "utf8");
+const registry = readFileSync(new URL("../src/features/shortcuts/actionRegistry.ts", import.meta.url), "utf8");
+const handlers = readFileSync(new URL("../src/features/layout/workspaceActionHandlers.ts", import.meta.url), "utf8");
+const bar = readFileSync(new URL("../src/features/layout/MultiExecBar.tsx", import.meta.url), "utf8");
+
+if (registry.includes("deferred-wf04c") ||
+    !registry.includes('"terminal.multiExec": { target: "none", capability: "multi-exec" }')) {
+  throw new Error("WF-04C top-level MultiExec must be gated by terminal availability, not deferred.");
+}
+if (!handlers.includes('"terminal.multiExec": application(operations.toggleMultiExec)')) {
+  throw new Error("WF-04C top-level MultiExec must dispatch through the shared action adapter.");
+}
+for (const needle of ["<MultiExecBar", "toggleMultiExec: toggleMultiExecBar", 'multiExecBarOpen || multiExecMode === "live"']) {
+  if (!shell.includes(needle)) throw new Error(`WF-04C visible MultiExec control surface missing: ${needle}`);
+}
+for (const needle of ['role="status"', 't("multiExec.stop")', "onClick={onStop}", "onToggleTarget(target.key, !selected)"]) {
+  if (!bar.includes(needle)) throw new Error(`WF-04C MultiExec control contract missing: ${needle}`);
+}
 
 for (const needle of [
   'export type MultiExecMode = "off" | "live" | "send";',

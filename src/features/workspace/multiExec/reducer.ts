@@ -29,7 +29,9 @@ export function multiExecReducer(state: MultiExecState, action: MultiExecAction)
       const next =
         typeof action.targets === "function" ? action.targets(state.targets) : action.targets;
       const targets = setsEqual(state.targets, next) ? state.targets : new Set(next);
-      return targets === state.targets ? state : { ...state, targets };
+      // 最后一个目标移除时原子停止 live；调用方的 updater 不得再嵌套 dispatch。
+      const mode = state.mode === "live" && targets.size === 0 ? "off" : state.mode;
+      return targets === state.targets && mode === state.mode ? state : { ...state, targets, mode };
     }
     case "multiExec/setError":
       return action.error === state.error ? state : { ...state, error: action.error };

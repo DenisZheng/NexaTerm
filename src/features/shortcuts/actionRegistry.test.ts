@@ -142,8 +142,11 @@ describe("WF-01 4B: policies and shortcut compatibility", () => {
     }
   });
 
-  it("keeps MultiExec deferred and Command Sender independently available", () => {
-    expect(resolveWorkspaceAction({ actionId: "terminal.multiExec" }, fixture(), {}).reason).toBe("deferred-wf04c");
+  it("gates MultiExec and Command Sender on available terminal targets", () => {
+    expect(resolveWorkspaceAction({ actionId: "terminal.multiExec" }, fixture(), {}).enabled).toBe(true);
+    expect(resolveWorkspaceAction({ actionId: "terminal.multiExec" }, { ...fixture(), activeItemId: "home" }, {}).enabled).toBe(true);
+    expect(resolveWorkspaceAction({ actionId: "terminal.multiExec" }, { ...fixture(), workspaceVisible: false }, {}).reason).toBe("workspace-inactive");
+    expect(resolveWorkspaceAction({ actionId: "terminal.multiExec" }, { ...fixture(), commandSenderTargetCount: 0 }, {}).reason).toBe("no-multi-exec-targets");
     expect(resolveWorkspaceAction({ actionId: "commandSender.toggle" }, fixture(), {}).enabled).toBe(true);
     expect(resolveWorkspaceAction({ actionId: "commandSender.toggle" }, { ...fixture(), commandSenderTargetCount: 0 }, {}).reason).toBe("no-command-targets");
   });
@@ -250,9 +253,9 @@ describe("WF-01 4B: injected unified execution", () => {
     expect(targets).toStrictEqual([currentInstance, currentInstance, currentInstance, currentInstance]);
   });
 
-  it("cannot execute deferred or locally-owned actions even if a handler is injected", async () => {
+  it("cannot execute locally-owned actions or MultiExec without targets even if a handler is injected", async () => {
     let calls = 0;
-    const executor = createWorkspaceActionExecutor(() => ({ context: fixture(), bindings: {}, handlers: {
+    const executor = createWorkspaceActionExecutor(() => ({ context: { ...fixture(), commandSenderTargetCount: 0 }, bindings: {}, handlers: {
       "ai.sendMessage": () => { calls += 1; }, "terminal.multiExec": () => { calls += 1; },
     } }));
     expect((await executor.run({ actionId: "ai.sendMessage" })).status).toBe("disabled");

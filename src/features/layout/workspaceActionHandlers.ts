@@ -17,6 +17,7 @@ export interface WorkspaceActionOperations {
   readonly toggleSidebar: ApplicationOperation;
   readonly toggleTools: ApplicationOperation;
   readonly toggleCommandSender: ApplicationOperation;
+  readonly toggleMultiExec: ApplicationOperation;
   readonly openTunnels: ApplicationOperation;
   readonly closeItem: (target: ItemTarget) => void | Promise<void>;
   readonly closeInstance: InstanceOperation;
@@ -59,6 +60,7 @@ export function createWorkspaceActionHandlers(
     "view.toggleSidebar": application(operations.toggleSidebar),
     "view.toggleTools": application(operations.toggleTools),
     "commandSender.toggle": application(operations.toggleCommandSender),
+    "terminal.multiExec": application(operations.toggleMultiExec),
     "tools.tunnels": application(operations.openTunnels),
     "workspace.closeItem": item(operations.closeItem),
     "terminal.closeTab": instance(operations.closeInstance),

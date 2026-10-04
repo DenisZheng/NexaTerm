@@ -431,8 +431,9 @@ import {
 import {
   TerminalSplitMenu,
   TerminalSplitSyncMenu,
-  type TerminalSplitSyncPaneOption,
 } from "../terminal/TerminalSplitMenu";
+import { MultiExecBar } from "./MultiExecBar";
+import { buildTerminalSplitSyncPaneOptions } from "./terminalSplitSyncOptions";
 import {
   closeTerminalSplitPane as closeTerminalSplitLayoutPane,
   collectTerminalSplitPanes,
@@ -986,6 +987,7 @@ export function WorkspaceShell() {
   }, [activeRdpSessionId, measureRdpEmbeddedBounds, syncRdpEmbeddedBounds]);
   const terminalWarmupCaptureStopsRef = useRef(new Map<string, () => void>());
   const [commandSenderOpen, setCommandSenderOpen] = useState(false);
+  const [multiExecBarOpen, setMultiExecBarOpen] = useState(false);
   const [commandSenderInput, setCommandSenderInput] = useState("");
   const [commandSnippets, setCommandSnippets] = useState<CommandSnippet[]>([]);
   const [commandHistoryEntries, setCommandHistoryEntries] = useState<CommandHistoryEntry[]>([]);
@@ -1683,6 +1685,7 @@ export function WorkspaceShell() {
     ? terminalSearchByTabId[activeTerminalToolbarTabId] || null
     : null;
   const showTerminalScopedActions = Boolean(activeTerminalToolbarTabId);
+  const showMultiExecBar = multiExecBarOpen || multiExecMode === "live";
   const showTerminalCommandSenderPanel =
     commandSenderOpen && (terminalSplitActive || showTerminalScopedActions);
   useEffect(() => {
@@ -1772,6 +1775,7 @@ export function WorkspaceShell() {
     toggleSidebar: () => setLeftPaneCollapsed((collapsed) => !collapsed),
     toggleTools: () => setRightPaneCollapsed((collapsed) => !collapsed),
     toggleCommandSender: openCommandSender,
+    toggleMultiExec: toggleMultiExecBar,
     openTunnels: () => {
       setRightPaneCollapsed(false);
       setRightTool("tunnels");
@@ -2076,33 +2080,13 @@ export function WorkspaceShell() {
       terminalTabs,
     ],
   );
-  const terminalSplitSyncPaneOptions = useMemo<TerminalSplitSyncPaneOption[]>(() => {
-    const optionByKey = new Map(
-      terminalSplitSessionOptions
-        .filter((option) => option.binding)
-        .map((option) => [option.value, option]),
-    );
-    return terminalSplitPanes.flatMap((pane, index) => {
-      if (!pane.binding) {
-        return [];
-      }
-      const key = terminalPaneBindingKey(pane.binding);
-      const option = optionByKey.get(key);
-      const focusedKey = focusedTerminalSplitBinding
-        ? terminalPaneBindingKey(focusedTerminalSplitBinding)
-        : null;
-      return [
-        {
-          disabled: !terminalSessionIdForBinding(pane.binding),
-          key,
-          label: `${option?.label || `终端 ${(index + 1).toString()}`}${
-            terminalSplitSyncEnabled && key === focusedKey ? " · 主输入" : ""
-          }`,
-          locked: false,
-        },
-      ];
-    });
-  }, [
+  const terminalSplitSyncPaneOptions = useMemo(() => buildTerminalSplitSyncPaneOptions({
+    focusedBinding: focusedTerminalSplitBinding,
+    panes: terminalSplitPanes,
+    sessionOptions: terminalSplitSessionOptions,
+    sessionIdForBinding: terminalSessionIdForBinding,
+    syncEnabled: terminalSplitSyncEnabled,
+  }), [
     focusedTerminalSplitBinding,
     localTerminalTabs,
     terminalSplitPanes,
@@ -4801,14 +4785,16 @@ export function WorkspaceShell() {
     setMultiExecMode("live");
   }
 
+  function toggleMultiExecBar() {
+    setMultiExecBarOpen(!showMultiExecBar);
+    if (showMultiExecBar && multiExecMode === "live") setTerminalSplitSyncState(false);
+  }
+
   function setTerminalSplitSyncParticipant(key: string, participant: boolean) {
     setMultiExecTargets((current) => {
       const next = new Set(current);
       if (participant) next.add(key);
       else next.delete(key);
-      if (multiExecMode === "live" && next.size === 0) {
-        setMultiExecMode("off");
-      }
       return next;
     });
     setTerminalSplitSyncError(null);
@@ -4842,9 +4828,6 @@ export function WorkspaceShell() {
         const next = new Set(
           Array.from(current).filter((key) => !failedKeys.has(key)),
         );
-        if (multiExecMode === "live" && next.size === 0) {
-          setMultiExecMode("off");
-        }
         return next;
       });
       setTerminalSplitSyncError(
@@ -8435,7 +8418,7 @@ export function WorkspaceShell() {
           />
         ) : null}
 
-        <section className="main-workbench" aria-label="工作区">
+        <section className={`main-workbench ${showMultiExecBar ? "multi-exec-open" : ""}`} aria-label="工作区">
           <ConnectionHome
             connections={connections}
             error={error}
@@ -9178,6 +9161,19 @@ export function WorkspaceShell() {
               </section>
 
             </section>
+          ) : null}
+          {showMultiExecBar ? (
+            <MultiExecBar error={terminalSplitSyncError} mode={multiExecMode}
+              selectedKeys={multiExecTargets} targets={multiExecRuntimeTargets}
+              onClose={toggleMultiExecBar} onStop={() => setTerminalSplitSyncState(false)}
+              onStartLive={() => setTerminalSplitSyncState(true)} onToggleTarget={setTerminalSplitSyncParticipant}
+              onOpenCommandSender={() => {
+                if (!showTerminalWorkbench || isUnifiedFileTabActive) {
+                  const target = selectedCommandTargets[0] || commandSenderTargets[0];
+                  if (target) activateCommandSenderTarget(target);
+                }
+                openCommandSenderAndPrepareTargets();
+              }} />
           ) : null}
         </section>
 
