@@ -1,0 +1,4 @@
+{"file":"NEXATERM_REQUIREMENTS.md","reason":"cross-brand migration requirement and no-silent-overwrite contract"}
+{"file":"src-tauri/src/storage_migration.rs","reason":"reuse existing JSON-to-SQLite/Vault migration and downgrade protection"}
+{"file":"src-tauri/src/storage_vault.rs","reason":"preserve encrypted vault/local-key compatibility without plaintext handling"}
+{"file":"src/App.tsx","reason":"run migration decision before WorkspaceShell initializes current app data"}
