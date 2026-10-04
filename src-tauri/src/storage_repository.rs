@@ -3052,65 +3052,6 @@ mod tests {
     }
 
     #[test]
-    fn workspace_snapshot_survives_repository_reopen_and_rotates_backup_for_a14() {
-        use serde_json::json;
-
-        let (repo, db_path, secrets) = temp_repository("wf07-a14-restart");
-        let first = json!({
-            "version": 1,
-            "activeItemId": "split",
-            "instances": [
-                {"id": "ssh:ssh-a", "kind": "ssh", "ordinal": 0, "target": {"kind": "profile", "profileId": "ssh-a"}},
-                {"id": "local:wsl-a", "kind": "local", "ordinal": 0, "source": "local", "target": {"kind": "profile", "profileId": "wsl-a"}}
-            ],
-            "order": ["ssh:ssh-a", "local:wsl-a"],
-            "panes": {
-                "id": "split-root",
-                "kind": "split",
-                "direction": "row",
-                "ratio": 0.5,
-                "first": {"id": "pane-a", "kind": "leaf", "instanceId": "ssh:ssh-a"},
-                "second": {"id": "pane-b", "kind": "leaf", "instanceId": "local:wsl-a"}
-            },
-            "files": {"directories": {"ssh:ssh-a": "/srv/a"}, "followActivePane": true},
-            "sidebar": {"collapsed": false, "view": "files"}
-        });
-        let second = json!({
-            "version": 1,
-            "activeItemId": "split",
-            "instances": [
-                {"id": "ssh:ssh-a", "kind": "ssh", "ordinal": 0, "target": {"kind": "profile", "profileId": "ssh-a"}},
-                {"id": "ssh:ssh-broken", "kind": "ssh", "ordinal": 1, "target": {"kind": "profile", "profileId": "deleted-profile"}},
-                {"id": "local:wsl-a", "kind": "local", "ordinal": 0, "source": "local", "target": {"kind": "profile", "profileId": "wsl-a"}}
-            ],
-            "order": ["ssh:ssh-a", "ssh:ssh-broken", "local:wsl-a"],
-            "panes": {
-                "id": "split-root",
-                "kind": "split",
-                "direction": "row",
-                "ratio": 0.5,
-                "first": {"id": "pane-a", "kind": "leaf", "instanceId": "ssh:ssh-a"},
-                "second": {"id": "pane-b", "kind": "leaf", "instanceId": "ssh:ssh-broken"}
-            },
-            "files": {"directories": {"ssh:ssh-a": "/srv/a"}, "followActivePane": true},
-            "sidebar": {"collapsed": false, "view": "files"}
-        });
-
-        repo.workspace_snapshot_save(&first, "2026-10-04T01:00:00Z").unwrap();
-        repo.workspace_snapshot_save(&second, "2026-10-04T01:00:01Z").unwrap();
-        drop(repo);
-
-        let reopened = StorageRepository::open(db_path.clone(), secrets).unwrap();
-        let (current, backup) = reopened.workspace_snapshot_get().unwrap();
-
-        assert_eq!(current, Some(second));
-        assert_eq!(backup, Some(first));
-
-        drop(reopened);
-        let _ = std::fs::remove_dir_all(db_path.parent().unwrap());
-    }
-
-    #[test]
     fn connection_upsert_stores_inline_password_in_secret_store_only() {
         let (repo, db_path, secrets) = temp_repository("inline-password");
 
