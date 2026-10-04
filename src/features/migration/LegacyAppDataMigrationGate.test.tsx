@@ -59,7 +59,7 @@ describe("WF-08B legacy app-data startup gate", () => {
       </LegacyAppDataMigrationGate>,
     );
 
-    expect(screen.getByText("workspace-ready")).toBeInTheDocument();
+    expect(screen.getByText("workspace-ready")).toBeTruthy();
     expect(preview).not.toHaveBeenCalled();
   });
 
@@ -82,7 +82,7 @@ describe("WF-08B legacy app-data startup gate", () => {
       </LegacyAppDataMigrationGate>,
     );
 
-    expect(await screen.findByText("workspace-ready")).toBeInTheDocument();
+    expect(await screen.findByText("workspace-ready")).toBeTruthy();
     expect(apply).not.toHaveBeenCalled();
   });
 
@@ -105,13 +105,13 @@ describe("WF-08B legacy app-data startup gate", () => {
       </LegacyAppDataMigrationGate>,
     );
 
-    expect(await screen.findByText("brandMigration.title")).toBeInTheDocument();
-    expect(screen.queryByText("workspace-ready")).not.toBeInTheDocument();
+    expect(await screen.findByText("brandMigration.title")).toBeTruthy();
+    expect(screen.queryByText("workspace-ready")).toBeNull();
     expect(apply).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("button", { name: "brandMigration.skip" }));
 
-    expect(screen.getByText("workspace-ready")).toBeInTheDocument();
+    expect(screen.getByText("workspace-ready")).toBeTruthy();
     expect(apply).not.toHaveBeenCalled();
   });
 
@@ -134,12 +134,12 @@ describe("WF-08B legacy app-data startup gate", () => {
       </LegacyAppDataMigrationGate>,
     );
 
-    expect(await screen.findByText("brandMigration.blockedTitle")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "brandMigration.apply" })).not.toBeInTheDocument();
+    expect(await screen.findByText("brandMigration.blockedTitle")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "brandMigration.apply" })).toBeNull();
     expect(apply).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("button", { name: "brandMigration.continue" }));
-    expect(screen.getByText("workspace-ready")).toBeInTheDocument();
+    expect(screen.getByText("workspace-ready")).toBeTruthy();
   });
 
   it("applies only after confirmation and relaunches after success", async () => {
@@ -173,6 +173,6 @@ describe("WF-08B legacy app-data startup gate", () => {
 
     await waitFor(() => expect(apply).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(restart).toHaveBeenCalledTimes(1));
-    expect(screen.queryByText("workspace-ready")).not.toBeInTheDocument();
+    expect(screen.queryByText("workspace-ready")).toBeNull();
   });
 });
