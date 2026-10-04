@@ -117,6 +117,6 @@ for (const needle of [
 ]) {
   if (!a14Acceptance.includes(needle)) throw new Error(`WF-07 A14 acceptance evidence missing: ${needle}`);
 }
-if (!repository.includes("workspace_snapshot_survives_repository_reopen_and_rotates_backup_for_a14")) {
+if (!rustBoundary.includes("workspace_snapshot_survives_repository_reopen_and_rotates_backup_for_a14")) {
   throw new Error("WF-07 A14 repository reopen evidence missing");
 }
