@@ -16,11 +16,11 @@
   "base_branch": "feat/wf04c-multiexec-entry",
   "worktree_path": null,
   "commit": null,
-  "pr_url": null,
+  "pr_url": "https://github.com/DenisZheng/NexaTerm/pull/36",
   "subtasks": [],
   "children": [],
   "parent": "09-23-nexaterm-workflow-mainline",
   "relatedFiles": [],
-  "notes": "WF-08 development may proceed in parallel with A09/A10 real-Tauri acceptance. A09/A10 remain a prerequisite for final A15/v1 sign-off. This task starts from feat/wf04c-multiexec-entry @ cc3b8e2.",
+  "notes": "2026-10-04: WF-08A started in parallel with pending A09/A10 real-Tauri acceptance; A09/A10 still block final A15/v1 sign-off. Draft stacked PR #36 targets feat/wf04c-multiexec-entry.",
   "meta": {}
 }
