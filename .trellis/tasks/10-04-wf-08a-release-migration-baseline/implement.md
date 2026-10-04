@@ -10,7 +10,7 @@
 - [x] 新增 `scripts/check-wf08a-release-migration-source.mjs`。
 - [x] package script 接入 `check:wf08a-release-migration`。
 - [x] CI 增加独立步骤 `WF-08A release and migration baseline`。
-- [ ] CI 首轮全绿证据回填。
+- [x] CI 首轮全绿证据回填：CI #307 / run `37209951472` PASS。
 
 ## 后续
 - [ ] 08B 跨品牌 app-data 迁移。
