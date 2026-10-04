@@ -23,10 +23,11 @@
     "09-23-wf-00b-close-lifecycle",
     "09-23-wf-01-unified-session-entry",
     "10-02-wf-04a-session-tree-consistency",
-    "10-04-wf04c-multiexec-entry"
+    "10-04-wf04c-multiexec-entry",
+    "10-04-wf-08a-release-migration-baseline"
   ],
   "parent": null,
   "relatedFiles": [],
-  "notes": "",
+  "notes": "2026-10-04: WF-08A started in parallel with pending A09/A10 real-Tauri acceptance; A09/A10 still block final A15/v1 sign-off.",
   "meta": {}
 }
