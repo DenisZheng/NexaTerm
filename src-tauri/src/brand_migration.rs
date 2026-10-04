@@ -124,6 +124,20 @@ fn legacy_root_from_current(current_root: &Path) -> Option<PathBuf> {
 
 fn preview_for_root(current_root: &Path) -> Result<LegacyAppDataMigrationPreview, AppError> {
     let current_root_text = current_root.to_string_lossy().to_string();
+    if current_root.join(MIGRATION_MARKER_FILE).is_file() {
+        return Ok(LegacyAppDataMigrationPreview {
+            available: false,
+            blocked: false,
+            current_root: current_root_text,
+            legacy_root: legacy_root_from_current(current_root)
+                .map(|path| path.to_string_lossy().to_string()),
+            legacy_identifier: LEGACY_APP_IDENTIFIER,
+            current_identifier: CURRENT_APP_IDENTIFIER,
+            files: Vec::new(),
+            reason: Some("already-migrated".to_string()),
+            target_has_user_data: true,
+        });
+    }
     let Some(legacy_root) = legacy_root_from_current(current_root) else {
         return Ok(LegacyAppDataMigrationPreview {
             available: false,
@@ -588,6 +602,26 @@ mod tests {
         assert!(std::path::Path::new(&rollback.preserved_migrated_root).exists());
 
         let _ = fs::remove_dir_all(parent);
+    }
+
+    #[test]
+    fn successful_migration_is_not_offered_again_while_legacy_root_is_retained() {
+        let (parent, legacy, current) = roots("already-migrated");
+        fs::write(legacy.join("connections.json"), "{}").unwrap();
+
+        let result = apply_for_root(&current).unwrap();
+        assert!(legacy.join("connections.json").exists());
+        assert!(current.join(MIGRATION_MARKER_FILE).exists());
+
+        let preview = preview_for_root(&current).unwrap();
+        assert!(!preview.available);
+        assert!(!preview.blocked);
+        assert_eq!(preview.reason.as_deref(), Some("already-migrated"));
+
+        let _ = fs::remove_dir_all(parent);
+        if let Some(backup) = result.backup_root {
+            let _ = fs::remove_dir_all(backup);
+        }
     }
 
     #[test]
