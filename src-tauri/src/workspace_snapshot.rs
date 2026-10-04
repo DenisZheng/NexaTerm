@@ -139,4 +139,60 @@ mod tests {
             );
         }
     }
+
+    #[test]
+    fn workspace_snapshot_survives_repository_reopen_and_rotates_backup_for_a14() {
+        use std::sync::Arc;
+
+        use crate::storage_repository::StorageRepository;
+        use crate::storage_vault::{InMemorySecretStore, SecretStore};
+
+        let root = std::env::temp_dir().join(format!(
+            "nexaterm-wf07-a14-restart-{}",
+            uuid::Uuid::new_v4()
+        ));
+        let db_path = root.join("mxterm.db");
+        let secrets: Arc<dyn SecretStore> = Arc::new(InMemorySecretStore::default());
+        let repo = StorageRepository::open(db_path.clone(), Arc::clone(&secrets)).unwrap();
+
+        let first = json!({
+            "version": 1,
+            "activeItemId": "split",
+            "instances": [
+                {"id": "ssh:ssh-a", "kind": "ssh", "ordinal": 0, "target": {"kind": "profile", "profileId": "ssh-a"}},
+                {"id": "local:wsl-a", "kind": "local", "ordinal": 0, "source": "local", "target": {"kind": "profile", "profileId": "wsl-a"}}
+            ],
+            "order": ["ssh:ssh-a", "local:wsl-a"],
+            "panes": null,
+            "files": {"directories": {"ssh:ssh-a": "/srv/a"}, "followActivePane": true},
+            "sidebar": {"collapsed": false, "view": "files"}
+        });
+        let second = json!({
+            "version": 1,
+            "activeItemId": "split",
+            "instances": [
+                {"id": "ssh:ssh-a", "kind": "ssh", "ordinal": 0, "target": {"kind": "profile", "profileId": "ssh-a"}},
+                {"id": "ssh:ssh-broken", "kind": "ssh", "ordinal": 1, "target": {"kind": "profile", "profileId": "deleted-profile"}},
+                {"id": "local:wsl-a", "kind": "local", "ordinal": 0, "source": "local", "target": {"kind": "profile", "profileId": "wsl-a"}}
+            ],
+            "order": ["ssh:ssh-a", "ssh:ssh-broken", "local:wsl-a"],
+            "panes": null,
+            "files": {"directories": {"ssh:ssh-a": "/srv/a"}, "followActivePane": true},
+            "sidebar": {"collapsed": false, "view": "files"}
+        });
+
+        repo.workspace_snapshot_save(&first, "2026-10-04T01:00:00Z").unwrap();
+        repo.workspace_snapshot_save(&second, "2026-10-04T01:00:01Z").unwrap();
+        drop(repo);
+
+        let reopened = StorageRepository::open(db_path.clone(), secrets).unwrap();
+        let (current, backup) = reopened.workspace_snapshot_get().unwrap();
+
+        assert_eq!(current, Some(second));
+        assert_eq!(backup, Some(first));
+
+        drop(reopened);
+        let _ = std::fs::remove_dir_all(root);
+    }
+
 }
