@@ -24,10 +24,11 @@
     "09-23-wf-01-unified-session-entry",
     "10-02-wf-04a-session-tree-consistency",
     "10-04-wf04c-multiexec-entry",
-    "10-04-wf-08a-release-migration-baseline"
+    "10-04-wf-08a-release-migration-baseline",
+    "10-05-wf-08b-cross-brand-migration"
   ],
   "parent": null,
   "relatedFiles": [],
-  "notes": "2026-10-04: WF-08A started in parallel with pending A09/A10 real-Tauri acceptance; A09/A10 still block final A15/v1 sign-off.",
+  "notes": "2026-10-05: WF-08B cross-brand migration started stacked on WF-08A; A09/A10 still block final A15/v1 sign-off.",
   "meta": {}
 }
