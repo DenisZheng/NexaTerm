@@ -24,8 +24,6 @@ function StartupFallback({ label }: { label: string }) {
 
 export default function App() {
   const isVncRunner = new URLSearchParams(window.location.search).get("view") === "vnc-runner";
-  const Component = isVncRunner ? VncRunnerWindowApp : WorkspaceShell;
-
   if (isVncRunner) {
     return (
       <Suspense fallback={<StartupFallback label="正在加载 VNC 窗口..." />}>
