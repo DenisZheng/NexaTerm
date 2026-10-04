@@ -56,8 +56,8 @@ Run this once on the Windows development machine with WSL available; record the 
 
 ## Result record
 
-- Commit:
-- CI: pending the evidence commit
+- Commit: `763e869b2dba54fa0d1fd769877064ebc309ac2f`
+- CI: #302 / run `37169542872` — PASS (Frontend, A14 restart acceptance, fixtures, Rust linux/windows/macos, security, license)
 - Windows version:
 - WSL distribution:
 - A14 real restart: PENDING
