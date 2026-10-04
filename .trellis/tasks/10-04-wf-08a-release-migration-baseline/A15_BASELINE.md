@@ -17,7 +17,7 @@ A15 是“迁移、安装与完整 v1”的最终验收。本表只记录当前�
 | License notices | bundle resources + license CI + release evidence files | AUTOMATED BASELINE |
 | Legacy JSON → SQLite/Vault | `StorageMigrator` tests + backups + secret rollback/repair | AUTOMATED BASELINE |
 | Newer data-dir downgrade protection | `.data-version` gate | AUTOMATED BASELINE |
-| mXterm app-data → NexaTerm app-data | requirement exists; automatic cross-brand discovery/import not yet proven | **MISSING / WF-08B** |
+| mXterm app-data → NexaTerm app-data | WF-08B core migration now implements identifier discovery, explicit prompt, no-overwrite staging and rollback; WebView localStorage remains separate | **IN PROGRESS / WF-08B** |
 | English / zh-CN full-product completeness | catalogs and new-entry gate exist | **FULL AUDIT PENDING** |
 | Light/Dark | existing product/acceptance evidence | FINAL REGRESSION PENDING |
 | Security Critical/High | security CI/report exists | FINAL RELEASE AUDIT PENDING |
