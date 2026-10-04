@@ -13,6 +13,7 @@ const remoteFiles = readFileSync(new URL("../src/features/files/RemoteFilePanel.
 const hydration = readFileSync(new URL("../src/features/workspace/restore/shellHydration.ts", import.meta.url), "utf8");
 const lifecycle = readFileSync(new URL("../src/features/workspace/restore/useWorkspaceSnapshotLifecycle.ts", import.meta.url), "utf8");
 const filesBridge = readFileSync(new URL("../src/features/workspace/restore/remoteFileSnapshotBridge.ts", import.meta.url), "utf8");
+const a14Acceptance = readFileSync(new URL("../src/features/workspace/restore/a14RestartAcceptance.test.ts", import.meta.url), "utf8");
 
 for (const needle of [
   "CREATE TABLE IF NOT EXISTS workspace_snapshots",
@@ -106,3 +107,16 @@ for (const needle of ["seedWorkspaceRemoteFileDirectories", "workspaceRemoteFile
 }
 
 console.log("WF-07 snapshot storage, safe shell hydration, Files state, debounce persistence and restore planner source gate passed");
+
+for (const needle of [
+  "WF-07 A14 real restart acceptance",
+  '"ssh:ssh-broken"',
+  '"local:wsl-a"',
+  'multiExecMode).toBe("off")',
+  "自动重连未开启",
+]) {
+  if (!a14Acceptance.includes(needle)) throw new Error(`WF-07 A14 acceptance evidence missing: ${needle}`);
+}
+if (!repository.includes("workspace_snapshot_survives_repository_reopen_and_rotates_backup_for_a14")) {
+  throw new Error("WF-07 A14 repository reopen evidence missing");
+}
