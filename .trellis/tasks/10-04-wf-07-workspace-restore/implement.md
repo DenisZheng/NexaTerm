@@ -24,7 +24,7 @@
 - [x] MultiExec remains off.
 - [x] Automated A14 restart evidence covers multi-session + Split + Local/WSL + deleted profile + explicit reconnect on/off.
 - [x] SQLite repository close/reopen test proves snapshot persistence across the process-storage boundary.
-- [ ] Record one real Windows Tauri exit/relaunch run using `A14_EVIDENCE.md`.
+- [x] Record real Windows Tauri exit/relaunch acceptance using `A14_EVIDENCE.md` (2026-10-04, maintainer confirmed both reconnect-on/off rounds; A14-01–15 PASS).
 
 Do not modify `scripts/line-budget.json`.
 
@@ -37,4 +37,4 @@ Do not modify `scripts/line-budget.json`.
 - [x] 提供 A14 专用坏项的离线构造/恢复步骤及脚本测试，保留正常 profile 删除语义。
 - [x] 完整前端 518 PASS / 1 TODO，脚本 96 PASS / 3 既有跳过；Rust 快照 3 PASS；类型、构建、启动边界和行数门禁通过，规范见 `.trellis/spec/frontend/workspace-restore.md`。
 
-修复提交后继续由维护者进行真实 Windows A14，不以自动化替代或归档为已验收完成。
+维护者已在修复提交 `f67154c` 上完成真实 Windows A14 两轮验收并确认通过；人工结果与自动化证据分别记录于 `A14_EVIDENCE.md`。

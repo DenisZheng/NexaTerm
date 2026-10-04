@@ -2,7 +2,7 @@
 
 > Branch: `feat/wf07-workspace-restore`  
 > Acceptance: A14 / WS-R01 / WS-R02  
-> Scenario: multi-session + Split + Local/WSL + one deleted profile + restart.
+> Scenario: multi-session + Split + Local/WSL + one missing profile reference + restart.
 
 ## Automated evidence
 
@@ -77,7 +77,7 @@ Run this once on the Windows development machine with WSL available; record the 
 - `RemoteFilePanel.restore.test.tsx`: browsing directory survives cold restoration, including ancestor directory loading.
 - `scripts/wf07-a14-fixture.test.mjs`: missing-reference injection/restore touches one test item and preserves real profiles/credentials.
 
-These automated checks supplement the original planner/storage evidence. Real Windows restart acceptance remains PENDING until the maintainer executes both rounds.
+These automated checks supplement the original planner/storage evidence. The maintainer confirmed both real Windows restart rounds passed on 2026-10-04; results are recorded below.
 
 Local validation after the review fixes: type check/build, WF-07/startup/line-budget gates PASS; frontend 518 PASS / 1 existing TODO; script suite 96 PASS / 3 existing Gitleaks environment-gated skips. The five offline fixture unit cases run inside the script suite. Rust snapshot tests remain 3 PASS; Rust production code was unchanged by these fixes.
 
@@ -85,11 +85,35 @@ Local validation after the review fixes: type check/build, WF-07/startup/line-bu
 
 - Automated baseline commit: `763e869b2dba54fa0d1fd769877064ebc309ac2f`
 - Baseline CI: #302 / run `37169542872` — PASS (Frontend, A14 restart acceptance, fixtures, Rust linux/windows/macos, security, license); this run predates the review fixes.
-- Real Windows tested commit: PENDING (record `git rev-parse HEAD` when performing the manual run)
-- Windows version:
-- WSL distribution:
-- A14 real restart: PENDING
-- Notes / screenshots:
+- Real Windows tested commit: `f67154cc46666725b0eef7cbca88b4233c57333a`
+- Acceptance date: 2026-10-04
+- Windows version: Windows 11 Pro / 10.0.26300 / x64
+- WSL distribution: Ubuntu-24.04
+- A14 real restart: **PASS**
+- Evidence source: maintainer-performed Windows Tauri GUI acceptance; the maintainer explicitly reported “验收通过” after the two-round A14 checklist. The assistant did not operate the GUI or independently observe these results. No screenshots were supplied.
+- The review-fix commit has local automated validation as recorded above. CI #302 is baseline evidence, not a CI result for `f67154c`.
+
+### 人工验收结果
+
+第一轮保持工作区恢复和自动重连开启；第二轮保留工作区恢复、关闭自动重连。以下 PASS 均来自维护者实测反馈。
+
+| 编号 | 检查项 | 结果 |
+| --- | --- | --- |
+| A14-01 | 工作区标签及顺序恢复 | PASS |
+| A14-02 | 4-pane Split 结构和比例恢复 | PASS |
+| A14-03 | 正常 SSH 实例原位恢复，不产生重复 tab | PASS |
+| A14-04 | Local 恢复/重连 | PASS |
+| A14-05 | WSL 恢复/重连 | PASS |
+| A14-06 | 缺失 profile 引用项保留可识别位置并单独失败 | PASS |
+| A14-07 | 坏项不阻塞正常实例恢复 | PASS |
+| A14-08 | 坏项提供重试入口 | PASS |
+| A14-09 | Files 及侧栏状态恢复 | PASS |
+| A14-10 | MultiExec 为 OFF，旧目标不继续广播 | PASS |
+| A14-11 | SSH 继续使用正常凭据与 Host Key 流程 | PASS |
+| A14-12 | 无额外重复连接或幽灵会话 | PASS |
+| A14-13 | 关闭自动重连后，布局、标签、Split 仍恢复 | PASS |
+| A14-14 | 正常终端不自动连接 | PASS |
+| A14-15 | 恢复后的失败/停止项可手动重试 | PASS |
 
 
 ## Completion rule
