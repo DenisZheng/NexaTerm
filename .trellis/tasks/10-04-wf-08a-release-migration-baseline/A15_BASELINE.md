@@ -28,3 +28,13 @@ A15 是“迁移、安装与完整 v1”的最终验收。本表只记录当前�
 ## Completion rule
 
 WF-08 development can continue while A09/A10 are pending. A15 is not PASS until the v1 mandatory scope, A09/A10 predecessor acceptance, three-platform release/install evidence, update/rollback, migration, locale, security/license and performance/stability evidence are all reconciled.
+
+
+## CI evidence
+
+- PR: #36
+- Head: `568db8ea6d1d82c42a57747456481b51cd193db7`
+- CI: #307 / run `37209951472` — PASS
+- `WF-08A release and migration baseline`: PASS
+- Frontend / Rust windows-x64 / Rust macos-arm64 / Rust linux-x64 / Test fixtures / Security / License: PASS
+- Windows package build-only job: skipped by design on pull_request events; it remains a manual workflow-dispatch packaging channel.
