@@ -122,6 +122,9 @@ jobs:
       - name: WF-07 A14 restart acceptance
         run: pnpm exec vitest run src/features/workspace/restore/a14RestartAcceptance.test.ts
 
+      - name: WF-08A release and migration baseline
+        run: pnpm run check:wf08a-release-migration
+
   security:
     name: Security evidence
     runs-on: ubuntu-22.04
