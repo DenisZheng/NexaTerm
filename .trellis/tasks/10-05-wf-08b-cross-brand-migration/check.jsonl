@@ -1,0 +1,4 @@
+{"file":"src-tauri/src/brand_migration.rs","reason":"core discovery, staging, conflict protection and rollback implementation"}
+{"file":"src/features/migration/LegacyAppDataMigrationGate.tsx","reason":"explicit user choice and restart UX"}
+{"file":"scripts/check-wf08b-cross-brand-migration-source.mjs","reason":"source contract gate"}
+{"file":".github/workflows/ci.yml","reason":"independent WF-08B CI step"}
