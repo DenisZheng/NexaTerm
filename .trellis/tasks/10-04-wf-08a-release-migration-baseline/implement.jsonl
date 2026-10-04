@@ -1,0 +1,4 @@
+{"file":"NEXATERM_REQUIREMENTS.md","reason":"A15 v1 release, migration, platform, locale, performance and security scope"}
+{"file":"ROADMAP.md","reason":"current execution order and A09/A10 parallel-development boundary"}
+{"file":".github/workflows/release.yml","reason":"existing three-platform package, signing, updater and release contract"}
+{"file":"src-tauri/src/storage_migration.rs","reason":"existing data-dir and legacy JSON to SQLite/Vault migration behavior"}
