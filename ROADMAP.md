@@ -10,7 +10,7 @@
 
 WF-04B/04C/05/06/07 已进入集中验收分支，验收基线为 `feat/wf07-workspace-restore` @ `3ff0c8e`（CI #304 SUCCESS）；此处不据此宣称全部已合入 main。维护者在 Windows 真实 Tauri 已确认 A01/A02/A04/A11/A12/A13，通过项及平台边界见 [A01–A15 报告](.trellis/tasks/09-23-nexaterm-workflow-mainline/validation/acceptance-report-2026-10-04.md)；A08、A14 另有既有验收记录。WS-X09 / WS-X04 已在 WORKFLOW_SPEC v0.5 / v0.6 确认。
 
-当前执行顺序：先完成 `10-04-wf04c-multiexec-entry` 的审核与 A09/A10 真实 Tauri 验收，再推进 WF-08 / A15。MultiExec 顶层底栏已在本地分支接入，测试、构建和浏览器三主题/交互检查通过，改动尚未提交（[本地证据](.trellis/tasks/10-04-wf04c-multiexec-entry/validation/entry.md)）；A09/A10 仍为待验，A15 未开始。
+当前执行顺序（2026-10-04 维护者确认并行）：`10-04-wf04c-multiexec-entry` 已提交并推送 `cc3b8e2`，A09/A10 真实 Tauri 仍待验；与此同时允许从该提交堆叠推进 WF-08 开发。A09/A10 不再阻塞 WF-08A–08D 的实现与自动化，但仍是最终 A15 / v1 sign-off 的前置门禁。WF-08A 从“发布与迁移基线门禁”开始，证据见 `10-04-wf-08a-release-migration-baseline/A15_BASELINE.md`。
 
 ## 当前评审整改状态
 
