@@ -1,6 +1,7 @@
 import { lazy, Suspense } from "react";
 import "./styles/tokens.css";
 import "./styles/app.css";
+import { LegacyAppDataMigrationGate } from "./features/migration/LegacyAppDataMigrationGate";
 
 const VncRunnerWindowApp = lazy(async () => {
   const module = await import("./features/layout/VncRunnerWindowApp");
@@ -25,9 +26,19 @@ export default function App() {
   const isVncRunner = new URLSearchParams(window.location.search).get("view") === "vnc-runner";
   const Component = isVncRunner ? VncRunnerWindowApp : WorkspaceShell;
 
+  if (isVncRunner) {
+    return (
+      <Suspense fallback={<StartupFallback label="正在加载 VNC 窗口..." />}>
+        <VncRunnerWindowApp />
+      </Suspense>
+    );
+  }
+
   return (
-    <Suspense fallback={<StartupFallback label={isVncRunner ? "正在加载 VNC 窗口..." : "正在加载工作区..."} />}>
-      <Component />
-    </Suspense>
+    <LegacyAppDataMigrationGate>
+      <Suspense fallback={<StartupFallback label="正在加载工作区..." />}>
+        <WorkspaceShell />
+      </Suspense>
+    </LegacyAppDataMigrationGate>
   );
 }
