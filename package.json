@@ -48,7 +48,8 @@
     "check:wf06b-multihop-jump": "node scripts/check-wf06b-multihop-jump-source.mjs",
     "check:wf06c-x11": "node scripts/check-wf06c-x11-source.mjs",
     "check:wf07-workspace-restore": "node scripts/check-wf07-workspace-restore-source.mjs",
-    "check:wf08a-release-migration": "node scripts/check-wf08a-release-migration-source.mjs"
+    "check:wf08a-release-migration": "node scripts/check-wf08a-release-migration-source.mjs",
+    "check:wf08b-cross-brand-migration": "node scripts/check-wf08b-cross-brand-migration-source.mjs"
   },
   "dependencies": {
     "@novnc/novnc": "^1.7.0",
