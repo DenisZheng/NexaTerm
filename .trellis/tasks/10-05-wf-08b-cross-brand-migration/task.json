@@ -16,11 +16,11 @@
   "base_branch": "feat/wf08a-release-migration-baseline",
   "worktree_path": null,
   "commit": null,
-  "pr_url": null,
+  "pr_url": "https://github.com/DenisZheng/NexaTerm/pull/37",
   "subtasks": [],
   "children": [],
   "parent": "09-23-nexaterm-workflow-mainline",
   "relatedFiles": [],
-  "notes": "Core App Data migration is being implemented first. Old WebView localStorage (including custom Local/WSL settings) is tracked separately inside this task and must not be claimed migrated until real platform evidence exists.",
+  "notes": "2026-10-05: 08B-1 core App Data migration implemented in Draft stacked PR #37. 08B-2 WebView localStorage migration remains pending; A09/A10 still block final A15/v1 sign-off.",
   "meta": {}
 }
