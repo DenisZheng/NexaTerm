@@ -11724,7 +11724,7 @@ function LatencyIndicator({ state }: { state?: LatencyProbeState }) {
     return (
       <>
         <span className="latency-dot idle" />
-        <span>未测</span>
+        <span>{tr("workspace.probe.notTested")}</span>
       </>
     );
   }
@@ -11733,7 +11733,7 @@ function LatencyIndicator({ state }: { state?: LatencyProbeState }) {
     return (
       <>
         <Loader2 className="ui-icon latency-spinner spin" aria-hidden="true" />
-        <span>探测中</span>
+        <span>{tr("workspace.probe.running")}</span>
       </>
     );
   }
@@ -11742,7 +11742,7 @@ function LatencyIndicator({ state }: { state?: LatencyProbeState }) {
     return (
       <>
         <span className="latency-dot fail" />
-        <span>超时</span>
+        <span>{tr("workspace.probe.timeout")}</span>
       </>
     );
   }
@@ -11830,13 +11830,13 @@ function formatRelativeTime(value?: string | null) {
   const normalized = value?.trim().toLowerCase();
 
   if (normalized === "demo" || normalized === "preview") {
-    return "最近";
+    return tr("workspace.recent");
   }
 
   const timestamp = connectionTimestampOf(value);
 
   if (!timestamp) {
-    return "最近";
+    return tr("workspace.recent");
   }
 
   const diffMs = Date.now() - timestamp;
@@ -11844,11 +11844,11 @@ function formatRelativeTime(value?: string | null) {
   const hour = 60 * minute;
   const day = 24 * hour;
 
-  if (diffMs < minute) return "刚刚";
-  if (diffMs < hour) return `${Math.floor(diffMs / minute).toString()} 分钟前`;
-  if (diffMs < day) return `${Math.floor(diffMs / hour).toString()} 小时前`;
-  if (diffMs < 2 * day) return "昨天";
-  return `${Math.floor(diffMs / day).toString()} 天前`;
+  if (diffMs < minute) return tr("workspace.time.justNow");
+  if (diffMs < hour) return tr("workspace.time.minutesAgo", { count: Math.floor(diffMs / minute) });
+  if (diffMs < day) return tr("workspace.time.hoursAgo", { count: Math.floor(diffMs / hour) });
+  if (diffMs < 2 * day) return tr("workspace.time.yesterday");
+  return tr("workspace.time.daysAgo", { count: Math.floor(diffMs / day) });
 }
 
 function countConnectedWithinWeek(connections: ConnectionProfile[]) {
@@ -11916,7 +11916,7 @@ function nextTerminalOrdinalForConnection(tabs: TerminalTab[], connectionId: str
 /** 工作区内终端子标签标题；编号显示规则与顶层实例标签共用 `displayOrdinal`（WS-E11）。 */
 function terminalTabTitle(ordinal: number) {
   const displayNumber = displayOrdinal(ordinal);
-  return displayNumber === null ? "终端" : `终端 ${displayNumber.toString()}`;
+  return displayNumber === null ? tr("workspace.terminal.title") : tr("workspace.terminal.numbered", { number: displayNumber });
 }
 
 function shortDockerRuntimeId(id: string) {
@@ -11946,7 +11946,7 @@ function formatDetailedError(error: unknown) {
   // raw_message 缺失时用诊断 ID 兜底，保证用户报障时仍有可对上内部日志的线索。
   const diagnosticId = errorDiagnosticId(error);
   if (!rawMessage && diagnosticId) {
-    return `${message}\n诊断 ID：${diagnosticId}`;
+    return `${message}\n${tr("workspace.diagnostic", { id: diagnosticId })}`;
   }
   return message;
 }
@@ -11973,64 +11973,64 @@ function extractTransferErrorCode(error: unknown): string | null {
 
 function transferErrorStage(code: string): string | null {
   if (code === "remote_file_upload_confirm_timeout") {
-    return "远程写入确认超时";
+    return tr("workspace.sftp.writeTimeout");
   }
   if (code === "remote_file_upload_confirm_failed") {
-    return "远程写入确认失败";
+    return tr("workspace.sftp.writeFailed");
   }
   if (
     code === "remote_sftp_subsystem_failed" ||
     code === "remote_sftp_subsystem_timeout"
   ) {
-    return "SFTP 子系统不可用";
+    return tr("workspace.sftp.unavailable");
   }
   if (
     code === "remote_sftp_connect_failed" ||
     code.startsWith("remote_sftp_connect_")
   ) {
-    return "SFTP 连接失败";
+    return tr("workspace.sftp.connectionFailed");
   }
   if (
     code === "remote_sftp_channel_failed" ||
     code === "remote_sftp_init_failed" ||
     code === "remote_sftp_channel_timeout"
   ) {
-    return "SFTP 通道建立失败";
+    return tr("workspace.sftp.channelFailed");
   }
   if (code === "remote_sftp_auth_timeout") {
-    return "SFTP 认证超时";
+    return tr("workspace.sftp.authTimeout");
   }
   return null;
 }
 
 function transferErrorSuggestion(code: string): string | null {
   if (code === "remote_file_upload_confirm_timeout") {
-    return "远端写入响应或关闭确认超时，临时 .mxpart 文件会保留用于重试。请检查网络、远端 SFTP 服务或目录负载后重试。";
+    return tr("workspace.sftp.suggestion.writeTimeout");
   }
   if (code === "remote_file_upload_confirm_failed") {
-    return "远端写入确认失败，临时 .mxpart 文件可能保留在目标目录；请检查目录权限、磁盘空间和远端文件系统状态。";
+    return tr("workspace.sftp.suggestion.writeFailed");
   }
   if (
     code === "remote_sftp_subsystem_failed" ||
     code === "remote_sftp_subsystem_timeout"
   ) {
-    return "该服务器可能未启用 SFTP 子系统，请联系管理员检查 sshd_config 中的 'Subsystem sftp' 配置，或在设置中关闭相关压缩选项。";
+    return tr("workspace.sftp.suggestion.unavailable");
   }
   if (
     code === "remote_sftp_connect_failed" ||
     code.startsWith("remote_sftp_connect_")
   ) {
-    return "SFTP 连接无法建立，请检查网络连通性、防火墙规则或代理设置。";
+    return tr("workspace.sftp.suggestion.connection");
   }
   if (
     code === "remote_sftp_channel_failed" ||
     code === "remote_sftp_init_failed" ||
     code === "remote_sftp_channel_timeout"
   ) {
-    return "SFTP 通道无法建立，服务器可能限制了 SFTP 会话数或子系统异常，请稍后重试或联系管理员。";
+    return tr("workspace.sftp.suggestion.channel");
   }
   if (code === "remote_sftp_auth_timeout") {
-    return "SFTP 认证超时，请确认凭据有效或检查网络延迟。";
+    return tr("workspace.sftp.suggestion.authTimeout");
   }
   return null;
 }
@@ -12069,7 +12069,7 @@ function describeConnectionStepError(error: unknown): ConnectionStepErrorDetail 
     code,
     message: connectionErrorSummary(code, message),
     // raw_message 下线后仍要给出可追溯的线索：优先展示诊断 ID，供用户报障时对上内部日志。
-    rawMessage: rawMessage || (diagnosticId ? `诊断 ID：${diagnosticId}` : message),
+    rawMessage: rawMessage || (diagnosticId ? tr("workspace.diagnostic", { id: diagnosticId }) : message),
     recoverable,
     stage: connectionErrorStage(code),
     suggestion: connectionErrorSuggestion(code),
@@ -12085,13 +12085,13 @@ function normalizeErrorText(value: unknown) {
 
 function connectionErrorStage(code: string) {
   if (isConnectTimeoutCode(code)) {
-    return "网络连接超时";
+    return tr("workspace.error.stage.networkTimeout");
   }
   if (isConnectionStageError(code)) {
-    return "网络连接阶段";
+    return tr("workspace.error.stage.network");
   }
   if (code === "host_key_unknown" || code === "host_key_changed") {
-    return "主机密钥阶段";
+    return tr("workspace.error.stage.hostKey");
   }
   if (
     code === "terminal_auth_failed" ||
@@ -12102,72 +12102,72 @@ function connectionErrorStage(code: string) {
     code === "terminal_private_key_not_found" ||
     code.startsWith("credential_")
   ) {
-    return "用户认证阶段";
+    return tr("workspace.error.stage.auth");
   }
   if (
     code === "terminal_channel_open_failed" ||
     code === "terminal_pty_failed" ||
     code === "terminal_shell_failed"
   ) {
-    return "远程终端初始化阶段";
+    return tr("workspace.error.stage.terminal");
   }
-  return "连接阶段";
+  return tr("workspace.error.stage.connection");
 }
 
 function connectionErrorSuggestion(code: string) {
   const networkKind = connectionNetworkKind(code);
   if (networkKind === "timeout") {
-    return "检查主机 IP、端口、防火墙和网络连通性；确认目标 SSH 服务可以从本机访问。";
+    return tr("workspace.error.suggest.networkTimeout");
   }
   if (networkKind === "refused") {
-    return "目标主机可达但端口拒绝连接，确认 SSH 服务已启动、端口填写正确，或安全组允许访问。";
+    return tr("workspace.error.suggest.refused");
   }
   if (networkKind === "unreachable") {
-    return "本机到目标主机没有可用路由，检查 VPN、网段、网关或代理配置。";
+    return tr("workspace.error.suggest.unreachable");
   }
   if (networkKind === "reset") {
-    return "连接被对端重置，检查 SSH 服务策略、代理链路或中间防火墙。";
+    return tr("workspace.error.suggest.reset");
   }
   if (code.startsWith("proxy_")) {
-    return "检查代理类型、代理地址端口以及代理用户名密码。";
+    return tr("workspace.error.suggest.proxy");
   }
   if (code === "terminal_auth_rejected") {
-    return "主机已响应但认证被拒绝，检查用户名、密码或私钥是否匹配。";
+    return tr("workspace.error.suggest.auth");
   }
   if (code === "terminal_private_key_invalid") {
-    return "检查私钥文件格式：支持 OpenSSH、PEM 与 PuTTY PPK（v2/v3）；确认文件未损坏且算法受支持。";
+    return tr("workspace.error.suggest.keyFormat");
   }
   if (code === "terminal_private_key_passphrase") {
-    return "该私钥已加密，请填写正确的私钥口令。";
+    return tr("workspace.error.suggest.passphrase");
   }
   if (code === "terminal_private_key_not_found") {
-    return "私钥文件不存在或无法读取，检查路径与文件权限。";
+    return tr("workspace.error.suggest.keyFile");
   }
   if (code === "terminal_auth_failed" || code === "terminal_auth_timeout") {
-    return "检查认证方式、用户名、密码或私钥；如果服务器禁用该方式，需要换用允许的认证方式。";
+    return tr("workspace.error.suggest.authMethod");
   }
   if (code === "host_key_changed") {
-    return "确认目标主机是否重装或变更过；只有确认安全后再更新信任。";
+    return tr("workspace.error.suggest.hostKeyChanged");
   }
   if (code === "host_key_unknown") {
-    return "核对主机指纹，确认无误后信任并继续连接。";
+    return tr("workspace.error.suggest.hostKeyUnknown");
   }
   if (code === "terminal_pty_failed" || code === "terminal_shell_failed") {
-    return "SSH 已登录但远程终端初始化失败，检查服务器是否允许分配 PTY 和启动默认 Shell。";
+    return tr("workspace.error.suggest.terminal");
   }
-  return "查看底层原因后重试；如果配置有误，点击编辑连接调整主机、端口、代理或认证信息。";
+  return tr("workspace.error.suggest.generic");
 }
 
 function connectionErrorSummary(code: string, fallback: string) {
   const networkKind = connectionNetworkKind(code);
   if (networkKind === "timeout") {
-    return "连接超时";
+    return tr("workspace.error.timeout");
   }
   if (networkKind === "refused") {
-    return "端口无法连接";
+    return tr("workspace.error.refused");
   }
   if (networkKind === "unreachable") {
-    return "主机不可达";
+    return tr("workspace.error.unreachable");
   }
   return fallback;
 }
@@ -12214,7 +12214,7 @@ function previewLocalTerminalProfiles(platform: string): LocalTerminalProfile[] 
         icon: "terminal-cmd",
         id: "cmd",
         kind: "cmd",
-        name: "命令提示符",
+        name: tr("workspace.local.previewCmd"),
         platform,
       }),
       buildPreviewLocalTerminalProfile({
@@ -12491,7 +12491,7 @@ function compareCommandSnippets(left: CommandSnippet, right: CommandSnippet) {
 }
 
 function commandLibraryRestartMessage() {
-  return "刚更新命令片段功能后需要重启应用，重启后这里会加载片段和历史命令。";
+  return tr("workspace.snippet.restartRequired");
 }
 
 function isCommandLibraryCommandMissingError(error: unknown) {
@@ -12589,13 +12589,13 @@ function isSshConnection(
 function rdpStatusLabel(status: RdpSessionStatus) {
   switch (status) {
     case "launching":
-      return "启动中";
+      return tr("workspace.rdp.status.starting");
     case "embedded":
-      return "嵌入式";
+      return tr("workspace.rdp.status.embedded");
     case "native":
-      return "原生窗口";
+      return tr("workspace.rdp.status.native");
     case "external":
-      return "外部客户端";
+      return tr("workspace.rdp.status.external");
     case "error":
       return tr("workspace.step.failed");
     default:
@@ -12606,13 +12606,13 @@ function rdpStatusLabel(status: RdpSessionStatus) {
 function rdpRenderModeLabel(mode: string) {
   switch (mode) {
     case "embedded":
-      return "嵌入式优先";
+      return tr("workspace.rdp.runner.embedded");
     case "external":
-      return "外部客户端";
+      return tr("workspace.rdp.status.external");
     case "custom":
-      return "自定义 runner";
+      return tr("workspace.rdp.runner.custom");
     default:
-      return "自动";
+      return tr("workspace.rdp.runner.auto");
   }
 }
 
@@ -12620,15 +12620,15 @@ function rdpDisplaySummary(
   display?: NonNullable<ConnectionProfile["rdp"]>["display"] | null,
 ) {
   if (!display) {
-    return "默认显示";
+    return tr("workspace.rdp.display.default");
   }
   const size =
     display.mode === "fullscreen" || display.mode === "all_monitors"
       ? rdpDisplayModeLabel(display.mode)
       : `${(display.width || 1440).toString()} x ${(display.height || 900).toString()}`;
   const flags = [
-    display.dynamic_resize ? "动态尺寸" : null,
-    display.use_multimon ? "多显示器" : null,
+    display.dynamic_resize ? tr("workspace.rdp.display.dynamic") : null,
+    display.use_multimon ? tr("workspace.rdp.display.multimon") : null,
   ].filter(Boolean);
   return [size, ...flags].join(" · ");
 }
@@ -12636,15 +12636,15 @@ function rdpDisplaySummary(
 function rdpDisplayModeLabel(mode: string) {
   switch (mode) {
     case "embedded":
-      return "嵌入";
+      return tr("workspace.rdp.display.embedded");
     case "windowed":
-      return "窗口";
+      return tr("workspace.rdp.display.window");
     case "fullscreen":
-      return "全屏";
+      return tr("workspace.rdp.display.fullscreen");
     case "all_monitors":
-      return "全屏多屏";
+      return tr("workspace.rdp.display.fullscreenAll");
     default:
-      return "默认";
+      return tr("workspace.rdp.display.defaultMode");
   }
 }
 
@@ -12652,26 +12652,26 @@ function rdpResourceSummary(
   resources?: NonNullable<ConnectionProfile["rdp"]>["resources"] | null,
 ) {
   if (!resources) {
-    return "默认资源";
+    return tr("workspace.rdp.resources.default");
   }
   const enabled = [
-    resources.clipboard ? "剪贴板" : null,
-    resources.drives ? "磁盘" : null,
-    resources.printers ? "打印机" : null,
-    resources.smart_cards ? "智能卡" : null,
-    resources.audio !== "disabled" ? `音频${rdpAudioLabel(resources.audio)}` : null,
+    resources.clipboard ? tr("workspace.rdp.resources.clipboard") : null,
+    resources.drives ? tr("workspace.rdp.resources.drives") : null,
+    resources.printers ? tr("workspace.rdp.resources.printers") : null,
+    resources.smart_cards ? tr("workspace.rdp.resources.smartCards") : null,
+    resources.audio !== "disabled" ? tr("workspace.rdp.resources.audio", { mode: rdpAudioLabel(resources.audio) }) : null,
   ].filter(Boolean);
-  return enabled.length ? enabled.join(" · ") : "无重定向";
+  return enabled.length ? enabled.join(" · ") : tr("workspace.rdp.resources.none");
 }
 
 function rdpAudioLabel(mode: string) {
   if (mode === "remote") {
-    return "远端";
+    return tr("workspace.rdp.audio.remote");
   }
   if (mode === "disabled") {
-    return "关闭";
+    return tr("workspace.rdp.audio.disabled");
   }
-  return "本机";
+  return tr("workspace.rdp.audio.local");
 }
 
 function previewRdpLaunchForBrowser(
@@ -12715,10 +12715,10 @@ function previewRdpLaunchForBrowser(
           ? []
           : ["<generated.rdp>"];
   const warnings = [
-    "浏览器预览模式不会启动桌面 RDP 客户端。",
-    "预览内容不会包含密码，真实启动也不会通过命令行传递明文密码。",
+    tr("workspace.rdp.preview.browser"),
+    tr("workspace.rdp.preview.noPassword"),
     config?.raw_rdp_settings?.trim()
-      ? "高级 .rdp 设置会在桌面运行时由后端校验后合并。"
+      ? tr("workspace.rdp.preview.raw")
       : null,
   ].filter((item): item is string => Boolean(item));
 
@@ -12728,9 +12728,9 @@ function previewRdpLaunchForBrowser(
     executable,
     fallback_reason:
       runner === "mstsc"
-        ? "浏览器预览按 Windows 外部 runner 展示。"
+        ? tr("workspace.rdp.preview.windows")
         : runner === "macos_app"
-          ? "浏览器预览按 macOS 系统 RDP 客户端展示。"
+          ? tr("workspace.rdp.preview.macos")
           : null,
     rdp_file_content:
       runner === "mstsc" || runner === "macos_app" || runner === "custom"
@@ -12818,28 +12818,28 @@ function rdpSessionFileText(session: RdpSessionTab) {
 
 function rdpSessionPrimaryDetail(session: RdpSessionTab) {
   if (session.status === "embedded") {
-    return { title: "启动方式", value: "Windows embedded RDP host" };
+    return { title: tr("workspace.launch.method"), value: "Windows embedded RDP host" };
   }
   if (session.status === "native") {
-    return { title: "启动方式", value: "Windows ActiveX 原生子窗口" };
+    return { title: tr("workspace.launch.method"), value: "Windows ActiveX native child window" };
   }
   const command = rdpSessionCommandText(session);
   if (command) {
-    return { title: "启动命令", value: command };
+    return { title: tr("workspace.launch.command"), value: command };
   }
-  return { title: "启动状态", value: session.message || rdpStatusLabel(session.status) };
+  return { title: tr("workspace.launch.status"), value: session.message || rdpStatusLabel(session.status) };
 }
 
 function vncStatusLabel(status: VncSessionStatus) {
   switch (status) {
     case "launching":
-      return "启动中";
+      return tr("workspace.rdp.status.starting");
     case "embedded":
-      return "内嵌画面";
+      return tr("workspace.vnc.status.embedded");
     case "windowed":
-      return "runner 窗口";
+      return tr("workspace.vnc.status.window");
     case "external":
-      return "外部客户端";
+      return tr("workspace.rdp.status.external");
     case "error":
       return tr("workspace.step.failed");
     default:
@@ -12850,15 +12850,15 @@ function vncStatusLabel(status: VncSessionStatus) {
 function vncRenderModeLabel(mode: string) {
   switch (mode) {
     case "embedded":
-      return "noVNC 内嵌";
+      return tr("workspace.vnc.runner.embedded");
     case "windowed":
-      return "RDP 窗口 noVNC";
+      return tr("workspace.vnc.runner.window");
     case "external":
-      return "外部客户端";
+      return tr("workspace.rdp.status.external");
     case "custom":
-      return "自定义 runner";
+      return tr("workspace.rdp.runner.custom");
     default:
-      return "自动";
+      return tr("workspace.rdp.runner.auto");
   }
 }
 
@@ -12866,17 +12866,17 @@ function vncDisplaySummary(
   display?: NonNullable<ConnectionProfile["vnc"]>["display"] | null,
 ) {
   if (!display) {
-    return "默认显示";
+    return tr("workspace.rdp.display.default");
   }
   const scale =
     display.scale_mode === "actual"
-      ? "原始尺寸"
+      ? tr("workspace.vnc.display.actual")
       : display.scale_mode === "stretch"
-        ? "拉伸适配"
-        : "适应窗口";
+        ? tr("workspace.vnc.display.stretch")
+        : tr("workspace.vnc.display.fit");
   const flags = [
-    display.resize_session ? "远端自适应" : null,
-    display.clip_viewport ? "裁剪视口" : null,
+    display.resize_session ? tr("workspace.vnc.display.remoteResize") : null,
+    display.clip_viewport ? tr("workspace.vnc.display.clip") : null,
   ].filter(Boolean);
   return [scale, ...flags].join(" · ");
 }
@@ -12885,12 +12885,12 @@ function vncInputSummary(
   input?: NonNullable<ConnectionProfile["vnc"]>["input"] | null,
 ) {
   if (!input) {
-    return "默认输入";
+    return tr("workspace.vnc.input.default");
   }
   const enabled = [
-    input.view_only ? "只看" : "键鼠",
-    input.clipboard ? "剪贴板" : null,
-    input.shared ? "共享会话" : null,
+    input.view_only ? tr("workspace.vnc.input.viewOnly") : tr("workspace.vnc.input.keyboardMouse"),
+    input.clipboard ? tr("workspace.vnc.input.clipboard") : null,
+    input.shared ? tr("workspace.vnc.input.shared") : null,
   ].filter(Boolean);
   return enabled.join(" · ");
 }
@@ -12920,10 +12920,10 @@ function previewVncLaunchForBrowser(connection: ConnectionProfile): VncLaunchPre
         ? [config.runner.custom_args_template || "{host}::{port}"]
         : [`${connection.host}::${connection.port.toString()}`];
   const warnings = [
-    "浏览器预览模式不会创建本地 VNC 桥接。",
-    "预览内容不会包含密码，外部 VNC 客户端也不会通过命令行接收明文密码。",
+    tr("workspace.vnc.preview.browser"),
+    tr("workspace.vnc.preview.noPassword"),
     config.raw_runner_args?.trim()
-      ? "高级 runner 参数会在桌面运行时由后端校验后合并。"
+      ? tr("workspace.vnc.preview.raw")
       : null,
   ].filter((item): item is string => Boolean(item));
 
@@ -12932,7 +12932,7 @@ function previewVncLaunchForBrowser(connection: ConnectionProfile): VncLaunchPre
     connection_id: connection.id,
     embedded: runner === "novnc",
     executable,
-    fallback_reason: runner === "novnc" ? null : "浏览器预览按外部 VNC runner 展示。",
+    fallback_reason: runner === "novnc" ? null : tr("workspace.vnc.preview.external"),
     render_mode: renderMode,
     runner,
     setup_hint: null,
@@ -12961,16 +12961,16 @@ function vncSessionCommandText(session: VncSessionTab) {
 
 function vncSessionPrimaryDetail(session: VncSessionTab) {
   if (session.status === "embedded") {
-    return { title: "启动方式", value: "noVNC 本地桥接" };
+    return { title: tr("workspace.launch.method"), value: "noVNC local bridge" };
   }
   if (session.status === "windowed") {
-    return { title: "启动方式", value: "RDP 风格 runner host" };
+    return { title: tr("workspace.launch.method"), value: "RDP-style runner host" };
   }
   const command = vncSessionCommandText(session);
   if (command) {
-    return { title: "启动命令", value: command };
+    return { title: tr("workspace.launch.command"), value: command };
   }
-  return { title: "启动状态", value: session.message || vncStatusLabel(session.status) };
+  return { title: tr("workspace.launch.status"), value: session.message || vncStatusLabel(session.status) };
 }
 
 function quoteCommandArgForDisplay(value: string) {
