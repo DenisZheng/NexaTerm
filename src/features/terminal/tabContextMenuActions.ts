@@ -10,6 +10,7 @@
 // 通过 ctx.restoreSplit?: () => void 可选注入。
 //
 // 编辑菜单只需改 buildTerminalSubtabActions 一处,三个 caller 自动同步。
+import { t } from "../../shared/i18n";
 import type { TabContextMenuAction } from "../../shared/ui/TabContextMenu";
 
 export interface TerminalSubtabMenuContext<T extends { id: string }> {
@@ -47,7 +48,7 @@ export function buildTerminalSubtabActions<T extends { id: string }>(
   if (!overrides.hideClose) {
     out.push({
       hint: ctx.closeHint || undefined,
-      label: "关闭",
+      label: t("terminal.tabs.close"),
       onSelect: () => {
         if (tab) ctx.close(tab);
       },
@@ -56,7 +57,7 @@ export function buildTerminalSubtabActions<T extends { id: string }>(
   if (!overrides.hideCloseOthers) {
     out.push({
       disabled: ctx.tabs.length <= 1,
-      label: "关闭其他",
+      label: t("terminal.tabs.closeOthers"),
       onSelect: () => {
         if (tab) ctx.closeOthers(tab);
       },
@@ -65,7 +66,7 @@ export function buildTerminalSubtabActions<T extends { id: string }>(
   if (!overrides.hideCloseRight) {
     out.push({
       disabled: ctx.index >= ctx.tabs.length - 1,
-      label: "关闭右侧标签页",
+      label: t("terminal.tabs.closeRight"),
       onSelect: () => {
         if (tab) ctx.closeRight(tab);
       },
@@ -74,7 +75,7 @@ export function buildTerminalSubtabActions<T extends { id: string }>(
   if (!overrides.hideCloseAll) {
     out.push({
       disabled: ctx.tabs.length === 0,
-      label: "全部关闭",
+      label: t("terminal.tabs.closeAll"),
       onSelect: () => ctx.closeAll(),
     });
   }
@@ -82,7 +83,7 @@ export function buildTerminalSubtabActions<T extends { id: string }>(
     const splitDisabled = !canSplit;
     out.push({
       disabled: splitDisabled,
-      label: "向右分屏",
+      label: t("terminal.tabs.splitRight"),
       onSelect: () => {
         if (tab) {
           ctx.activate(tab);
@@ -93,7 +94,7 @@ export function buildTerminalSubtabActions<T extends { id: string }>(
     });
     out.push({
       disabled: splitDisabled,
-      label: "向下分屏",
+      label: t("terminal.tabs.splitDown"),
       onSelect: () => {
         if (tab) {
           ctx.activate(tab);
@@ -103,7 +104,7 @@ export function buildTerminalSubtabActions<T extends { id: string }>(
     });
     out.push({
       disabled: false,
-      label: "四分屏",
+      label: t("terminal.tabs.fourPane"),
       onSelect: () => {
         if (tab) {
           ctx.activate(tab);
@@ -114,7 +115,7 @@ export function buildTerminalSubtabActions<T extends { id: string }>(
   }
   if (ctx.restoreSplit) {
     out.push({
-      label: "恢复上下分屏",
+      label: t("terminal.tabs.restoreSplit"),
       onSelect: () => {
         if (tab) ctx.restoreSplit!(tab);
       },
