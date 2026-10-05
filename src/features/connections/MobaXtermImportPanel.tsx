@@ -288,13 +288,17 @@ export function MobaXtermImportPanel({
 function MobaPreview({
   busy,
   names,
+  locale,
   preview,
   selected,
   onNameChange,
   onToggle,
+  t,
 }: {
   busy: boolean;
   names: Record<number, string>;
+  locale: "en" | "zh-CN";
+  t: Translate;
   preview: MobaXtermImportPreviewResult;
   selected: Set<number>;
   onNameChange: (index: number, name: string) => void;
@@ -302,22 +306,22 @@ function MobaPreview({
 }) {
   const blocked = preview.summary.unsupported + preview.summary.invalid + preview.summary.needs_input;
   return (
-    <section className="connection-transfer-preview" aria-label="MobaXterm 导入预览">
+    <section className="connection-transfer-preview" aria-label={t("mobaxterm.preview.aria")}>
       <div className="connection-transfer-stats">
         <div>
           <strong>{preview.summary.total.toString()}</strong>
-          <span>全部会话</span>
-          <small>源文件记录</small>
+          <span>{t("mobaxterm.preview.total")}</span>
+          <small>{t("mobaxterm.preview.totalHint")}</small>
         </div>
         <div>
           <strong>{preview.summary.ready.toString()}</strong>
-          <span>SSH 可处理</span>
-          <small>仍会排除精确重复</small>
+          <span>{t("mobaxterm.preview.ready")}</span>
+          <small>{t("mobaxterm.preview.readyHint")}</small>
         </div>
         <div>
           <strong>{blocked.toString()}</strong>
-          <span>需处理/不支持</span>
-          <small>不会静默转换</small>
+          <span>{t("mobaxterm.preview.blocked")}</span>
+          <small>{t("mobaxterm.preview.blockedHint")}</small>
         </div>
       </div>
 
@@ -327,11 +331,9 @@ function MobaPreview({
         <div className="connection-transfer-warning">
           <AlertTriangle className="ui-icon" aria-hidden="true" />
           <span>
-            <strong>检测到本地冲突</strong>
+            <strong>{t("mobaxterm.preview.conflicts")}</strong>
             <small>
-              精确重复 {preview.summary.exact_duplicates.toString()} · 同名{" "}
-              {preview.summary.name_conflicts.toString()} · 疑似同目标{" "}
-              {preview.summary.possible_target_duplicates.toString()}
+              {t("mobaxterm.preview.conflictSummary", { exact: preview.summary.exact_duplicates, names: preview.summary.name_conflicts, targets: preview.summary.possible_target_duplicates })}
             </small>
           </span>
         </div>
@@ -353,11 +355,11 @@ function MobaPreview({
                   type="checkbox"
                   onChange={() => onToggle(item)}
                 />
-                <span>{statusLabel(item)}</span>
+                <span>{statusLabel(item, t)}</span>
               </label>
               <div className="mobaxterm-import-detail">
                 <input
-                  aria-label={`导入名称：${item.name}`}
+                  aria-label={t("mobaxterm.preview.nameAria", { name: item.name })}
                   disabled={busy || !item.selectable || !checked}
                   value={names[item.source_index] || item.suggested_name || item.name}
                   onChange={(event) => onNameChange(item.source_index, event.target.value)}
@@ -369,10 +371,10 @@ function MobaPreview({
                   {item.folder_path ? ` · ${item.folder_path}` : ""}
                 </small>
                 {item.private_key_path ? (
-                  <small title={item.private_key_path}>私钥路径：{item.private_key_path}</small>
+                  <small title={item.private_key_path}>{t("mobaxterm.preview.privateKeyPath", { path: item.private_key_path })}</small>
                 ) : null}
                 {item.warnings.length ? (
-                  <small>{item.warnings.map(warningLabel).join("；")}</small>
+                  <small>{item.warnings.map((value) => warningLabel(value, t)).join(locale === "zh-CN" ? "；" : "; ")}</small>
                 ) : null}
               </div>
             </div>
@@ -383,47 +385,47 @@ function MobaPreview({
   );
 }
 
-function statusLabel(item: MobaXtermImportItem) {
+function statusLabel(item: MobaXtermImportItem, t: Translate) {
   if (item.conflict === "exact_duplicate") {
-    return "已存在";
+    return t("mobaxterm.status.exists");
   }
   if (item.conflict === "name_conflict") {
-    return "同名，已建议重命名";
+    return t("mobaxterm.status.nameConflict");
   }
   if (item.conflict === "possible_target_duplicate") {
-    return "疑似同目标";
+    return t("mobaxterm.status.targetConflict");
   }
   if (item.status === "unsupported") {
-    return "暂不支持";
+    return t("mobaxterm.status.unsupported");
   }
   if (item.status === "invalid") {
-    return "记录无效";
+    return t("mobaxterm.status.invalid");
   }
   if (item.missing_fields.includes("network_settings_review")) {
-    return "需手动检查 Jump/Proxy";
+    return t("mobaxterm.status.networkReview");
   }
   if (item.missing_fields.includes("username")) {
-    return "需补用户名";
+    return t("mobaxterm.status.username");
   }
-  return "可导入";
+  return t("mobaxterm.status.ready");
 }
 
-function warningLabel(value: string) {
+function warningLabel(value: string, t: Translate) {
   switch (value) {
     case "private_key_path_is_local_reference":
-      return "私钥仅保留本机路径引用";
+      return t("mobaxterm.warning.privateKeyLocal");
     case "private_key_path_uses_current_drive_placeholder":
-      return "私钥路径含 MobaXterm 驱动器占位符";
+      return t("mobaxterm.warning.drivePlaceholder");
     case "startup_command_not_imported":
-      return "启动命令暂不迁移";
+      return t("mobaxterm.warning.startupCommand");
     case "ssh_gateway_requires_review":
-      return "SSH Gateway 需手动重建";
+      return t("mobaxterm.warning.gateway");
     case "proxy_requires_review":
-      return "Proxy 需手动重建";
+      return t("mobaxterm.warning.proxy");
     case "x11_forwarding_not_imported":
-      return "X11 设置暂不迁移";
+      return t("mobaxterm.warning.x11");
     case "session_type_not_imported_yet":
-      return "该协议当前仅识别，不导入";
+      return t("mobaxterm.warning.protocol");
     default:
       return value;
   }
