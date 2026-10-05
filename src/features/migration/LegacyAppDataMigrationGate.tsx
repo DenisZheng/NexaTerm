@@ -149,7 +149,9 @@ export function LegacyAppDataMigrationGate({ children }: LegacyAppDataMigrationG
               markSettingsMigration("none");
             }
           } catch {
-            // Core startup must remain usable; a failed probe can retry next launch.
+            if (!cancelled) {
+              setSettingsUnsupported(true);
+            }
           }
         }
       } catch (cause: unknown) {
@@ -301,7 +303,12 @@ export function LegacyAppDataMigrationGate({ children }: LegacyAppDataMigrationG
         try {
           legacySettings = await probeLegacySettings();
         } catch {
-          legacySettings = null;
+          legacySettings = {
+            complete: true,
+            reason: "legacy-settings-probe-failed",
+            supported: false,
+            value: null,
+          };
         }
       }
 
