@@ -1530,6 +1530,7 @@ function FilePanelShell({
   onUploadDirectory?: (parentPath: string) => void;
   onUploadFile?: (parentPath: string) => void;
 }) {
+  const { t } = useI18n();
   const [pathInput, setPathInput] = useState(path);
   const isAtTerminalPath = Boolean(
     terminalPath && (terminalPath === "/" ? path === terminalPath : locatedDirectoryPath === terminalPath),
