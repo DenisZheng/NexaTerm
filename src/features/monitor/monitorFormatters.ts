@@ -51,7 +51,7 @@ export function formatCpuTopologyBadge(cpu: RemoteCpuSummary) {
     return tr("monitor.cpu.physical", { count: physical });
   }
   if (logical) {
-    return `${logical.toString()} 线程`;
+    return tr("monitor.cpu.threads", { count: logical });
   }
   return undefined;
 }
