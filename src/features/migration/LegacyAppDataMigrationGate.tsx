@@ -1,10 +1,13 @@
 import { type ReactNode, useEffect, useState } from "react";
 import { relaunch } from "@tauri-apps/plugin-process";
 
+import { settingsStorageKey } from "../settings/startupSettings";
 import { useI18n } from "../../shared/i18n";
 import {
   legacyAppDataMigrationApply,
   legacyAppDataMigrationPreview,
+  legacyWebviewSettingsProbeStart,
+  legacyWebviewSettingsProbeTake,
   type LegacyAppDataMigrationPreview,
 } from "../../shared/tauri/commands";
 
@@ -13,6 +16,16 @@ import "./LegacyAppDataMigrationGate.css";
 interface LegacyAppDataMigrationGateProps {
   children: ReactNode;
 }
+
+interface LegacySettingsProbeOutcome {
+  complete: boolean;
+  supported: boolean;
+  value: string | null;
+}
+
+const settingsMigrationMarkerKey = "nexaterm.brandMigration.settings.v1";
+const legacySettingsProbeAttempts = 50;
+const legacySettingsProbeIntervalMs = 50;
 
 function isTauriRuntime() {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
@@ -28,9 +41,54 @@ function describeError(error: unknown) {
   return "unknown error";
 }
 
+function settingsMigrationMarked() {
+  try {
+    return Boolean(window.localStorage.getItem(settingsMigrationMarkerKey));
+  } catch {
+    return false;
+  }
+}
+
+function markSettingsMigration(status: "done" | "none") {
+  try {
+    window.localStorage.setItem(settingsMigrationMarkerKey, status);
+  } catch {
+    // A restricted WebView may not expose localStorage; the next launch can retry.
+  }
+}
+
+function installLegacySettings(value: string) {
+  window.localStorage.setItem(settingsStorageKey, value);
+  markSettingsMigration("done");
+}
+
+function sleep(milliseconds: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+}
+
+async function probeLegacySettings(): Promise<LegacySettingsProbeOutcome> {
+  const start = await legacyWebviewSettingsProbeStart();
+  if (!start.supported) {
+    return { complete: true, supported: false, value: null };
+  }
+  if (!start.started || !start.token) {
+    return { complete: true, supported: true, value: null };
+  }
+
+  for (let attempt = 0; attempt < legacySettingsProbeAttempts; attempt += 1) {
+    const result = await legacyWebviewSettingsProbeTake(start.token);
+    if (result.complete) {
+      return { complete: true, supported: true, value: result.value };
+    }
+    await sleep(legacySettingsProbeIntervalMs);
+  }
+  return { complete: false, supported: true, value: null };
+}
+
 export function LegacyAppDataMigrationGate({ children }: LegacyAppDataMigrationGateProps) {
   const { t } = useI18n();
   const [preview, setPreview] = useState<LegacyAppDataMigrationPreview | null>(null);
+  const [settingsOnlyValue, setSettingsOnlyValue] = useState<string | null>(null);
   const [checking, setChecking] = useState(isTauriRuntime);
   const [dismissed, setDismissed] = useState(false);
   const [applying, setApplying] = useState(false);
@@ -44,23 +102,41 @@ export function LegacyAppDataMigrationGate({ children }: LegacyAppDataMigrationG
     }
 
     let cancelled = false;
-    void legacyAppDataMigrationPreview()
-      .then((result) => {
-        if (!cancelled) setPreview(result);
-      })
-      .catch((cause: unknown) => {
-        if (!cancelled) setError(describeError(cause));
-      })
-      .finally(() => {
-        if (!cancelled) setChecking(false);
-      });
+    const check = async () => {
+      try {
+        const result = await legacyAppDataMigrationPreview();
+        if (cancelled) return;
+        setPreview(result);
 
+        if (!result.available && !settingsMigrationMarked()) {
+          try {
+            const settings = await probeLegacySettings();
+            if (cancelled) return;
+            if (settings.complete && settings.supported) {
+              if (settings.value) {
+                setSettingsOnlyValue(settings.value);
+              } else {
+                markSettingsMigration("none");
+              }
+            }
+          } catch {
+            // Core startup must remain usable; a failed probe can retry next launch.
+          }
+        }
+      } catch (cause: unknown) {
+        if (!cancelled) setError(describeError(cause));
+      } finally {
+        if (!cancelled) setChecking(false);
+      }
+    };
+
+    void check();
     return () => {
       cancelled = true;
     };
   }, []);
 
-  if (!isTauriRuntime() || dismissed || (!checking && preview && !preview.available)) {
+  if (!isTauriRuntime() || dismissed) {
     return children;
   }
 
@@ -92,6 +168,64 @@ export function LegacyAppDataMigrationGate({ children }: LegacyAppDataMigrationG
     return children;
   }
 
+  if (!preview.available && settingsOnlyValue) {
+    const applySettingsOnly = async () => {
+      setApplying(true);
+      setError(null);
+      setRestartFailed(false);
+      try {
+        installLegacySettings(settingsOnlyValue);
+        try {
+          await relaunch();
+        } catch {
+          setRestartFailed(true);
+        }
+      } catch (cause: unknown) {
+        setError(describeError(cause));
+      } finally {
+        setApplying(false);
+      }
+    };
+
+    return (
+      <MigrationCard title={t("brandMigration.settingsTitle")}>
+        <p>{t("brandMigration.settingsDescription")}</p>
+        {error ? (
+          <p className="brand-migration-error" role="alert">
+            {t("brandMigration.error", { message: error })}
+          </p>
+        ) : null}
+        {restartFailed ? (
+          <p className="brand-migration-error" role="alert">
+            {t("brandMigration.restartFailed")}
+          </p>
+        ) : null}
+        <div className="brand-migration-actions">
+          <button
+            className="brand-migration-secondary"
+            type="button"
+            disabled={applying}
+            onClick={() => setDismissed(true)}
+          >
+            {t("brandMigration.skip")}
+          </button>
+          <button
+            className="brand-migration-primary"
+            type="button"
+            disabled={applying || restartFailed}
+            onClick={() => void applySettingsOnly()}
+          >
+            {applying ? t("brandMigration.applying") : t("brandMigration.settingsApply")}
+          </button>
+        </div>
+      </MigrationCard>
+    );
+  }
+
+  if (!preview.available) {
+    return children;
+  }
+
   if (preview.blocked) {
     return (
       <MigrationCard title={t("brandMigration.blockedTitle")}>
@@ -111,7 +245,25 @@ export function LegacyAppDataMigrationGate({ children }: LegacyAppDataMigrationG
     setError(null);
     setRestartFailed(false);
     try {
+      let legacySettings: LegacySettingsProbeOutcome | null = null;
+      if (!settingsMigrationMarked()) {
+        try {
+          legacySettings = await probeLegacySettings();
+        } catch {
+          legacySettings = null;
+        }
+      }
+
       await legacyAppDataMigrationApply();
+
+      if (legacySettings?.complete && legacySettings.supported) {
+        if (legacySettings.value) {
+          installLegacySettings(legacySettings.value);
+        } else {
+          markSettingsMigration("none");
+        }
+      }
+
       try {
         await relaunch();
       } catch {
