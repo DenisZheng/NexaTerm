@@ -196,14 +196,6 @@ const settingsSections: Array<{
   { id: "terminalTheme", labelKey: "settings.nav.terminalTheme.label", descriptionKey: "settings.nav.terminalTheme.description", icon: Terminal },
 ];
 
-const credentialKindOptions: Array<{
-  label: string;
-  value: ConnectionAuthKind;
-}> = [
-  { label: "密码账号", value: "password" },
-  { label: "私钥账号", value: "private_key" },
-];
-
 export function SettingsView({
   appUpdate,
   connections,
@@ -877,7 +869,7 @@ function AiSettingsSection() {
                   onClick={() => setDeleteTarget(selectedConfig)}
                 >
                   <Trash2 className="ui-icon" aria-hidden="true" />
-                  删除
+                  {t("settings.credentials.delete")}
                 </button>
               ) : null}
             </div>
@@ -918,7 +910,7 @@ function AiSettingsSection() {
         open={Boolean(deleteTarget)}
         title="删除 AI 配置"
         description={`确认删除“${deleteTarget?.name || "该配置"}”吗？API Key 也会从 vault 删除。`}
-        confirmLabel="删除"
+        confirmLabel={t("settings.credentials.deleteConfirm")}
         onConfirm={confirmDeleteConfig}
         onOpenChange={(open) => {
           if (!open) {
@@ -2053,6 +2045,7 @@ function CredentialSettingsSection({
   onDelete: (credential: CredentialProfile) => Promise<void>;
   onSave: (input: CredentialProfileInput) => Promise<void>;
 }) {
+  const { t } = useI18n();
   const [editing, setEditing] = useState<CredentialProfile | null>(null);
   const [form, setForm] = useState<CredentialProfileInput>(emptyCredentialForm());
   const [busy, setBusy] = useState(false);
@@ -2078,7 +2071,10 @@ function CredentialSettingsSection({
       }),
     [credentials, kindFilter, query],
   );
-  const editingKindLabel = form.kind === "private_key" ? "私钥" : "密码";
+  const editingKindLabel =
+    form.kind === "private_key"
+      ? t("settings.credentials.kind.privateKeyShort")
+      : t("settings.credentials.kind.passwordShort");
 
   function startCreate(kind: ConnectionAuthKind = "password") {
     setEditing(null);
@@ -2151,7 +2147,7 @@ function CredentialSettingsSection({
         setForm((current) => ({ ...current, private_key_path: selectedPath }));
       }
     } catch (error) {
-      setFormError(error instanceof Error ? error.message : "无法打开私钥文件选择器");
+      setFormError(error instanceof Error ? error.message : t("settings.credentials.error.privateKeyPicker"));
     }
   }
 
@@ -2159,8 +2155,8 @@ function CredentialSettingsSection({
     <section className="settings-page-section credential-page-section">
       <header className="settings-section-head settings-section-head-row">
         <span>
-          <h1>账号管理</h1>
-          <p>保存可复用的登录账号（用户名 + 密码或私钥），连接时直接引用。</p>
+          <h1>{t("settings.credentials.title")}</h1>
+          <p>{t("settings.credentials.description")}</p>
         </span>
         <button
           className="repository-primary-button credential-new-button"
@@ -2168,21 +2164,21 @@ function CredentialSettingsSection({
           onClick={() => startCreate()}
         >
           <Plus className="ui-icon" aria-hidden="true" />
-          <span>新增账号</span>
+          <span>{t("settings.credentials.new")}</span>
         </button>
       </header>
 
       <div className="credential-settings-layout">
-        <section className="settings-panel credential-list-panel" aria-label="账号列表">
+        <section className="settings-panel credential-list-panel" aria-label={t("settings.credentials.listAria")}>
           <header className="credential-list-head">
             <span>
-              <strong>账号库</strong>
-              <small>{credentialSummary(credentials.length, passwordCount, privateKeyCount)}</small>
+              <strong>{t("settings.credentials.library")}</strong>
+              <small>{credentialSummary(credentials.length, passwordCount, privateKeyCount, t)}</small>
             </span>
             <button
               className="repository-icon-button"
               type="button"
-              aria-label="新增私钥账号"
+              aria-label={t("settings.credentials.newPrivateKeyAria")}
               onClick={() => startCreate("private_key")}
             >
               <FileKey className="ui-icon" aria-hidden="true" />
@@ -2194,42 +2190,42 @@ function CredentialSettingsSection({
               <Search className="ui-icon" aria-hidden="true" />
               <input
                 value={query}
-                placeholder="搜索账号"
-                aria-label="搜索账号"
+                placeholder={t("settings.credentials.searchPlaceholder")}
+                aria-label={t("settings.credentials.searchAria")}
                 onChange={(event) => setQuery(event.currentTarget.value)}
               />
             </label>
             <SegmentedControl
               value={kindFilter}
               options={[
-                { value: "all", label: "全部" },
-                { value: "password", label: "密码账号" },
-                { value: "private_key", label: "私钥账号" },
+                { value: "all", label: t("settings.credentials.filter.all") },
+                { value: "password", label: t("settings.credentials.kind.password") },
+                { value: "private_key", label: t("settings.credentials.kind.privateKey") },
               ]}
               onChange={setKindFilter}
             />
           </div>
 
           <div className="credential-list-body">
-            {loading ? <p className="settings-note">加载账号中...</p> : null}
+            {loading ? <p className="settings-note">{t("settings.credentials.loading")}</p> : null}
             {error ? <p className="form-error credential-list-error">{error}</p> : null}
             {credentials.length === 0 && !loading ? (
               <div className="credential-empty-state">
                 <ShieldCheck className="ui-icon" aria-hidden="true" />
-                <strong>还没有保存账号</strong>
-                <small>先添加一个账号（用户名 + 密码或私钥），连接配置里可以直接引用。</small>
+                <strong>{t("settings.credentials.empty.title")}</strong>
+                <small>{t("settings.credentials.empty.description")}</small>
                 <div>
                   <button type="button" onClick={() => startCreate("password")}>
-                    新建密码账号
+                    {t("settings.credentials.empty.newPassword")}
                   </button>
                   <button type="button" onClick={() => startCreate("private_key")}>
-                    新建私钥账号
+                    {t("settings.credentials.empty.newPrivateKey")}
                   </button>
                 </div>
               </div>
             ) : null}
             {credentials.length > 0 && filteredCredentials.length === 0 ? (
-              <p className="settings-note">没有匹配的账号。</p>
+              <p className="settings-note">{t("settings.credentials.noMatch")}</p>
             ) : null}
             {filteredCredentials.map((credential) => {
               const Icon = credential.kind === "private_key" ? FileKey : KeyRound;
@@ -2248,13 +2244,13 @@ function CredentialSettingsSection({
                   <span className="credential-list-copy">
                     <strong>{credential.name}</strong>
                     <small>
-                      {credential.username || "未设置用户名"}
-                      {` · ${credential.kind === "private_key" ? "私钥账号" : "密码账号"}`}
+                      {credential.username || t("settings.credentials.noUsername")}
+                      {` · ${credential.kind === "private_key" ? t("settings.credentials.kind.privateKey") : t("settings.credentials.kind.password")}`}
                       {credential.notes ? ` · ${credential.notes}` : ""}
                     </small>
                   </span>
                   <span className="credential-list-kind">
-                    {credential.kind === "private_key" ? "私钥账号" : "密码账号"}
+                    {credential.kind === "private_key" ? t("settings.credentials.kind.privateKey") : t("settings.credentials.kind.password")}
                   </span>
                 </button>
               );
@@ -2272,29 +2268,29 @@ function CredentialSettingsSection({
               )}
             </span>
             <span>
-              <strong>{editing ? "编辑账号" : `新增${editingKindLabel}账号`}</strong>
-              <small>账号包含用户名和认证材料，不包含主机、端口。</small>
+              <strong>{editing ? t("settings.credentials.edit") : t("settings.credentials.create", { kind: editingKindLabel })}</strong>
+              <small>{t("settings.credentials.formDescription")}</small>
             </span>
           </header>
 
           <div className="credential-form-body">
             <label className="credential-field credential-field-name">
-              <span>名称</span>
+              <span>{t("settings.credentials.name")}</span>
               <input
                 className="settings-input"
                 value={form.name || ""}
-                placeholder="例如：生产只读账号"
-                aria-label="账号名称"
+                placeholder={t("settings.credentials.namePlaceholder")}
+                aria-label={t("settings.credentials.nameAria")}
                 onChange={(event) => setForm({ ...form, name: event.currentTarget.value })}
               />
             </label>
             <label className="credential-field credential-field-kind">
-              <span>类型</span>
+              <span>{t("settings.credentials.type")}</span>
               <AppSelect
-                ariaLabel="账号认证类型"
+                ariaLabel={t("settings.credentials.typeAria")}
                 className="settings-select"
                 value={form.kind}
-                options={credentialKindOptions}
+                options={[{ label: t("settings.credentials.kind.password"), value: "password" }, { label: t("settings.credentials.kind.privateKey"), value: "private_key" }]}
                 onChange={(kind) => {
                   setForm(emptyCredentialForm(kind, form));
                   setShowSecret(false);
@@ -2304,27 +2300,27 @@ function CredentialSettingsSection({
             </label>
 
             <label className="credential-field credential-field-full">
-              <span>用户名</span>
+              <span>{t("settings.credentials.username")}</span>
               <input
                 className="settings-input"
                 {...usernameInputAttributes}
                 value={form.username || ""}
-                placeholder="例如：root、deploy"
-                aria-label="账号用户名"
+                placeholder={t("settings.credentials.usernamePlaceholder")}
+                aria-label={t("settings.credentials.usernameAria")}
                 onChange={(event) => setForm({ ...form, username: event.currentTarget.value })}
               />
             </label>
 
             {form.kind === "password" ? (
               <label className="credential-field credential-field-full">
-                <span>账号密码</span>
+                <span>{t("settings.credentials.password")}</span>
                 <div className="credential-secret-field">
                   <LockKeyhole className="ui-icon" aria-hidden="true" />
                   <input
                     type={showSecret ? "text" : "password"}
                     value={form.password || ""}
-                    placeholder={editing ? "已保存，留空保留" : "输入账号密码"}
-                    aria-label="账号密码"
+                    placeholder={editing ? t("settings.credentials.passwordKeep") : t("settings.credentials.passwordInput")}
+                    aria-label={t("settings.credentials.passwordAria")}
                     onChange={(event) =>
                       setForm({
                         ...form,
@@ -2337,7 +2333,7 @@ function CredentialSettingsSection({
                     <button
                       type="button"
                       disabled={busy}
-                      aria-label={showSecret ? "隐藏密码" : "显示密码"}
+                      aria-label={showSecret ? t("settings.credentials.passwordHide") : t("settings.credentials.passwordShow")}
                       onClick={() => void toggleCredentialSecretVisibility()}
                     >
                       {showSecret ? (
@@ -2352,13 +2348,13 @@ function CredentialSettingsSection({
             ) : (
               <>
                 <label className="credential-field credential-field-full">
-                  <span>账号私钥路径</span>
+                  <span>{t("settings.credentials.privateKeyPath")}</span>
                   <div className="settings-path-picker credential-private-key-picker">
                     <input
                       className="settings-input settings-path-input"
                       value={form.private_key_path || ""}
                       placeholder="~/.ssh/id_ed25519"
-                      aria-label="账号私钥路径"
+                      aria-label={t("settings.credentials.privateKeyPathAria")}
                       onChange={(event) =>
                         setForm({ ...form, private_key_path: event.currentTarget.value })
                       }
@@ -2366,23 +2362,23 @@ function CredentialSettingsSection({
                     <button
                       className="settings-action-button settings-path-button"
                       type="button"
-                      aria-label="选择账号私钥文件"
+                      aria-label={t("settings.credentials.privateKeyChooseAria")}
                       onClick={choosePrivateKeyPath}
                     >
                       <FolderOpen className="ui-icon" aria-hidden="true" />
-                      <span>选择</span>
+                      <span>{t("settings.credentials.choose")}</span>
                     </button>
                   </div>
                 </label>
                 <label className="credential-field credential-field-full">
-                  <span>账号私钥口令</span>
+                  <span>{t("settings.credentials.passphrase")}</span>
                   <div className="credential-secret-field">
                     <LockKeyhole className="ui-icon" aria-hidden="true" />
                     <input
                       type={showPassphrase ? "text" : "password"}
                       value={form.private_key_passphrase || ""}
-                      placeholder={editing ? "已保存，留空保留" : "可选"}
-                      aria-label="账号私钥口令"
+                      placeholder={editing ? t("settings.credentials.passphraseKeep") : t("settings.credentials.optional")}
+                      aria-label={t("settings.credentials.passphraseAria")}
                       onChange={(event) =>
                         setForm({
                           ...form,
@@ -2395,7 +2391,7 @@ function CredentialSettingsSection({
                       <button
                         type="button"
                         disabled={busy}
-                        aria-label={showPassphrase ? "隐藏私钥口令" : "显示私钥口令"}
+                        aria-label={showPassphrase ? t("settings.credentials.passphraseHide") : t("settings.credentials.passphraseShow")}
                         onClick={() => void toggleCredentialPassphraseVisibility()}
                       >
                         {showPassphrase ? (
@@ -2411,12 +2407,12 @@ function CredentialSettingsSection({
             )}
 
             <label className="credential-field credential-field-full">
-              <span>备注</span>
+              <span>{t("settings.credentials.notes")}</span>
               <textarea
                 className="settings-input credential-notes-input"
                 value={form.notes || ""}
-                placeholder="可选，用于本机识别和检索。"
-                aria-label="账号备注"
+                placeholder={t("settings.credentials.notesPlaceholder")}
+                aria-label={t("settings.credentials.notesAria")}
                 onChange={(event) => setForm({ ...form, notes: event.currentTarget.value })}
               />
             </label>
@@ -2434,17 +2430,17 @@ function CredentialSettingsSection({
                   onClick={() => setDeleteTarget(editing)}
                 >
                   <Trash2 className="ui-icon" aria-hidden="true" />
-                  删除
+                  {t("settings.credentials.delete")}
                 </button>
               ) : null}
             </div>
             <div>
               <button disabled={busy} type="button" onClick={() => startCreate(form.kind)}>
-                清空
+                {t("settings.credentials.clear")}
               </button>
               <button className="primary-button" disabled={busy} type="submit">
                 <ShieldCheck className="ui-icon" aria-hidden="true" />
-                保存账号
+                {t("settings.credentials.save")}
               </button>
             </div>
           </footer>
@@ -2452,14 +2448,14 @@ function CredentialSettingsSection({
       </div>
 
       <ConfirmDialog
-        confirmLabel="删除"
+        confirmLabel={t("settings.credentials.deleteConfirm")}
         description={
           deleteTarget
-            ? `确认删除账号“${deleteTarget.name}”吗？如果已有连接正在使用它，请先修改这些连接后再删除。`
+            ? t("settings.credentials.deleteDescription", { name: deleteTarget.name })
             : ""
         }
         open={Boolean(deleteTarget)}
-        title="删除账号"
+        title={t("settings.credentials.deleteTitle")}
         onConfirm={confirmDelete}
         onOpenChange={(open) => {
           if (!open) {
@@ -2547,11 +2543,15 @@ function emptyCredentialForm(
   };
 }
 
-function credentialSummary(total: number, passwordCount: number, privateKeyCount: number) {
+function credentialSummary(total: number, passwordCount: number, privateKeyCount: number, t: Translate) {
   if (total === 0) {
-    return "0 项账号";
+    return t("settings.credentials.summary.zero");
   }
-  return `${total.toString()} 项 · ${passwordCount.toString()} 密码 · ${privateKeyCount.toString()} 私钥`;
+  return t("settings.credentials.summary", {
+    total,
+    password: passwordCount,
+    privateKey: privateKeyCount,
+  });
 }
 
 function formatError(error: unknown) {
@@ -2883,7 +2883,7 @@ function BasicSettingsSection({
                 onClick={() => void chooseDownloadRoot()}
               >
                 <FolderOpen className="ui-icon" aria-hidden="true" />
-                <span>选择</span>
+                <span>{t("settings.credentials.choose")}</span>
               </button>
               <button
                 className="settings-action-button settings-path-button"
@@ -3013,12 +3013,13 @@ function AppearanceSettingsSection({
   onReset: () => void;
   onUpdate: (update: Partial<AppearanceSettings>) => void;
 }) {
+  const { t } = useI18n();
   const [uiFontDraft, setUiFontDraft] = useState(settings.uiFontCustom);
   const [terminalFontDraft, setTerminalFontDraft] = useState(settings.terminalFontCustom);
   const windowMaterialDescription =
     supportedWindowMaterials.length > 1
-      ? "选择窗口背景材质；不支持的平台会自动回退。"
-      : "当前平台仅支持默认窗口背景。";
+      ? t("settings.appearance.material.descriptionSupported")
+      : t("settings.appearance.material.descriptionDefault");
 
   useEffect(() => {
     setUiFontDraft(settings.uiFontCustom);
@@ -3058,8 +3059,8 @@ function AppearanceSettingsSection({
   return (
     <section className="settings-page-section">
       <header className="settings-section-head">
-        <h1>外观</h1>
-        <p>调整 NexaTerm 的主题、窗口材质、界面字体、密度和面板细节。</p>
+        <h1>{t("settings.appearance.title")}</h1>
+        <p>{t("settings.appearance.description")}</p>
       </header>
 
       <div className="appearance-preview" aria-hidden="true">
@@ -3071,7 +3072,7 @@ function AppearanceSettingsSection({
         </div>
         <div className="appearance-preview-main">
           <div className="appearance-preview-toolbar">
-            <span>NexaTerm 预览</span>
+            <span>{t("settings.appearance.preview")}</span>
             <i />
           </div>
           <div className="appearance-preview-workbench">
@@ -3090,57 +3091,57 @@ function AppearanceSettingsSection({
       </div>
 
       <div className="settings-panel">
-        <SettingsRow icon={Monitor} title="主题模式" description="浅色、深色和系统主题会同步应用到整个工作区。">
+        <SettingsRow icon={Monitor} title={t("settings.appearance.theme.title")} description={t("settings.appearance.theme.description")}>
           <SegmentedControl
             value={settings.themeMode}
             options={[
-              { value: "system", label: "系统", icon: Monitor },
-              { value: "light", label: "浅色", icon: Sun },
-              { value: "dark", label: "深色", icon: Moon },
+              { value: "system", label: t("settings.appearance.theme.system"), icon: Monitor },
+              { value: "light", label: t("settings.appearance.theme.light"), icon: Sun },
+              { value: "dark", label: t("settings.appearance.theme.dark"), icon: Moon },
             ]}
             onChange={(themeMode) => onUpdate({ themeMode })}
           />
         </SettingsRow>
 
-        <SettingsRow icon={Layers} title="窗口材质" description={windowMaterialDescription}>
+        <SettingsRow icon={Layers} title={t("settings.appearance.material.title")} description={windowMaterialDescription}>
           <SegmentedControl<WindowMaterialMode>
             value={effectiveWindowMaterial}
             options={supportedWindowMaterials.map((material) => ({
               value: material,
-              label: getWindowMaterialLabel(material),
+              label: material === "auto" ? t("settings.appearance.material.auto") : getWindowMaterialLabel(material),
             }))}
             onChange={(windowMaterial) => onUpdate({ windowMaterial })}
           />
         </SettingsRow>
 
-        <SettingsRow icon={Palette} title="强调色" description="用于选中态、关键按钮和焦点高亮。">
+        <SettingsRow icon={Palette} title={t("settings.appearance.accent.title")} description={t("settings.appearance.accent.description")}>
           <div className="settings-accent-picker">
             {accentColorPresets.map((preset) => (
               <button
                 className={settings.accentColor === preset.value ? "active" : ""}
                 key={preset.value}
                 type="button"
-                aria-label={`选择${preset.label}色`}
-                title={preset.label}
+                aria-label={t("settings.appearance.accent.chooseAria", { name: appearanceAccentLabel(preset.value, t) })}
+                title={appearanceAccentLabel(preset.value, t)}
                 onClick={() => onUpdate({ accentColor: preset.value })}
               >
                 <span
                   className="settings-accent-swatch"
                   style={{ "--settings-accent-swatch": preset.light } as CSSProperties}
                 />
-                <span>{preset.label}</span>
+                <span>{appearanceAccentLabel(preset.value, t)}</span>
               </button>
             ))}
             <label
               className={`settings-accent-custom ${
                 settings.accentColor === "custom" ? "active" : ""
               }`}
-              title="自定义强调色"
+              title={t("settings.appearance.accent.customTitle")}
             >
               <input
                 type="color"
                 value={normalizeHexColor(accentDraft, defaultSettings.appearance.accentColorCustom)}
-                aria-label="选择自定义强调色"
+                aria-label={t("settings.appearance.accent.customAria")}
                 onChange={(event) => commitCustomAccent(event.target.value)}
               />
               <span
@@ -3152,14 +3153,14 @@ function AppearanceSettingsSection({
                   ),
                 } as CSSProperties}
               />
-              <span>自选</span>
+              <span>{t("settings.appearance.accent.custom")}</span>
             </label>
             <input
               className="settings-input settings-accent-value-input"
               value={accentDraft}
               maxLength={7}
               spellCheck={false}
-              aria-label="自定义强调色值"
+              aria-label={t("settings.appearance.accent.valueAria")}
               onFocus={() => {
                 if (settings.accentColor !== "custom") {
                   onUpdate({ accentColor: "custom" as AccentColor });
@@ -3177,32 +3178,32 @@ function AppearanceSettingsSection({
           </div>
         </SettingsRow>
 
-        <SettingsRow icon={Rows3} title="界面密度" description="影响连接树、文件树、工具栏和设置行距。">
+        <SettingsRow icon={Rows3} title={t("settings.appearance.density.title")} description={t("settings.appearance.density.description")}>
           <SegmentedControl
             value={settings.density}
             options={[
-              { value: "comfortable", label: "舒适" },
-              { value: "compact", label: "紧凑" },
+              { value: "comfortable", label: t("settings.appearance.density.comfortable") },
+              { value: "compact", label: t("settings.appearance.density.compact") },
             ]}
             onChange={(density) => onUpdate({ density })}
           />
         </SettingsRow>
 
-        <SettingsRow icon={Type} title="界面字体" description="用于菜单、侧栏、按钮和设置页。">
+        <SettingsRow icon={Type} title={t("settings.appearance.uiFont.title")} description={t("settings.appearance.uiFont.description")}>
           <FontFamilyControl<UiFontPreset>
             modeValue={settings.uiFontMode}
             onModeChange={(uiFontMode) => onUpdate({ uiFontMode })}
             presetValue={settings.uiFontPreset}
-            presetOptions={uiFontPresets}
+            presetOptions={uiFontPresets.map((preset) => ({ ...preset, label: appearanceFontPresetLabel(preset.value, preset.label, t) }))}
             onPresetChange={(uiFontPreset) => onUpdate({ uiFontPreset })}
             customValue={uiFontDraft}
-            customPlaceholder={'例如 "Microsoft YaHei UI", "Segoe UI", sans-serif'}
+            customPlaceholder={t("settings.appearance.uiFont.placeholder")}
             onCustomChange={setUiFontDraft}
             onCustomCommit={() => commitUiFontFamily(uiFontDraft)}
           />
         </SettingsRow>
 
-        <SettingsRow icon={Terminal} title="终端字体" description="用于 xterm 会话、预览和等宽文本。">
+        <SettingsRow icon={Terminal} title={t("settings.appearance.terminalFont.title")} description={t("settings.appearance.terminalFont.description")}>
           <FontFamilyControl<TerminalFontPreset>
             modeValue={settings.terminalFontMode}
             onModeChange={(terminalFontMode) => onUpdate({ terminalFontMode })}
@@ -3210,13 +3211,13 @@ function AppearanceSettingsSection({
             presetOptions={terminalFontPresets}
             onPresetChange={(terminalFontPreset) => onUpdate({ terminalFontPreset })}
             customValue={terminalFontDraft}
-            customPlaceholder={'例如 "JetBrains Mono", "Cascadia Mono", Consolas, monospace'}
+            customPlaceholder={t("settings.appearance.terminalFont.placeholder")}
             onCustomChange={setTerminalFontDraft}
             onCustomCommit={() => commitTerminalFontFamily(terminalFontDraft)}
           />
         </SettingsRow>
 
-        <SettingsRow icon={Type} title="UI 字号" description="调整菜单、侧栏、按钮和设置页文字。">
+        <SettingsRow icon={Type} title={t("settings.appearance.uiFontSize.title")} description={t("settings.appearance.uiFontSize.description")}>
           <Stepper
             value={settings.uiFontSize}
             values={[12, 13, 14, 15] as const}
@@ -3224,7 +3225,7 @@ function AppearanceSettingsSection({
           />
         </SettingsRow>
 
-        <SettingsRow icon={Terminal} title="终端字号" description="调整 xterm 会话字号并自动重新适配尺寸。">
+        <SettingsRow icon={Terminal} title={t("settings.appearance.terminalFontSize.title")} description={t("settings.appearance.terminalFontSize.description")}>
           <Stepper
             value={settings.terminalFontSize}
             values={[12, 13, 14, 15, 16] as const}
@@ -3232,30 +3233,30 @@ function AppearanceSettingsSection({
           />
         </SettingsRow>
 
-        <SettingsRow icon={PanelLeft} title="图标大小" description="影响连接树、文件树和工具按钮图标。">
+        <SettingsRow icon={PanelLeft} title={t("settings.appearance.iconSize.title")} description={t("settings.appearance.iconSize.description")}>
           <SegmentedControl
             value={settings.iconSize}
             options={[
-              { value: "small", label: "小" },
-              { value: "medium", label: "中" },
-              { value: "large", label: "大" },
+              { value: "small", label: t("settings.appearance.iconSize.small") },
+              { value: "medium", label: t("settings.appearance.iconSize.medium") },
+              { value: "large", label: t("settings.appearance.iconSize.large") },
             ]}
             onChange={(iconSize) => onUpdate({ iconSize })}
           />
         </SettingsRow>
 
-        <SettingsRow icon={PanelLeft} title="记住面板宽度" description="保留左侧连接仓库和右侧文件面板拖拽宽度。">
+        <SettingsRow icon={PanelLeft} title={t("settings.appearance.rememberPaneWidths.title")} description={t("settings.appearance.rememberPaneWidths.description")}>
           <SettingsToggle
             checked={settings.rememberPaneWidths}
-            label="记住面板宽度"
+            label={t("settings.appearance.rememberPaneWidths.label")}
             onChange={(rememberPaneWidths) => onUpdate({ rememberPaneWidths })}
           />
         </SettingsRow>
 
-        <SettingsRow icon={RotateCcw} title="恢复默认外观" description="恢复外观、终端显示和终端配色默认值。">
+        <SettingsRow icon={RotateCcw} title={t("settings.appearance.reset.title")} description={t("settings.appearance.reset.description")}>
           <button className="settings-action-button" type="button" onClick={onReset}>
             <RotateCcw className="ui-icon" aria-hidden="true" />
-            <span>重置</span>
+            <span>{t("settings.appearance.reset")}</span>
           </button>
         </SettingsRow>
       </div>
@@ -3284,14 +3285,15 @@ function FontFamilyControl<TPreset extends string>({
   onCustomChange: (value: string) => void;
   onCustomCommit: () => void;
 }) {
+  const { t } = useI18n();
   return (
     <div className="settings-font-control">
       <div className="settings-font-main">
         <SegmentedControl
           value={modeValue}
           options={[
-            { value: "preset", label: "预设" },
-            { value: "custom", label: "自定义" },
+            { value: "preset", label: t("settings.appearance.fontMode.preset") },
+            { value: "custom", label: t("settings.appearance.fontMode.custom") },
           ]}
           onChange={onModeChange}
         />
@@ -3300,8 +3302,8 @@ function FontFamilyControl<TPreset extends string>({
             className="settings-input settings-font-custom-input"
             value={customValue}
             placeholder={customPlaceholder}
-            title="支持直接输入字体名，或输入完整 font-family 栈。"
-            aria-label="自定义字体"
+            title={t("settings.appearance.fontCustomTitle")}
+            aria-label={t("settings.appearance.fontCustomAria")}
             spellCheck={false}
             onChange={(event) => onCustomChange(event.currentTarget.value)}
             onBlur={onCustomCommit}
@@ -3314,7 +3316,7 @@ function FontFamilyControl<TPreset extends string>({
           />
         ) : (
           <AppSelect
-            ariaLabel="选择字体预设"
+            ariaLabel={t("settings.appearance.fontPresetAria")}
             className="settings-select"
             value={presetValue}
             options={presetOptions.map((preset) => ({
@@ -3327,6 +3329,20 @@ function FontFamilyControl<TPreset extends string>({
       </div>
     </div>
   );
+}
+
+function appearanceAccentLabel(value: string, t: Translate) {
+  if (value === "blue") return t("settings.appearance.accent.blue");
+  if (value === "emerald") return t("settings.appearance.accent.emerald");
+  if (value === "amber") return t("settings.appearance.accent.amber");
+  if (value === "rose") return t("settings.appearance.accent.rose");
+  return t("settings.appearance.accent.violet");
+}
+
+function appearanceFontPresetLabel(value: string, fallback: string, t: Translate) {
+  if (value === "system") return t("settings.appearance.uiFont.systemDefault");
+  if (value === "microsoft-yahei") return t("settings.appearance.uiFont.microsoftYahei");
+  return fallback;
 }
 
 function LocalTerminalSettingsSection({
@@ -3630,7 +3646,7 @@ function LocalTerminalSettingsSection({
                       type="button"
                       onClick={() => deleteCustomProfile(profile.id)}
                     >
-                      删除
+                      {t("settings.credentials.delete")}
                     </button>
                   </div>
                 </div>
@@ -3648,7 +3664,7 @@ function LocalTerminalSettingsSection({
           </header>
           <div className="local-terminal-form-grid">
             <label>
-              <span>名称</span>
+              <span>{t("settings.credentials.name")}</span>
               <input
                 className="settings-input"
                 value={form.name}
@@ -3656,7 +3672,7 @@ function LocalTerminalSettingsSection({
               />
             </label>
             <label>
-              <span>类型</span>
+              <span>{t("settings.credentials.type")}</span>
               <input
                 className="settings-input"
                 value={form.kind}
@@ -3705,7 +3721,7 @@ function LocalTerminalSettingsSection({
             <div />
             <div>
               <button type="button" onClick={resetForm}>
-                清空
+                {t("settings.credentials.clear")}
               </button>
               <button className="primary-button" type="button" onClick={saveCustomProfile}>
                 保存 profile
@@ -3898,7 +3914,7 @@ function TerminalThemeSettingsSection({
           <SegmentedControl
             value={terminalSchemeTone}
             options={[
-              { value: "all", label: "全部" },
+              { value: "all", label: t("settings.credentials.filter.all") },
               { value: "dark", label: "暗色", icon: Moon },
               { value: "light", label: "亮色", icon: Sun },
             ]}
