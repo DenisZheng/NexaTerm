@@ -2613,5 +2613,7 @@
   "dialog.connectionImport": "Select connection migration file",
   "dialog.connectionExport": "Export connections",
   "dialog.mobaxtermExport": "MobaXterm session export",
-  "dialog.mobaxtermImport": "Select MobaXterm session file"
+  "dialog.mobaxtermImport": "Select MobaXterm session file",
+  "startup.vnc": "Loading VNC window…",
+  "startup.workspace": "Loading workspace…"
 }
