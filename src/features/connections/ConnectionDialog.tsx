@@ -401,7 +401,7 @@ export function ConnectionDialog({
     () => {
       const options: Array<{ label: string; value: RdpRenderMode }> = [];
       if (platformCapabilities.supportsEmbeddedRdp) {
-        options.push({ label: "内置宿主", value: "embedded" });
+        options.push({ label: t("connectionDialog.rdp.runner.embedded"), value: "embedded" });
       }
       options.push({
         label: rdpExternalModeLabelForPlatform(desktopPlatform),
@@ -409,7 +409,7 @@ export function ConnectionDialog({
       });
       return options;
     },
-    [desktopPlatform, platformCapabilities.supportsEmbeddedRdp],
+    [desktopPlatform, platformCapabilities.supportsEmbeddedRdp, t],
   );
   const rdpExternalModeNote = useMemo(
     () => rdpExternalModeNoteForPlatform(desktopPlatform),
@@ -425,9 +425,9 @@ export function ConnectionDialog({
   const currentConnectionId = connection && !duplicate ? connection.id : form.id || "";
   const dialogTabs: Array<[ConnectionDialogTab, string]> = isRdp
     ? [
-        ["basic", "基本"],
+        ["basic", t("connectionDialog.tab.basic")],
         ["rdp", "RDP"],
-        ["advanced", "高级"],
+        ["advanced", t("connectionDialog.tab.advanced")],
       ]
     : isVnc
       ? [
@@ -439,7 +439,7 @@ export function ConnectionDialog({
         ? [["basic", "基本"]]
     : [
         ["basic", "基本"],
-        ["proxy", "网络路径"],
+        ["proxy", t("connectionDialog.tab.network")],
         ["advanced", "高级"],
       ];
   const [serialPorts, setSerialPorts] = useState<SerialPortEntry[]>([]);
@@ -528,8 +528,8 @@ export function ConnectionDialog({
     if (isCharacterProtocol) {
       setTestState("success");
       setFeedback({
-        detail: "Telnet 和串口会在打开标签页时建立运行时会话；当前表单会先保存为连接配置。",
-        title: "配置可保存",
+        detail: t("connectionDialog.test.characterDetail"),
+        title: t("connectionDialog.test.characterTitle"),
       });
       return;
     }
@@ -550,38 +550,39 @@ export function ConnectionDialog({
     setBusy(true);
     setTestState("running");
     setFeedback({
-      detail: "正在检查本机 RDP runner 能力，不会发起远程登录。",
-      title: "正在检查 RDP runner",
+      detail: t("connectionDialog.test.rdpCheckingDetail"),
+      title: t("connectionDialog.test.rdpCheckingTitle"),
     });
 
     try {
       if (!hasTauriRuntime()) {
         setTestState("success");
         setFeedback({
-          detail: "浏览器预览模式使用静态 runner 状态，桌面运行时会执行真实探测。",
-          title: "RDP runner 预览可用",
+          detail: t("connectionDialog.test.previewDetail"),
+          title: t("connectionDialog.test.rdpPreviewTitle"),
         });
         return;
       }
       const result = await rdpTestRunner((form.rdp || defaultRdpConfig).runner);
       if (result.default_runner) {
-        const availabilityDetail = `${formatRdpRunnerKind(result.default_runner)} 可用。${
-          result.supports_embedded
-            ? "当前平台支持嵌入式会话。"
-            : "嵌入式 host 暂不可用时会自动外部启动。"
-        }`;
+        const availabilityDetail = t("connectionDialog.test.runnerAvailable", {
+          runner: formatRdpRunnerKind(result.default_runner),
+          detail: result.supports_embedded
+            ? t("connectionDialog.test.rdpEmbedded")
+            : t("connectionDialog.test.rdpExternal"),
+        });
         setTestState("success");
         setFeedback({
           detail: result.setup_hint
             ? `${availabilityDetail}${result.setup_hint}`
             : availabilityDetail,
-          title: "RDP runner 检查通过",
+          title: t("connectionDialog.test.rdpPass"),
         });
       } else {
         setTestState("error");
         setFeedback({
-          detail: result.setup_hint || "未找到可用 RDP runner，请确认系统远程桌面组件可用。",
-          title: "未找到可用 RDP runner",
+          detail: result.setup_hint || t("connectionDialog.test.rdpMissing"),
+          title: t("connectionDialog.test.rdpMissingTitle"),
         });
       }
     } catch (nextError) {
@@ -598,16 +599,16 @@ export function ConnectionDialog({
     setBusy(true);
     setTestState("running");
     setFeedback({
-      detail: "正在检查本机 VNC runner 能力，不会发起远程登录。",
-      title: "正在检查 VNC runner",
+      detail: t("connectionDialog.test.vncCheckingDetail"),
+      title: t("connectionDialog.test.vncCheckingTitle"),
     });
 
     try {
       if (!hasTauriRuntime()) {
         setTestState("success");
         setFeedback({
-          detail: "浏览器预览模式使用静态 runner 状态，桌面运行时会执行真实探测。",
-          title: "VNC runner 预览可用",
+          detail: t("connectionDialog.test.previewDetail"),
+          title: t("connectionDialog.test.vncPreviewTitle"),
         });
         return;
       }
@@ -615,16 +616,19 @@ export function ConnectionDialog({
       if (result.default_runner) {
         setTestState("success");
         setFeedback({
-          detail: `${formatVncRunnerKind(result.default_runner)} 可用。${
-            result.supports_embedded ? "当前平台支持内嵌 noVNC 会话。" : "可使用外部 viewer。"
-          }`,
-          title: "VNC runner 检查通过",
+          detail: t("connectionDialog.test.runnerAvailable", {
+            runner: formatVncRunnerKind(result.default_runner),
+            detail: result.supports_embedded
+              ? t("connectionDialog.test.vncEmbedded")
+              : t("connectionDialog.test.vncExternal"),
+          }),
+          title: t("connectionDialog.test.vncPass"),
         });
       } else {
         setTestState("error");
         setFeedback({
-          detail: result.setup_hint || "未找到可用 VNC runner，请确认 noVNC 或外部 viewer 配置可用。",
-          title: "未找到可用 VNC runner",
+          detail: result.setup_hint || t("connectionDialog.test.vncMissing"),
+          title: t("connectionDialog.test.vncMissingTitle"),
         });
       }
     } catch (nextError) {
@@ -647,9 +651,9 @@ export function ConnectionDialog({
     setFeedback({
       detail:
         feedback.hostKeyDecision === "changed"
-          ? "正在更新本机保存的主机密钥信任，然后继续测试。"
-          : "正在保存本机主机密钥信任，然后继续测试。",
-      title: "正在确认主机密钥",
+          ? t("connectionDialog.hostKey.updating")
+          : t("connectionDialog.hostKey.saving"),
+      title: t("connectionDialog.hostKey.confirming"),
     });
     setTestState("running");
 
@@ -672,8 +676,8 @@ export function ConnectionDialog({
     busyRef.current = true;
     setBusy(true);
     setFeedback({
-      detail: "测试会复用当前表单配置，不会打开终端。",
-      title: `${formatAddress(input)} 正在检查`,
+      detail: t("connectionDialog.test.detail"),
+      title: t("connectionDialog.test.checking", { address: formatAddress(input) }),
     });
     setTestState("running");
 
@@ -681,8 +685,8 @@ export function ConnectionDialog({
       await onTest(input);
       setTestState("success");
       setFeedback({
-        detail: "当前配置可以继续保存。",
-        title: "连接测试通过",
+        detail: t("connectionDialog.test.successDetail"),
+        title: t("connectionDialog.test.success"),
       });
     } catch (nextError) {
       setActiveTab(tabForError(nextError));
@@ -801,30 +805,30 @@ export function ConnectionDialog({
               <header className="dialog-head">
                 <div className="dialog-title-group">
                   <Dialog.Title asChild>
-                    <strong>{duplicate ? "复制连接" : connection ? "编辑连接" : "新增连接"}</strong>
+                    <strong>{duplicate ? t("connectionDialog.title.duplicate") : connection ? t("connectionDialog.title.edit") : t("connectionDialog.title.new")}</strong>
                   </Dialog.Title>
                   <Dialog.Description className="dialog-subtitle">
                     {form.host
                       ? formatAddress(form)
                       : isRdp
-                        ? "保存一条可跨平台启动的 RDP 连接配置。"
+                        ? t("connectionDialog.description.rdp")
                         : isVnc
-                          ? "保存一条 noVNC 或外部 viewer VNC 连接配置。"
+                          ? t("connectionDialog.description.vnc")
                           : isTelnet
-                            ? "保存一条 Telnet 字符终端连接配置。"
+                            ? t("connectionDialog.description.telnet")
                             : isSerial
-                              ? "保存一条串口字符终端连接配置。"
-                              : "保存一条可维护的 SSH 连接配置。"}
+                              ? t("connectionDialog.description.serial")
+                              : t("connectionDialog.description.ssh")}
                   </Dialog.Description>
                 </div>
                 <Dialog.Close asChild>
-                  <button className="icon-button dialog-close-button" type="button" aria-label="关闭">
+                  <button className="icon-button dialog-close-button" type="button" aria-label={t("connectionDialog.close")}>
                     <X className="ui-icon" aria-hidden="true" />
                   </button>
                 </Dialog.Close>
               </header>
 
-              <div className="protocol-switch" aria-label="连接协议">
+              <div className="protocol-switch" aria-label={t("connectionDialog.protocolAria")}>
                 {protocolOptions().map((item) => {
                   const Icon = item.icon;
                   const active = protocol === item.value;
@@ -843,7 +847,7 @@ export function ConnectionDialog({
                 })}
               </div>
 
-              <nav className="connection-dialog-tabs" aria-label="连接配置页签">
+              <nav className="connection-dialog-tabs" aria-label={t("connectionDialog.tabsAria")}>
                 {dialogTabs.map(([id, label]) => (
                   <button
                     className={activeTab === id ? "active" : ""}
@@ -886,29 +890,29 @@ export function ConnectionDialog({
                       {feedback.rawMessage && testState !== "host-key" ? (
                         <>
                           {" "}
-                          原因：<code>{feedback.rawMessage}</code>
+                          {t("connectionDialog.feedback.reason", { reason: feedback.rawMessage })}
                         </>
                       ) : null}
                     </span>
                     {feedback.hostKey ? (
                       <dl className="fb-host-key">
                         <div>
-                          <dt>主机</dt>
+                          <dt>{t("connectionDialog.hostKey.host")}</dt>
                           <dd>{feedback.hostKey.host}:{feedback.hostKey.port.toString()}</dd>
                         </div>
                         <div>
-                          <dt>算法</dt>
+                          <dt>{t("connectionDialog.hostKey.algorithm")}</dt>
                           <dd>{feedback.hostKey.key_algorithm}</dd>
                         </div>
                         {feedback.oldHostKeyFingerprint ? (
                           <div>
-                            <dt>已保存指纹</dt>
+                            <dt>{t("connectionDialog.hostKey.savedFingerprint")}</dt>
                             <dd>{feedback.oldHostKeyFingerprint}</dd>
                           </div>
                         ) : null}
                         <div>
                           <dt>
-                            {feedback.oldHostKeyFingerprint ? "当前指纹" : "SHA256 指纹"}
+                            {feedback.oldHostKeyFingerprint ? t("connectionDialog.hostKey.currentFingerprint") : t("connectionDialog.hostKey.sha256")}
                           </dt>
                           <dd>{feedback.hostKey.fingerprint_sha256}</dd>
                         </div>
@@ -923,7 +927,7 @@ export function ConnectionDialog({
                           onClick={testConnection}
                         >
                           <RefreshCw className="ui-icon" aria-hidden="true" />
-                          <span>重试</span>
+                          <span>{t("connectionDialog.retry")}</span>
                         </button>
                       </div>
                     ) : null}
@@ -938,8 +942,8 @@ export function ConnectionDialog({
                           <RefreshCw className="ui-icon" aria-hidden="true" />
                           <span>
                             {feedback.hostKeyDecision === "changed"
-                              ? "更新信任并继续测试"
-                              : "信任并继续测试"}
+                              ? t("connectionDialog.hostKey.updateTrust")
+                              : t("connectionDialog.hostKey.trust")}
                           </span>
                         </button>
                       </div>
@@ -957,7 +961,7 @@ export function ConnectionDialog({
                       type="button"
                       onClick={() => setDeleteConfirmOpen(true)}
                     >
-                      删除
+                      {t("connectionDialog.delete")}
                     </button>
                   ) : null}
                   <button
@@ -966,13 +970,13 @@ export function ConnectionDialog({
                     type="button"
                     onClick={testConnection}
                   >
-                    {isRdp || isVnc ? "检查 Runner" : isCharacterProtocol ? "检查配置" : "测试连接"}
+                    {isRdp || isVnc ? t("connectionDialog.checkRunner") : isCharacterProtocol ? t("connectionDialog.checkConfig") : t("connectionDialog.testConnection")}
                   </button>
                 </div>
                 <div className="dialog-action-right">
                   <Dialog.Close asChild>
                     <button disabled={busy} type="button">
-                      取消
+                      {t("connectionDialog.cancel")}
                     </button>
                   </Dialog.Close>
                   <button disabled={busy} type="button" onClick={submitSecondary}>{submitPolicy.secondary.label}</button>
@@ -988,10 +992,10 @@ export function ConnectionDialog({
 
       {connection && !duplicate ? (
         <ConfirmDialog
-          confirmLabel="删除"
-          description={`确认删除连接“${connection.name}”吗？这个操作无法撤销。`}
+          confirmLabel={t("connectionDialog.delete")}
+          description={t("connectionDialog.deleteDescription", { name: connection.name })}
           open={deleteConfirmOpen}
-          title="删除连接"
+          title={t("connectionDialog.deleteTitle")}
           onConfirm={remove}
           onOpenChange={setDeleteConfirmOpen}
         />
