@@ -7,6 +7,7 @@ const en = JSON.parse(readFileSync(new URL("../src/shared/i18n/locales/en.json",
 const zh = JSON.parse(readFileSync(new URL("../src/shared/i18n/locales/zh-CN.json", import.meta.url), "utf8"));
 const release = readFileSync(new URL("../.github/workflows/release.yml", import.meta.url), "utf8");
 const buildPlatform = readFileSync(new URL("../scripts/build-platform.mjs", import.meta.url), "utf8");
+const prepareSidecar = readFileSync(new URL("../scripts/prepare-mcp-sidecar.mjs", import.meta.url), "utf8");
 const mcp = readFileSync(new URL("../src-tauri/src/mcp.rs", import.meta.url), "utf8");
 const sidecar = readFileSync(new URL("../src-tauri/src/bin/mxterm_mcp.rs", import.meta.url), "utf8");
 
@@ -37,6 +38,14 @@ for (const key of enKeys) {
 if (pkg.name !== "nexaterm") fail(`package name drifted: ${pkg.name}`);
 if (tauri.productName !== "NexaTerm") fail(`Tauri productName drifted: ${tauri.productName}`);
 if (tauri.identifier !== "com.nexaterm.app") fail(`bundle identifier drifted: ${tauri.identifier}`);
+if (!Array.isArray(tauri?.bundle?.externalBin) ||
+    !tauri.bundle.externalBin.includes("binaries/nexaterm-mcp")) {
+  fail("externalBin must bundle nexaterm-mcp");
+}
+if (!String(tauri?.build?.beforeBuildCommand || "").includes("build:mcp-sidecar") ||
+    !String(tauri?.build?.beforeDevCommand || "").includes("build:mcp-sidecar")) {
+  fail("Tauri build/dev hooks must prepare the canonical MCP sidecar");
+}
 const updaterEndpoints = tauri?.plugins?.updater?.endpoints || [];
 if (!updaterEndpoints.some((value) =>
   String(value).includes("github.com/DenisZheng/NexaTerm/releases/latest/download/latest.json")
@@ -65,12 +74,28 @@ if (!buildPlatform.includes('"MXTERM_CREATE_UPDATER_ARTIFACTS"')) {
 }
 
 for (const needle of [
+  'canonicalSidecarName = "nexaterm-mcp"',
+  'legacyCargoBinName = "mxterm-mcp"',
+  "TAURI_ENV_TARGET_TRIPLE",
+  '"binaries"',
+]) {
+  if (!prepareSidecar.includes(needle)) {
+    fail(`prepare-mcp-sidecar must emit canonical target-triple bundle: ${needle}`);
+  }
+}
+
+for (const needle of [
   '"get_nexaterm_mcp_status"',
   '"get_mxterm_mcp_status"',
   '"Get NexaTerm MCP status."',
   '"List redacted saved NexaTerm connections."',
   '"NexaTerm MCP 尚未启用。"',
   '"MCP 工具只允许使用 NexaTerm 已保存的 connection_id。"',
+  '"nexaterm-mcp.exe"',
+  '"nexaterm-mcp"',
+  '"mxterm-mcp.exe"',
+  '"mxterm-mcp"',
+  "legacy_sidecar_executable_name",
 ]) {
   if (!mcp.includes(needle)) fail(`MCP backend missing canonical/compatibility contract: ${needle}`);
 }
@@ -94,6 +119,10 @@ for (const needle of [
 }
 if (sidecar.includes('"serverInfo": { "name": "mxterm-mcp"')) {
   fail("MCP serverInfo must use the NexaTerm identity");
+}
+
+if (!mcp.includes('const MCP_SIDECAR_PROCESS_NAMES: [&str; 2] = ["nexaterm-mcp.exe", "mxterm-mcp.exe"]')) {
+  fail("Windows updater blocker must recognize canonical and legacy MCP process names");
 }
 
 console.log(
