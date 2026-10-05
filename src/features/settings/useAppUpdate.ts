@@ -144,7 +144,7 @@ export function useAppUpdate({
     if (!autoCheckEnabled || !runtimeInfo) {
       return;
     }
-    if (getUnsupportedUpdateMessage(runtimeInfo)) {
+    if (getUnsupportedUpdateMessage(runtimeInfo, locale)) {
       return;
     }
     if (lastAutoCheckVersionRef.current === runtimeInfo.version) {
