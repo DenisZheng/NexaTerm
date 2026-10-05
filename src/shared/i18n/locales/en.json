@@ -163,5 +163,8 @@
   "brandMigration.blockedDescription": "NexaTerm will not overwrite existing user data. Keep using the current data, or export/back it up before attempting a manual migration.",
   "brandMigration.continue": "Continue with current NexaTerm data",
   "brandMigration.error": "Migration failed: {message}",
-  "brandMigration.restartFailed": "Migration completed, but automatic restart failed. Please restart NexaTerm manually."
+  "brandMigration.restartFailed": "Migration completed, but automatic restart failed. Please restart NexaTerm manually.",
+  "brandMigration.settingsTitle": "Migrate your mXterm settings",
+  "brandMigration.settingsDescription": "NexaTerm found settings from the previous mXterm WebView profile. Importing them restores appearance, shortcuts, startup preferences, and custom Local/WSL profiles. The old mXterm profile is left untouched.",
+  "brandMigration.settingsApply": "Import settings and restart"
 }
