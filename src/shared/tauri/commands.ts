@@ -187,6 +187,18 @@ export interface LegacyAppDataRollbackResult {
   restartRequired: boolean;
 }
 
+export interface LegacyWebviewSettingsProbeStart {
+  supported: boolean;
+  started: boolean;
+  token: string | null;
+  reason: string | null;
+}
+
+export interface LegacyWebviewSettingsProbeResult {
+  complete: boolean;
+  value: string | null;
+}
+
 export function legacyAppDataMigrationPreview() {
   return invoke<LegacyAppDataMigrationPreview>("legacy_app_data_migration_preview");
 }
@@ -197,6 +209,18 @@ export function legacyAppDataMigrationApply() {
 
 export function legacyAppDataMigrationRollback() {
   return invoke<LegacyAppDataRollbackResult>("legacy_app_data_migration_rollback");
+}
+
+export function legacyWebviewSettingsProbeStart() {
+  return invoke<LegacyWebviewSettingsProbeStart>("legacy_webview_settings_probe_start");
+}
+
+export function legacyWebviewSettingsProbeCapture(token: string, value: string | null) {
+  return invoke<void>("legacy_webview_settings_probe_capture", { token, value });
+}
+
+export function legacyWebviewSettingsProbeTake(token: string) {
+  return invoke<LegacyWebviewSettingsProbeResult>("legacy_webview_settings_probe_take", { token });
 }
 
 export function secretVaultStatus() {
