@@ -2521,5 +2521,7 @@
   "workspace.local.status.connected": "Connected",
   "workspace.local.status.connecting": "Connecting",
   "workspace.rdp.copyPreview": "Copy preview",
-  "workspace.vnc.copyPreview": "Copy preview"
+  "workspace.vnc.copyPreview": "Copy preview",
+  "workspace.command.sendFailed": "Command send failed: {message}",
+  "workspace.local.state": "Terminal status"
 }
