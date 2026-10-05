@@ -9,8 +9,8 @@
 - [x] First green CI evidence: CI #369 / run `37268756990` PASS on `0a7509a6be8746e6222d52a1640a4b4d33947ca8`.
 
 ## Real predecessor gate
-- [ ] A09 maintainer-confirmed real Tauri PASS.
-- [ ] A10 maintainer-confirmed real Tauri PASS.
+- [x] A09 maintainer-confirmed real Tauri PASS (2026-10-05).
+- [x] A10 maintainer-confirmed real Tauri PASS (2026-10-05).
 
 ## Real release evidence
 - [ ] Windows x64 install / launch / Authenticode / upgrade / rollback / locale / theme / brand.
