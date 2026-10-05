@@ -42,7 +42,11 @@ requireAll(legacySettings, [
   ".initialization_script(initialization_script)",
   ".data_directory(legacy_root)",
   "MAX_SETTINGS_BYTES",
-  "macos-default-wkwebview-store-unaddressable",
+  "read_legacy_macos_settings",
+  "SQLITE_OPEN_READ_ONLY",
+  "SELECT value FROM ItemTable WHERE key = ?1",
+  "decode_webkit_utf16le_blob",
+  "macos-readonly-webkit-sqlite",
 ], "legacy WebView settings bridge");
 
 requireAll(lib, [
