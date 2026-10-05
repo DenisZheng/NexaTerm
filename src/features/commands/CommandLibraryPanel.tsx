@@ -16,6 +16,7 @@ import {
   Trash2,
 } from "lucide-react";
 
+import { useI18n, type Translate } from "../../shared/i18n";
 import { AppSelect } from "../../shared/ui/AppSelect";
 import { Tooltip } from "../../shared/ui/Tooltip";
 import type { CommandHistoryEntry, CommandSnippet } from "./commandLibraryTypes";
@@ -68,7 +69,6 @@ interface SnippetTree {
   rootSnippets: CommandSnippet[];
 }
 
-const rootSnippetGroupLabel = "根目录";
 const legacyUngroupedSnippetGroup = "未分组";
 
 export function CommandLibraryPanel({
@@ -99,17 +99,17 @@ export function CommandLibraryPanel({
   onRunHistory,
   onRunSnippet,
 }: CommandLibraryPanelProps) {
+  const { t, locale } = useI18n();
   const [mode, setMode] = useState<CommandLibraryMode>("snippets");
   const [query, setQuery] = useState("");
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => new Set());
   const normalizedQuery = query.trim().toLowerCase();
   const disabled = Boolean(unavailableReason);
 
-  const snippetTree = useMemo(() => buildSnippetTree(snippets, groups, normalizedQuery), [
-    groups,
-    normalizedQuery,
-    snippets,
-  ]);
+  const snippetTree = useMemo(
+    () => buildSnippetTree(snippets, groups, normalizedQuery, locale),
+    [groups, locale, normalizedQuery, snippets],
+  );
   const filteredHistoryEntries = useMemo(
     () => historyEntries.filter((entry) => historyMatchesQuery(entry, normalizedQuery)),
     [historyEntries, normalizedQuery],
@@ -144,37 +144,37 @@ export function CommandLibraryPanel({
             </span>
             <code title={snippet.command}>{firstCommandLine(snippet.command)}</code>
             <small>
-              使用 {snippet.use_count.toString()} 次 ·{" "}
+              {t("commands.used", { count: snippet.use_count })} ·{" "}
               {formatCommandLibraryTime(snippet.last_used_at || snippet.updated_at)}
               {snippet.description ? ` · ${snippet.description}` : ""}
             </small>
           </div>
           <div className="command-library-row-actions">
-            <Tooltip label="复制命令">
+            <Tooltip label={t("commands.copy")}>
               <button
                 className="command-library-icon-button"
                 type="button"
-                aria-label={`复制片段 ${snippet.title}`}
+                aria-label={t("commands.copySnippetAria", { name: snippet.title })}
                 onClick={() => onCopySnippet(snippet)}
               >
                 <Copy className="ui-icon" aria-hidden="true" />
               </button>
             </Tooltip>
-            <Tooltip label="插入到命令操作台">
+            <Tooltip label={t("commands.insert")}>
               <button
                 className="command-library-icon-button"
                 type="button"
-                aria-label={`插入片段 ${snippet.title}`}
+                aria-label={t("commands.insertSnippetAria", { name: snippet.title })}
                 onClick={() => onInsertSnippet(snippet)}
               >
                 <CornerDownLeft className="ui-icon" aria-hidden="true" />
               </button>
             </Tooltip>
-            <Tooltip label="发送到终端">
+            <Tooltip label={t("commands.run")}>
               <button
                 className="command-library-icon-button primary"
                 type="button"
-                aria-label={`发送片段 ${snippet.title} 到终端`}
+                aria-label={t("commands.runSnippetAria", { name: snippet.title })}
                 disabled={disabled}
                 onClick={() => onRunSnippet(snippet)}
               >
@@ -188,11 +188,11 @@ export function CommandLibraryPanel({
         <ContextMenu.Content className="context-menu-content">
           <ContextMenu.Item className="context-menu-item" onSelect={() => onCopySnippet(snippet)}>
             <Copy className="ui-icon" aria-hidden="true" />
-            <span>复制命令</span>
+            <span>{t("commands.copy")}</span>
           </ContextMenu.Item>
           <ContextMenu.Item className="context-menu-item" onSelect={() => onInsertSnippet(snippet)}>
             <CornerDownLeft className="ui-icon" aria-hidden="true" />
-            <span>插入到命令操作台</span>
+            <span>{t("commands.insert")}</span>
           </ContextMenu.Item>
           <ContextMenu.Item
             className="context-menu-item"
@@ -200,7 +200,7 @@ export function CommandLibraryPanel({
             onSelect={() => onRunSnippet(snippet)}
           >
             <Play className="ui-icon" aria-hidden="true" />
-            <span>发送到终端</span>
+            <span>{t("commands.run")}</span>
           </ContextMenu.Item>
           <ContextMenu.Separator className="context-menu-separator" />
           <ContextMenu.Item
@@ -209,7 +209,7 @@ export function CommandLibraryPanel({
             onSelect={() => onEditSnippet(snippet)}
           >
             <Pencil className="ui-icon" aria-hidden="true" />
-            <span>编辑片段</span>
+            <span>{t("commands.editSnippet")}</span>
           </ContextMenu.Item>
           <ContextMenu.Item
             className="context-menu-item danger"
@@ -217,7 +217,7 @@ export function CommandLibraryPanel({
             onSelect={() => onDeleteSnippet(snippet)}
           >
             <Trash2 className="ui-icon" aria-hidden="true" />
-            <span>删除片段</span>
+            <span>{t("commands.deleteSnippet")}</span>
           </ContextMenu.Item>
         </ContextMenu.Content>
       </ContextMenu.Portal>
@@ -240,26 +240,26 @@ export function CommandLibraryPanel({
   }));
 
   return (
-    <section className="command-library-tool" aria-label="命令">
+    <section className="command-library-tool" aria-label={t("commands.aria")}>
       <header className="command-library-tool-head">
         <div className="command-library-tool-title">
-          <strong>命令</strong>
-          <span>{mode === "snippets" ? "片段按文件夹分组管理" : "主动发送与可选终端输入历史"}</span>
+          <strong>{t("commands.title")}</strong>
+          <span>{mode === "snippets" ? t("commands.subtitle.snippets") : t("commands.subtitle.history")}</span>
         </div>
-        <div className="command-library-mode-tabs" aria-label="命令视图">
+        <div className="command-library-mode-tabs" aria-label={t("commands.viewAria")}>
           <button
             className={mode === "snippets" ? "active" : ""}
             type="button"
             onClick={() => setMode("snippets")}
           >
-            片段
+            {t("commands.snippets")}
           </button>
           <button
             className={mode === "history" ? "active" : ""}
             type="button"
             onClick={() => setMode("history")}
           >
-            历史
+            {t("commands.history")}
           </button>
         </div>
       </header>
@@ -268,15 +268,15 @@ export function CommandLibraryPanel({
         <label className="command-library-search">
           <Search className="ui-icon" aria-hidden="true" />
           <input
-            aria-label="搜索命令"
-            placeholder={mode === "snippets" ? "搜索片段名称、命令、说明" : "搜索历史命令"}
+            aria-label={t("commands.searchAria")}
+            placeholder={mode === "snippets" ? t("commands.searchSnippets") : t("commands.searchHistory")}
             spellCheck={false}
             value={query}
             onChange={(event) => setQuery(event.currentTarget.value)}
           />
         </label>
         <span className="command-library-count">
-          {loading ? "加载中" : `${visibleCount.toString()} 条`}
+          {loading ? t("commands.loading") : t("commands.count", { count: visibleCount })}
         </span>
       </div>
 
@@ -288,9 +288,9 @@ export function CommandLibraryPanel({
 
       {mode === "snippets" ? (
         <div className="command-library-snippet-workbench">
-          <div className="command-library-snippet-list" aria-label="命令片段">
+          <div className="command-library-snippet-list" aria-label={t("commands.snippetListAria")}>
             <div className="command-library-list-head">
-              <span>片段库</span>
+              <span>{t("commands.library")}</span>
               <div className="command-library-list-actions">
                 <button
                   className="command-library-mini-button primary"
@@ -299,7 +299,7 @@ export function CommandLibraryPanel({
                   onClick={() => onCreateSnippet()}
                 >
                   <Plus className="ui-icon" aria-hidden="true" />
-                  <span>命令</span>
+                  <span>{t("commands.newCommand")}</span>
                 </button>
                 <button
                   className="command-library-mini-button"
@@ -308,18 +308,18 @@ export function CommandLibraryPanel({
                   onClick={onCreateGroup}
                 >
                   <FolderPlus className="ui-icon" aria-hidden="true" />
-                  <span>分组</span>
+                  <span>{t("commands.newGroup")}</span>
                 </button>
               </div>
             </div>
             {!hasSnippetTreeRows ? (
               <p className="command-library-empty">
-                {loading ? "正在加载命令片段..." : "暂无匹配片段。"}
+                {loading ? t("commands.loadingSnippets") : t("commands.noSnippets")}
               </p>
             ) : (
               <div className="command-library-snippet-tree">
                 {snippetTree.rootSnippets.length > 0 ? (
-                  <div className="command-library-snippet-root" aria-label={rootSnippetGroupLabel}>
+                  <div className="command-library-snippet-root" aria-label={t("commands.root")}>
                     {snippetTree.rootSnippets.map((snippet) => renderSnippetRow(snippet))}
                   </div>
                 ) : null}
@@ -360,7 +360,7 @@ export function CommandLibraryPanel({
                             onSelect={() => onCreateSnippet(group.name)}
                           >
                             <Plus className="ui-icon" aria-hidden="true" />
-                            <span>新建命令到此分组</span>
+                            <span>{t("commands.newInGroup")}</span>
                           </ContextMenu.Item>
                           <ContextMenu.Item
                             className="context-menu-item"
@@ -368,7 +368,7 @@ export function CommandLibraryPanel({
                             onSelect={() => onRenameGroup(group.name)}
                           >
                             <Pencil className="ui-icon" aria-hidden="true" />
-                            <span>重命名分组</span>
+                            <span>{t("commands.renameGroup")}</span>
                           </ContextMenu.Item>
                           <ContextMenu.Separator className="context-menu-separator" />
                           <ContextMenu.Item
@@ -377,7 +377,7 @@ export function CommandLibraryPanel({
                             onSelect={() => onDeleteGroup(group.name)}
                           >
                             <Trash2 className="ui-icon" aria-hidden="true" />
-                            <span>删除分组</span>
+                            <span>{t("commands.deleteGroup")}</span>
                           </ContextMenu.Item>
                         </ContextMenu.Content>
                       </ContextMenu.Portal>
@@ -385,7 +385,7 @@ export function CommandLibraryPanel({
                     {collapsedGroups.has(group.name) ? null : (
                       <div className="command-library-snippet-children">
                         {group.snippets.length === 0 ? (
-                          <p className="command-library-group-empty">空分组</p>
+                          <p className="command-library-group-empty">{t("commands.emptyGroup")}</p>
                         ) : (
                           group.snippets.map((snippet) => renderSnippetRow(snippet, true))
                         )}
@@ -402,7 +402,7 @@ export function CommandLibraryPanel({
           <div className="command-library-list-head">
             <div className="command-library-list-actions">
               <AppSelect
-                ariaLabel="历史范围"
+                ariaLabel={t("commands.historyScope")}
                 className="command-library-scope-select"
                 menuMinWidth={190}
                 options={scopeSelectOptions}
@@ -416,13 +416,13 @@ export function CommandLibraryPanel({
                 onClick={onClearHistory}
               >
                 <Trash2 className="ui-icon" aria-hidden="true" />
-                <span>清空全部</span>
+                <span>{t("commands.clearAll")}</span>
               </button>
             </div>
           </div>
           {filteredHistoryEntries.length === 0 ? (
             <p className="command-library-empty">
-              {loading ? "正在加载历史命令..." : "暂无匹配历史。"}
+              {loading ? t("commands.loadingHistory") : t("commands.noHistory")}
             </p>
           ) : (
             <div className="command-library-history-list">
@@ -438,38 +438,38 @@ export function CommandLibraryPanel({
                         <code title={entry.command}>{entry.command}</code>
                         <span>
                           <em className="command-library-source-badge">
-                            {historySourceLabel(entry.source)}
+                            {historySourceLabel(entry.source, t)}
                           </em>
                           <Clock3 className="ui-icon" aria-hidden="true" />
-                          使用 {entry.use_count.toString()} 次 · {formatCommandLibraryTime(entry.last_used_at)}
+                          {t("commands.used", { count: entry.use_count })} · {formatCommandLibraryTime(entry.last_used_at)}
                         </span>
                       </div>
                       <div className="command-library-history-actions">
-                        <Tooltip label="复制命令">
+                        <Tooltip label={t("commands.copy")}>
                           <button
                             className="command-library-icon-button"
                             type="button"
-                            aria-label="复制历史命令"
+                            aria-label={t("commands.copyHistoryAria")}
                             onClick={() => onCopyHistory(entry)}
                           >
                             <Copy className="ui-icon" aria-hidden="true" />
                           </button>
                         </Tooltip>
-                        <Tooltip label="插入到命令操作台">
+                        <Tooltip label={t("commands.insert")}>
                           <button
                             className="command-library-icon-button"
                             type="button"
-                            aria-label="插入历史命令"
+                            aria-label={t("commands.insertHistoryAria")}
                             onClick={() => onInsertHistory(entry)}
                           >
                             <CornerDownLeft className="ui-icon" aria-hidden="true" />
                           </button>
                         </Tooltip>
-                        <Tooltip label="发送到终端">
+                        <Tooltip label={t("commands.run")}>
                           <button
                             className="command-library-icon-button primary"
                             type="button"
-                            aria-label="发送历史命令到终端"
+                            aria-label={t("commands.runHistoryAria")}
                             disabled={disabled}
                             onClick={() => onRunHistory(entry)}
                           >
@@ -483,11 +483,11 @@ export function CommandLibraryPanel({
                     <ContextMenu.Content className="context-menu-content">
                       <ContextMenu.Item className="context-menu-item" onSelect={() => onCopyHistory(entry)}>
                         <Copy className="ui-icon" aria-hidden="true" />
-                        <span>复制命令</span>
+                        <span>{t("commands.copy")}</span>
                       </ContextMenu.Item>
                       <ContextMenu.Item className="context-menu-item" onSelect={() => onInsertHistory(entry)}>
                         <CornerDownLeft className="ui-icon" aria-hidden="true" />
-                        <span>插入到命令操作台</span>
+                        <span>{t("commands.insert")}</span>
                       </ContextMenu.Item>
                       <ContextMenu.Item
                         className="context-menu-item"
@@ -495,7 +495,7 @@ export function CommandLibraryPanel({
                         onSelect={() => onRunHistory(entry)}
                       >
                         <Play className="ui-icon" aria-hidden="true" />
-                        <span>发送到终端</span>
+                        <span>{t("commands.run")}</span>
                       </ContextMenu.Item>
                       <ContextMenu.Separator className="context-menu-separator" />
                       <ContextMenu.Item
@@ -504,7 +504,7 @@ export function CommandLibraryPanel({
                         onSelect={() => onHistoryToSnippet(entry)}
                       >
                         <Plus className="ui-icon" aria-hidden="true" />
-                        <span>存为片段</span>
+                        <span>{t("commands.saveSnippet")}</span>
                       </ContextMenu.Item>
                       <ContextMenu.Item
                         className="context-menu-item danger"
@@ -512,7 +512,7 @@ export function CommandLibraryPanel({
                         onSelect={() => onDeleteHistory(entry)}
                       >
                         <Trash2 className="ui-icon" aria-hidden="true" />
-                        <span>删除历史命令</span>
+                        <span>{t("commands.deleteHistory")}</span>
                       </ContextMenu.Item>
                     </ContextMenu.Content>
                   </ContextMenu.Portal>
@@ -530,6 +530,7 @@ function buildSnippetTree(
   snippets: CommandSnippet[],
   explicitGroups: string[],
   normalizedQuery: string,
+  locale: "en" | "zh-CN",
 ): SnippetTree {
   const rootSnippets: CommandSnippet[] = [];
   const groups = new Map<string, CommandSnippet[]>();
@@ -557,7 +558,7 @@ function buildSnippetTree(
   const visibleGroups = Array.from(groups.entries())
     .filter(([, groupSnippets]) => groupSnippets.length > 0 || !normalizedQuery)
     .map(([name, groupSnippets]) => ({ name, snippets: groupSnippets }))
-    .sort((left, right) => left.name.localeCompare(right.name, "zh-Hans"));
+    .sort((left, right) => left.name.localeCompare(right.name, locale === "zh-CN" ? "zh-Hans" : "en"));
 
   return { groups: visibleGroups, rootSnippets };
 }
@@ -587,8 +588,8 @@ function historyMatchesQuery(entry: CommandHistoryEntry, normalizedQuery: string
   return entry.command.toLowerCase().includes(normalizedQuery);
 }
 
-function historySourceLabel(source: CommandHistoryEntry["source"]) {
-  return source === "terminal_input" ? "终端" : "发送";
+function historySourceLabel(source: CommandHistoryEntry["source"], t: Translate) {
+  return source === "terminal_input" ? t("commands.source.terminal") : t("commands.source.send");
 }
 
 function firstCommandLine(command: string) {
