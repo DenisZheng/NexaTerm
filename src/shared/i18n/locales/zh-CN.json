@@ -2591,5 +2591,8 @@
   "workspace.restore.temporaryCredentials": "临时连接凭据不会持久化，请重新建立或认证该连接。",
   "workspace.restore.restoring": "正在恢复",
   "workspace.restore.manualRetry": "工作区已恢复；自动重连未开启，可手动重试。",
-  "workspace.restore.desktopStopped": "工作区已恢复；桌面会话保持停止，可手动重试。"
+  "workspace.restore.desktopStopped": "工作区已恢复；桌面会话保持停止，可手动重试。",
+  "files.transfer.stage.waitingRemote": "等待远端确认",
+  "monitor.error.noSsh": "没有活动 SSH 连接。",
+  "monitor.preview.signal": "预览模式已模拟发送 {signal}"
 }
