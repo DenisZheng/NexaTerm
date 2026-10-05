@@ -1225,7 +1225,7 @@ function RemoteFilePanelComponent({
         </ContextMenu.Item>
         <ContextMenu.Item className="context-menu-item" onSelect={() => onUploadDirectory?.(entry.path)}>
           <Upload className="ui-icon" aria-hidden="true" />
-          {t("files.panel.action.uploadFile")}夹
+          {t("files.panel.action.uploadFolder")}
         </ContextMenu.Item>
         <ContextMenu.Item className="context-menu-item" onSelect={() => onCreateFile?.(entry.path)}>
           <FilePlus className="ui-icon" aria-hidden="true" />
@@ -1233,11 +1233,11 @@ function RemoteFilePanelComponent({
         </ContextMenu.Item>
         <ContextMenu.Item className="context-menu-item" onSelect={() => onCreateDirectory?.(entry.path)}>
           <FolderPlus className="ui-icon" aria-hidden="true" />
-          {t("files.panel.action.newFile")}夹
+          {t("files.panel.action.newFolder")}
         </ContextMenu.Item>
         <ContextMenu.Item className="context-menu-item" onSelect={() => onDownloadEntry?.(entry)}>
           <Download className="ui-icon" aria-hidden="true" />
-          {t("files.panel.action.download")}目录
+          {t("files.panel.action.downloadDirectory")}
         </ContextMenu.Item>
         <ContextMenu.Separator className="context-menu-separator" />
         <ContextMenu.Item className="context-menu-item" onSelect={() => onRenameEntry?.(entry)}>
@@ -1269,11 +1269,11 @@ function RemoteFilePanelComponent({
       <>
         <ContextMenu.Item className="context-menu-item" onSelect={() => onDownloadEntries?.(entries)}>
           <Download className="ui-icon" aria-hidden="true" />
-          {t("files.panel.action.download")}所选 {entries.length.toString()} 项
+          {t("files.panel.action.downloadSelected", { count: entries.length })}
         </ContextMenu.Item>
         <ContextMenu.Item className="context-menu-item danger" onSelect={() => onDeleteEntries?.(entries)}>
           <Trash2 className="ui-icon" aria-hidden="true" />
-          {t("files.panel.action.delete")}所选 {entries.length.toString()} 项
+          {t("files.panel.action.deleteSelected", { count: entries.length })}
         </ContextMenu.Item>
         <ContextMenu.Item className="context-menu-item" onSelect={clearSelection}>
           <X className="ui-icon" aria-hidden="true" />
@@ -1288,7 +1288,7 @@ function RemoteFilePanelComponent({
       <>
         <ContextMenu.Item className="context-menu-item" onSelect={() => void loadDirectory(activeDirectoryPath, true)}>
           <RefreshCw className="ui-icon" aria-hidden="true" />
-          {t("files.panel.action.refresh")}当前目录
+          {t("files.panel.action.refreshCurrent")}
         </ContextMenu.Item>
         <ContextMenu.Item className="context-menu-item" onSelect={() => onUploadFile?.(activeDirectoryPath)}>
           <Upload className="ui-icon" aria-hidden="true" />
@@ -1296,7 +1296,7 @@ function RemoteFilePanelComponent({
         </ContextMenu.Item>
         <ContextMenu.Item className="context-menu-item" onSelect={() => onUploadDirectory?.(activeDirectoryPath)}>
           <Upload className="ui-icon" aria-hidden="true" />
-          {t("files.panel.action.uploadFile")}夹
+          {t("files.panel.action.uploadFolder")}
         </ContextMenu.Item>
         <ContextMenu.Item className="context-menu-item" onSelect={() => onCreateFile?.(activeDirectoryPath)}>
           <FilePlus className="ui-icon" aria-hidden="true" />
@@ -1304,11 +1304,11 @@ function RemoteFilePanelComponent({
         </ContextMenu.Item>
         <ContextMenu.Item className="context-menu-item" onSelect={() => onCreateDirectory?.(activeDirectoryPath)}>
           <FolderPlus className="ui-icon" aria-hidden="true" />
-          {t("files.panel.action.newFile")}夹
+          {t("files.panel.action.newFolder")}
         </ContextMenu.Item>
         <ContextMenu.Item className="context-menu-item" onSelect={() => onDownloadEntry?.(currentDirectoryEntry())}>
           <Download className="ui-icon" aria-hidden="true" />
-          {t("files.panel.action.download")}当前目录
+          {t("files.panel.action.downloadCurrent")}
         </ContextMenu.Item>
         <ContextMenu.Separator className="context-menu-separator" />
         <ContextMenu.Item className="context-menu-item" onSelect={() => onCopyPath?.(activeDirectoryPath)}>
@@ -1699,7 +1699,7 @@ function FilePanelShell({
                       onToggleUploadMenu();
                     }}
                   >
-                    {t("files.panel.action.uploadFile")}夹
+                    {t("files.panel.action.uploadFolder")}
                   </button>
                 </div>
               ) : null}
