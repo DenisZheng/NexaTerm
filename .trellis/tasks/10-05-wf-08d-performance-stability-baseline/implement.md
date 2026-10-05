@@ -15,7 +15,7 @@
 - [x] Define failure-isolation steps.
 - [x] Add WF-08D source gate.
 - [x] Wire CI step.
-- [ ] First green CI evidence.
+- [x] First green CI evidence: CI #364 / run `37266312459` PASS on `c0002d706c39f3c8508694803c3bf3524a12e2c0`.
 
 ## Real-platform evidence boundary
 - [ ] Windows packaged startup/idle baseline.
