@@ -574,7 +574,7 @@ fn normalize_connection_ids(ids: Vec<String>) -> Vec<String> {
 }
 
 pub fn status(settings: &McpSettings) -> McpStatus {
-    let mut tools = vec!["get_mxterm_mcp_status"];
+    let mut tools = vec!["get_nexaterm_mcp_status", "get_mxterm_mcp_status"];
     if settings.enabled && settings.expose_connections {
         tools.extend(["list_connections", "search_connections", "get_connection"]);
     }
@@ -764,7 +764,7 @@ pub fn default_app_data_dir() -> Result<PathBuf, AppError> {
         let appdata = env::var_os("APPDATA").ok_or_else(|| {
             AppError::new(
                 "mcp_data_dir_missing",
-                "无法定位 MXterm 数据目录。",
+                "无法定位 NexaTerm 数据目录。",
                 "APPDATA missing",
                 true,
             )
@@ -776,7 +776,7 @@ pub fn default_app_data_dir() -> Result<PathBuf, AppError> {
         let home = env::var_os("HOME").ok_or_else(|| {
             AppError::new(
                 "mcp_data_dir_missing",
-                "无法定位 MXterm 数据目录。",
+                "无法定位 NexaTerm 数据目录。",
                 "HOME missing",
                 true,
             )
@@ -794,7 +794,7 @@ pub fn default_app_data_dir() -> Result<PathBuf, AppError> {
             .ok_or_else(|| {
                 AppError::new(
                     "mcp_data_dir_missing",
-                    "无法定位 MXterm 数据目录。",
+                    "无法定位 NexaTerm 数据目录。",
                     "HOME missing",
                     true,
                 )
@@ -826,7 +826,7 @@ pub fn ensure_enabled(settings: &McpSettings) -> Result<(), AppError> {
     } else {
         Err(AppError::new(
             "mcp_disabled",
-            "MXterm MCP 尚未启用。",
+            "NexaTerm MCP 尚未启用。",
             "mcp.enabled=false",
             true,
         ))
@@ -893,7 +893,7 @@ pub fn reject_plaintext_credential_args(args: &Value) -> Result<(), AppError> {
         if object.contains_key(forbidden) {
             return Err(AppError::new(
                 "mcp_plaintext_credentials_rejected",
-                "MCP 工具只允许使用 MXterm 已保存的 connection_id。",
+                "MCP 工具只允许使用 NexaTerm 已保存的 connection_id。",
                 format!("forbidden argument: {forbidden}"),
                 true,
             ));
@@ -1228,7 +1228,7 @@ pub async fn execute_script(
         .and_then(|value| value.to_str())
         .unwrap_or("script.sh")
         .replace(['/', '\\', ' ', '\'', '"'], "_");
-    let remote_path = format!("/tmp/mxterm-mcp-{}-{name}", now_millis());
+    let remote_path = format!("/tmp/nexaterm-mcp-{}-{name}", now_millis());
     let command = build_execute_script_command(&remote_path, interpreter, args)?;
     upload_file(root, connection_id, script_path, &remote_path, settings).await?;
     execute_command(
@@ -1627,7 +1627,7 @@ pub fn sidecar_executable_path() -> Result<PathBuf, AppError> {
     let current_exe = env::current_exe().map_err(|error| {
         AppError::new(
             "mcp_executable_path_failed",
-            "无法定位 MXterm MCP 可执行文件路径。",
+            "无法定位 NexaTerm MCP 可执行文件路径。",
             error,
             true,
         )
@@ -1635,7 +1635,7 @@ pub fn sidecar_executable_path() -> Result<PathBuf, AppError> {
     let parent = current_exe.parent().ok_or_else(|| {
         AppError::new(
             "mcp_executable_path_failed",
-            "无法定位 MXterm MCP 可执行文件路径。",
+            "无法定位 NexaTerm MCP 可执行文件路径。",
             current_exe.display(),
             true,
         )
@@ -2245,7 +2245,7 @@ fn app_data_dir(app: &AppHandle) -> Result<PathBuf, AppError> {
     app.path().app_data_dir().map_err(|error| {
         AppError::new(
             "mcp_data_dir_missing",
-            "无法定位 MXterm 数据目录。",
+            "无法定位 NexaTerm 数据目录。",
             error,
             true,
         )
@@ -2444,18 +2444,23 @@ pub fn mcp_remote_token_rotate(
 pub fn tool_schemas() -> Vec<Value> {
     vec![
         tool(
+            "get_nexaterm_mcp_status",
+            "Get NexaTerm MCP status.",
+            json!({ "type": "object", "properties": {} }),
+        ),
+        tool(
             "get_mxterm_mcp_status",
-            "Get MXterm MCP status.",
+            "Legacy alias for get_nexaterm_mcp_status.",
             json!({ "type": "object", "properties": {} }),
         ),
         tool(
             "list_connections",
-            "List redacted saved MXterm connections.",
+            "List redacted saved NexaTerm connections.",
             json!({ "type": "object", "properties": {} }),
         ),
         tool(
             "search_connections",
-            "Search redacted saved MXterm connections.",
+            "Search redacted saved NexaTerm connections.",
             json!({ "type": "object", "properties": { "query": { "type": "string" } }, "required": ["query"] }),
         ),
         tool(
@@ -2591,7 +2596,7 @@ mod tests {
         let settings = McpSettings::default();
 
         assert!(!settings.enabled);
-        assert_eq!(status(&settings).tools, vec!["get_mxterm_mcp_status"]);
+        assert_eq!(status(&settings).tools, vec!["get_nexaterm_mcp_status", "get_mxterm_mcp_status"]);
         let tool_names = tool_schemas_for_settings(&settings)
             .into_iter()
             .filter_map(|tool| {
@@ -2600,7 +2605,7 @@ mod tests {
                     .map(ToOwned::to_owned)
             })
             .collect::<Vec<_>>();
-        assert_eq!(tool_names, vec!["get_mxterm_mcp_status"]);
+        assert_eq!(tool_names, vec!["get_nexaterm_mcp_status", "get_mxterm_mcp_status"]);
     }
 
     #[test]
