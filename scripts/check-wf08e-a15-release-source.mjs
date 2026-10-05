@@ -24,7 +24,7 @@ for (const platform of ["windows-x64","macos-arm64","linux-x64"]) {
 }
 for (const predecessor of ["A09","A10"]) {
   if (template.predecessor?.[predecessor] !== "pending") {
-    fail(`${predecessor} must remain pending in the template until maintainer confirms real Tauri PASS`);
+    fail(`${predecessor} must remain pending in the neutral template; real results belong in current evidence`);
   }
 }
 if (template.signoff?.status !== "pending") {
