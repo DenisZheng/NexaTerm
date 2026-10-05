@@ -18,7 +18,7 @@ A15 是“迁移、安装与完整 v1”的最终验收。本表只记录当前�
 | Legacy JSON → SQLite/Vault | `StorageMigrator` tests + backups + secret rollback/repair | AUTOMATED BASELINE |
 | Newer data-dir downgrade protection | `.data-version` gate | AUTOMATED BASELINE |
 | mXterm app-data → NexaTerm app-data | WF-08B implements safe core App Data migration plus `mxterm.settings.v1` bridging on Windows/Linux and read-only WebKit SQLite extraction on macOS; CI #343 passed all three Rust platforms and frontend gates | **CODE COMPLETE / REAL UPGRADE PENDING WF-08E** |
-| English / zh-CN full-product completeness | catalogs and new-entry gate exist | **FULL AUDIT PENDING** |
+| English / zh-CN full-product completeness | WF-08C full-catalog audit locks exact en/zh-CN key + placeholder parity (170/170 at audit) | **AUTOMATED AUDIT PASS / REAL UI SWITCH PENDING WF-08E** |
 | Light/Dark | existing product/acceptance evidence | FINAL REGRESSION PENDING |
 | Security Critical/High | security CI/report exists | FINAL RELEASE AUDIT PENDING |
 | Startup / idle / 10-session performance | requirements defined | **BENCHMARK PENDING** |
@@ -50,3 +50,17 @@ WF-08 development can continue while A09/A10 are pending. A15 is not PASS until 
 - Test fixtures / Security / License: PASS
 - Windows package build-only: skipped by design on pull_request
 - Boundary: this is automated code evidence, not proof that a real previously-installed mXterm profile upgrades successfully on each OS. That remains WF-08E/A15.
+
+
+## WF-08C CI evidence
+
+- PR: #38
+- Functional head: `40cdc07b94bb4f285dd39519a9f0793f15aa848a`
+- CI: #357 / run `37262522837` — PASS
+- Frontend checks + `WF-08C release surface`: PASS
+- Rust windows-x64 / linux-x64 / macos-arm64: Cargo check + Cargo test PASS
+- Test fixtures / Security / License: PASS
+- Canonical active MCP identity: `nexaterm-mcp`, `get_nexaterm_mcp_status`, `X-NexaTerm-MCP-Token`
+- Compatibility aliases retained only where explicit: legacy status/header/env/binary fallback
+- Canonical bundled sidecar: `nexaterm-mcp`; Cargo externalBin placeholder keeps check/test compatible while Tauri hooks build the real sidecar for dev/package
+- Boundary: real installer contents, About/title, language switching and updater behavior remain WF-08E/A15 real-platform evidence.
