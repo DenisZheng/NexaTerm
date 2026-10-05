@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 1,
+  "candidate": {
+    "version": "0.1.17",
+    "commit": "FILL_AT_RC",
+    "tag": "FILL_AT_RC",
+    "timestamp": "FILL_AT_RC"
+  },
+  "predecessor": {
+    "A09": "pending",
+    "A10": "pending"
+  },
+  "automated": {
+    "finalCi": "pending",
+    "securityCriticalHigh": "pending",
+    "license": "pending"
+  },
+  "platforms": {
+    "windows-x64": {
+      "build": "pending",
+      "install": "pending",
+      "launch": "pending",
+      "brand": "pending",
+      "locale": "pending",
+      "theme": "pending",
+      "upgrade": "pending",
+      "rollback": "pending",
+      "artifactHash": "pending",
+      "authenticode": "pending"
+    },
+    "macos-arm64": {
+      "build": "pending",
+      "install": "pending",
+      "launch": "pending",
+      "brand": "pending",
+      "locale": "pending",
+      "theme": "pending",
+      "upgrade": "pending",
+      "rollback": "pending",
+      "artifactHash": "pending",
+      "developerId": "pending",
+      "notarization": "pending"
+    },
+    "linux-x64": {
+      "build": "pending",
+      "install": "pending",
+      "launch": "pending",
+      "brand": "pending",
+      "locale": "pending",
+      "theme": "pending",
+      "upgrade": "pending",
+      "rollback": "pending",
+      "artifactHash": "pending"
+    }
+  },
+  "migration": {
+    "coreAppData": "pending",
+    "webviewSettings": "pending",
+    "noSilentOverwrite": "pending",
+    "vault": "pending",
+    "rollback": "pending"
+  },
+  "performance": {
+    "startup": "pending",
+    "idleCpu": "pending",
+    "memoryVsMxterm": "pending",
+    "tenSshWorkload": "pending",
+    "resourceRelease": "pending",
+    "failureIsolation": "pending"
+  },
+  "updater": {
+    "signedMetadata": "pending",
+    "upgrade": "pending",
+    "rollbackRecovery": "pending"
+  },
+  "signoff": {
+    "status": "pending",
+    "maintainer": "",
+    "notes": ""
+  }
+}
