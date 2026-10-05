@@ -3391,14 +3391,14 @@ function LocalTerminalSettingsSection({
       try {
         const profiles = hasTauriRuntime()
           ? await localTerminalListProfiles()
-          : previewSettingsLocalTerminalProfiles();
+          : previewSettingsLocalTerminalProfiles(t);
         if (!disposed) {
           setDetectedProfiles(profiles);
         }
       } catch (nextError) {
         if (!disposed) {
           setError(formatError(nextError));
-          setDetectedProfiles(previewSettingsLocalTerminalProfiles());
+          setDetectedProfiles(previewSettingsLocalTerminalProfiles(t));
         }
       } finally {
         if (!disposed) {
@@ -3755,7 +3755,7 @@ function emptyLocalTerminalProfile(): LocalTerminalProfileInput {
   };
 }
 
-function previewSettingsLocalTerminalProfiles(): LocalTerminalProfile[] {
+function previewSettingsLocalTerminalProfiles(t): LocalTerminalProfile[] {
   return [
     {
       args: ["-NoLogo", "-NoProfile"],
@@ -3781,7 +3781,7 @@ function previewSettingsLocalTerminalProfiles(): LocalTerminalProfile[] {
       icon: "terminal-cmd",
       id: "cmd",
       kind: "cmd",
-      name: "命令提示符",
+      name: t("settings.localTerminal.preview.cmd"),
       platform: "windows",
       source: "detected",
     },
