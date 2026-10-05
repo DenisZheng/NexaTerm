@@ -1,3 +1,4 @@
+import { t as tr } from "../../shared/i18n";
 import type { RemoteCpuSummary } from "./monitorTypes";
 
 const ordinaryThreadsPerCoreLimit = 2;
@@ -18,7 +19,7 @@ function shouldDisplayThreadOnlyTopology(cpu: RemoteCpuSummary) {
 
 export function formatCoreShape(cpu: RemoteCpuSummary) {
   if (cpu.is_virtualized) {
-    return `虚拟化 · ${formatLogicalCpuCount(cpu)}`;
+    return tr("monitor.cpu.virtualized", { logical: formatLogicalCpuCount(cpu) });
   }
 
   if (shouldDisplayThreadOnlyTopology(cpu)) {
@@ -27,10 +28,10 @@ export function formatCoreShape(cpu: RemoteCpuSummary) {
 
   const physical = positiveCount(cpu.physical_cores);
   const logical = logicalCpuCount(cpu);
-  const physicalLabel = physical ? `${physical.toString()} 核` : "核心未获取";
-  const logicalLabel = logical ? `${logical.toString()} 线程` : "线程未获取";
+  const physicalLabel = physical ? tr("monitor.cpu.physical", { count: physical }) : tr("monitor.cpu.physicalUnknown");
+  const logicalLabel = logical ? tr("monitor.cpu.threads", { count: logical }) : tr("monitor.cpu.threadsUnknown");
   const sockets = cpu.sockets || 1;
-  return `${sockets.toString()} 路 · ${physicalLabel} · ${logicalLabel}`;
+  return tr("monitor.cpu.sockets", { count: sockets, physical: physicalLabel, logical: logicalLabel });
 }
 
 export function formatCpuTopologyBadge(cpu: RemoteCpuSummary) {
@@ -41,13 +42,13 @@ export function formatCpuTopologyBadge(cpu: RemoteCpuSummary) {
     return `${logical.toString()} vCPU`;
   }
   if (shouldDisplayThreadOnlyTopology(cpu) && logical) {
-    return `${logical.toString()} 线程`;
+    return tr("monitor.cpu.threads", { count: logical });
   }
   if (physical && logical) {
-    return `${physical.toString()} 核 / ${logical.toString()} 线程`;
+    return tr("monitor.cpu.topology", { physical, logical });
   }
   if (physical) {
-    return `${physical.toString()} 核`;
+    return tr("monitor.cpu.physical", { count: physical });
   }
   if (logical) {
     return `${logical.toString()} 线程`;
@@ -58,7 +59,7 @@ export function formatCpuTopologyBadge(cpu: RemoteCpuSummary) {
 export function formatLogicalCpuCount(cpu: RemoteCpuSummary) {
   const logical = logicalCpuCount(cpu);
   if (!logical) {
-    return cpu.is_virtualized ? "vCPU 未获取" : "线程未获取";
+    return cpu.is_virtualized ? tr("monitor.cpu.vcpuUnknown") : tr("monitor.cpu.threadsUnknown");
   }
-  return cpu.is_virtualized ? `${logical.toString()} vCPU` : `${logical.toString()} 线程`;
+  return cpu.is_virtualized ? `${logical.toString()} vCPU` : tr("monitor.cpu.threads", { count: logical });
 }
