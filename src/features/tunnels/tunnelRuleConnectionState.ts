@@ -1,3 +1,4 @@
+import { t as tr } from "../../shared/i18n";
 import type { ConnectionProfile } from "../connections/connectionTypes";
 import type { TunnelRule } from "./tunnelTypes";
 
@@ -19,7 +20,7 @@ export function resolveTunnelRuleConnection(
     return {
       canStart: false,
       connection: null,
-      label: "连接不存在",
+      label: tr("tunnel.connectionMissing"),
     };
   }
   return {
