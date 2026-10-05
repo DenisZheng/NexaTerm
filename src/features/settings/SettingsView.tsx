@@ -3080,7 +3080,7 @@ function AppearanceSettingsSection({
             <div className="appearance-preview-terminal">
               <code>$ ssh prod-core</code>
               <code>connected to 10.0.2.16</code>
-              <code>~/apps/mxterm $</code>
+              <code>~/apps/nexaterm $</code>
             </div>
             <div className="appearance-preview-files">
               <span>src</span>
