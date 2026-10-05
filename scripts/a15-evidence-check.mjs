@@ -2,7 +2,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 
 export const REQUIRED_STATUS = "pass";
 export const PLATFORM_KEYS = ["windows-x64", "macos-arm64", "linux-x64"];
