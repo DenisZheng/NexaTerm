@@ -1,3 +1,4 @@
+import { t as tr } from "../../shared/i18n";
 export type ConnectionAuthKind = "password" | "private_key";
 export type ConnectionCredentialMode = "saved" | "inline" | "prompt";
 export type ConnectionJumpKind = "none" | "ssh_jump";
@@ -652,11 +653,11 @@ export function formatRdpRunnerKind(runner?: RdpRunnerKind | null) {
     case "freerdp":
       return "FreeRDP";
     case "macos_app":
-      return "macOS 系统 RDP 客户端";
+      return tr("connection.runner.rdp.macos");
     case "custom":
-      return "自定义 RDP 客户端";
+      return tr("connection.runner.rdp.custom");
     default:
-      return "自动选择";
+      return tr("connection.runner.auto");
   }
 }
 
@@ -674,28 +675,28 @@ export function defaultRdpExternalRunnerForPlatform(
 
 export function rdpExternalModeLabelForPlatform(platform?: RdpPlatform | string | null) {
   if (platform === "macos") {
-    return "系统 RDP 客户端";
+    return tr("connection.runner.rdp.system");
   }
   if (platform === "linux") {
     return "FreeRDP";
   }
-  return "mstsc.exe 模式";
+  return tr("connection.runner.rdp.mstscMode");
 }
 
 export function rdpExternalModeNoteForPlatform(platform?: RdpPlatform | string | null) {
   if (platform === "macos") {
-    return "系统 RDP 客户端模式会通过 Windows App / Microsoft Remote Desktop 打开 .rdp 文件，适合需要官方客户端兼容行为的场景。";
+    return tr("connection.runner.rdp.note.macos");
   }
   if (platform === "linux") {
-    return "FreeRDP 模式会通过系统 FreeRDP 客户端打开，适合需要外部客户端兼容行为的场景。";
+    return tr("connection.runner.rdp.note.freerdp");
   }
-  return "mstsc.exe 模式会通过系统远程桌面客户端打开，适合需要系统客户端兼容行为的场景。";
+  return tr("connection.runner.rdp.note.mstsc");
 }
 
 export function formatVncRunnerKind(runner?: VncRunnerKind | null) {
   switch (runner) {
     case "novnc":
-      return "noVNC 内嵌";
+      return tr("connection.runner.vnc.embedded");
     case "vncviewer":
       return "VNC Viewer";
     case "tigervnc":
@@ -703,8 +704,8 @@ export function formatVncRunnerKind(runner?: VncRunnerKind | null) {
     case "realvnc":
       return "RealVNC";
     case "custom":
-      return "自定义 VNC 客户端";
+      return tr("connection.runner.vnc.custom");
     default:
-      return "自动选择";
+      return tr("connection.runner.auto");
   }
 }
