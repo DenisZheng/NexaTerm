@@ -1,0 +1,22 @@
+{
+  "id": "wf08e-a15-release-acceptance",
+  "name": "wf08e-a15-release-acceptance",
+  "title": "WF-08E A15 最终发布与三平台验收",
+  "description": "汇总真实三平台安装、签名/公证、升级/回滚、迁移、语言/主题、性能、updater 与 A09/A10 前置验收；任何缺项都不得签署 A15",
+  "status": "in_progress",
+  "priority": "P1",
+  "creator": "codex",
+  "assignee": "codex",
+  "createdAt": "2026-10-05",
+  "completedAt": null,
+  "branch": "feat/wf08e-a15-release-acceptance",
+  "base_branch": "feat/wf08d-performance-stability-baseline",
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": "09-23-nexaterm-workflow-mainline",
+  "relatedFiles": [],
+  "notes": "Final WF-08 slice. Source/CI can validate the evidence framework only. A15 remains pending until maintainer-confirmed A09/A10 and real Windows/macOS/Linux release/install/upgrade/rollback/performance evidence exist.",
+  "meta": {}
+}
