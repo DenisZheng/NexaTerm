@@ -94,7 +94,7 @@ A09/A10 predecessor acceptance is now PASS. A15 is not PASS until the remaining 
 - Rust windows-x64 / linux-x64 / macos-arm64: Cargo check + Cargo test PASS
 - Test fixtures / Security / License: PASS
 - Automated framework now enforces zero-blocker A15 signoff.
-- Boundary: A15 itself is **not PASS**. A09/A10 and real three-platform install/sign/upgrade/rollback/migration/performance/updater evidence remain pending.
+- Boundary: A15 itself is **not PASS**. A09/A10 are now PASS; real three-platform install/sign/upgrade/rollback/migration/performance/updater evidence remains pending.
 
 
 ## A09/A10 real-Tauri evidence
