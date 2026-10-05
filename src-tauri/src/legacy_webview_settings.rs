@@ -219,7 +219,10 @@ fn legacy_webview_data_root(app: &tauri::AppHandle) -> Result<Option<PathBuf>, A
             true,
         )
     })?;
-    if current_root.file_name()?.to_string_lossy() != CURRENT_APP_IDENTIFIER {
+    let Some(directory_name) = current_root.file_name() else {
+        return Ok(None);
+    };
+    if directory_name.to_string_lossy() != CURRENT_APP_IDENTIFIER {
         return Ok(None);
     }
     Ok(current_root
