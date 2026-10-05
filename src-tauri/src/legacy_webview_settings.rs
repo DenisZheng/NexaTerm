@@ -39,7 +39,7 @@ pub struct LegacyWebviewSettingsProbeResult {
 }
 
 #[tauri::command]
-pub fn legacy_webview_settings_probe_start(
+pub async fn legacy_webview_settings_probe_start(
     app: tauri::AppHandle,
     state: State<'_, LegacyWebviewSettingsProbeState>,
 ) -> Result<LegacyWebviewSettingsProbeStart, AppError> {
@@ -108,8 +108,22 @@ pub fn legacy_webview_settings_probe_start(
             );
         }
 
-        let url = format!("index.html?view=legacy-settings-probe&token={token}");
-        WebviewWindowBuilder::new(&app, PROBE_WINDOW_LABEL, WebviewUrl::App(url.into()))
+        let token_json = serde_json::to_string(&token).map_err(|error| {
+            AppError::new(
+                "brand_settings_probe_token_failed",
+                "无法初始化旧设置迁移令牌。",
+                error,
+                true,
+            )
+        })?;
+        let initialization_script =
+            format!("window.__NEXATERM_LEGACY_SETTINGS_PROBE_TOKEN__ = {token_json};");
+        WebviewWindowBuilder::new(
+            &app,
+            PROBE_WINDOW_LABEL,
+            WebviewUrl::App("index.html".into()),
+        )
+            .initialization_script(initialization_script)
             .data_directory(legacy_root)
             .visible(false)
             .build()
