@@ -2583,5 +2583,7 @@
   "settings.stepper.decrease": "减小",
   "settings.stepper.increase": "增大",
   "files.transfer.stage.awaitingRemote": "等待远端确认",
-  "files.transfer.archiveSize": "压缩包 {size}"
+  "files.transfer.archiveSize": "压缩包 {size}",
+  "settings.controls.decrease": "减小",
+  "settings.controls.increase": "增大"
 }
