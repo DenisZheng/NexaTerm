@@ -1,8 +1,9 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import "./styles/tokens.css";
 import "./styles/app.css";
 import { LegacyAppDataMigrationGate } from "./features/migration/LegacyAppDataMigrationGate";
 import { LegacySettingsProbeWindow } from "./features/migration/LegacySettingsProbeWindow";
+import { performanceProbeMarkInteractive } from "./shared/tauri/commands";
 
 const VncRunnerWindowApp = lazy(async () => {
   const module = await import("./features/layout/VncRunnerWindowApp");
@@ -13,6 +14,13 @@ const WorkspaceShell = lazy(async () => {
   const module = await import("./features/layout/WorkspaceShell");
   return { default: module.WorkspaceShell };
 });
+
+function WorkspaceInteractiveMarker() {
+  useEffect(() => {
+    void performanceProbeMarkInteractive().catch(() => undefined);
+  }, []);
+  return null;
+}
 
 function StartupFallback({ label }: { label: string }) {
   return (
@@ -45,6 +53,7 @@ export default function App() {
     <LegacyAppDataMigrationGate>
       <Suspense fallback={<StartupFallback label="正在加载工作区..." />}>
         <WorkspaceShell />
+        <WorkspaceInteractiveMarker />
       </Suspense>
     </LegacyAppDataMigrationGate>
   );
