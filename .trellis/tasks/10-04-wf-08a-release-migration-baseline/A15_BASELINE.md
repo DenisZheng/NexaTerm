@@ -21,7 +21,7 @@ A15 是“迁移、安装与完整 v1”的最终验收。本表只记录当前�
 | English / zh-CN full-product completeness | WF-08C full-catalog audit locks exact en/zh-CN key + placeholder parity (170/170 at audit) | **AUTOMATED AUDIT PASS / REAL UI SWITCH PENDING WF-08E** |
 | Light/Dark | existing product/acceptance evidence | FINAL REGRESSION PENDING |
 | Security Critical/High | security CI/report exists | FINAL RELEASE AUDIT PENDING |
-| Startup / idle / 10-session performance | WF-08D now provides opt-in startup interactive probe, cross-platform process-tree CPU/RSS sampler and fixed 10 SSH/resource-release workload | **MEASUREMENT HARNESS IN PROGRESS / REAL BENCHMARK PENDING** |
+| Startup / idle / 10-session performance | WF-08D provides opt-in startup interactive probe, cross-platform process-tree CPU/RSS sampler and fixed 10 SSH/resource-release workload; CI #364 passed | **MEASUREMENT HARNESS COMPLETE / REAL BENCHMARK PENDING WF-08E** |
 | Real installer launch/upgrade/rollback on all 3 platforms | no final A15 evidence yet | **PENDING** |
 | A09/A10 MultiExec real Tauri | separate predecessor acceptance | **PENDING; blocks final A15 sign-off** |
 
@@ -64,3 +64,22 @@ WF-08 development can continue while A09/A10 are pending. A15 is not PASS until 
 - Compatibility aliases retained only where explicit: legacy status/header/env/binary fallback
 - Canonical bundled sidecar: `nexaterm-mcp`; Cargo externalBin placeholder keeps check/test compatible while Tauri hooks build the real sidecar for dev/package
 - Boundary: real installer contents, About/title, language switching and updater behavior remain WF-08E/A15 real-platform evidence.
+
+
+## WF-08D CI evidence
+
+- PR: #39
+- Functional head: `c0002d706c39f3c8508694803c3bf3524a12e2c0`
+- CI: #364 / run `37266312459` — PASS
+- Frontend checks + `WF-08D performance and stability contract`: PASS
+- Rust windows-x64 / linux-x64 / macos-arm64: Cargo check + Cargo test PASS
+- Test fixtures / Security / License: PASS
+- Measurement harness:
+  - opt-in `workspace-interactive` startup evidence;
+  - full descendant process-tree RSS / interval CPU / process-count sampling;
+  - ~2000 ms startup review target;
+  - mXterm-comparable idle RSS ratio > 1.25 triggers review;
+  - no invented absolute idle CPU threshold;
+  - fixed 10 SSH + Split + SFTP + Transfer + Monitoring workload;
+  - three-cycle resource-release and failure-isolation workload.
+- Boundary: no real packaged performance number is claimed by CI. Windows/macOS/Linux real benchmarks remain WF-08E/A15.
