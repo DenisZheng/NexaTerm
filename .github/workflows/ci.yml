@@ -134,6 +134,9 @@ jobs:
       - name: WF-08D performance and stability contract
         run: pnpm run check:wf08d-performance-stability
 
+      - name: WF-08E final A15 evidence contract
+        run: pnpm run check:wf08e-a15-release
+
   security:
     name: Security evidence
     runs-on: ubuntu-22.04
