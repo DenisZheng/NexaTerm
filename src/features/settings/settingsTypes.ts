@@ -130,11 +130,11 @@ export const accentColorPresets: Array<{
   light: string;
   value: Exclude<AccentColor, "custom" | "slate">;
 }> = [
-  { value: "blue", label: "蓝", light: "#2374C6", dark: "#73B7FF" },
-  { value: "emerald", label: "绿", light: "#168264", dark: "#57D8AE" },
-  { value: "amber", label: "琥", light: "#C97A19", dark: "#FFBF66" },
-  { value: "rose", label: "玫", light: "#C85F82", dark: "#FF9DB8" },
-  { value: "violet", label: "紫", light: "#7460DE", dark: "#AC9CFF" },
+  { value: "blue", label: "Blue", light: "#2374C6", dark: "#73B7FF" },
+  { value: "emerald", label: "Green", light: "#168264", dark: "#57D8AE" },
+  { value: "amber", label: "Amber", light: "#C97A19", dark: "#FFBF66" },
+  { value: "rose", label: "Rose", light: "#C85F82", dark: "#FF9DB8" },
+  { value: "violet", label: "Violet", light: "#7460DE", dark: "#AC9CFF" },
 ];
 
 const legacyAccentColors: Record<Extract<AccentColor, "slate">, { light: string; dark: string }> = {
@@ -148,7 +148,7 @@ export const uiFontPresets: Array<{
 }> = [
   {
     value: "system",
-    label: "系统默认",
+    label: "System default",
     stack: "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
   },
   {
@@ -158,7 +158,7 @@ export const uiFontPresets: Array<{
   },
   {
     value: "microsoft-yahei",
-    label: "微软雅黑",
+    label: "Microsoft YaHei",
     stack: "\"Microsoft YaHei UI\", \"Microsoft YaHei\", \"Segoe UI\", sans-serif",
   },
   {
