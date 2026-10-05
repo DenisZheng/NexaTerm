@@ -2579,5 +2579,9 @@
   "demo.credential.privateKeyName": "云主机私钥账号",
   "demo.credential.notes": "预览账号",
   "demo.credential.defaultPrivateKey": "SSH 私钥账号",
-  "demo.credential.defaultPassword": "SSH 密码账号"
+  "demo.credential.defaultPassword": "SSH 密码账号",
+  "settings.stepper.decrease": "减小",
+  "settings.stepper.increase": "增大",
+  "files.transfer.stage.awaitingRemote": "等待远端确认",
+  "files.transfer.archiveSize": "压缩包 {size}"
 }
