@@ -19,7 +19,7 @@
 - [ ] SHA256/updater signatures reconciled to candidate artifacts.
 - [ ] mXterm → NexaTerm migration + rollback.
 - [ ] WF-08D packaged startup/idle/memory/10-SSH/resource-release evidence.
-- [ ] Final Security / License / CI reconciliation.
+- [x] Final Security / License / CI reconciliation: main CI #383 PASS on `4bd88f9060fe089ee6e52a042a5e589c1bb739bd`.
 - [ ] Maintainer A15 signoff after validator reports zero blockers.
 
 Nothing in the real-evidence section may be marked PASS from CI alone.
