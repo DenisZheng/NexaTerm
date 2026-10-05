@@ -1,6 +1,8 @@
 import { readFileSync } from "node:fs";
 
 const panel = readFileSync(new URL("../src/features/tunnels/TunnelPanel.tsx", import.meta.url), "utf8");
+const tunnelLocaleEn = JSON.parse(readFileSync(new URL("../src/shared/i18n/locales/en.json", import.meta.url), "utf8"));
+const tunnelLocaleZh = JSON.parse(readFileSync(new URL("../src/shared/i18n/locales/zh-CN.json", import.meta.url), "utf8"));
 const association = readFileSync(new URL("../src/features/tunnels/tunnelRuleConnectionState.ts", import.meta.url), "utf8");
 const associationTest = readFileSync(new URL("../src/features/tunnels/tunnelRuleConnectionState.test.ts", import.meta.url), "utf8");
 const types = readFileSync(new URL("../src/features/tunnels/tunnelTypes.ts", import.meta.url), "utf8");
@@ -42,14 +44,26 @@ for (const needle of [
   if (!types.includes(needle)) throw new Error(`WF-06A existing tunnel contract missing: ${needle}`);
 }
 for (const needle of [
-  '{ label: "本地转发", value: "local" }',
-  '{ label: "动态 SOCKS", value: "dynamic" }',
-  '{ label: "远程转发", value: "remote" }',
+  'tr("tunnel.kind.local")',
+  'tr("tunnel.kind.dynamic")',
+  'tr("tunnel.kind.remote")',
   'connection_id: form.connectionId',
   'state.status === "credential_required"',
   'parseHostKeyError(nextError)',
 ]) {
   if (!panel.includes(needle)) throw new Error(`WF-06A TunnelPanel reuse contract missing: ${needle}`);
+}
+for (const [key, enPattern, zhPattern] of [
+  ["tunnel.kind.local", /Local forwarding/i, /本地转发/],
+  ["tunnel.kind.dynamic", /Dynamic SOCKS/i, /动态 SOCKS/],
+  ["tunnel.kind.remote", /Remote forwarding/i, /远程转发/],
+]) {
+  if (!enPattern.test(tunnelLocaleEn[key] || "")) {
+    throw new Error(`WF-06A English tunnel locale missing: ${key}`);
+  }
+  if (!zhPattern.test(tunnelLocaleZh[key] || "")) {
+    throw new Error(`WF-06A zh-CN tunnel locale missing: ${key}`);
+  }
 }
 for (const needle of [
   "failed_state_keeps_rule_and_port_conflict_error_context",
@@ -77,9 +91,15 @@ for (const needle of [
 for (const needle of [
   "connectionState.label",
   "busy || !connectionState.canStart",
-  "关联的 SSH 连接不存在",
+  'tr("tunnel.connectionMissing")',
 ]) {
   if (!panel.includes(needle)) throw new Error(`WF-06A orphan-rule UI guard missing: ${needle}`);
+}
+if (!/linked SSH connection no longer exists/i.test(tunnelLocaleEn["tunnel.connectionMissing"] || "")) {
+  throw new Error("WF-06A English orphan-rule copy missing.");
+}
+if (!/关联的 SSH 连接不存在/.test(tunnelLocaleZh["tunnel.connectionMissing"] || "")) {
+  throw new Error("WF-06A zh-CN orphan-rule copy missing.");
 }
 for (const needle of [
   "TunnelConnectionRequest",
