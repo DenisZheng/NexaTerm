@@ -10292,19 +10292,19 @@ function RdpSessionToolPanel({
       <div className="rdp-tool-actions">
         <button type="button" onClick={() => onPreview(session)}>
           <FileText className="ui-icon" aria-hidden="true" />
-          预览
+          {tr("workspace.rdp.preview")}
         </button>
         <button type="button" disabled={!hasCommand} onClick={() => onCopyCommand(session)}>
           <Clipboard className="ui-icon" aria-hidden="true" />
-          复制命令
+          {tr("workspace.rdp.copyCommand")}
         </button>
         <button type="button" disabled={!hasRdpFile} onClick={() => onCopyRdpFile(session)}>
           <Clipboard className="ui-icon" aria-hidden="true" />
-          复制 .rdp
+          {tr("workspace.rdp.copyFile")}
         </button>
         <button type="button" onClick={() => onRetry(session)}>
           <RefreshCw className="ui-icon" aria-hidden="true" />
-          重试
+          {tr("workspace.rdp.retry")}
         </button>
       </div>
 
@@ -10512,15 +10512,15 @@ function VncSessionToolPanel({
       <div className="rdp-tool-actions">
         <button type="button" onClick={() => onPreview(session)}>
           <FileText className="ui-icon" aria-hidden="true" />
-          预览
+          {tr("workspace.rdp.preview")}
         </button>
         <button type="button" disabled={!hasCommand} onClick={() => onCopyCommand(session)}>
           <Clipboard className="ui-icon" aria-hidden="true" />
-          复制命令
+          {tr("workspace.rdp.copyCommand")}
         </button>
         <button type="button" onClick={() => onRetry(session)}>
           <RefreshCw className="ui-icon" aria-hidden="true" />
-          重试
+          {tr("workspace.rdp.retry")}
         </button>
       </div>
 
