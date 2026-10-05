@@ -37,7 +37,13 @@ No secret is decrypted during brand migration. The encrypted vault and the histo
 
 ## 08B-2 WebView settings
 
-Do not copy an active WebView profile directory while the WebView is running. Investigate per-platform storage layout / pre-window migration or a one-time helper process. Until implemented, UI/local terminal settings remain an explicit gap.
+Do not copy an active WebView profile directory while the WebView is running.
+
+- **Windows / Linux:** create a hidden Tauri WebView whose `data_directory` points at the historical `com.mxterm.app` local-data sibling. The probe loads only the current trusted frontend, reads only `mxterm.settings.v1`, returns the JSON through an internal Tauri command, then closes. The old store is never written.
+- **macOS:** Tauri cannot redirect a new WKWebView to the previous default store through the same `data_directory` API. Instead, scan only historical mXterm WebKit roots for `localstorage.sqlite3`, open them read-only, read `ItemTable[key = 'mxterm.settings.v1']`, decode Text/UTF-16LE Blob values, and require valid JSON. Multiple different values, malformed databases, oversized values, symlinks or abnormal scan depth fail closed.
+- **Fallback:** if the legacy settings store cannot be read safely, core App Data migration remains available but NexaTerm surfaces that UI/Local/WSL settings need manual review. The original mXterm data remains untouched.
+
+After a successful settings migration NexaTerm writes the same historical key to its current localStorage, so existing `normalizeSettings()` remains the compatibility layer.
 
 ## UI
 
