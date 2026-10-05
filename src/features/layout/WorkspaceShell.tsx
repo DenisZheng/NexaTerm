@@ -9408,14 +9408,14 @@ export function WorkspaceShell() {
             <header className="command-snippet-dialog-head">
               <div>
                 <Dialog.Title asChild>
-                  <h2>{commandSnippetDraft.id ? "编辑命令片段" : "保存命令片段"}</h2>
+                  <h2>{commandSnippetDraft.id ? tr("workspace.snippet.edit") : tr("workspace.snippet.saveTitle")}</h2>
                 </Dialog.Title>
                 <Dialog.Description className="dialog-subtitle">
-                  保存后可在右侧命令面板快速复制、插入或发送。
+                  {tr("workspace.snippet.description")}
                 </Dialog.Description>
               </div>
               <Dialog.Close asChild>
-                <button className="icon-button" type="button" aria-label="关闭命令片段">
+                <button className="icon-button" type="button" aria-label={tr("workspace.snippet.close")}>
                   <X className="ui-icon" aria-hidden="true" />
                 </button>
               </Dialog.Close>
@@ -9424,10 +9424,10 @@ export function WorkspaceShell() {
             <div className="command-snippet-dialog-body">
               <form className="command-snippet-form" onSubmit={(event) => void saveCommandSnippetDraft(event)}>
                 <label className="command-snippet-field">
-                  <span>文件夹</span>
+                  <span>{tr("workspace.snippet.folder")}</span>
                   <div className="command-snippet-group-control">
                     <AppSelect
-                      ariaLabel="命令片段文件夹"
+                      ariaLabel={tr("workspace.snippet.folderAria")}
                       className="command-snippet-group-select"
                       menuMinWidth={180}
                       options={commandSnippetGroupOptions}
@@ -9439,11 +9439,11 @@ export function WorkspaceShell() {
                         }))
                       }
                     />
-                    <Tooltip label="新增分组">
+                    <Tooltip label={tr("workspace.snippet.newGroup")}>
                       <button
                         className="command-snippet-group-add"
                         type="button"
-                        aria-label="新增命令片段分组"
+                        aria-label={tr("workspace.snippet.newGroupAria")}
                         onClick={() => openCommandSnippetGroupCreateDialog(true)}
                       >
                         <Plus className="ui-icon" aria-hidden="true" />
@@ -9452,7 +9452,7 @@ export function WorkspaceShell() {
                   </div>
                 </label>
                 <label className="command-snippet-field">
-                  <span>标题</span>
+                  <span>{tr("workspace.snippet.title")}</span>
                   <input
                     value={commandSnippetDraft.title}
                     onChange={(event) => {
@@ -9467,7 +9467,7 @@ export function WorkspaceShell() {
                   />
                 </label>
                 <label className="command-snippet-field command-snippet-command-field">
-                  <span>命令</span>
+                  <span>{tr("workspace.snippet.command")}</span>
                   <textarea
                     value={commandSnippetDraft.command}
                     spellCheck={false}
@@ -9483,7 +9483,7 @@ export function WorkspaceShell() {
                   />
                 </label>
                 <label className="command-snippet-field">
-                  <span>说明</span>
+                  <span>{tr("workspace.snippet.descriptionField")}</span>
                   <input
                     value={commandSnippetDraft.description}
                     onChange={(event) => {
@@ -9498,10 +9498,10 @@ export function WorkspaceShell() {
                   />
                 </label>
                 <label className="command-snippet-field">
-                  <span>标签</span>
+                  <span>{tr("workspace.snippet.tags")}</span>
                   <input
                     value={commandSnippetDraft.tagsText}
-                    placeholder="多个标签用逗号分隔"
+                    placeholder={tr("workspace.snippet.tagsPlaceholder")}
                     onChange={(event) => {
                       const value = event.target?.value;
                       if (value !== undefined) {
@@ -9528,18 +9528,18 @@ export function WorkspaceShell() {
                     }}
                   />
                   <Star className="ui-icon" aria-hidden="true" />
-                  <span>收藏置顶</span>
+                  <span>{tr("workspace.snippet.favorite")}</span>
                 </label>
                 {commandSnippetFormError ? (
                   <p className="command-snippet-form-error">{commandSnippetFormError}</p>
                 ) : null}
                 <footer className="command-snippet-form-actions">
                   <Dialog.Close asChild>
-                    <button className="secondary-button" type="button">取消</button>
+                    <button className="secondary-button" type="button">{tr("workspace.snippet.cancel")}</button>
                   </Dialog.Close>
                   <button className="primary-button" type="submit">
                     <CheckCircle2 className="ui-icon" aria-hidden="true" />
-                    <span>保存片段</span>
+                    <span>{tr("workspace.snippet.save")}</span>
                   </button>
                 </footer>
               </form>
@@ -9568,16 +9568,16 @@ export function WorkspaceShell() {
                 <Dialog.Title asChild>
                   <h2>
                     {commandSnippetGroupDialog?.mode === "rename"
-                      ? "重命名片段分组"
-                      : "新增片段分组"}
+                      ? tr("workspace.snippet.groupRename")
+                      : tr("workspace.snippet.groupNew")}
                   </h2>
                 </Dialog.Title>
                 <Dialog.Description className="dialog-subtitle">
-                  分组只保留一层，用来整理右侧命令片段。
+                  {tr("workspace.snippet.groupDescription")}
                 </Dialog.Description>
               </div>
               <Dialog.Close asChild>
-                <button className="icon-button" type="button" aria-label="关闭片段分组">
+                <button className="icon-button" type="button" aria-label={tr("workspace.snippet.groupClose")}>
                   <X className="ui-icon" aria-hidden="true" />
                 </button>
               </Dialog.Close>
@@ -9585,7 +9585,7 @@ export function WorkspaceShell() {
 
             <form className="command-snippet-group-form" onSubmit={(event) => void saveCommandSnippetGroupDialog(event)}>
               <label className="command-snippet-field">
-                <span>分组名称</span>
+                <span>{tr("workspace.snippet.groupName")}</span>
                 <input
                   autoFocus
                   value={commandSnippetGroupDialog?.value || ""}
@@ -9604,11 +9604,11 @@ export function WorkspaceShell() {
               ) : null}
               <footer className="command-snippet-form-actions">
                 <Dialog.Close asChild>
-                  <button className="secondary-button" type="button">取消</button>
+                  <button className="secondary-button" type="button">{tr("workspace.snippet.cancel")}</button>
                 </Dialog.Close>
                 <button className="primary-button" type="submit">
                   <CheckCircle2 className="ui-icon" aria-hidden="true" />
-                  <span>保存</span>
+                  <span>{tr("workspace.snippet.groupSave")}</span>
                 </button>
               </footer>
             </form>
@@ -9617,14 +9617,14 @@ export function WorkspaceShell() {
       </Dialog.Root>
 
       <ConfirmDialog
-        confirmLabel="删除"
+        confirmLabel={tr("workspace.delete")}
         description={
           pendingCommandSnippetDelete
-            ? `删除“${pendingCommandSnippetDelete.title}”后，命令操作台将不再展示这个片段。`
+            ? tr("workspace.snippet.deleteDescription", { name: pendingCommandSnippetDelete.title })
             : ""
         }
         open={Boolean(pendingCommandSnippetDelete)}
-        title="删除命令片段"
+        title={tr("workspace.snippet.deleteTitle")}
         onConfirm={confirmDeleteCommandSnippet}
         onOpenChange={(open) => {
           if (!open) {
@@ -9634,20 +9634,20 @@ export function WorkspaceShell() {
       />
 
       <ConfirmDialog
-        confirmLabel="删除"
+        confirmLabel={tr("workspace.delete")}
         description={
           pendingCommandSnippetGroupDelete
-            ? `将删除“${pendingCommandSnippetGroupDelete}”分组，以及其中 ${commandSnippets
+            ? tr("workspace.snippet.deleteGroupDescription", { name: pendingCommandSnippetGroupDelete, count: commandSnippets
                 .filter(
                   (snippet) =>
                     normalizeCommandSnippetGroupValue(snippet.group) ===
                     normalizeCommandSnippetGroupValue(pendingCommandSnippetGroupDelete),
                 )
-                .length.toString()} 条命令片段。此操作不可撤销。`
+                .length })
             : ""
         }
         open={Boolean(pendingCommandSnippetGroupDelete)}
-        title="删除片段分组"
+        title={tr("workspace.snippet.deleteGroupTitle")}
         onConfirm={confirmDeleteCommandSnippetGroup}
         onOpenChange={(open) => {
           if (!open) {
@@ -9657,14 +9657,14 @@ export function WorkspaceShell() {
       />
 
       <ConfirmDialog
-        confirmLabel="删除"
+        confirmLabel={tr("workspace.delete")}
         description={
           pendingCommandHistoryDelete
-            ? `删除历史命令“${truncateCommandLabel(pendingCommandHistoryDelete.command, 48)}”。`
+            ? tr("workspace.history.deleteDescription", { command: truncateCommandLabel(pendingCommandHistoryDelete.command, 48) })
             : ""
         }
         open={Boolean(pendingCommandHistoryDelete)}
-        title="删除历史命令"
+        title={tr("workspace.history.deleteTitle")}
         onConfirm={confirmDeleteCommandHistory}
         onOpenChange={(open) => {
           if (!open) {
@@ -9674,23 +9674,23 @@ export function WorkspaceShell() {
       />
 
       <ConfirmDialog
-        confirmLabel="清空"
-        description="清空后，命令操作台不再展示任何历史命令；命令片段不受影响。"
+        confirmLabel={tr("workspace.clear")}
+        description={tr("workspace.history.clearDescription")}
         open={commandHistoryClearOpen}
-        title="清空历史命令"
+        title={tr("workspace.history.clearTitle")}
         onConfirm={confirmClearCommandHistory}
         onOpenChange={setCommandHistoryClearOpen}
       />
 
       <ConfirmDialog
-        confirmLabel="放弃"
+        confirmLabel={tr("workspace.discard")}
         description={
           pendingRemoteFileCloseTab
-            ? `关闭“${pendingRemoteFileCloseTab.name}”会丢弃尚未保存的修改。`
+            ? tr("workspace.file.closeModifiedDescription", { name: pendingRemoteFileCloseTab.name })
             : ""
         }
         open={Boolean(pendingRemoteFileCloseTab)}
-        title="关闭已修改文件"
+        title={tr("workspace.file.closeModifiedTitle")}
         onConfirm={() => {
           if (pendingRemoteFileCloseTab) {
             closeRemoteFileTabNow(pendingRemoteFileCloseTab.id);
@@ -9718,7 +9718,7 @@ export function WorkspaceShell() {
       />
 
       <ConfirmDialog
-        confirmLabel="删除"
+        confirmLabel={tr("workspace.delete")}
         description={
           remoteFileDeleteTarget
             ? remoteFileDeleteDescription(
@@ -9729,7 +9729,7 @@ export function WorkspaceShell() {
             : ""
         }
         open={Boolean(remoteFileDeleteTarget)}
-        title={remoteFileDeleteEntries.length > 1 ? "删除所选远程文件" : "删除远程文件"}
+        title={remoteFileDeleteEntries.length > 1 ? tr("workspace.file.deleteSelectedTitle") : tr("workspace.file.deleteTitle")}
         onConfirm={confirmRemoteFileDelete}
         onOpenChange={(open) => {
           if (!open) {
@@ -9757,10 +9757,10 @@ export function WorkspaceShell() {
               <RefreshCw className="ui-icon" />
             </div>
             <div className="confirm-dialog-copy">
-              <Dialog.Title className="confirm-dialog-title">远端文件已变化</Dialog.Title>
+              <Dialog.Title className="confirm-dialog-title">{tr("workspace.file.conflictTitle")}</Dialog.Title>
               <Dialog.Description className="confirm-dialog-description">
                 {pendingRemoteFileConflictTab
-                  ? `“${pendingRemoteFileConflictTab.name}”在打开后被远端修改。你可以重新加载远端版本，或覆盖保存当前编辑内容。`
+                  ? tr("workspace.file.conflictDescription", { name: pendingRemoteFileConflictTab.name })
                   : ""}
               </Dialog.Description>
               {pendingRemoteFileConflictTab?.error ? (
@@ -9777,7 +9777,7 @@ export function WorkspaceShell() {
                   setPendingRemoteFileConflictId(null);
                 }}
               >
-                重新加载
+                {tr("workspace.file.reload")}
               </button>
               <button
                 className="danger-button"
@@ -9789,10 +9789,10 @@ export function WorkspaceShell() {
                   setPendingRemoteFileConflictId(null);
                 }}
               >
-                覆盖保存
+                {tr("workspace.file.overwrite")}
               </button>
               <Dialog.Close asChild>
-                <button type="button">取消</button>
+                <button type="button">{tr("workspace.file.cancel")}</button>
               </Dialog.Close>
             </footer>
           </Dialog.Content>
@@ -9820,21 +9820,21 @@ export function WorkspaceShell() {
               <header className="dialog-head">
                 <div className="dialog-title-group">
                   <Dialog.Title asChild>
-                    <strong>{remoteFileTextAction ? remoteFileActionTitle(remoteFileTextAction) : "远程文件"}</strong>
+                    <strong>{remoteFileTextAction ? remoteFileActionTitle(remoteFileTextAction) : tr("workspace.file.dialogFallback")}</strong>
                   </Dialog.Title>
                   <Dialog.Description className="dialog-subtitle">
                     {remoteFileTextAction ? remoteFileActionDescription(remoteFileTextAction) : ""}
                   </Dialog.Description>
                 </div>
                 <Dialog.Close asChild>
-                  <button className="icon-button dialog-close-button" type="button" aria-label="关闭">
+                  <button className="icon-button dialog-close-button" type="button" aria-label={tr("workspace.file.close")}>
                     <X className="ui-icon" aria-hidden="true" />
                   </button>
                 </Dialog.Close>
               </header>
               <div className="dialog-body">
                 <label className="remote-file-name-field">
-                  <span>名称</span>
+                  <span>{tr("workspace.file.name")}</span>
                   <input
                     autoFocus
                     spellCheck={false}
@@ -9849,10 +9849,10 @@ export function WorkspaceShell() {
               <footer className="dialog-actions remote-file-text-actions">
                 <span />
                 <Dialog.Close asChild>
-                  <button type="button">取消</button>
+                  <button type="button">{tr("workspace.file.cancel")}</button>
                 </Dialog.Close>
                 <button className="primary-button" type="submit">
-                  确认
+                  {tr("workspace.file.confirm")}
                 </button>
               </footer>
             </form>
@@ -9874,21 +9874,21 @@ export function WorkspaceShell() {
             <header className="dialog-head">
               <div className="dialog-title-group">
                 <Dialog.Title asChild>
-                  <strong>查看属性</strong>
+                  <strong>{tr("workspace.file.properties")}</strong>
                 </Dialog.Title>
                 <Dialog.Description className="dialog-subtitle">
                   {remoteFileProperties?.entry.path || ""}
                 </Dialog.Description>
               </div>
               <Dialog.Close asChild>
-                <button className="icon-button dialog-close-button" type="button" aria-label="关闭">
+                <button className="icon-button dialog-close-button" type="button" aria-label={tr("workspace.file.close")}>
                   <X className="ui-icon" aria-hidden="true" />
                 </button>
               </Dialog.Close>
             </header>
             <div className="dialog-body">
               {remoteFileProperties?.loading ? (
-                <p className="file-panel-empty">读取属性中...</p>
+                <p className="file-panel-empty">{tr("workspace.file.loadingProperties")}</p>
               ) : remoteFileProperties?.error ? (
                 <p className="remote-file-dialog-error">{remoteFileProperties.error}</p>
               ) : remoteFileProperties?.metadata ? (
@@ -9905,10 +9905,10 @@ export function WorkspaceShell() {
                   }
                 }}
               >
-                复制路径
+                {tr("workspace.file.copyPath")}
               </button>
               <Dialog.Close asChild>
-                <button className="primary-button" type="button">关闭</button>
+                <button className="primary-button" type="button">{tr("workspace.file.close")}</button>
               </Dialog.Close>
             </footer>
           </Dialog.Content>
@@ -9934,23 +9934,23 @@ export function WorkspaceShell() {
               <RefreshCw className="ui-icon" />
             </div>
             <div className="confirm-dialog-copy">
-              <Dialog.Title className="confirm-dialog-title">同名目标策略</Dialog.Title>
+              <Dialog.Title className="confirm-dialog-title">{tr("workspace.file.conflictPolicy")}</Dialog.Title>
               <Dialog.Description className="confirm-dialog-description">
                 {transferConflictPrompt ? transferConflictPrompt.description : ""}
               </Dialog.Description>
             </div>
             <footer className="confirm-dialog-actions transfer-conflict-actions">
               <button type="button" onClick={() => settleTransferConflictPrompt("rename")}>
-                重命名
+                {tr("workspace.file.rename")}
               </button>
               <button type="button" onClick={() => settleTransferConflictPrompt("skip")}>
-                跳过
+                {tr("workspace.file.skip")}
               </button>
               <button className="danger-button" type="button" onClick={() => settleTransferConflictPrompt("overwrite")}>
-                覆盖
+                {tr("workspace.file.overwriteAction")}
               </button>
               <button type="button" onClick={() => settleTransferConflictPrompt(null)}>
-                取消
+                {tr("workspace.file.cancel")}
               </button>
             </footer>
           </Dialog.Content>
@@ -10015,14 +10015,14 @@ function ConnectionSearchDialogFallback() {
   return (
     <Dialog.Root open>
       <Dialog.Overlay className="dialog-backdrop connection-search-backdrop" />
-      <Dialog.Content className="connection-search-dialog" aria-label="加载连接搜索">
+      <Dialog.Content className="connection-search-dialog" aria-label={tr("workspace.loading.connectionSearch")}>
         <header className="connection-search-head">
           <div>
-            <Dialog.Title className="connection-search-title">快速打开连接</Dialog.Title>
-            <Dialog.Description className="sr-only">正在加载连接搜索</Dialog.Description>
+            <Dialog.Title className="connection-search-title">{tr("workspace.loading.connectionSearchTitle")}</Dialog.Title>
+            <Dialog.Description className="sr-only">{tr("workspace.loading.connectionSearchDescription")}</Dialog.Description>
           </div>
         </header>
-        <p className="file-panel-empty">正在加载连接搜索...</p>
+        <p className="file-panel-empty">{tr("workspace.loading.connectionSearchBody")}</p>
       </Dialog.Content>
     </Dialog.Root>
   );
@@ -10030,11 +10030,11 @@ function ConnectionSearchDialogFallback() {
 
 function SettingsViewFallback({ hidden }: { hidden: boolean }) {
   return (
-    <section className="settings-view" hidden={hidden} aria-label="设置" aria-hidden={hidden}>
-      <aside className="settings-sidebar app-sidebar" aria-label="设置分类" />
+    <section className="settings-view" hidden={hidden} aria-label={tr("workspace.loading.settings")} aria-hidden={hidden}>
+      <aside className="settings-sidebar app-sidebar" aria-label={tr("workspace.loading.settingsCategories")} />
       <main className="settings-content">
         <section className="settings-page-section">
-          <p className="file-panel-empty">正在加载设置...</p>
+          <p className="file-panel-empty">{tr("workspace.loading.settingsBody")}</p>
         </section>
       </main>
     </section>
@@ -10043,10 +10043,10 @@ function SettingsViewFallback({ hidden }: { hidden: boolean }) {
 
 function RemoteEditorLoadingFallback() {
   return (
-    <div className="remote-editor-loading" aria-live="polite" aria-label="正在加载文件编辑器">
+    <div className="remote-editor-loading" aria-live="polite" aria-label={tr("workspace.loading.editorAria")}>
       <div>
         <Loader2 className="ui-icon spin" aria-hidden="true" />
-        <span>正在加载编辑器...</span>
+        <span>{tr("workspace.loading.editor")}</span>
       </div>
     </div>
   );
@@ -10174,7 +10174,7 @@ function RdpSessionStatusPanel({
             </button>
             <button type="button" disabled={!hasCommand} onClick={onCopyCommand}>
               <Clipboard className="ui-icon" aria-hidden="true" />
-              <span>命令</span>
+              <span>{tr("workspace.snippet.command")}</span>
             </button>
             <button type="button" disabled={!hasRdpFile} onClick={onCopyRdpFile}>
               <FileText className="ui-icon" aria-hidden="true" />
@@ -10410,7 +10410,7 @@ function VncSessionStatusPanel({
             </button>
             <button type="button" disabled={!hasCommand} onClick={onCopyCommand}>
               <Clipboard className="ui-icon" aria-hidden="true" />
-              <span>命令</span>
+              <span>{tr("workspace.snippet.command")}</span>
             </button>
             <button type="button" onClick={onRetry}>
               <RefreshCw className="ui-icon" aria-hidden="true" />
