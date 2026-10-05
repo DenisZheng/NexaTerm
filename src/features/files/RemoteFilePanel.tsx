@@ -44,6 +44,7 @@ import type { ConnectionProfile } from "../connections/connectionTypes";
 import { remoteFileList, remoteFileMetadata } from "../../shared/tauri/commands";
 import { hasTauriRuntime } from "../../shared/tauri/runtime";
 import { Tooltip } from "../../shared/ui/Tooltip";
+import { useI18n } from "../../shared/i18n";
 import { RemoteFileIcon } from "./RemoteFileIcon";
 import { RemoteFileInfoTooltip, type RemoteFileInfoState } from "./RemoteFileInfoTooltip";
 import {
@@ -234,6 +235,7 @@ function RemoteFilePanelComponent({
   terminalPath,
   toolsPanel,
 }: RemoteFilePanelProps) {
+  const { t } = useI18n();
   const connectionId = connection?.id || null;
   const terminalDirectory = terminalPath ? normalizeRemotePath(terminalPath) : null;
   const restoredNavigation = stateKey && !remoteFilePanelStateCache.has(stateKey)
@@ -509,7 +511,7 @@ function RemoteFilePanelComponent({
     return (
       <aside
         className={`tool-pane ${hideToolTabs ? "remote-files-view " : ""}is-hidden`}
-        aria-label={hideToolTabs ? "远程文件" : "右侧工具面板"}
+        aria-label={hideToolTabs ? t("rightPanel.filesAria") : t("rightPanel.aria")}
         aria-hidden="true"
         data-remote-file-panel-placeholder="true"
       />
@@ -517,7 +519,7 @@ function RemoteFilePanelComponent({
   }
 
   return (
-    <aside className={`tool-pane ${hideToolTabs ? "remote-files-view " : ""}${active ? "" : "is-hidden"}`} aria-label={hideToolTabs ? "远程文件" : "右侧工具面板"} aria-hidden={!active}>
+    <aside className={`tool-pane ${hideToolTabs ? "remote-files-view " : ""}${active ? "" : "is-hidden"}`} aria-label={hideToolTabs ? t("rightPanel.filesAria") : t("rightPanel.aria")} aria-hidden={!active}>
       {hideToolTabs ? null : (
         <FilePanelTabs
           activeTool={effectiveActiveTool}
@@ -527,20 +529,20 @@ function RemoteFilePanelComponent({
         />
       )}
       <div className="tool-panel-slot" hidden={effectiveActiveTool !== "tools"}>
-        {toolsPanel || <p className="file-panel-empty">打开一个 SSH 会话后显示工具。</p>}
+        {toolsPanel || <p className="file-panel-empty">{t("rightPanel.empty.tools")}</p>}
       </div>
       <div className="tool-panel-slot" hidden={effectiveActiveTool !== "tunnels"}>
-        {tunnelPanel || <p className="file-panel-empty">打开一个 SSH 会话后管理隧道。</p>}
+        {tunnelPanel || <p className="file-panel-empty">{t("rightPanel.empty.tunnels")}</p>}
       </div>
       <div className="tool-panel-slot" hidden={effectiveActiveTool !== "ai"}>
-        {aiPanel || <p className="file-panel-empty">正在加载 AI 面板...</p>}
+        {aiPanel || <p className="file-panel-empty">{t("rightPanel.loading.ai")}</p>}
       </div>
       {effectiveActiveTool === "monitor" ? (
         <div className="monitor-tool-body">
-          {monitorPanel || <p className="file-panel-empty">打开一个 SSH 会话后显示监控。</p>}
+          {monitorPanel || <p className="file-panel-empty">{t("rightPanel.empty.monitor")}</p>}
         </div>
       ) : effectiveActiveTool === "commands" ? (
-        commandPanel || <p className="file-panel-empty">还没有命令片段。</p>
+        commandPanel || <p className="file-panel-empty">{t("rightPanel.empty.commands")}</p>
       ) : effectiveActiveTool === "files" ? (
         <>
           <FilePanelShell
@@ -568,7 +570,7 @@ function RemoteFilePanelComponent({
             onUploadFile={connection ? onUploadFile : undefined}
           >
             {!connection ? (
-              <p className="file-panel-empty">打开一个 SSH 会话后显示远程文件。</p>
+              <p className="file-panel-empty">{t("rightPanel.empty.files")}</p>
             ) : (
               <>
                 {error ? <p className="file-panel-error">{error}</p> : null}
@@ -577,8 +579,8 @@ function RemoteFilePanelComponent({
                     className={`file-list ${effectiveDropTargetPath === activeDirectoryPath ? "is-drop-target" : ""}`}
                     data-remote-file-drop-target={activeDirectoryPath}
                   >
-                    <section className="remote-file-tree" aria-label="远程文件树">
-                      <p className="file-panel-empty">正在恢复文件视图...</p>
+                    <section className="remote-file-tree" aria-label={t("rightPanel.treeAria")}>
+                      <p className="file-panel-empty">{t("rightPanel.restoring")}</p>
                     </section>
                   </div>
                 ) : (
@@ -593,13 +595,13 @@ function RemoteFilePanelComponent({
                         onDragOver={(event) => handleLocalDragOver(event, activeDirectoryPath)}
                         onDrop={(event) => handleDropUpload(event, activeDirectoryPath)}
                       >
-                        <section className="remote-file-tree" aria-label="远程文件树">
+                        <section className="remote-file-tree" aria-label={t("rightPanel.treeAria")}>
                           {entries.length ? (
                             renderRows(entries, 0)
                           ) : showCurrentPathLoading ? (
-                            <p className="file-panel-empty">读取目录中...</p>
+                            <p className="file-panel-empty">{t("rightPanel.reading")}</p>
                           ) : isCurrentPathLoading ? null : (
-                            <p className="file-panel-empty">当前目录为空。</p>
+                            <p className="file-panel-empty">{t("rightPanel.emptyDirectory")}</p>
                           )}
                         </section>
                       </div>
@@ -1423,36 +1425,37 @@ function FilePanelTabs({
   onToolChange?: (tool: RemoteFileTool) => void;
   onToggleRightPane?: () => void;
 }) {
+  const { t } = useI18n();
   return (
-    <nav className="tool-tabs" aria-label="工具标签">
+    <nav className="tool-tabs" aria-label={t("rightPanel.tabsAria")}>
       {availableTools.includes("files") ? (
         <button className={activeTool === "files" ? "active" : ""} type="button" onClick={() => onToolChange?.("files")}>
           <Folder className="ui-icon" aria-hidden="true" />
-          文件
+          {t("rightPanel.tab.files")}
         </button>
       ) : null}
       {availableTools.includes("monitor") ? (
         <button className={activeTool === "monitor" ? "active" : ""} type="button" onClick={() => onToolChange?.("monitor")}>
           <Activity className="ui-icon" aria-hidden="true" />
-          监控
+          {t("rightPanel.tab.monitor")}
         </button>
       ) : null}
       {availableTools.includes("commands") ? (
         <button className={activeTool === "commands" ? "active" : ""} type="button" onClick={() => onToolChange?.("commands")}>
           <ListTree className="ui-icon" aria-hidden="true" />
-          命令
+          {t("rightPanel.tab.commands")}
         </button>
       ) : null}
       {availableTools.includes("tools") ? (
         <button className={activeTool === "tools" ? "active" : ""} type="button" onClick={() => onToolChange?.("tools")}>
           <Wrench className="ui-icon" aria-hidden="true" />
-          工具
+          {t("rightPanel.tab.tools")}
         </button>
       ) : null}
       {availableTools.includes("tunnels") ? (
         <button className={activeTool === "tunnels" ? "active" : ""} type="button" onClick={() => onToolChange?.("tunnels")}>
           <Network className="ui-icon" aria-hidden="true" />
-          隧道
+          {t("rightPanel.tab.tunnels")}
         </button>
       ) : null}
       {availableTools.includes("ai") ? (
@@ -1462,11 +1465,11 @@ function FilePanelTabs({
         </button>
       ) : null}
       {onToggleRightPane ? (
-        <Tooltip label="收起右侧面板">
+        <Tooltip label={t("rightPanel.collapse")}>
           <button
             className="right-collapse-button"
             type="button"
-            aria-label="收起右侧面板"
+            aria-label={t("rightPanel.collapse")}
             aria-expanded
             onClick={onToggleRightPane}
           >
