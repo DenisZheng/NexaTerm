@@ -1,4 +1,4 @@
-import { t } from "../../shared/i18n";
+import { getLocale, t } from "../../shared/i18n";
 import type {
   RemoteFileTransferItem,
   TransferDirection,
@@ -122,7 +122,7 @@ export function transferItemSizeText(item: RemoteFileTransferItem) {
   if (item.kind === "directory") {
     return item.progressDetail?.includes(" / ") || item.progressDetail?.startsWith("压缩包 ")
       ? item.progressDetail
-      : "目录";
+      : t("files.transfer.kind.directory");
   }
   if (item.progressDetail?.includes(" / ")) {
     return item.progressDetail;
@@ -160,7 +160,7 @@ export function formatTransferDetailTime(timestamp: number) {
   if (Number.isNaN(date.getTime())) {
     return "--";
   }
-  return date.toLocaleString("zh-CN", {
+  return date.toLocaleString(getLocale() === "zh-CN" ? "zh-CN" : "en-US", {
     hour: "2-digit",
     hour12: false,
     minute: "2-digit",
@@ -186,7 +186,7 @@ export function transferInlineErrorText(error: string) {
     .split(/\r?\n/)
     .map((line) => normalizeErrorText(line))
     .filter(Boolean)
-    .join("；");
+    .join(getLocale() === "zh-CN" ? "；" : "; ");
 }
 
 export function transferDisplayStatusLabel(item: RemoteFileTransferItem) {
