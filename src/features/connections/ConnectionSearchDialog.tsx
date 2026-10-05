@@ -142,19 +142,19 @@ export function ConnectionSearchDialog({
       >
         <header className="connection-search-head">
           <div>
-            <Dialog.Title className="connection-search-title">快速打开连接</Dialog.Title>
+            <Dialog.Title className="connection-search-title">{t("connectionSearch.title")}</Dialog.Title>
             <Dialog.Description className="sr-only">
-              按名称、地址、用户、分组或备注查找连接
+              {t("connectionSearch.description")}
             </Dialog.Description>
           </div>
           <Dialog.Close asChild>
-            <button className="icon-button dialog-close-button" type="button" aria-label="关闭连接搜索">
+            <button className="icon-button dialog-close-button" type="button" aria-label={t("connectionSearch.close")}>
               <X className="ui-icon" aria-hidden="true" />
             </button>
           </Dialog.Close>
         </header>
 
-        <label className="connection-search-input-wrap" aria-label="搜索连接">
+        <label className="connection-search-input-wrap" aria-label={t("connectionSearch.searchAria")}>
           <Search className="ui-icon" aria-hidden="true" />
           <input
             ref={inputRef}
@@ -163,7 +163,7 @@ export function ConnectionSearchDialog({
             value={query}
             onChange={(event) => onQueryChange(event.currentTarget.value)}
             onKeyDown={handleInputKeyDown}
-            placeholder="搜索连接、地址、用户、备注"
+            placeholder={t("connectionSearch.placeholder")}
           />
         </label>
 
@@ -183,14 +183,14 @@ export function ConnectionSearchDialog({
         ) : null}
 
         <div className="connection-search-section-title">
-          <span>{hasQuery ? "搜索结果" : "最近连接"}</span>
+          <span>{hasQuery ? t("connectionSearch.results") : t("connectionSearch.recent")}</span>
           <small>{entries.length.toString()}</small>
         </div>
 
-        <div className="connection-search-results" role="listbox" aria-label="连接搜索结果">
+        <div className="connection-search-results" role="listbox" aria-label={t("connectionSearch.resultsAria")}>
           {entries.length === 0 ? (
             <p className="connection-search-empty">
-              {hasQuery ? "没有匹配的连接" : "暂无可打开的连接"}
+              {hasQuery ? t("connectionSearch.noMatch") : t("connectionSearch.empty")}
             </p>
           ) : null}
 
@@ -214,9 +214,9 @@ export function ConnectionSearchDialog({
                   <small>{entry.address}</small>
                 </span>
                 <span className="connection-search-result-side">
-                  {current ? <span className="connection-search-badge">当前</span> : null}
+                  {current ? <span className="connection-search-badge">{t("connectionSearch.current")}</span> : null}
                   {connection.is_favorite ? (
-                    <span className="connection-search-badge icon" aria-label="收藏">
+                    <span className="connection-search-badge icon" aria-label={t("connectionSearch.favorite")}>
                       <Star className="ui-icon" aria-hidden="true" />
                     </span>
                   ) : null}
