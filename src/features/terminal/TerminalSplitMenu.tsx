@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { type KeyboardEvent, type RefObject, useEffect, useRef, useState } from "react";
 
+import { useI18n } from "../../shared/i18n";
 import { AnchoredSurfacePortal } from "../../shared/ui/AnchoredSurfacePortal";
 import { Tooltip } from "../../shared/ui/Tooltip";
 import type { TerminalSplitSyncPaneOption } from "../layout/terminalSplitSyncOptions";
@@ -40,6 +41,7 @@ export function TerminalSplitMenu({
   onSplitFour,
   onSplitRight,
 }: TerminalSplitMenuProps) {
+  const { t } = useI18n();
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const [open, setOpen] = useState(false);
@@ -53,12 +55,12 @@ export function TerminalSplitMenu({
 
   return (
     <div className="terminal-split-menu">
-      <Tooltip label="分屏布局">
+      <Tooltip label={t("terminal.split.layout")}>
         <button
           ref={triggerRef}
           className="add-subtab terminal-split-menu-trigger"
           type="button"
-          aria-label="分屏布局"
+          aria-label={t("terminal.split.layout")}
           aria-expanded={open}
           aria-haspopup="menu"
           disabled={disabled}
@@ -78,7 +80,7 @@ export function TerminalSplitMenu({
       <AnchoredSurfacePortal
         align="end"
         anchorRef={triggerRef}
-        ariaLabel="终端分屏操作"
+        ariaLabel={t("terminal.split.actionsAria")}
         className="terminal-split-menu-content dropdown-menu-content"
         desiredHeight={172}
         minHeight={160}
@@ -98,7 +100,7 @@ export function TerminalSplitMenu({
             <span className="terminal-split-menu-check" aria-hidden="true">
               {autoCreateSameSession ? <Check className="ui-icon" /> : null}
             </span>
-            <span>同会话</span>
+            <span>{t("terminal.split.sameSession")}</span>
           </button>
           <div className="terminal-split-menu-separator" role="separator" />
           <button
@@ -109,7 +111,7 @@ export function TerminalSplitMenu({
             onClick={() => select(onSplitRight)}
           >
             <SquareSplitHorizontal className="ui-icon" aria-hidden="true" />
-            <span>向右分屏</span>
+            <span>{t("terminal.tabs.splitRight")}</span>
           </button>
           <button
             className="terminal-split-menu-item dropdown-menu-item"
@@ -119,7 +121,7 @@ export function TerminalSplitMenu({
             onClick={() => select(onSplitDown)}
           >
             <SquareSplitVertical className="ui-icon" aria-hidden="true" />
-            <span>向下分屏</span>
+            <span>{t("terminal.tabs.splitDown")}</span>
           </button>
           <button
             className="terminal-split-menu-item dropdown-menu-item"
@@ -129,7 +131,7 @@ export function TerminalSplitMenu({
             onClick={() => select(onSplitFour)}
           >
             <PanelsTopLeft className="ui-icon" aria-hidden="true" />
-            <span>四分屏</span>
+            <span>{t("terminal.tabs.fourPane")}</span>
           </button>
         </div>
       </AnchoredSurfacePortal>
@@ -144,6 +146,7 @@ export function TerminalSplitSyncMenu({
   onEnabledChange,
   onParticipantChange,
 }: TerminalSplitSyncMenuProps) {
+  const { t } = useI18n();
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const [open, setOpen] = useState(false);
@@ -153,12 +156,12 @@ export function TerminalSplitSyncMenu({
 
   return (
     <div className="terminal-split-menu">
-      <Tooltip label={enabled ? "同步输入已开启" : "同步输入"}>
+      <Tooltip label={enabled ? t("terminal.split.syncOn") : t("terminal.split.sync")}>
         <button
           ref={triggerRef}
           className={`add-subtab terminal-split-sync-trigger ${enabled ? "active" : ""}`}
           type="button"
-          aria-label="同步输入设置"
+          aria-label={t("terminal.split.syncSettings")}
           aria-expanded={open}
           aria-haspopup="menu"
           aria-pressed={enabled}
@@ -179,7 +182,7 @@ export function TerminalSplitSyncMenu({
       <AnchoredSurfacePortal
         align="end"
         anchorRef={triggerRef}
-        ariaLabel="同步输入设置"
+        ariaLabel={t("terminal.split.syncSettings")}
         className="terminal-split-menu-content terminal-split-sync-menu dropdown-menu-content"
         desiredHeight={Math.min(256, 52 + panes.length * 34)}
         minHeight={120}
@@ -200,10 +203,10 @@ export function TerminalSplitSyncMenu({
             <span className="terminal-split-menu-check" aria-hidden="true">
               {enabled ? <Check className="ui-icon" /> : null}
             </span>
-            <span>{enabled ? "关闭同步输入" : "开启同步输入"}</span>
+            <span>{enabled ? t("terminal.split.syncOffAction") : t("terminal.split.syncOnAction")}</span>
           </button>
           <div className="terminal-split-menu-separator" role="separator" />
-          <div className="terminal-split-menu-label">参与同步</div>
+          <div className="terminal-split-menu-label">{t("terminal.split.participants")}</div>
           {panes.map((pane) => {
             const checked = participantKeys.has(pane.key);
             return (
