@@ -2523,5 +2523,22 @@
   "workspace.rdp.copyPreview": "Copy preview",
   "workspace.vnc.copyPreview": "Copy preview",
   "workspace.command.sendFailed": "Command send failed: {message}",
-  "workspace.local.state": "Terminal status"
+  "workspace.local.state": "Terminal status",
+  "connection.runner.rdp.macos": "macOS system RDP client",
+  "connection.runner.rdp.custom": "Custom RDP client",
+  "connection.runner.auto": "Auto select",
+  "connection.runner.rdp.system": "System RDP client",
+  "connection.runner.rdp.mstscMode": "mstsc.exe mode",
+  "connection.runner.rdp.note.macos": "System RDP client mode opens .rdp files with Windows App / Microsoft Remote Desktop and is suitable when official-client compatibility is required.",
+  "connection.runner.rdp.note.freerdp": "FreeRDP mode opens with the system FreeRDP client and is suitable when external-client compatibility is required.",
+  "connection.runner.rdp.note.mstsc": "mstsc.exe mode opens with the system Remote Desktop client and is suitable when system-client compatibility is required.",
+  "connection.runner.vnc.embedded": "Embedded noVNC",
+  "connection.runner.vnc.custom": "Custom VNC client",
+  "jump.issue.cycle.title": "Jump chain contains a cycle",
+  "jump.issue.cycle.detail": "The selected jump chain returns to the current connection or forms a cycle. Choose a different jump host.",
+  "jump.issue.depth.title": "Jump chain exceeds the supported depth",
+  "jump.issue.depth.detail": "At most two SSH jump levels are currently supported. Shorten the saved connection's jump chain.",
+  "jump.issue.missing.title": "Jump-host connection is missing",
+  "jump.issue.missing.detail": "A saved connection referenced by the jump chain no longer exists. Choose the jump host again.",
+  "window.material.auto": "Default"
 }
