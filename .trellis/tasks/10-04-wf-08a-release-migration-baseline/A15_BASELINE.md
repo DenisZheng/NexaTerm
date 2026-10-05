@@ -83,3 +83,15 @@ WF-08 development can continue while A09/A10 are pending. A15 is not PASS until 
   - fixed 10 SSH + Split + SFTP + Transfer + Monitoring workload;
   - three-cycle resource-release and failure-isolation workload.
 - Boundary: no real packaged performance number is claimed by CI. Windows/macOS/Linux real benchmarks remain WF-08E/A15.
+
+
+## WF-08E CI evidence
+
+- PR: #40
+- Functional head: `0a7509a6be8746e6222d52a1640a4b4d33947ca8`
+- CI: #369 / run `37268756990` — PASS
+- Frontend checks + `WF-08E final A15 evidence contract`: PASS
+- Rust windows-x64 / linux-x64 / macos-arm64: Cargo check + Cargo test PASS
+- Test fixtures / Security / License: PASS
+- Automated framework now enforces zero-blocker A15 signoff.
+- Boundary: A15 itself is **not PASS**. A09/A10 and real three-platform install/sign/upgrade/rollback/migration/performance/updater evidence remain pending.
