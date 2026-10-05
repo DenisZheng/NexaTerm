@@ -50,7 +50,9 @@
     "check:wf07-workspace-restore": "node scripts/check-wf07-workspace-restore-source.mjs",
     "check:wf08a-release-migration": "node scripts/check-wf08a-release-migration-source.mjs",
     "check:wf08b-cross-brand-migration": "node scripts/check-wf08b-cross-brand-migration-source.mjs",
-    "check:wf08c-release-surface": "node scripts/check-wf08c-release-surface.mjs"
+    "check:wf08c-release-surface": "node scripts/check-wf08c-release-surface.mjs",
+    "check:wf08d-performance-stability": "node scripts/check-wf08d-performance-stability-source.mjs",
+    "perf:wf08d": "node scripts/perf-runtime-sampler.mjs"
   },
   "dependencies": {
     "@novnc/novnc": "^1.7.0",
