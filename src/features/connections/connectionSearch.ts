@@ -1,3 +1,4 @@
+import { t as tr } from "../../shared/i18n";
 import type { ConnectionProfile } from "./connectionTypes";
 
 export interface ConnectionSearchEntry {
@@ -92,7 +93,7 @@ export function formatConnectionAddress(connection: ConnectionProfile) {
     case "telnet":
       return `Telnet · ${connection.host}:${connection.port.toString()}`;
     case "serial":
-      return `串口 · ${connection.serial?.port_name || connection.host}`;
+      return `${tr("connection.search.serial")} · ${connection.serial?.port_name || connection.host}`;
     default:
       return address;
   }
@@ -119,7 +120,7 @@ function buildConnectionSearchEntry(
 
 function buildConnectionSearchFields(connection: ConnectionProfile): ConnectionSearchFields {
   const address = formatConnectionAddress(connection);
-  const groupLabel = connection.group?.trim() || "未分组";
+  const groupLabel = connection.group?.trim() || tr("connection.search.ungrouped");
   const systemLabel = [connection.remote_os_name, connection.remote_os_version]
     .map((value) => value?.trim())
     .filter(Boolean)
