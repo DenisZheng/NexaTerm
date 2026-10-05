@@ -2613,5 +2613,7 @@
   "dialog.connectionImport": "选择连接迁移文件",
   "dialog.connectionExport": "导出连接",
   "dialog.mobaxtermExport": "MobaXterm 会话导出",
-  "dialog.mobaxtermImport": "选择 MobaXterm 会话文件"
+  "dialog.mobaxtermImport": "选择 MobaXterm 会话文件",
+  "startup.vnc": "正在加载 VNC 窗口...",
+  "startup.workspace": "正在加载工作区..."
 }
