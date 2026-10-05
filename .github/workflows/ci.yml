@@ -131,6 +131,9 @@ jobs:
       - name: WF-08C release surface
         run: pnpm run check:wf08c-release-surface
 
+      - name: WF-08D performance and stability contract
+        run: pnpm run check:wf08d-performance-stability
+
   security:
     name: Security evidence
     runs-on: ubuntu-22.04
