@@ -27,10 +27,11 @@
     "10-04-wf-08a-release-migration-baseline",
     "10-05-wf-08b-cross-brand-migration",
     "10-05-wf-08c-release-surface-audit",
-    "10-05-wf-08d-performance-stability-baseline"
+    "10-05-wf-08d-performance-stability-baseline",
+    "10-05-wf-08e-a15-release-acceptance"
   ],
   "parent": null,
   "relatedFiles": [],
-  "notes": "2026-10-05: WF-08D performance/stability measurement tooling started stacked on WF-08C. Real packaged benchmarks remain WF-08E/A15 evidence; A09/A10 still block final sign-off.",
+  "notes": "2026-10-05: WF-08E final A15 evidence/signoff framework started stacked on WF-08D. A09/A10 and real three-platform release/install/upgrade/rollback/performance evidence remain hard blockers.",
   "meta": {}
 }
