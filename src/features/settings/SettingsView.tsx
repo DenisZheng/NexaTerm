@@ -998,7 +998,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
       JSON.stringify(
         {
           mcpServers: {
-            mxterm: {
+            nexaterm: {
               command: executablePath,
               args: [],
             },
@@ -1014,7 +1014,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
       JSON.stringify(
         {
           mcpServers: {
-            mxterm: {
+            nexaterm: {
               type: "streamable-http",
               url: remoteMcpUrl,
               headers: {
@@ -1033,7 +1033,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
       JSON.stringify(
         {
           mcpServers: {
-            mxterm: {
+            nexaterm: {
               type: "sse",
               url: remoteSseUrl,
               headers: {
