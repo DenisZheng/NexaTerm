@@ -12,11 +12,11 @@
   "branch": "feat/wf08c-release-surface-audit",
   "base_branch": "feat/wf08b-cross-brand-migration",
   "commit": null,
-  "pr_url": null,
+  "pr_url": "https://github.com/DenisZheng/NexaTerm/pull/38",
   "subtasks": [],
   "children": [],
   "parent": "09-23-nexaterm-workflow-mainline",
   "relatedFiles": [],
-  "notes": "Stacked on WF-08B. 08C-1 hardens active brand/i18n/release surfaces while preserving explicit legacy compatibility aliases. 08C-2 handles executable/installer naming compatibility. A09/A10 still block final A15/v1 sign-off.",
+  "notes": "2026-10-05: WF-08C-1 active brand/i18n/release-surface hardening implemented in Draft stacked PR #38. Legacy MCP names remain explicit compatibility aliases; executable rename is 08C-2. A09/A10 still block final A15/v1 sign-off.",
   "meta": {}
 }
