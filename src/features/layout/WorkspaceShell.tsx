@@ -10847,30 +10847,30 @@ function ConnectionStepPanel({
   const { t } = useI18n();
   const hostKeyChanged = step.hostKeyDecision === "changed";
   const activeStepIndex = currentConnectionStepIndex(step);
-  const closeLabel = step.status === "running" ? "取消" : "关闭";
+  const closeLabel = step.status === "running" ? tr("workspace.connection.cancel") : tr("workspace.connection.close");
   const progressPercent = Math.max(8, Math.min(100, ((activeStepIndex + 1) / 5) * 100));
   const showStepDetail = step.status !== "idle" && step.status !== "running";
   const stepItems = [
     {
-      description: "加载连接参数和认证材料",
-      label: "读取配置",
+      description: tr("workspace.connection.step.readDescription"),
+      label: tr("workspace.connection.step.read"),
     },
     {
-      description: `TCP 握手 ${step.connection.host}:${step.connection.port.toString()}`,
-      label: "网络连接",
+      description: tr("workspace.connection.step.networkDescription", { host: step.connection.host, port: step.connection.port }),
+      label: tr("workspace.connection.step.network"),
     },
     {
-      description: "校验服务器指纹和 known_hosts",
-      label: "主机密钥验证",
+      description: tr("workspace.connection.step.hostKeyDescription"),
+      label: tr("workspace.connection.step.hostKey"),
     },
     {
       description: connectionStepAuthDescription(step),
-      label: "用户认证",
+      label: tr("workspace.connection.step.auth"),
     },
     {
       description:
-        step.mode === "terminal" ? "启动交互式 Shell 会话" : "完成连接测试流程",
-      label: step.mode === "terminal" ? "打开终端" : "完成测试",
+        step.mode === "terminal" ? tr("workspace.connection.step.finishTerminal") : tr("workspace.connection.step.finishTest"),
+      label: step.mode === "terminal" ? tr("workspace.connection.step.openTerminal") : tr("workspace.connection.step.finish"),
     },
   ];
 
@@ -10878,7 +10878,7 @@ function ConnectionStepPanel({
     <section
       className={`connection-step-page ${visible ? "" : "is-hidden"} ${className || ""}`}
       data-step-status={step.status}
-      aria-label="连接步骤"
+      aria-label={tr("workspace.connection.stepsAria")}
       aria-hidden={!visible}
       style={style}
       onPointerDown={onPaneFocus}
@@ -10889,11 +10889,11 @@ function ConnectionStepPanel({
             {step.status === "success" && !step.temporary ? (
               <button
                 type="button"
-                aria-label="编辑连接"
+                aria-label={tr("workspace.connection.edit")}
                 onClick={() => onEdit(step.connection)}
               >
                 <Pencil className="ui-icon" aria-hidden="true" />
-                <span>编辑</span>
+                <span>{tr("workspace.connection.editShort")}</span>
               </button>
             ) : null}
             <button type="button" aria-label={closeLabel} onClick={onCancel}>
@@ -10919,7 +10919,7 @@ function ConnectionStepPanel({
             </span>
           </header>
 
-          <ol className="connection-step-list" aria-label="连接阶段">
+          <ol className="connection-step-list" aria-label={tr("workspace.connection.stagesAria")}>
             {stepItems.map((item, index) => {
               const state = connectionStepItemState(step, index, activeStepIndex);
               return (
@@ -10978,8 +10978,8 @@ function ConnectionStepPanel({
                   <header>
                     <KeyRound className="ui-icon" aria-hidden="true" />
                     <span>
-                      <strong>{step.promptTarget?.connectionId !== step.connection.id ? "输入跳板机凭据" : "输入本次凭据"}</strong>
-                      <small>{step.promptTarget ? `${step.promptTarget.name || step.promptTarget.connectionId} · ${step.promptTarget.username}@${step.promptTarget.host}:${step.promptTarget.port.toString()}` : "这部分不会保存到连接配置。"}</small>
+                      <strong>{step.promptTarget?.connectionId !== step.connection.id ? tr("workspace.connection.jumpCredentials") : tr("workspace.connection.credentials")}</strong>
+                      <small>{step.promptTarget ? tr("workspace.connection.credentialsTarget", { name: step.promptTarget.name || step.promptTarget.connectionId, user: step.promptTarget.username, host: step.promptTarget.host, port: step.promptTarget.port }) : tr("workspace.connection.credentialsHint")}</small>
                     </span>
                   </header>
                   {step.temporary ? (
@@ -10990,9 +10990,9 @@ function ConnectionStepPanel({
                     </label>
                   ) : null}
                   <label>
-                    <span>认证方式</span>
+                    <span>{tr("workspace.connection.authMethod")}</span>
                     <AppSelect
-                      ariaLabel="认证方式"
+                      ariaLabel={tr("workspace.connection.authMethod")}
                       value={step.authKind}
                       options={connectionPromptAuthKindOptions}
                       onChange={onPromptAuthKindChange}
@@ -11000,7 +11000,7 @@ function ConnectionStepPanel({
                   </label>
                   {step.authKind === "password" ? (
                     <label>
-                      <span>密码</span>
+                      <span>{tr("workspace.connection.password")}</span>
                       <input
                         type="password"
                         value={step.password}
@@ -11010,7 +11010,7 @@ function ConnectionStepPanel({
                   ) : (
                     <>
                       <label>
-                        <span>私钥路径</span>
+                        <span>{tr("workspace.connection.privateKey")}</span>
                         <input
                           value={step.privateKeyPath}
                           placeholder="~/.ssh/id_ed25519"
@@ -11020,7 +11020,7 @@ function ConnectionStepPanel({
                         />
                       </label>
                       <label>
-                        <span>私钥口令</span>
+                        <span>{tr("workspace.connection.passphrase")}</span>
                         <input
                           type="password"
                           value={step.privateKeyPassphrase}
@@ -11032,7 +11032,7 @@ function ConnectionStepPanel({
                     </>
                   )}
                   <button className="primary-button" type="submit">
-                    继续连接
+                    {tr("workspace.connection.continue")}
                   </button>
                 </form>
               ) : null}
@@ -11042,19 +11042,19 @@ function ConnectionStepPanel({
                   <header>
                     <LockKeyhole className="ui-icon" aria-hidden="true" />
                     <span>
-                      <strong>确认主机密钥</strong>
+                      <strong>{tr("workspace.connection.hostKeyConfirm")}</strong>
                       <small>
-                        {hostKeyChanged ? "主机密钥已变化" : step.hostKey.key_algorithm}
+                        {hostKeyChanged ? tr("workspace.connection.hostKeyChanged") : step.hostKey.key_algorithm}
                       </small>
                     </span>
                   </header>
                   {hostKeyChanged && step.oldHostKeyFingerprint ? (
-                    <code>旧指纹：{step.oldHostKeyFingerprint}</code>
+                    <code>{tr("workspace.connection.oldFingerprint", { value: step.oldHostKeyFingerprint })}</code>
                   ) : null}
                   <code>{step.hostKey.fingerprint_sha256}</code>
                   {step.error ? <p className="form-error">{step.error}</p> : null}
                   <button className="primary-button" type="button" onClick={onTrustHostKey}>
-                    {hostKeyChanged ? "更新信任并继续" : "信任并继续"}
+                    {hostKeyChanged ? tr("workspace.connection.updateTrust") : tr("workspace.connection.trust")}
                   </button>
                 </div>
               ) : null}
@@ -11062,7 +11062,7 @@ function ConnectionStepPanel({
               {step.status === "success" && step.mode === "test" ? (
                 <div className="connection-step-success">
                   <CheckCircle2 className="ui-icon" aria-hidden="true" />
-                  <span>连接测试通过。</span>
+                  <span>{tr("workspace.connection.testSuccess")}</span>
                 </div>
               ) : null}
 
@@ -11071,7 +11071,7 @@ function ConnectionStepPanel({
                   <header>
                     <AlertTriangle className="ui-icon" aria-hidden="true" />
                     <strong>
-                      {step.errorDetail?.rawMessage || step.errorDetail?.message || step.error || "连接失败"}
+                      {step.errorDetail?.rawMessage || step.errorDetail?.message || step.error || tr("workspace.connection.errorFallback")}
                     </strong>
                   </header>
                   {step.errorDetail?.suggestion ? (
@@ -11089,7 +11089,7 @@ function ConnectionStepPanel({
                     {!step.temporary ? (
                       <button className="connection-step-secondary-button" type="button" onClick={() => onEdit(step.connection)}>
                         <Pencil className="ui-icon" aria-hidden="true" />
-                        <span>编辑连接</span>
+                        <span>{tr("workspace.connection.edit")}</span>
                       </button>
                     ) : null}
                   </div>
@@ -11102,11 +11102,11 @@ function ConnectionStepPanel({
             <summary>
               <span>
                 <ChevronLeft className="ui-icon" aria-hidden="true" />
-                连接日志
+                {tr("workspace.connection.logs")}
               </span>
-              <small>{step.logs.length.toString()} 条</small>
+              <small>{tr("workspace.connection.logCount", { count: step.logs.length })}</small>
             </summary>
-            <div aria-label="连接日志">
+            <div aria-label={tr("workspace.connection.logsAria")}>
               <div>
                 {step.logs.map((line, index) => (
                   <code key={`${line}-${index.toString()}`}>{line}</code>
@@ -11214,10 +11214,10 @@ function connectionStepAuthDescription(step: ConnectionStepState) {
       : step.connection.inline_auth_kind || step.connection.auth_kind || step.authKind;
 
   if (step.connection.credential_mode === "prompt") {
-    return authKind === "private_key" ? "使用本次输入的 SSH 密钥" : "使用本次输入的 SSH 密码";
+    return authKind === "private_key" ? tr("workspace.connection.authRuntimePrivate") : tr("workspace.connection.authRuntimePassword");
   }
 
-  return authKind === "private_key" ? "使用 SSH 密钥认证" : "使用密码认证";
+  return authKind === "private_key" ? tr("workspace.connection.authSavedPrivate") : tr("workspace.connection.authSavedPassword");
 }
 
 function connectionStepItemLabel(
@@ -11225,113 +11225,113 @@ function connectionStepItemLabel(
   status: ConnectionStepStatus,
 ) {
   if (state === "done") {
-    return "完成";
+    return tr("workspace.step.complete");
   }
   if (state === "error") {
-    return "失败";
+    return tr("workspace.step.failed");
   }
   if (state === "active") {
     if (status === "prompt") {
-      return "等待输入";
+      return tr("workspace.step.waitInput");
     }
     if (status === "waiting_host_key") {
-      return "待确认";
+      return tr("workspace.step.waitConfirm");
     }
     if (status === "idle") {
-      return "准备中";
+      return tr("workspace.step.preparing");
     }
-    return "进行中";
+    return tr("workspace.step.running");
   }
-  return "待处理";
+  return tr("workspace.step.pending");
 }
 
 function connectionStepStatusTitle(step: ConnectionStepState) {
   if (step.status === "success") {
-    return "测试通过";
+    return tr("workspace.step.testPassed");
   }
   if (step.status === "error") {
-    return "连接失败";
+    return tr("workspace.step.connectionFailed");
   }
   if (step.status === "waiting_host_key") {
-    return "等待确认";
+    return tr("workspace.step.waitConfirm");
   }
   if (step.status === "prompt") {
-    return "需要凭据";
+    return tr("workspace.step.credentialsRequired");
   }
-  return "正在检查";
+  return tr("workspace.step.checking");
 }
 
 function connectionStepPanelTitle(step: ConnectionStepState) {
   if (step.status === "success") {
-    return "连接检查完成";
+    return tr("workspace.step.checkComplete");
   }
   if (step.status === "error") {
-    return "连接未完成";
+    return tr("workspace.step.checkIncomplete");
   }
   if (step.status === "waiting_host_key") {
-    return "主机密钥确认";
+    return tr("workspace.step.hostKey");
   }
   if (step.status === "prompt") {
-    return "补充认证信息";
+    return tr("workspace.step.authInfo");
   }
-  return "执行连接检查";
+  return tr("workspace.step.execute");
 }
 
 function connectionStepPanelDescription(step: ConnectionStepState) {
   if (step.status === "success") {
-    return "本次测试没有创建终端会话。";
+    return tr("workspace.step.note.test");
   }
   if (step.status === "error") {
-    return "错误保留在当前页面，不会写入终端。";
+    return tr("workspace.step.note.error");
   }
   if (step.status === "waiting_host_key") {
-    return "首次连接或指纹变化时需要显式信任。";
+    return tr("workspace.step.note.hostKey");
   }
   if (step.status === "prompt") {
-    return "临时凭据只用于这一次连接。";
+    return tr("workspace.step.note.credential");
   }
-  return "连接步骤会在这里实时更新。";
+  return tr("workspace.step.note.live");
 }
 
 function RemoteFilePropertiesTable({ metadata }: { metadata: RemoteFileEntryMetadata }) {
   return (
     <dl className="remote-file-properties">
       <div>
-        <dt>名称</dt>
+        <dt>{tr("workspace.file.meta.name")}</dt>
         <dd>{metadata.name}</dd>
       </div>
       <div>
-        <dt>类型</dt>
+        <dt>{tr("workspace.file.meta.type")}</dt>
         <dd>{remoteFileKindLabel(metadata.type)}</dd>
       </div>
       {shouldShowRemoteFileSize(metadata.type) ? (
         <div>
-          <dt>大小</dt>
+          <dt>{tr("workspace.file.meta.size")}</dt>
           <dd>{formatFileSize(metadata.size)}</dd>
         </div>
       ) : null}
       <div>
-        <dt>用户</dt>
+        <dt>{tr("workspace.file.meta.user")}</dt>
         <dd>{formatRemoteFileIdentity(metadata.owner, metadata.uid, "UID")}</dd>
       </div>
       <div>
-        <dt>用户组</dt>
+        <dt>{tr("workspace.file.meta.group")}</dt>
         <dd>{formatRemoteFileIdentity(metadata.group, metadata.gid, "GID")}</dd>
       </div>
       <div>
-        <dt>权限</dt>
-        <dd>{metadata.mode || "未知"}</dd>
+        <dt>{tr("workspace.file.meta.permissions")}</dt>
+        <dd>{metadata.mode || tr("workspace.file.meta.unknown")}</dd>
       </div>
       <div>
-        <dt>修改时间</dt>
-        <dd>{formatRemoteFileTimestamp(metadata.mtime, "未知")}</dd>
+        <dt>{tr("workspace.file.meta.modified")}</dt>
+        <dd>{formatRemoteFileTimestamp(metadata.mtime, tr("workspace.file.meta.unknown"))}</dd>
       </div>
       <div>
-        <dt>创建时间</dt>
-        <dd>{formatRemoteFileTimestamp(metadata.birthtime, "系统不支持")}</dd>
+        <dt>{tr("workspace.file.meta.created")}</dt>
+        <dd>{formatRemoteFileTimestamp(metadata.birthtime, tr("workspace.file.meta.unsupported"))}</dd>
       </div>
       <div>
-        <dt>绝对路径</dt>
+        <dt>{tr("workspace.file.meta.path")}</dt>
         <dd>{metadata.path}</dd>
       </div>
     </dl>
@@ -12595,7 +12595,7 @@ function rdpStatusLabel(status: RdpSessionStatus) {
     case "external":
       return "外部客户端";
     case "error":
-      return "失败";
+      return tr("workspace.step.failed");
     default:
       return "RDP";
   }
@@ -12839,7 +12839,7 @@ function vncStatusLabel(status: VncSessionStatus) {
     case "external":
       return "外部客户端";
     case "error":
-      return "失败";
+      return tr("workspace.step.failed");
     default:
       return "VNC";
   }
