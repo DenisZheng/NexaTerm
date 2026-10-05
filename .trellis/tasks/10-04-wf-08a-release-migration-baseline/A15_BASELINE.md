@@ -21,7 +21,7 @@ A15 是“迁移、安装与完整 v1”的最终验收。本表只记录当前�
 | English / zh-CN full-product completeness | WF-08C full-catalog audit locks exact en/zh-CN key + placeholder parity (170/170 at audit) | **AUTOMATED AUDIT PASS / REAL UI SWITCH PENDING WF-08E** |
 | Light/Dark | existing product/acceptance evidence | FINAL REGRESSION PENDING |
 | Security Critical/High | security CI/report exists | FINAL RELEASE AUDIT PENDING |
-| Startup / idle / 10-session performance | requirements defined | **BENCHMARK PENDING** |
+| Startup / idle / 10-session performance | WF-08D now provides opt-in startup interactive probe, cross-platform process-tree CPU/RSS sampler and fixed 10 SSH/resource-release workload | **MEASUREMENT HARNESS IN PROGRESS / REAL BENCHMARK PENDING** |
 | Real installer launch/upgrade/rollback on all 3 platforms | no final A15 evidence yet | **PENDING** |
 | A09/A10 MultiExec real Tauri | separate predecessor acceptance | **PENDING; blocks final A15 sign-off** |
 
