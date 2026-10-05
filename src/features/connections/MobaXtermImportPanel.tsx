@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { useMemo, useState, type FormEvent } from "react";
 
+import { useI18n, type Translate } from "../../shared/i18n";
 import {
   mobaxtermImportApply,
   mobaxtermImportPreview,
@@ -32,6 +33,7 @@ export function MobaXtermImportPanel({
   onBusyChange,
   onImported,
 }: MobaXtermImportPanelProps) {
+  const { t, locale } = useI18n();
   const [path, setPath] = useState("");
   const [defaultUsername, setDefaultUsername] = useState("");
   const [preview, setPreview] = useState<MobaXtermImportPreviewResult | null>(null);
@@ -60,7 +62,7 @@ export function MobaXtermImportPanel({
         resetPreview();
       }
     } catch (selectionError) {
-      setError(formatError(selectionError, "无法打开 MobaXterm 会话文件选择器。"));
+      setError(formatError(selectionError, t("mobaxterm.error.filePicker")));
     }
   }
 
@@ -80,7 +82,7 @@ export function MobaXtermImportPanel({
   async function runPreview(event: FormEvent) {
     event.preventDefault();
     if (!path) {
-      setError("请先选择 .mxtsessions 文件。");
+      setError(t("mobaxterm.error.fileRequired"));
       return;
     }
     updateBusy(true);
@@ -100,7 +102,7 @@ export function MobaXtermImportPanel({
       setNames(nextNames);
     } catch (previewError) {
       resetPreview();
-      setError(formatError(previewError, "MobaXterm 会话预览失败。"));
+      setError(formatError(previewError, t("mobaxterm.error.preview")));
     } finally {
       updateBusy(false);
     }
@@ -123,7 +125,7 @@ export function MobaXtermImportPanel({
 
   async function applyImport() {
     if (!preview || !selected.size) {
-      setError("请选择至少一个可导入的 SSH 会话。");
+      setError(t("mobaxterm.error.selection"));
       return;
     }
     const selections: MobaXtermImportSelection[] = preview.items
@@ -133,7 +135,7 @@ export function MobaXtermImportPanel({
         name: (names[item.source_index] || item.suggested_name || item.name).trim(),
       }));
     if (selections.some((item) => !item.name)) {
-      setError("导入名称不能为空。");
+      setError(t("mobaxterm.error.name"));
       return;
     }
 
@@ -149,7 +151,7 @@ export function MobaXtermImportPanel({
       setResult(nextResult);
       await onImported();
     } catch (importError) {
-      setError(formatError(importError, "MobaXterm 会话导入失败。"));
+      setError(formatError(importError, t("mobaxterm.error.import")));
     } finally {
       updateBusy(false);
     }
@@ -159,16 +161,16 @@ export function MobaXtermImportPanel({
     return (
       <div className="connection-transfer-complete">
         <CheckCircle2 className="ui-icon" aria-hidden="true" />
-        <strong>MobaXterm 会话已导入</strong>
+        <strong>{t("mobaxterm.complete.title")}</strong>
         <span>
-          新增 {result.created.toString()} 个连接
+          {t("mobaxterm.complete.created", { count: result.created })}
           {result.skipped_exact_duplicates
-            ? ` · 跳过 ${result.skipped_exact_duplicates.toString()} 个精确重复`
+            ? t("mobaxterm.complete.skipped", { count: result.skipped_exact_duplicates })
             : ""}
         </span>
         <Dialog.Close asChild>
           <button className="primary-button" type="button">
-            完成
+            {t("mobaxterm.complete.done")}
           </button>
         </Dialog.Close>
       </div>
@@ -184,11 +186,11 @@ export function MobaXtermImportPanel({
         onClick={onBack}
       >
         <ArrowLeft className="ui-icon" aria-hidden="true" />
-        返回 NexaTerm 迁移包导入
+        {t("mobaxterm.back")}
       </button>
 
       <div className="connection-transfer-field">
-        <span>MobaXterm 会话文件</span>
+        <span>{t("mobaxterm.file")}</span>
         <button
           className="connection-transfer-file"
           disabled={busy}
@@ -197,18 +199,18 @@ export function MobaXtermImportPanel({
           onClick={() => void choosePath()}
         >
           <Upload className="ui-icon" aria-hidden="true" />
-          <span>{path ? fileName(path) : "尚未选择 .mxtsessions 文件"}</span>
+          <span>{path ? fileName(path) : t("mobaxterm.file.none")}</span>
           <FolderOpen className="ui-icon" aria-hidden="true" />
         </button>
       </div>
 
       <label className="connection-transfer-field" htmlFor="mobaxterm-default-username">
-        <span>缺失用户名的默认值（可选）</span>
+        <span>{t("mobaxterm.defaultUsername")}</span>
         <input
           id="mobaxterm-default-username"
           autoComplete="username"
           disabled={busy}
-          placeholder="例如 root / ubuntu / deploy"
+          placeholder={t("mobaxterm.defaultUsername.placeholder")}
           value={defaultUsername}
           onChange={(event) => changeDefaultUsername(event.target.value)}
         />
@@ -216,13 +218,15 @@ export function MobaXtermImportPanel({
 
       <p className="connection-transfer-note">
         <AlertTriangle className="ui-icon" aria-hidden="true" />
-        MobaXterm 允许会话继承全局用户名；NexaTerm 不会猜测。未填写的会话会保留为“需补用户名”，不会导入。
+        {t("mobaxterm.note")}
       </p>
 
       {preview ? (
         <MobaPreview
           busy={busy}
           names={names}
+          locale={locale}
+          t={t}
           preview={preview}
           selected={selected}
           onNameChange={(index, name) => {
@@ -242,7 +246,7 @@ export function MobaXtermImportPanel({
       <footer className="connection-transfer-actions">
         <Dialog.Close asChild>
           <button disabled={busy} type="button">
-            取消
+            {t("mobaxterm.cancel")}
           </button>
         </Dialog.Close>
         {preview ? (
@@ -257,7 +261,7 @@ export function MobaXtermImportPanel({
             ) : (
               <Upload className="ui-icon" aria-hidden="true" />
             )}
-            导入 {selected.size.toString()} 项
+            {t("mobaxterm.import", { count: selected.size })}
           </button>
         ) : (
           <button className="primary-button" disabled={busy} type="submit">
@@ -266,7 +270,7 @@ export function MobaXtermImportPanel({
             ) : (
               <Upload className="ui-icon" aria-hidden="true" />
             )}
-            预览
+            {t("mobaxterm.preview")}
           </button>
         )}
       </footer>
@@ -274,7 +278,7 @@ export function MobaXtermImportPanel({
       {preview && importableCount === 0 ? (
         <p className="connection-transfer-note">
           <AlertTriangle className="ui-icon" aria-hidden="true" />
-          当前文件没有可直接导入的 SSH 会话；请补用户名，或手动处理 Jump/Proxy 等无法无损迁移的设置。
+          {t("mobaxterm.noneImportable")}
         </p>
       ) : null}
     </form>
