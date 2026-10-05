@@ -17,7 +17,7 @@ A15 是“迁移、安装与完整 v1”的最终验收。本表只记录当前�
 | License notices | bundle resources + license CI + release evidence files | AUTOMATED BASELINE |
 | Legacy JSON → SQLite/Vault | `StorageMigrator` tests + backups + secret rollback/repair | AUTOMATED BASELINE |
 | Newer data-dir downgrade protection | `.data-version` gate | AUTOMATED BASELINE |
-| mXterm app-data → NexaTerm app-data | WF-08B core migration now implements identifier discovery, explicit prompt, no-overwrite staging and rollback; WebView localStorage remains separate | **IN PROGRESS / WF-08B** |
+| mXterm app-data → NexaTerm app-data | WF-08B implements safe core App Data migration plus `mxterm.settings.v1` bridging on Windows/Linux and read-only WebKit SQLite extraction on macOS; CI #343 passed all three Rust platforms and frontend gates | **CODE COMPLETE / REAL UPGRADE PENDING WF-08E** |
 | English / zh-CN full-product completeness | catalogs and new-entry gate exist | **FULL AUDIT PENDING** |
 | Light/Dark | existing product/acceptance evidence | FINAL REGRESSION PENDING |
 | Security Critical/High | security CI/report exists | FINAL RELEASE AUDIT PENDING |
@@ -38,3 +38,15 @@ WF-08 development can continue while A09/A10 are pending. A15 is not PASS until 
 - `WF-08A release and migration baseline`: PASS
 - Frontend / Rust windows-x64 / Rust macos-arm64 / Rust linux-x64 / Test fixtures / Security / License: PASS
 - Windows package build-only job: skipped by design on pull_request events; it remains a manual workflow-dispatch packaging channel.
+
+
+## WF-08B CI evidence
+
+- PR: #37
+- Functional head: `5c800f14603917bd99e5417cb78d10afc06ff612`
+- CI: #343 / run `37257491086` — PASS
+- Frontend checks + `WF-08B cross-brand app-data migration`: PASS
+- Rust windows-x64 / linux-x64 / macos-arm64: Cargo check + Cargo test PASS
+- Test fixtures / Security / License: PASS
+- Windows package build-only: skipped by design on pull_request
+- Boundary: this is automated code evidence, not proof that a real previously-installed mXterm profile upgrades successfully on each OS. That remains WF-08E/A15.
