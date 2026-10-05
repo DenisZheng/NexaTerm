@@ -2515,5 +2515,11 @@
   "workspace.file.validation.required": "请输入名称。",
   "workspace.file.validation.dot": "名称不能是 . 或 ..。",
   "workspace.file.validation.path": "这里只能填写名称，不能包含路径。",
-  "workspace.file.validation.invalid": "请输入有效名称。"
+  "workspace.file.validation.invalid": "请输入有效名称。",
+  "workspace.local.status.opening": "正在打开",
+  "workspace.local.status.preview": "预览",
+  "workspace.local.status.connected": "已连接",
+  "workspace.local.status.connecting": "正在连接",
+  "workspace.rdp.copyPreview": "复制预览",
+  "workspace.vnc.copyPreview": "复制预览"
 }
