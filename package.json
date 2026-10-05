@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "build:mcp-sidecar": "cargo build --manifest-path src-tauri/Cargo.toml --release --bin mxterm-mcp",
+    "build:mcp-sidecar": "node scripts/prepare-mcp-sidecar.mjs",
     "check": "tsc --noEmit",
     "check:connection-transfer": "node scripts/check-connection-transfer-source.mjs",
     "check:duplicate-connection": "node scripts/check-duplicate-connection-source.mjs",
