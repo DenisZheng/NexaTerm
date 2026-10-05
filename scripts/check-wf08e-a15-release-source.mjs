@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 
 const validator = readFileSync(new URL("./a15-evidence-check.mjs", import.meta.url), "utf8");
 const template = JSON.parse(readFileSync(new URL("../.trellis/tasks/10-05-wf-08e-a15-release-acceptance/A15_EVIDENCE_TEMPLATE.json", import.meta.url), "utf8"));
+const currentEvidence = JSON.parse(readFileSync(new URL("../.trellis/tasks/10-05-wf-08e-a15-release-acceptance/A15_EVIDENCE_CURRENT.json", import.meta.url), "utf8"));
 const release = readFileSync(new URL("../.github/workflows/release.yml", import.meta.url), "utf8");
 const perf = readFileSync(new URL("../tests/performance/wf08d-workload.json", import.meta.url), "utf8");
 const acceptance = readFileSync(new URL("../.trellis/tasks/09-23-nexaterm-workflow-mainline/validation/acceptance-report-2026-10-04.md", import.meta.url), "utf8");
@@ -62,8 +63,16 @@ for (const needle of [
 if (!acceptance.includes("| A09 |") || !acceptance.includes("| A10 |")) {
   fail("canonical acceptance report must retain A09/A10 rows");
 }
-if (!acceptance.includes("真实 Tauri 待验")) {
-  fail("canonical acceptance report must not silently mark A09/A10 complete");
+for (const predecessor of ["A09","A10"]) {
+  if (currentEvidence.predecessor?.[predecessor] !== "pass") {
+    fail(`current A15 evidence must record maintainer-confirmed ${predecessor}=pass`);
+  }
+}
+if (currentEvidence.signoff?.status !== "pending") {
+  fail("current A15 signoff must remain pending until all real release blockers clear");
+}
+if (!acceptance.includes("A09 / A10（2026-10-05 真实 Tauri 通过）")) {
+  fail("canonical acceptance report must record the 2026-10-05 A09/A10 real-Tauri PASS");
 }
 
 console.log("PASS  WF-08E final A15 evidence contract");
