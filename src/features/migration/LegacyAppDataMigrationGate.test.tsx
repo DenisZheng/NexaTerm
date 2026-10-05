@@ -163,6 +163,70 @@ describe("WF-08B legacy app-data startup gate", () => {
     expect(screen.queryByText("brandMigration.settingsTitle")).toBeNull();
   });
 
+  it("records the macOS settings limitation after a confirmed core migration", async () => {
+    preview.mockResolvedValue({
+      available: true,
+      blocked: false,
+      currentRoot: "nexa",
+      legacyRoot: "mxterm",
+      legacyIdentifier: "com.mxterm.app",
+      currentIdentifier: "com.nexaterm.app",
+      files: ["mxterm.db"],
+      reason: null,
+      targetHasUserData: false,
+    });
+    probeStart.mockResolvedValue({
+      supported: false,
+      started: false,
+      token: null,
+      reason: "macos-default-wkwebview-store-unaddressable",
+    });
+    apply.mockResolvedValue({
+      migratedFiles: ["mxterm.db"],
+      backupRoot: "backup",
+      legacyRoot: "mxterm",
+      currentRoot: "nexa",
+      restartRequired: true,
+    });
+    restart.mockResolvedValue(undefined);
+
+    render(
+      <LegacyAppDataMigrationGate>
+        <div>workspace-ready</div>
+      </LegacyAppDataMigrationGate>,
+    );
+
+    fireEvent.click(await screen.findByRole("button", { name: "brandMigration.apply" }));
+
+    await waitFor(() => expect(restart).toHaveBeenCalledTimes(1));
+    expect(window.localStorage.getItem("nexaterm.brandMigration.settings.v1")).toBe("unsupported");
+  });
+
+  it("shows the macOS settings limitation once after core migration", async () => {
+    window.localStorage.setItem("nexaterm.brandMigration.settings.v1", "unsupported");
+    preview.mockResolvedValue({
+      ...noLegacyCoreData(),
+      reason: "already-migrated",
+      targetHasUserData: true,
+    });
+
+    render(
+      <LegacyAppDataMigrationGate>
+        <div>workspace-ready</div>
+      </LegacyAppDataMigrationGate>,
+    );
+
+    expect(await screen.findByText("brandMigration.settingsUnsupportedTitle")).toBeTruthy();
+    expect(screen.queryByText("workspace-ready")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "brandMigration.continue" }));
+
+    expect(screen.getByText("workspace-ready")).toBeTruthy();
+    expect(window.localStorage.getItem("nexaterm.brandMigration.settings.v1")).toBe(
+      "unsupported-ack",
+    );
+  });
+
   it("requires explicit user action before migrating core data and supports skip", async () => {
     preview.mockResolvedValue({
       available: true,
