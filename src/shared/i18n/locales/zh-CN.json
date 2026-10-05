@@ -1414,5 +1414,7 @@
   "monitor.cpu.threadsUnknown": "线程未获取",
   "monitor.cpu.sockets": "{count} 路 · {physical} · {logical}",
   "monitor.cpu.topology": "{physical} 核 / {logical} 线程",
-  "monitor.cpu.vcpuUnknown": "vCPU 未获取"
+  "monitor.cpu.vcpuUnknown": "vCPU 未获取",
+  "monitor.network.interfaceList": "接口列表",
+  "monitor.process.management": "进程管理"
 }
