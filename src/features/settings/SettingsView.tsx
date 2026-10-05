@@ -46,7 +46,7 @@ import {
   X,
 } from "lucide-react";
 
-import { useI18n, type MessageKey } from "../../shared/i18n";
+import { useI18n, type MessageKey, type Translate } from "../../shared/i18n";
 import { AppSelect } from "../../shared/ui/AppSelect";
 import { AppCombobox } from "../../shared/ui/AppCombobox";
 import { Tooltip } from "../../shared/ui/Tooltip";
