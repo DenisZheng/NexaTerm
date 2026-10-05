@@ -6,8 +6,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   legacyAppDataMigrationApply,
   legacyAppDataMigrationPreview,
+  legacyWebviewSettingsProbeStart,
+  legacyWebviewSettingsProbeTake,
 } from "../../shared/tauri/commands";
 import { relaunch } from "@tauri-apps/plugin-process";
+import { settingsStorageKey } from "../settings/startupSettings";
 
 import { LegacyAppDataMigrationGate } from "./LegacyAppDataMigrationGate";
 
@@ -21,6 +24,8 @@ vi.mock("../../shared/i18n", () => ({
 vi.mock("../../shared/tauri/commands", () => ({
   legacyAppDataMigrationPreview: vi.fn(),
   legacyAppDataMigrationApply: vi.fn(),
+  legacyWebviewSettingsProbeStart: vi.fn(),
+  legacyWebviewSettingsProbeTake: vi.fn(),
 }));
 
 vi.mock("@tauri-apps/plugin-process", () => ({
@@ -29,6 +34,8 @@ vi.mock("@tauri-apps/plugin-process", () => ({
 
 const preview = vi.mocked(legacyAppDataMigrationPreview);
 const apply = vi.mocked(legacyAppDataMigrationApply);
+const probeStart = vi.mocked(legacyWebviewSettingsProbeStart);
+const probeTake = vi.mocked(legacyWebviewSettingsProbeTake);
 const restart = vi.mocked(relaunch);
 
 function setTauriRuntime(enabled: boolean) {
@@ -42,14 +49,37 @@ function setTauriRuntime(enabled: boolean) {
   }
 }
 
+function noLegacyCoreData() {
+  return {
+    available: false,
+    blocked: false,
+    currentRoot: "nexa",
+    legacyRoot: "mxterm",
+    legacyIdentifier: "com.mxterm.app",
+    currentIdentifier: "com.nexaterm.app",
+    files: [],
+    reason: "legacy-data-not-found",
+    targetHasUserData: false,
+  };
+}
+
 describe("WF-08B legacy app-data startup gate", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    window.localStorage.clear();
     setTauriRuntime(true);
+    probeStart.mockResolvedValue({
+      supported: true,
+      started: false,
+      token: null,
+      reason: "legacy-webview-data-not-found",
+    });
+    probeTake.mockResolvedValue({ complete: true, value: null });
   });
 
   afterEach(() => {
     cleanup();
+    window.localStorage.clear();
     setTauriRuntime(false);
   });
 
@@ -64,19 +94,63 @@ describe("WF-08B legacy app-data startup gate", () => {
 
     expect(screen.getByText("workspace-ready")).toBeTruthy();
     expect(preview).not.toHaveBeenCalled();
+    expect(probeStart).not.toHaveBeenCalled();
   });
 
-  it("enters the workspace immediately when no legacy data is available", async () => {
-    preview.mockResolvedValue({
-      available: false,
-      blocked: false,
-      currentRoot: "nexa",
-      legacyRoot: "mxterm",
-      legacyIdentifier: "com.mxterm.app",
-      currentIdentifier: "com.nexaterm.app",
-      files: [],
-      reason: "legacy-data-not-found",
-      targetHasUserData: false,
+  it("enters the workspace when neither legacy app data nor legacy settings exist", async () => {
+    preview.mockResolvedValue(noLegacyCoreData());
+
+    render(
+      <LegacyAppDataMigrationGate>
+        <div>workspace-ready</div>
+      </LegacyAppDataMigrationGate>,
+    );
+
+    expect(await screen.findByText("workspace-ready")).toBeTruthy();
+    expect(probeStart).toHaveBeenCalledTimes(1);
+    expect(apply).not.toHaveBeenCalled();
+  });
+
+  it("offers settings-only migration when the old WebView store contains mxterm.settings.v1", async () => {
+    const legacySettings = JSON.stringify({
+      basic: { locale: "en" },
+      localTerminal: {
+        customProfiles: [{ id: "wsl-old", name: "Ubuntu", kind: "wsl", command: "wsl.exe" }],
+      },
+    });
+    preview.mockResolvedValue(noLegacyCoreData());
+    probeStart.mockResolvedValue({
+      supported: true,
+      started: true,
+      token: "probe-token",
+      reason: null,
+    });
+    probeTake.mockResolvedValue({ complete: true, value: legacySettings });
+    restart.mockResolvedValue(undefined);
+
+    render(
+      <LegacyAppDataMigrationGate>
+        <div>workspace-ready</div>
+      </LegacyAppDataMigrationGate>,
+    );
+
+    expect(await screen.findByText("brandMigration.settingsTitle")).toBeTruthy();
+    expect(screen.queryByText("workspace-ready")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "brandMigration.settingsApply" }));
+
+    await waitFor(() => expect(restart).toHaveBeenCalledTimes(1));
+    expect(window.localStorage.getItem(settingsStorageKey)).toBe(legacySettings);
+    expect(apply).not.toHaveBeenCalled();
+  });
+
+  it("does not pretend to auto-migrate old settings on unsupported platforms", async () => {
+    preview.mockResolvedValue(noLegacyCoreData());
+    probeStart.mockResolvedValue({
+      supported: false,
+      started: false,
+      token: null,
+      reason: "macos-default-wkwebview-store-unaddressable",
     });
 
     render(
@@ -86,10 +160,10 @@ describe("WF-08B legacy app-data startup gate", () => {
     );
 
     expect(await screen.findByText("workspace-ready")).toBeTruthy();
-    expect(apply).not.toHaveBeenCalled();
+    expect(screen.queryByText("brandMigration.settingsTitle")).toBeNull();
   });
 
-  it("requires explicit user action before migrating and supports skip", async () => {
+  it("requires explicit user action before migrating core data and supports skip", async () => {
     preview.mockResolvedValue({
       available: true,
       blocked: false,
@@ -118,7 +192,7 @@ describe("WF-08B legacy app-data startup gate", () => {
     expect(apply).not.toHaveBeenCalled();
   });
 
-  it("never offers automatic overwrite when NexaTerm already has user data", async () => {
+  it("never offers automatic core overwrite when NexaTerm already has user data", async () => {
     preview.mockResolvedValue({
       available: true,
       blocked: true,
@@ -140,12 +214,17 @@ describe("WF-08B legacy app-data startup gate", () => {
     expect(await screen.findByText("brandMigration.blockedTitle")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "brandMigration.apply" })).toBeNull();
     expect(apply).not.toHaveBeenCalled();
+    expect(probeStart).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("button", { name: "brandMigration.continue" }));
     expect(screen.getByText("workspace-ready")).toBeTruthy();
   });
 
-  it("applies only after confirmation and relaunches after success", async () => {
+  it("migrates legacy WebView settings together with confirmed core data", async () => {
+    const legacySettings = JSON.stringify({
+      appearance: { themeMode: "dark" },
+      shortcuts: { bindings: { "workspace.newSession": "Ctrl+Shift+N" } },
+    });
     preview.mockResolvedValue({
       available: true,
       blocked: false,
@@ -157,6 +236,13 @@ describe("WF-08B legacy app-data startup gate", () => {
       reason: null,
       targetHasUserData: false,
     });
+    probeStart.mockResolvedValue({
+      supported: true,
+      started: true,
+      token: "probe-token",
+      reason: null,
+    });
+    probeTake.mockResolvedValue({ complete: true, value: legacySettings });
     apply.mockResolvedValue({
       migratedFiles: ["mxterm.db"],
       backupRoot: "backup",
@@ -176,6 +262,7 @@ describe("WF-08B legacy app-data startup gate", () => {
 
     await waitFor(() => expect(apply).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(restart).toHaveBeenCalledTimes(1));
+    expect(window.localStorage.getItem(settingsStorageKey)).toBe(legacySettings);
     expect(screen.queryByText("workspace-ready")).toBeNull();
   });
 });
