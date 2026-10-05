@@ -1134,7 +1134,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
 
   async function saveUpdate(update: Partial<McpSettings>) {
     if (!desktopRuntime) {
-      setError("需要在 MXterm 桌面端保存 MCP 设置。");
+      setError("需要在 NexaTerm 桌面端保存 MCP 设置。");
       return;
     }
     const previous = settings;
@@ -1344,13 +1344,13 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
       <div className="settings-panel mcp-settings-panel">
         <SettingsRow
           icon={Waypoints}
-          title="启用 MXterm MCP"
+          title="启用 NexaTerm MCP"
           description="默认关闭。关闭时 sidecar 只返回禁用状态，不暴露连接信息。"
         >
           <SettingsToggle
             checked={settings.enabled}
             disabled={loading || saving || !desktopRuntime}
-            label="启用 MXterm MCP"
+            label="启用 NexaTerm MCP"
             onChange={(enabled) => void saveUpdate({ enabled })}
           />
         </SettingsRow>
@@ -3059,7 +3059,7 @@ function AppearanceSettingsSection({
     <section className="settings-page-section">
       <header className="settings-section-head">
         <h1>外观</h1>
-        <p>调整 MXterm 的主题、窗口材质、界面字体、密度和面板细节。</p>
+        <p>调整 NexaTerm 的主题、窗口材质、界面字体、密度和面板细节。</p>
       </header>
 
       <div className="appearance-preview" aria-hidden="true">
@@ -3071,7 +3071,7 @@ function AppearanceSettingsSection({
         </div>
         <div className="appearance-preview-main">
           <div className="appearance-preview-toolbar">
-            <span>MXterm 预览</span>
+            <span>NexaTerm 预览</span>
             <i />
           </div>
           <div className="appearance-preview-workbench">
