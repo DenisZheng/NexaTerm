@@ -1,3 +1,4 @@
+import { t as tr } from "../../shared/i18n";
 import { defaultShortcutBindings, shortcutActions } from "./shortcutRegistry";
 import type { ShortcutAction, ShortcutConflict } from "./shortcutTypes";
 import {
@@ -32,7 +33,7 @@ export function validateShortcutBinding(value: string | null | undefined): Short
   if (!normalized || !parseShortcutBinding(normalized)) {
     return {
       code: "invalid",
-      message: "快捷键格式无效。",
+      message: tr("settings.shortcuts.validation.invalid"),
       valid: false,
     };
   }
@@ -40,7 +41,7 @@ export function validateShortcutBinding(value: string | null | undefined): Short
   if (isPlainPrintableShortcut(normalized)) {
     return {
       code: "plain-printable",
-      message: "普通字符会影响输入，不能作为应用快捷键。",
+      message: tr("settings.shortcuts.validation.plainPrintable"),
       valid: false,
     };
   }
@@ -48,7 +49,7 @@ export function validateShortcutBinding(value: string | null | undefined): Short
   if (reservedBindings.has(normalized)) {
     return {
       code: "reserved",
-      message: "该组合键通常由终端或编辑器使用，不能作为应用快捷键。",
+      message: tr("settings.shortcuts.validation.reserved"),
       valid: false,
     };
   }
