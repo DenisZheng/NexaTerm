@@ -21,6 +21,7 @@ export interface AppUpdateCheckResult {
 }
 
 export interface AppUpdateCheckOptions {
+  locale?: "en" | "zh-CN";
   silent?: boolean;
 }
 
@@ -46,6 +47,7 @@ export async function getAppRuntimeInfo(): Promise<AppRuntimeInfo> {
 export async function checkForAppUpdate(
   options: AppUpdateCheckOptions = {},
 ): Promise<AppUpdateCheckResult | null> {
+  const locale = options.locale ?? "zh-CN";
   let runtimeInfo: AppRuntimeInfo;
   try {
     runtimeInfo = await getAppRuntimeInfo();
@@ -55,12 +57,12 @@ export async function checkForAppUpdate(
     }
     return {
       status: "failed",
-      message: formatUnknownError(error, "运行时信息读取失败。"),
+      message: formatUnknownError(error, localized(locale, "Could not read runtime information.", "运行时信息读取失败。")),
       runtimeInfo: webRuntimeInfo(),
     };
   }
 
-  const unsupportedMessage = getUnsupportedUpdateMessage(runtimeInfo);
+  const unsupportedMessage = getUnsupportedUpdateMessage(runtimeInfo, locale);
   if (unsupportedMessage) {
     return {
       status: "unsupported",
@@ -75,7 +77,7 @@ export async function checkForAppUpdate(
     if (!update) {
       return {
         status: "latest",
-        message: "当前已是最新版本。",
+        message: localized(locale, "You already have the latest version.", "当前已是最新版本。"),
         runtimeInfo,
       };
     }
@@ -83,7 +85,11 @@ export async function checkForAppUpdate(
     const version = normalizeString(update.version) || undefined;
     return {
       status: "available",
-      message: normalizeString(update.body) || (version ? `发现新版本 ${version}。` : "发现新版本。"),
+      message:
+        normalizeString(update.body) ||
+        (version
+          ? localized(locale, `New version ${version} is available.`, `发现新版本 ${version}。`)
+          : localized(locale, "A new version is available.", "发现新版本。")),
       runtimeInfo,
       update,
       version,
@@ -94,7 +100,7 @@ export async function checkForAppUpdate(
     }
     return {
       status: "failed",
-      message: formatUnknownError(error, "检查更新失败。"),
+      message: formatUnknownError(error, localized(locale, "Update check failed.", "检查更新失败。")),
       runtimeInfo,
     };
   }
@@ -103,6 +109,7 @@ export async function checkForAppUpdate(
 export async function installAppUpdate(
   update: Update,
   onProgress?: (message: string) => void,
+  locale: "en" | "zh-CN" = "zh-CN",
 ): Promise<void> {
   const progress: UpdateDownloadProgressState = {
     downloaded: 0,
@@ -110,11 +117,11 @@ export async function installAppUpdate(
   };
 
   try {
-    onProgress?.("正在准备更新...");
+    onProgress?.(localized(locale, "Preparing update…", "正在准备更新..."));
     await update.downloadAndInstall((event) => {
-      onProgress?.(formatUpdateDownloadProgress(event, progress));
+      onProgress?.(formatUpdateDownloadProgress(event, progress, locale));
     });
-    onProgress?.("更新安装完成，正在重启应用...");
+    onProgress?.(localized(locale, "Update installed. Restarting…", "更新安装完成，正在重启应用..."));
     const { relaunch } = await import("@tauri-apps/plugin-process");
     await relaunch();
   } finally {
@@ -125,6 +132,7 @@ export async function installAppUpdate(
 export function formatUpdateDownloadProgress(
   event: DownloadEvent,
   state: UpdateDownloadProgressState,
+  locale: "en" | "zh-CN" = "zh-CN",
 ) {
   if (event.event === "Started") {
     state.downloaded = 0;
@@ -134,41 +142,52 @@ export function formatUpdateDownloadProgress(
     state.downloaded += event.data.chunkLength;
   }
   if (event.event === "Finished") {
-    return "更新包下载完成，正在安装...";
+    return localized(locale, "Download complete. Installing…", "更新包下载完成，正在安装...");
   }
   if (state.total <= 0) {
-    return "正在下载更新包...";
+    return localized(locale, "Downloading update…", "正在下载更新包...");
   }
 
   const percent = Math.min(100, Math.round((state.downloaded / state.total) * 100));
-  return `正在下载更新包... ${percent.toString()}%`;
+  return localized(
+    locale,
+    `Downloading update… ${percent.toString()}%`,
+    `正在下载更新包... ${percent.toString()}%`,
+  );
 }
 
-export function getUnsupportedUpdateMessage(runtimeInfo: AppRuntimeInfo) {
+export function getUnsupportedUpdateMessage(
+  runtimeInfo: AppRuntimeInfo,
+  locale: "en" | "zh-CN" = "zh-CN",
+) {
   if (!runtimeInfo.isTauri || runtimeInfo.distributionMode === "web") {
-    return "Web 预览不支持应用内更新，请在桌面端使用。";
+    return localized(locale, "In-app updates are unavailable in web preview. Use the desktop app.", "Web 预览不支持应用内更新，请在桌面端使用。");
   }
   if (import.meta.env.DEV) {
-    return "开发模式不会检查应用更新。";
+    return localized(locale, "Development mode does not check for app updates.", "开发模式不会检查应用更新。");
   }
   if (runtimeInfo.distributionMode === "desktop-portable") {
-    return "Windows 绿色版需到 GitHub Release 手动下载新版本。";
+    return localized(locale, "The Windows portable build must be updated manually from GitHub Releases.", "Windows 绿色版需到 GitHub Release 手动下载新版本。");
   }
   if (runtimeInfo.distributionMode === "desktop-package") {
-    return "当前 Linux 安装包需手动下载，AppImage 才支持应用内更新。";
+    return localized(locale, "This Linux package must be updated manually; only AppImage supports in-app updates.", "当前 Linux 安装包需手动下载，AppImage 才支持应用内更新。");
   }
   return null;
 }
 
-export function formatAppDistributionMode(mode: AppDistributionMode) {
-  const labels: Record<AppDistributionMode, string> = {
-    "desktop-appimage": "Linux AppImage",
-    "desktop-installer": "桌面安装版",
-    "desktop-package": "Linux deb/rpm",
-    "desktop-portable": "Windows 绿色版",
-    web: "Web 预览",
+export function formatAppDistributionMode(
+  mode: AppDistributionMode,
+  locale: "en" | "zh-CN" = "zh-CN",
+) {
+  const labels: Record<AppDistributionMode, readonly [string, string]> = {
+    "desktop-appimage": ["Linux AppImage", "Linux AppImage"],
+    "desktop-installer": ["Desktop installer", "桌面安装版"],
+    "desktop-package": ["Linux deb/rpm", "Linux deb/rpm"],
+    "desktop-portable": ["Windows portable", "Windows 绿色版"],
+    web: ["Web preview", "Web 预览"],
   };
-  return labels[mode];
+  const [en, zhCN] = labels[mode];
+  return localized(locale, en, zhCN);
 }
 
 function normalizeRuntimeInfo(value: unknown): AppRuntimeInfo {
@@ -222,4 +241,9 @@ function normalizeString(value: unknown) {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+
+function localized(locale: "en" | "zh-CN", en: string, zhCN: string) {
+  return locale === "zh-CN" ? zhCN : en;
 }
