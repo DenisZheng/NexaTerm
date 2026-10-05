@@ -1018,21 +1018,21 @@ export function ConnectionDialog({
         <div className="connection-dialog-fields">
           <div className={`form-grid ${showGroupField ? "form-grid-wide" : "form-grid-single"}`}>
             <label>
-              <span>名称（可以为空）</span>
+              <span>{t("connectionDialog.field.nameOptional")}</span>
               <input
                 value={form.name || ""}
                 onChange={(event) => setForm({ ...form, name: event.target.value })}
-                placeholder="例如：交换机 Telnet"
+                placeholder={t("connectionDialog.telnet.namePlaceholder")}
               />
             </label>
             {showGroupField ? (
               <label>
-                <span>分组</span>
+                <span>{t("connectionDialog.field.group")}</span>
                 <AppSelect
-                  ariaLabel="分组"
+                  ariaLabel={t("connectionDialog.field.group")}
                   value={form.group_id || ""}
                   options={[
-                    { label: "不分组", value: "" },
+                    { label: t("connectionDialog.group.none"), value: "" },
                     ...groupOptions.map((group) => ({
                       label: group.label,
                       value: group.value,
@@ -1045,16 +1045,16 @@ export function ConnectionDialog({
           </div>
           <div className="form-grid">
             <label>
-              <span>主机</span>
+              <span>{t("connectionDialog.field.host")}</span>
               <input
                 required
                 value={form.host}
                 onChange={(event) => setForm({ ...form, host: event.target.value })}
-                placeholder="请输入主机地址"
+                placeholder={t("connectionDialog.hostPlaceholder")}
               />
             </label>
             <label>
-              <span>端口</span>
+              <span>{t("connectionDialog.field.port")}</span>
               <input
                 inputMode="numeric"
                 required
@@ -1067,9 +1067,9 @@ export function ConnectionDialog({
           </div>
           <div className="form-grid form-grid-wide">
             <label>
-              <span>回车模式</span>
+              <span>{t("connectionDialog.field.enterMode")}</span>
               <AppSelect
-                ariaLabel="回车模式"
+                ariaLabel={t("connectionDialog.field.enterMode")}
                 value={telnet.enter_mode}
                 options={telnetEnterModeOptions}
                 onChange={(enterMode) =>
@@ -1081,9 +1081,9 @@ export function ConnectionDialog({
               />
             </label>
             <label>
-              <span>退格模式</span>
+              <span>{t("connectionDialog.field.backspaceMode")}</span>
               <AppSelect
-                ariaLabel="退格模式"
+                ariaLabel={t("connectionDialog.field.backspaceMode")}
                 value={telnet.backspace_mode}
                 options={backspaceModeOptions}
                 onChange={(backspaceMode) =>
@@ -1096,12 +1096,12 @@ export function ConnectionDialog({
             </label>
           </div>
           <label>
-            <span>说明</span>
+            <span>{t("connectionDialog.field.notes")}</span>
             <textarea
               rows={3}
               value={form.notes || ""}
               onChange={(event) => setForm({ ...form, notes: event.target.value })}
-              placeholder="可记录设备型号、网络区域、登录提示等。"
+              placeholder={t("connectionDialog.notes.characterPlaceholder")}
             />
           </label>
         </div>
@@ -1117,12 +1117,12 @@ export function ConnectionDialog({
       });
       const serialAvailabilityMessage =
         serialAvailability.status === "loading"
-          ? "正在读取串口设备…"
+          ? t("connectionDialog.serial.loading")
           : serialAvailability.status === "list_failed"
-            ? `串口列表读取失败：${serialAvailability.error || "未知错误"}`
+            ? t("connectionDialog.serial.error", { message: serialAvailability.error || t("connectionDialog.serial.unknownError") })
             : serialAvailability.status === "no_ports"
-              ? "未检测到可用串口设备。连接设备后可点击刷新重试。"
-              : `已检测到 ${serialAvailability.count.toString()} 个串口设备。`;
+              ? t("connectionDialog.serial.none")
+              : t("connectionDialog.serial.count", { count: serialAvailability.count });
       const serialPortOptions =
         serialPorts.length > 0
           ? serialPorts.map((port) => ({
@@ -1134,10 +1134,10 @@ export function ConnectionDialog({
                 disabled: true,
                 label:
                   serialAvailability.status === "loading"
-                    ? "正在读取串口"
+                    ? t("connectionDialog.serial.loadingShort")
                     : serialAvailability.status === "list_failed"
-                      ? "串口读取失败"
-                      : "暂无可用串口",
+                      ? t("connectionDialog.serial.errorShort")
+                      : t("connectionDialog.serial.noneShort"),
                 value: "",
               },
             ];
@@ -1145,21 +1145,21 @@ export function ConnectionDialog({
         <div className="connection-dialog-fields">
           <div className={`form-grid ${showGroupField ? "form-grid-wide" : "form-grid-single"}`}>
             <label>
-              <span>名称（可以为空）</span>
+              <span>{t("connectionDialog.field.nameOptional")}</span>
               <input
                 value={form.name || ""}
                 onChange={(event) => setForm({ ...form, name: event.target.value })}
-                placeholder="例如：开发板 Console"
+                placeholder={t("connectionDialog.serial.namePlaceholder")}
               />
             </label>
             {showGroupField ? (
               <label>
-                <span>分组</span>
+                <span>{t("connectionDialog.field.group")}</span>
                 <AppSelect
-                  ariaLabel="分组"
+                  ariaLabel={t("connectionDialog.field.group")}
                   value={form.group_id || ""}
                   options={[
-                    { label: "不分组", value: "" },
+                    { label: t("connectionDialog.group.none"), value: "" },
                     ...groupOptions.map((group) => ({
                       label: group.label,
                       value: group.value,
@@ -1172,9 +1172,9 @@ export function ConnectionDialog({
           </div>
           <div className="credential-select-row">
             <label>
-              <span>串口</span>
+              <span>{t("connectionDialog.field.serial")}</span>
               <AppSelect
-                ariaLabel="串口"
+                ariaLabel={t("connectionDialog.field.serial")}
                 disabled={serialAvailability.status !== "available"}
                 value={serial.port_name}
                 options={serialPortOptions}
@@ -1200,7 +1200,7 @@ export function ConnectionDialog({
           </div>
           <div className="form-grid form-grid-wide">
             <label>
-              <span>波特率</span>
+              <span>{t("connectionDialog.field.baudRate")}</span>
               <input
                 inputMode="numeric"
                 required
@@ -1217,9 +1217,9 @@ export function ConnectionDialog({
               />
             </label>
             <label>
-              <span>退格模式</span>
+              <span>{t("connectionDialog.field.backspaceMode")}</span>
               <AppSelect
-                ariaLabel="退格模式"
+                ariaLabel={t("connectionDialog.field.backspaceMode")}
                 value={serial.backspace_mode}
                 options={backspaceModeOptions}
                 onChange={(backspaceMode) =>
@@ -1233,9 +1233,9 @@ export function ConnectionDialog({
           </div>
           <div className="form-grid form-grid-wide">
             <label>
-              <span>数据位</span>
+              <span>{t("connectionDialog.field.dataBits")}</span>
               <AppSelect
-                ariaLabel="数据位"
+                ariaLabel={t("connectionDialog.field.dataBits")}
                 value={serial.data_bits}
                 options={serialDataBitsOptions}
                 onChange={(dataBits) =>
@@ -1244,9 +1244,9 @@ export function ConnectionDialog({
               />
             </label>
             <label>
-              <span>校验位</span>
+              <span>{t("connectionDialog.field.parity")}</span>
               <AppSelect
-                ariaLabel="校验位"
+                ariaLabel={t("connectionDialog.field.parity")}
                 value={serial.parity}
                 options={serialParityOptions}
                 onChange={(parity) =>
@@ -1257,9 +1257,9 @@ export function ConnectionDialog({
           </div>
           <div className="form-grid form-grid-wide">
             <label>
-              <span>停止位</span>
+              <span>{t("connectionDialog.field.stopBits")}</span>
               <AppSelect
-                ariaLabel="停止位"
+                ariaLabel={t("connectionDialog.field.stopBits")}
                 value={serial.stop_bits}
                 options={serialStopBitsOptions}
                 onChange={(stopBits) =>
@@ -1268,9 +1268,9 @@ export function ConnectionDialog({
               />
             </label>
             <label>
-              <span>流控</span>
+              <span>{t("connectionDialog.field.flowControl")}</span>
               <AppSelect
-                ariaLabel="流控"
+                ariaLabel={t("connectionDialog.field.flowControl")}
                 value={serial.flow_control}
                 options={serialFlowControlOptions()}
                 onChange={(flowControl) =>
@@ -1286,12 +1286,12 @@ export function ConnectionDialog({
             {serialAvailabilityMessage}
           </p>
           <label>
-            <span>说明</span>
+            <span>{t("connectionDialog.field.notes")}</span>
             <textarea
               rows={3}
               value={form.notes || ""}
               onChange={(event) => setForm({ ...form, notes: event.target.value })}
-              placeholder="可记录设备型号、线缆、调试用途等。"
+              placeholder={t("connectionDialog.serial.notesPlaceholder")}
             />
           </label>
         </div>
@@ -1303,21 +1303,21 @@ export function ConnectionDialog({
         <div className="connection-dialog-fields">
           <div className={`form-grid ${showGroupField ? "form-grid-wide" : "form-grid-single"}`}>
             <label>
-              <span>名称（可以为空）</span>
+              <span>{t("connectionDialog.field.nameOptional")}</span>
               <input
               value={form.name || ""}
               onChange={(event) => setForm({ ...form, name: event.target.value })}
-              placeholder={isRdp ? "例如：办公 Windows" : "例如：Linux 图形桌面"}
+              placeholder={isRdp ? t("connectionDialog.desktop.rdpNamePlaceholder") : t("connectionDialog.desktop.vncNamePlaceholder")}
             />
             </label>
             {showGroupField ? (
               <label>
-                <span>分组</span>
+                <span>{t("connectionDialog.field.group")}</span>
                 <AppSelect
-                  ariaLabel="分组"
+                  ariaLabel={t("connectionDialog.field.group")}
                   value={form.group_id || ""}
                   options={[
-                    { label: "不分组", value: "" },
+                    { label: t("connectionDialog.group.none"), value: "" },
                     ...groupOptions.map((group) => ({
                       label: group.label,
                       value: group.value,
@@ -1331,16 +1331,16 @@ export function ConnectionDialog({
 
           <div className="form-grid">
             <label>
-              <span>主机</span>
+              <span>{t("connectionDialog.field.host")}</span>
               <input
                 required
                 value={form.host}
                 onChange={(event) => setForm({ ...form, host: event.target.value })}
-                placeholder="请输入主机地址"
+                placeholder={t("connectionDialog.hostPlaceholder")}
               />
             </label>
             <label>
-              <span>端口</span>
+              <span>{t("connectionDialog.field.port")}</span>
               <input
                 inputMode="numeric"
                 required
@@ -1354,9 +1354,9 @@ export function ConnectionDialog({
 
           <div className="form-grid form-grid-wide">
             <label>
-              <span>账号来源</span>
+              <span>{t("connectionDialog.field.credentialSource")}</span>
               <AppSelect
-                ariaLabel="账号来源"
+                ariaLabel={t("connectionDialog.field.credentialSource")}
                 value={credentialMode}
                 options={credentialModeOptions()}
                 onChange={(credentialMode) =>
@@ -1378,12 +1378,12 @@ export function ConnectionDialog({
               />
             </label>
             <label>
-              <span>{isRdp ? "域" : "用户名"}</span>
+              <span>{isRdp ? t("connectionDialog.field.domain") : t("connectionDialog.field.username")}</span>
               {isRdp ? (
                 <input
                   value={rdp.domain || ""}
                   onChange={(event) => updateRdp({ domain: event.target.value })}
-                  placeholder="可选"
+                  placeholder={t("connectionDialog.optional")}
                 />
               ) : (
                 <input
@@ -1400,14 +1400,14 @@ export function ConnectionDialog({
           {credentialMode === "saved" ? (
             <div className="credential-select-row">
               <label>
-                <span>选择账号</span>
+                <span>{t("connectionDialog.field.savedAccount")}</span>
                 <AppSelect
-                  ariaLabel="选择账号"
+                  ariaLabel={t("connectionDialog.field.savedAccount")}
                   value={form.credential_id || ""}
                   options={[
-                    { label: "选择密码账号", value: "" },
+                    { label: t("connectionDialog.savedPasswordAccount"), value: "" },
                     ...passwordCredentials.map((credential) => ({
-                      label: `${credential.name}${credential.username ? `（${credential.username}）` : ""} · 密码`,
+                      label: `${credential.name}${credential.username ? ` (${credential.username})` : ""}${t("connectionDialog.account.passwordSuffix")}`,
                       value: credential.id,
                     })),
                   ]}
@@ -1427,7 +1427,7 @@ export function ConnectionDialog({
                 type="button"
                 onClick={onManageCredentials}
               >
-                管理
+                {t("connectionDialog.manage")}
               </button>
             </div>
           ) : null}
@@ -1436,19 +1436,19 @@ export function ConnectionDialog({
             <div className="form-grid form-grid-wide">
               {isRdp ? (
                 <label>
-                  <span>用户名</span>
+                  <span>{t("connectionDialog.field.username")}</span>
                   <input
                     required
                     {...usernameInputAttributes}
                     value={form.username}
                     onChange={(event) => setForm({ ...form, username: event.target.value })}
-                    placeholder="请输入用户名"
+                    placeholder={t("connectionDialog.usernamePlaceholder")}
                   />
                 </label>
               ) : null}
               {credentialMode === "inline" ? (
                 <label>
-                  <span>密码</span>
+                  <span>{t("connectionDialog.field.password")}</span>
                   <div className="input-with-toggle">
                     <input
                       type={showPassword ? "text" : "password"}
@@ -1463,8 +1463,8 @@ export function ConnectionDialog({
                       }
                       placeholder={
                         connection?.id && !form.inline_password
-                          ? "已保存，留空保留"
-                          : `输入 ${desktopProtocolName} 密码`
+                          ? t("connectionDialog.password.savedKeep")
+                          : t("connectionDialog.password.input", { protocol: desktopProtocolName })
                       }
                     />
                     {allowPasswordReveal ? (
@@ -1472,7 +1472,7 @@ export function ConnectionDialog({
                         className="field-toggle"
                         type="button"
                         disabled={revealBusy}
-                        aria-label={showPassword ? "隐藏密码" : "显示密码"}
+                        aria-label={showPassword ? t("connectionDialog.password.hide") : t("connectionDialog.password.show")}
                         onClick={() => void toggleInlinePasswordVisibility()}
                       >
                         {showPassword ? (
@@ -1491,24 +1491,24 @@ export function ConnectionDialog({
           {credentialMode === "prompt" ? (
             <p className="connection-dialog-note">
               {isRdp
-                ? "连接时由系统 RDP 客户端提示凭据；内嵌模式也会保留这个安全兜底。"
-                : "连接时由 noVNC 安全提示凭据；保存连接本身不会写入密码。"}
+                ? t("connectionDialog.rdp.promptNote")
+                : t("connectionDialog.vnc.promptNote")}
             </p>
           ) : (
             <p className="connection-dialog-note">
               {isRdp
-                ? "保存的 RDP 密码只进入 MXterm vault，并且仅在 Windows 内嵌 ActiveX 模式中内存注入；外部 runner 仍会提示凭据。"
-                : "保存的 VNC 密码只进入 MXterm vault，并且仅在 noVNC 内嵌或 RDP 窗口模式中以内存字段传入；外部 viewer 仍会提示凭据。"}
+                ? t("connectionDialog.rdp.savedPasswordNote")
+                : t("connectionDialog.vnc.savedPasswordNote")}
             </p>
           )}
 
           <label>
-            <span>说明</span>
+            <span>{t("connectionDialog.field.notes")}</span>
             <textarea
               rows={3}
               value={form.notes || ""}
               onChange={(event) => setForm({ ...form, notes: event.target.value })}
-              placeholder="可记录用途、环境、连接注意事项。"
+              placeholder={t("connectionDialog.notes.desktopPlaceholder")}
             />
           </label>
         </div>
@@ -1520,21 +1520,21 @@ export function ConnectionDialog({
         {/* 目标：名称/分组、主机/端口 平铺，无分组标题 */}
         <div className={`form-grid ${showGroupField ? "form-grid-wide" : "form-grid-single"}`}>
           <label>
-            <span>名称（可以为空）</span>
+            <span>{t("connectionDialog.field.nameOptional")}</span>
             <input
               value={form.name || ""}
               onChange={(event) => setForm({ ...form, name: event.target.value })}
-              placeholder="例如：生产跳板"
+              placeholder={t("connectionDialog.ssh.namePlaceholder")}
             />
           </label>
           {showGroupField ? (
             <label>
-              <span>分组</span>
+              <span>{t("connectionDialog.field.group")}</span>
               <AppSelect
-                ariaLabel="分组"
+                ariaLabel={t("connectionDialog.field.group")}
                 value={form.group_id || ""}
                 options={[
-                  { label: "不分组", value: "" },
+                  { label: t("connectionDialog.group.none"), value: "" },
                   ...groupOptions.map((group) => ({
                     label: group.label,
                     value: group.value,
@@ -1548,16 +1548,16 @@ export function ConnectionDialog({
 
         <div className="form-grid">
           <label>
-            <span>主机</span>
+            <span>{t("connectionDialog.field.host")}</span>
             <input
               required
               value={form.host}
               onChange={(event) => setForm({ ...form, host: event.target.value })}
-              placeholder="请输入主机地址"
+              placeholder={t("connectionDialog.hostPlaceholder")}
             />
           </label>
           <label>
-            <span>端口</span>
+            <span>{t("connectionDialog.field.port")}</span>
             <input
               inputMode="numeric"
               required
@@ -1575,9 +1575,9 @@ export function ConnectionDialog({
             {/* 账号来源 + 认证方式 并排 */}
             <div className="form-grid form-grid-wide">
               <label>
-                <span>账号来源</span>
+                <span>{t("connectionDialog.field.credentialSource")}</span>
                 <AppSelect
-                  ariaLabel="账号来源"
+                  ariaLabel={t("connectionDialog.field.credentialSource")}
                   value={credentialMode}
                   options={credentialModeOptions()}
                   onChange={(credentialMode) =>
@@ -1589,9 +1589,9 @@ export function ConnectionDialog({
                 />
               </label>
               <label>
-                <span>认证方式</span>
+                <span>{t("connectionDialog.field.authMethod")}</span>
                 <AppSelect
-                  ariaLabel="认证方式"
+                  ariaLabel={t("connectionDialog.field.authMethod")}
                   value={inlineAuthKind}
                   options={authKindOptions()}
                   onChange={changeInlineAuthKind}
@@ -1603,17 +1603,17 @@ export function ConnectionDialog({
             {inlineAuthKind === "password" ? (
               <div className="form-grid form-grid-wide">
                 <label>
-                  <span>用户名</span>
+                  <span>{t("connectionDialog.field.username")}</span>
                   <input
                     required
                     {...usernameInputAttributes}
                     value={form.username}
                     onChange={(event) => setForm({ ...form, username: event.target.value })}
-                    placeholder="请输入用户名"
+                    placeholder={t("connectionDialog.usernamePlaceholder")}
                   />
                 </label>
                 <label>
-                  <span>密码</span>
+                  <span>{t("connectionDialog.field.password")}</span>
                   <div className="input-with-toggle">
                     <input
                       type={showPassword ? "text" : "password"}
@@ -1627,8 +1627,8 @@ export function ConnectionDialog({
                       }
                       placeholder={
                         connection?.id && !form.inline_password
-                          ? "已保存，留空保留"
-                          : "输入密码"
+                          ? t("connectionDialog.password.savedKeep")
+                          : t("connectionDialog.password.input", { protocol: "SSH" })
                       }
                     />
                     {allowPasswordReveal ? (
@@ -1636,7 +1636,7 @@ export function ConnectionDialog({
                         className="field-toggle"
                         type="button"
                         disabled={revealBusy}
-                        aria-label={showPassword ? "隐藏密码" : "显示密码"}
+                        aria-label={showPassword ? t("connectionDialog.password.hide") : t("connectionDialog.password.show")}
                         onClick={() => void toggleInlinePasswordVisibility()}
                       >
                         {showPassword ? (
@@ -1651,13 +1651,13 @@ export function ConnectionDialog({
               </div>
             ) : (
               <label>
-                <span>用户名</span>
+                <span>{t("connectionDialog.field.username")}</span>
                 <input
                   required
                   {...usernameInputAttributes}
                   value={form.username}
                   onChange={(event) => setForm({ ...form, username: event.target.value })}
-                  placeholder="请输入用户名"
+                  placeholder={t("connectionDialog.usernamePlaceholder")}
                 />
               </label>
             )}
@@ -1666,7 +1666,7 @@ export function ConnectionDialog({
             {inlineAuthKind === "private_key" ? (
               <>
                 <label>
-                  <span>私钥路径</span>
+                  <span>{t("connectionDialog.privateKey.path")}</span>
                   <div className="settings-path-picker credential-private-key-picker">
                     <input
                       className="settings-path-input"
@@ -1674,21 +1674,21 @@ export function ConnectionDialog({
                       onChange={(event) =>
                         setForm({ ...form, inline_private_key_path: event.target.value })
                       }
-                      placeholder="~/.ssh/id_ed25519 或 PuTTY .ppk"
+                      placeholder={t("connectionDialog.privateKey.placeholder")}
                     />
                     <button
                       className="settings-action-button settings-path-button"
                       type="button"
-                      aria-label="选择私钥文件"
+                      aria-label={t("connectionDialog.privateKey.choose")}
                       onClick={choosePrivateKeyPath}
                     >
                       <FolderOpen className="ui-icon" aria-hidden="true" />
-                      <span>选择</span>
+                      <span>{t("connectionDialog.choose")}</span>
                     </button>
                   </div>
                 </label>
                 <label>
-                  <span>私钥口令</span>
+                  <span>{t("connectionDialog.privateKey.passphrase")}</span>
                   <div className="input-with-toggle">
                     <input
                       type={showPassphrase ? "text" : "password"}
@@ -1702,8 +1702,8 @@ export function ConnectionDialog({
                       }
                       placeholder={
                         connection?.id && !form.inline_private_key_passphrase
-                          ? "已保存，留空保留"
-                          : "输入私钥口令"
+                          ? t("connectionDialog.password.savedKeep")
+                          : t("connectionDialog.privateKey.passphrasePlaceholder")
                       }
                     />
                     {allowPasswordReveal ? (
@@ -1711,7 +1711,7 @@ export function ConnectionDialog({
                         className="field-toggle"
                         type="button"
                         disabled={revealBusy}
-                        aria-label={showPassphrase ? "隐藏私钥口令" : "显示私钥口令"}
+                        aria-label={showPassphrase ? t("connectionDialog.privateKey.hidePassphrase") : t("connectionDialog.privateKey.showPassphrase")}
                         onClick={() => void toggleInlinePassphraseVisibility()}
                       >
                         {showPassphrase ? (
@@ -1731,9 +1731,9 @@ export function ConnectionDialog({
         {credentialMode === "saved" ? (
           <>
             <label>
-              <span>账号来源</span>
+              <span>{t("connectionDialog.field.credentialSource")}</span>
               <AppSelect
-                ariaLabel="账号来源"
+                ariaLabel={t("connectionDialog.field.credentialSource")}
                 value={credentialMode}
                 options={credentialModeOptions()}
                 onChange={(credentialMode) =>
@@ -1746,15 +1746,15 @@ export function ConnectionDialog({
             </label>
             <div className="credential-select-row">
               <label>
-                <span>选择账号</span>
+                <span>{t("connectionDialog.field.savedAccount")}</span>
                 <AppSelect
-                  ariaLabel="选择账号"
+                  ariaLabel={t("connectionDialog.field.savedAccount")}
                   value={form.credential_id || ""}
                   options={[
-                    { label: "选择账号", value: "" },
+                    { label: t("connectionDialog.account.choose"), value: "" },
                     ...credentials.map((credential) => ({
                       label: `${credential.name}${credential.username ? `（${credential.username}）` : ""} · ${
-                        credential.kind === "password" ? "密码" : "私钥"
+                        credential.kind === "password" ? t("connectionDialog.account.passwordSuffix").trim().replace("· ", "") : t("connectionDialog.account.privateKeySuffix").trim().replace("· ", "")
                       }`,
                       value: credential.id,
                     })),
@@ -1767,7 +1767,7 @@ export function ConnectionDialog({
                 type="button"
                 onClick={onManageCredentials}
               >
-                管理
+                {t("connectionDialog.manage")}
               </button>
             </div>
           </>
@@ -1776,9 +1776,9 @@ export function ConnectionDialog({
         {credentialMode === "prompt" ? (
           <>
             <label>
-              <span>账号来源</span>
+              <span>{t("connectionDialog.field.credentialSource")}</span>
               <AppSelect
-                ariaLabel="账号来源"
+                ariaLabel={t("connectionDialog.field.credentialSource")}
                 value={credentialMode}
                 options={credentialModeOptions()}
                 onChange={(credentialMode) =>
@@ -1790,19 +1790,19 @@ export function ConnectionDialog({
               />
             </label>
             <p className="connection-dialog-note">
-              连接时弹出密码或私钥输入，不在本机保存认证材料。
+              {t("connectionDialog.promptAuthNote")}
             </p>
           </>
         ) : null}
 
         {/* 备注 */}
         <label>
-          <span>说明</span>
+          <span>{t("connectionDialog.field.notes")}</span>
           <textarea
             rows={3}
             value={form.notes || ""}
             onChange={(event) => setForm({ ...form, notes: event.target.value })}
-            placeholder="可记录用途、环境、连接注意事项。"
+            placeholder={t("connectionDialog.notes.desktopPlaceholder")}
           />
         </label>
       </div>
@@ -1819,12 +1819,12 @@ export function ConnectionDialog({
 
     return (
       <section className="dialog-section dialog-section-last">
-        <div className="dialog-section-title">网络路径</div>
+        <div className="dialog-section-title">{t("connectionDialog.tab.network")}</div>
 
         <label>
-          <span>连接方式</span>
+          <span>{t("connectionDialog.field.connectionMethod")}</span>
           <AppSelect
-            ariaLabel="连接方式"
+            ariaLabel={t("connectionDialog.field.connectionMethod")}
             value={networkPathMode}
             options={networkPathOptions()}
             onChange={(mode) => {
@@ -1852,9 +1852,9 @@ export function ConnectionDialog({
         {networkPathMode === "proxy" ? (
           <>
             <label>
-              <span>代理类型</span>
+              <span>{t("connectionDialog.field.proxyType")}</span>
               <AppSelect
-                ariaLabel="代理类型"
+                ariaLabel={t("connectionDialog.field.proxyType")}
                 value={proxy.kind === "none" ? "http_connect" : proxy.kind}
                 options={proxyKindOptions}
                 onChange={(proxyKind) =>
@@ -1872,7 +1872,7 @@ export function ConnectionDialog({
 
             <div className="form-grid">
               <label>
-                <span>代理主机</span>
+                <span>{t("connectionDialog.field.proxyHost")}</span>
                 <input
                   value={proxy.host || ""}
                   onChange={(event) =>
@@ -1886,7 +1886,7 @@ export function ConnectionDialog({
                 />
               </label>
               <label>
-                <span>代理端口</span>
+                <span>{t("connectionDialog.field.proxyPort")}</span>
                 <input
                   inputMode="numeric"
                   value={(proxy.port || "").toString()}
@@ -1904,7 +1904,7 @@ export function ConnectionDialog({
 
             <div className="form-grid form-grid-wide">
               <label>
-                <span>代理用户名</span>
+                <span>{t("connectionDialog.field.proxyUsername")}</span>
                 <input
                   {...usernameInputAttributes}
                   value={proxy.username || ""}
@@ -1918,7 +1918,7 @@ export function ConnectionDialog({
                 />
               </label>
               <label>
-                <span>代理密码</span>
+                <span>{t("connectionDialog.field.proxyPassword")}</span>
                 <div className="input-with-toggle">
                   <input
                     type={showProxyPassword ? "text" : "password"}
@@ -1934,7 +1934,7 @@ export function ConnectionDialog({
                   <button
                     className="field-toggle"
                     type="button"
-                    aria-label={showProxyPassword ? "隐藏代理密码" : "显示代理密码"}
+                    aria-label={showProxyPassword ? t("connectionDialog.proxy.hidePassword") : t("connectionDialog.proxy.showPassword")}
                     onClick={() => setShowProxyPassword((value) => !value)}
                   >
                     {showProxyPassword ? (
@@ -1952,12 +1952,12 @@ export function ConnectionDialog({
         {networkPathMode === "ssh_jump" ? (
           <>
             <label>
-              <span>跳板机连接</span>
+              <span>{t("connectionDialog.field.jumpConnection")}</span>
               <AppSelect
-                ariaLabel="跳板机连接"
+                ariaLabel={t("connectionDialog.field.jumpConnection")}
                 value={jump.jump_connection_id || ""}
                 options={[
-                  { label: "选择跳板机", value: "" },
+                  { label: t("connectionDialog.jump.choose"), value: "" },
                   ...jumpCandidates.map((item) => ({
                     label: `${item.name} · ${item.username}@${item.host}:${item.port.toString()}`,
                     value: item.id,
@@ -1977,13 +1977,13 @@ export function ConnectionDialog({
               />
             </label>
             <p className={`connection-dialog-note ${jumpPlan.issue ? "form-error" : ""}`}>
-              {jumpPlan.issue ? jumpPlan.issue.detail : `实际连接路径：${jumpPlan.labels.join(" → ")}`}
+              {jumpPlan.issue ? jumpPlan.issue.detail : t("connectionDialog.jump.path", { path: jumpPlan.labels.join(" → ") })}
             </p>
           </>
         ) : null}
 
         {networkPathMode === "direct" ? (
-          <p className="connection-dialog-note">当前连接将直接访问 SSH 主机。</p>
+          <p className="connection-dialog-note">{t("connectionDialog.directNote")}</p>
         ) : null}
       </section>
     );
