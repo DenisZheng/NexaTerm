@@ -44,7 +44,7 @@ import type { ConnectionProfile } from "../connections/connectionTypes";
 import { remoteFileList, remoteFileMetadata } from "../../shared/tauri/commands";
 import { hasTauriRuntime } from "../../shared/tauri/runtime";
 import { Tooltip } from "../../shared/ui/Tooltip";
-import { useI18n } from "../../shared/i18n";
+import { useI18n, type Translate } from "../../shared/i18n";
 import { RemoteFileIcon } from "./RemoteFileIcon";
 import { RemoteFileInfoTooltip, type RemoteFileInfoState } from "./RemoteFileInfoTooltip";
 import {
@@ -719,7 +719,7 @@ function RemoteFilePanelComponent({
           return;
         }
         const nextState: RemoteFileInfoState = {
-          error: "属性读取失败，请刷新后重试。",
+          error: t("files.panel.error.metadata"),
           status: "error",
         };
         remoteFileMetadataCacheRef.current.set(candidate.cacheKey, nextState);
@@ -1150,7 +1150,7 @@ function RemoteFilePanelComponent({
               })
             ? [
               <div className="remote-file-empty-row" key={`${entry.path}:empty`} style={{ paddingLeft: `${38 + depth * 16}px` }}>
-                空文件夹
+                {t("files.panel.emptyFolder")}
               </div>,
               ]
             : []),
@@ -1169,33 +1169,33 @@ function RemoteFilePanelComponent({
       <>
         <ContextMenu.Item className="context-menu-item" onSelect={() => onOpenFile?.(entry)}>
           <FileText className="ui-icon" aria-hidden="true" />
-          打开
+          {t("files.panel.action.open")}
         </ContextMenu.Item>
         <ContextMenu.Item className="context-menu-item" onSelect={() => onDownloadEntry?.(entry)}>
           <Download className="ui-icon" aria-hidden="true" />
-          下载
+          {t("files.panel.action.download")}
         </ContextMenu.Item>
         <ContextMenu.Item className="context-menu-item" onSelect={() => onUploadFile?.(parentPath)}>
           <Upload className="ui-icon" aria-hidden="true" />
-          上传文件
+          {t("files.panel.action.uploadFile")}
         </ContextMenu.Item>
         <ContextMenu.Separator className="context-menu-separator" />
         <ContextMenu.Item className="context-menu-item" onSelect={() => onRenameEntry?.(entry)}>
           <Pencil className="ui-icon" aria-hidden="true" />
-          重命名
+          {t("files.panel.action.rename")}
         </ContextMenu.Item>
         <ContextMenu.Item className="context-menu-item" onSelect={() => onCopyPath?.(entry.path)}>
           <Clipboard className="ui-icon" aria-hidden="true" />
-          复制绝对路径
+          {t("files.panel.action.copyAbsolutePath")}
         </ContextMenu.Item>
         <ContextMenu.Item className="context-menu-item" onSelect={() => onShowProperties?.(entry)}>
           <Info className="ui-icon" aria-hidden="true" />
-          查看属性
+          {t("files.panel.action.properties")}
         </ContextMenu.Item>
         <ContextMenu.Separator className="context-menu-separator" />
         <ContextMenu.Item className="context-menu-item danger" onSelect={() => onDeleteEntry?.(entry)}>
           <Trash2 className="ui-icon" aria-hidden="true" />
-          删除
+          {t("files.panel.action.delete")}
         </ContextMenu.Item>
       </>
     );
@@ -1217,45 +1217,45 @@ function RemoteFilePanelComponent({
           }}
         >
           <RefreshCw className="ui-icon" aria-hidden="true" />
-          刷新
+          {t("files.panel.action.refresh")}
         </ContextMenu.Item>
         <ContextMenu.Item className="context-menu-item" onSelect={() => onUploadFile?.(entry.path)}>
           <Upload className="ui-icon" aria-hidden="true" />
-          上传文件
+          {t("files.panel.action.uploadFile")}
         </ContextMenu.Item>
         <ContextMenu.Item className="context-menu-item" onSelect={() => onUploadDirectory?.(entry.path)}>
           <Upload className="ui-icon" aria-hidden="true" />
-          上传文件夹
+          {t("files.panel.action.uploadFile")}夹
         </ContextMenu.Item>
         <ContextMenu.Item className="context-menu-item" onSelect={() => onCreateFile?.(entry.path)}>
           <FilePlus className="ui-icon" aria-hidden="true" />
-          新建文件
+          {t("files.panel.action.newFile")}
         </ContextMenu.Item>
         <ContextMenu.Item className="context-menu-item" onSelect={() => onCreateDirectory?.(entry.path)}>
           <FolderPlus className="ui-icon" aria-hidden="true" />
-          新建文件夹
+          {t("files.panel.action.newFile")}夹
         </ContextMenu.Item>
         <ContextMenu.Item className="context-menu-item" onSelect={() => onDownloadEntry?.(entry)}>
           <Download className="ui-icon" aria-hidden="true" />
-          下载目录
+          {t("files.panel.action.download")}目录
         </ContextMenu.Item>
         <ContextMenu.Separator className="context-menu-separator" />
         <ContextMenu.Item className="context-menu-item" onSelect={() => onRenameEntry?.(entry)}>
           <Pencil className="ui-icon" aria-hidden="true" />
-          重命名
+          {t("files.panel.action.rename")}
         </ContextMenu.Item>
         <ContextMenu.Item className="context-menu-item" onSelect={() => onCopyPath?.(entry.path)}>
           <Clipboard className="ui-icon" aria-hidden="true" />
-          复制绝对路径
+          {t("files.panel.action.copyAbsolutePath")}
         </ContextMenu.Item>
         <ContextMenu.Item className="context-menu-item" onSelect={() => onShowProperties?.(entry)}>
           <Info className="ui-icon" aria-hidden="true" />
-          查看属性
+          {t("files.panel.action.properties")}
         </ContextMenu.Item>
         <ContextMenu.Separator className="context-menu-separator" />
         <ContextMenu.Item className="context-menu-item danger" onSelect={() => onDeleteEntry?.(entry)}>
           <Trash2 className="ui-icon" aria-hidden="true" />
-          删除
+          {t("files.panel.action.delete")}
         </ContextMenu.Item>
       </>
     );
@@ -1269,15 +1269,15 @@ function RemoteFilePanelComponent({
       <>
         <ContextMenu.Item className="context-menu-item" onSelect={() => onDownloadEntries?.(entries)}>
           <Download className="ui-icon" aria-hidden="true" />
-          下载所选 {entries.length.toString()} 项
+          {t("files.panel.action.download")}所选 {entries.length.toString()} 项
         </ContextMenu.Item>
         <ContextMenu.Item className="context-menu-item danger" onSelect={() => onDeleteEntries?.(entries)}>
           <Trash2 className="ui-icon" aria-hidden="true" />
-          删除所选 {entries.length.toString()} 项
+          {t("files.panel.action.delete")}所选 {entries.length.toString()} 项
         </ContextMenu.Item>
         <ContextMenu.Item className="context-menu-item" onSelect={clearSelection}>
           <X className="ui-icon" aria-hidden="true" />
-          清空选择
+          {t("files.panel.action.clearSelection")}
         </ContextMenu.Item>
       </>
     );
@@ -1288,32 +1288,32 @@ function RemoteFilePanelComponent({
       <>
         <ContextMenu.Item className="context-menu-item" onSelect={() => void loadDirectory(activeDirectoryPath, true)}>
           <RefreshCw className="ui-icon" aria-hidden="true" />
-          刷新当前目录
+          {t("files.panel.action.refresh")}当前目录
         </ContextMenu.Item>
         <ContextMenu.Item className="context-menu-item" onSelect={() => onUploadFile?.(activeDirectoryPath)}>
           <Upload className="ui-icon" aria-hidden="true" />
-          上传文件
+          {t("files.panel.action.uploadFile")}
         </ContextMenu.Item>
         <ContextMenu.Item className="context-menu-item" onSelect={() => onUploadDirectory?.(activeDirectoryPath)}>
           <Upload className="ui-icon" aria-hidden="true" />
-          上传文件夹
+          {t("files.panel.action.uploadFile")}夹
         </ContextMenu.Item>
         <ContextMenu.Item className="context-menu-item" onSelect={() => onCreateFile?.(activeDirectoryPath)}>
           <FilePlus className="ui-icon" aria-hidden="true" />
-          新建文件
+          {t("files.panel.action.newFile")}
         </ContextMenu.Item>
         <ContextMenu.Item className="context-menu-item" onSelect={() => onCreateDirectory?.(activeDirectoryPath)}>
           <FolderPlus className="ui-icon" aria-hidden="true" />
-          新建文件夹
+          {t("files.panel.action.newFile")}夹
         </ContextMenu.Item>
         <ContextMenu.Item className="context-menu-item" onSelect={() => onDownloadEntry?.(currentDirectoryEntry())}>
           <Download className="ui-icon" aria-hidden="true" />
-          下载当前目录
+          {t("files.panel.action.download")}当前目录
         </ContextMenu.Item>
         <ContextMenu.Separator className="context-menu-separator" />
         <ContextMenu.Item className="context-menu-item" onSelect={() => onCopyPath?.(activeDirectoryPath)}>
           <Clipboard className="ui-icon" aria-hidden="true" />
-          复制当前路径
+          {t("files.panel.action.copyCurrent")}
         </ContextMenu.Item>
       </>
     );
@@ -1534,7 +1534,7 @@ function FilePanelShell({
   const isAtTerminalPath = Boolean(
     terminalPath && (terminalPath === "/" ? path === terminalPath : locatedDirectoryPath === terminalPath),
   );
-  const terminalLocateLabel = locateTooltipLabel(terminalPath, canLocateTerminalDirectory);
+  const terminalLocateLabel = locateTooltipLabel(terminalPath, canLocateTerminalDirectory, t);
   const parentPath = remotePathParent(path);
   const canNavigateToParent = parentPath !== path;
 
@@ -1551,11 +1551,11 @@ function FilePanelShell({
     <>
       <div className="file-panel-toolbar">
         <div className="file-panel-path-row">
-          <Tooltip label={canNavigateToParent ? "上一级" : "已在根目录"}>
+          <Tooltip label={canNavigateToParent ? t("files.panel.toolbar.parent") : t("files.panel.toolbar.root")}>
             <button
               className="mini-action"
               type="button"
-              aria-label="打开上一级文件夹"
+              aria-label={t("files.panel.toolbar.parentAria")}
               disabled={disabled || !canNavigateToParent}
               onClick={() => onPathSubmit(parentPath)}
             >
@@ -1569,18 +1569,18 @@ function FilePanelShell({
               spellCheck={false}
               title={path}
               value={pathInput}
-              aria-label="远程路径"
+              aria-label={t("files.panel.toolbar.pathAria")}
               onChange={(event) => setPathInput(event.target.value)}
             />
           </form>
         </div>
-        <div className="file-panel-actions" aria-label="文件工具栏">
+        <div className="file-panel-actions" aria-label={t("files.panel.toolbar.aria")}>
           <div className="file-panel-action-group">
             <Tooltip label={terminalLocateLabel}>
               <button
                 className={`mini-action ${isAtTerminalPath ? "active" : ""}`}
                 type="button"
-                aria-label="定位到当前终端目录"
+                aria-label={t("files.panel.toolbar.locateAria")}
                 disabled={disabled || !canLocateTerminalDirectory}
                 title={terminalLocateLabel}
                 onClick={onLocateTerminalDirectory}
@@ -1588,11 +1588,11 @@ function FilePanelShell({
                 <Crosshair className="ui-icon" aria-hidden="true" />
               </button>
             </Tooltip>
-            <Tooltip label={followTerminalDirectory ? "关闭跟随终端目录" : "跟随终端目录"}>
+            <Tooltip label={followTerminalDirectory ? t("files.panel.toolbar.followOff") : t("files.panel.toolbar.followOn")}>
               <button
                 className={`mini-action ${followTerminalDirectory ? "active" : ""}`}
                 type="button"
-                aria-label="跟随终端目录"
+                aria-label={t("files.panel.toolbar.followOn")}
                 aria-pressed={followTerminalDirectory}
                 disabled={disabled}
                 onClick={onToggleFollowTerminalDirectory}
@@ -1600,11 +1600,11 @@ function FilePanelShell({
                 <ListTree className="ui-icon" aria-hidden="true" />
               </button>
             </Tooltip>
-            <Tooltip label={showHidden ? "隐藏点文件" : "显示点文件"}>
+            <Tooltip label={showHidden ? t("files.panel.toolbar.hideHidden") : t("files.panel.toolbar.showHidden")}>
               <button
                 className={`mini-action ${showHidden ? "active" : ""}`}
                 type="button"
-                aria-label={showHidden ? "隐藏点文件" : "显示点文件"}
+                aria-label={showHidden ? t("files.panel.toolbar.hideHidden") : t("files.panel.toolbar.showHidden")}
                 disabled={disabled}
                 aria-pressed={showHidden}
                 onClick={onToggleHidden}
@@ -1616,11 +1616,11 @@ function FilePanelShell({
                 )}
               </button>
             </Tooltip>
-            <Tooltip label={hasExpandedDirectories ? "收起已展开目录" : "没有可收起的目录"}>
+            <Tooltip label={hasExpandedDirectories ? t("files.panel.toolbar.collapse") : t("files.panel.toolbar.nothingCollapse")}>
               <button
                 className="mini-action"
                 type="button"
-                aria-label="收起已展开目录"
+                aria-label={t("files.panel.toolbar.collapse")}
                 disabled={disabled || !hasExpandedDirectories}
                 onClick={onCollapseExpandedDirectories}
               >
@@ -1629,44 +1629,44 @@ function FilePanelShell({
             </Tooltip>
           </div>
           <div className="file-panel-action-group">
-            <Tooltip label="复制当前路径">
-              <button className="mini-action" type="button" aria-label="复制当前路径" disabled={disabled} onClick={onCopyCurrentPath}>
+            <Tooltip label={t("files.panel.toolbar.copyPath")}>
+              <button className="mini-action" type="button" aria-label={t("files.panel.toolbar.copyPath")} disabled={disabled} onClick={onCopyCurrentPath}>
                 <Clipboard className="ui-icon" aria-hidden="true" />
               </button>
             </Tooltip>
-            <Tooltip label="新建文件">
+            <Tooltip label={t("files.panel.toolbar.newFile")}>
               <button
                 className="mini-action"
                 type="button"
-                aria-label="新建文件"
+                aria-label={t("files.panel.toolbar.newFile")}
                 disabled={disabled || !onCreateFile}
                 onClick={() => onCreateFile?.(path)}
               >
                 <FilePlus className="ui-icon" aria-hidden="true" />
               </button>
             </Tooltip>
-            <Tooltip label="新建文件夹">
+            <Tooltip label={t("files.panel.toolbar.newFolder")}>
               <button
                 className="mini-action"
                 type="button"
-                aria-label="新建文件夹"
+                aria-label={t("files.panel.toolbar.newFolder")}
                 disabled={disabled || !onCreateDirectory}
                 onClick={() => onCreateDirectory?.(path)}
               >
                 <FolderPlus className="ui-icon" aria-hidden="true" />
               </button>
             </Tooltip>
-            <Tooltip label="刷新目录">
-              <button className="mini-action" type="button" aria-label="刷新目录" disabled={disabled} onClick={onRefresh}>
+            <Tooltip label={t("files.panel.toolbar.refresh")}>
+              <button className="mini-action" type="button" aria-label={t("files.panel.toolbar.refresh")} disabled={disabled} onClick={onRefresh}>
                 <RefreshCw className={`ui-icon ${loading ? "spin" : ""}`} aria-hidden="true" />
               </button>
             </Tooltip>
             <div className="upload-action-wrap">
-              <Tooltip label="上传">
+              <Tooltip label={t("files.panel.toolbar.upload")}>
                 <button
                   className={`mini-action upload-trigger ${uploadMenuOpen ? "active" : ""}`}
                   type="button"
-                  aria-label="上传"
+                  aria-label={t("files.panel.toolbar.upload")}
                   aria-expanded={uploadMenuOpen}
                   disabled={disabled}
                   onClick={onToggleUploadMenu}
@@ -1676,7 +1676,7 @@ function FilePanelShell({
                 </button>
               </Tooltip>
               {uploadMenuOpen ? (
-                <div className="upload-menu" role="menu" aria-label="上传选项">
+                <div className="upload-menu" role="menu" aria-label={t("files.panel.toolbar.uploadOptions")}>
                   <button
                     className="upload-menu-item"
                     type="button"
@@ -1687,7 +1687,7 @@ function FilePanelShell({
                       onToggleUploadMenu();
                     }}
                   >
-                    上传文件
+                    {t("files.panel.action.uploadFile")}
                   </button>
                   <button
                     className="upload-menu-item"
@@ -1699,7 +1699,7 @@ function FilePanelShell({
                       onToggleUploadMenu();
                     }}
                   >
-                    上传文件夹
+                    {t("files.panel.action.uploadFile")}夹
                   </button>
                 </div>
               ) : null}
@@ -1712,14 +1712,18 @@ function FilePanelShell({
   );
 }
 
-function locateTooltipLabel(terminalPath: string | null, canLocateTerminalDirectory: boolean) {
+function locateTooltipLabel(
+  terminalPath: string | null,
+  canLocateTerminalDirectory: boolean,
+  t: Translate,
+) {
   if (terminalPath) {
-    return `定位到: ${terminalPath}`;
+    return t("files.panel.locate.to", { path: terminalPath });
   }
   if (canLocateTerminalDirectory) {
-    return "读取当前终端提示符并定位";
+    return t("files.panel.locate.readPrompt");
   }
-  return "当前终端目录未记录";
+  return t("files.panel.locate.unknown");
 }
 
 async function extractUploadItems(dataTransfer: DataTransfer): Promise<RemoteFileUploadItem[]> {
