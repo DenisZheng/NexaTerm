@@ -3366,6 +3366,7 @@ function LocalTerminalSettingsSection({
   onUpdateBasic: (update: Partial<BasicSettings>) => void;
   onUpdateCommand: (update: Partial<CommandSettings>) => void;
 }) {
+  const { t } = useI18n();
   const [detectedProfiles, setDetectedProfiles] = useState<LocalTerminalProfile[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -3793,6 +3794,7 @@ function TerminalThemeSettingsSection({
   settings: TerminalThemeSettings;
   onUpdate: (update: Partial<TerminalThemeSettings>) => void;
 }) {
+  const { t } = useI18n();
   const [terminalSchemeQuery, setTerminalSchemeQuery] = useState("");
   const [terminalSchemeTone, setTerminalSchemeTone] =
     useState<"all" | TerminalColorSchemeTone>("all");
