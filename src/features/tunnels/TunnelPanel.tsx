@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 
+import { getLocale, t as tr, useI18n } from "../../shared/i18n";
 import type { ConnectionAuthKind, ConnectionProfile } from "../connections/connectionTypes";
 import { parseHostKeyError, type ParsedHostKeyError } from "../connections/hostKeyErrors";
 import {
@@ -74,18 +75,8 @@ interface HostKeyPromptState {
   submitting: boolean;
 }
 
-const authKindOptions: Array<{ label: string; value: ConnectionAuthKind }> = [
-  { label: "密码", value: "password" },
-  { label: "私钥", value: "private_key" },
-];
-
-const tunnelKindOptions: Array<{ label: string; value: TunnelKind }> = [
-  { label: "本地转发", value: "local" },
-  { label: "动态 SOCKS", value: "dynamic" },
-  { label: "远程转发", value: "remote" },
-];
-
 export function TunnelPanel({ activeConnectionId = null, connections }: TunnelPanelProps) {
+  const { locale } = useI18n();
   const [items, setItems] = useState<TunnelRuleWithState[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -100,7 +91,7 @@ export function TunnelPanel({ activeConnectionId = null, connections }: TunnelPa
 
   const connectionById = useMemo(
     () => new Map(connections.map((connection) => [connection.id, connection])),
-    [connections],
+    [connections, locale],
   );
   const connectionOptions = useMemo(
     () =>
@@ -109,7 +100,7 @@ export function TunnelPanel({ activeConnectionId = null, connections }: TunnelPa
             label: connection.name || `${connection.host}:${connection.port.toString()}`,
             value: connection.id,
           }))
-        : [{ disabled: true, label: "暂无连接", value: "" }],
+        : [{ disabled: true, label: tr("tunnel.noConnections"), value: "" }],
     [connections],
   );
   const sortedItems = useMemo(() => [...items].sort(compareTunnelItems), [items]);
@@ -136,7 +127,7 @@ export function TunnelPanel({ activeConnectionId = null, connections }: TunnelPa
     } catch (nextError) {
       if (isTauriCommandMissingError(nextError, "tunnel_list")) {
         setItems([]);
-        setUnavailableReason("刚更新隧道功能后需要重启应用，重启后这里会加载隧道规则。");
+        setUnavailableReason(tr("tunnel.restartRequired"));
         return;
       }
       setError(formatError(nextError));
@@ -287,7 +278,7 @@ export function TunnelPanel({ activeConnectionId = null, connections }: TunnelPa
     }
     const credential = credentialPromptToInput(credentialPrompt);
     if (!credential) {
-      setCredentialPrompt({ ...credentialPrompt, error: "请填写密码或私钥路径。" });
+      setCredentialPrompt({ ...credentialPrompt, error: tr("tunnel.credentialRequired") });
       return;
     }
     setCredentialPrompt({ ...credentialPrompt, error: null, submitting: true });
@@ -325,18 +316,18 @@ export function TunnelPanel({ activeConnectionId = null, connections }: TunnelPa
 
   return (
     <div className="tunnel-tool-body">
-      <section className="tunnel-panel" aria-label="SSH 隧道">
+      <section className="tunnel-panel" aria-label={tr("tunnel.aria")}>
         <header className="tunnel-panel-head">
           <span>
-            <strong>隧道</strong>
+            <strong>{tr("tunnel.title")}</strong>
             <small>
-              运行 {runningCount.toString()} 个
-              {credentialRequiredCount > 0 ? ` · ${credentialRequiredCount.toString()} 个需要凭据` : ""}
+              {tr("tunnel.summary", { running: runningCount })}
+              {credentialRequiredCount > 0 ? tr("tunnel.summaryCredentials", { count: credentialRequiredCount }) : ""}
             </small>
           </span>
           <div className="tunnel-head-actions">
-            <Tooltip label="刷新隧道">
-              <button className="mini-action" type="button" aria-label="刷新隧道" onClick={() => void loadTunnels()}>
+            <Tooltip label={tr("tunnel.refresh")}>
+              <button className="mini-action" type="button" aria-label={tr("tunnel.refresh")} onClick={() => void loadTunnels()}>
                 <RefreshCw className={`ui-icon ${loading ? "spin" : ""}`} aria-hidden="true" />
               </button>
             </Tooltip>
@@ -347,7 +338,7 @@ export function TunnelPanel({ activeConnectionId = null, connections }: TunnelPa
               onClick={openCreateForm}
             >
               <Plus className="ui-icon" aria-hidden="true" />
-              新建
+              {tr("tunnel.new")}
             </button>
           </div>
         </header>
@@ -358,12 +349,12 @@ export function TunnelPanel({ activeConnectionId = null, connections }: TunnelPa
           {sortedItems.length === 0 ? (
             <div className="tunnel-empty">
               <Network className="ui-icon" aria-hidden="true" />
-              <strong>{unavailableReason ? "隧道功能需要重启后启用" : connections.length ? "还没有隧道规则" : "暂无可用 SSH 连接"}</strong>
-              <small>{unavailableReason || (connections.length ? "可创建本地转发、动态 SOCKS 或远程转发规则。" : "先创建 SSH 连接后再配置端口转发。")}</small>
+              <strong>{unavailableReason ? tr("tunnel.empty.restart") : connections.length ? tr("tunnel.empty.rules") : tr("tunnel.empty.connections")}</strong>
+              <small>{unavailableReason || (connections.length ? tr("tunnel.empty.rulesHint") : tr("tunnel.empty.connectionsHint"))}</small>
               {connections.length && !unavailableReason ? (
                 <button type="button" onClick={openCreateForm}>
                   <Plus className="ui-icon" aria-hidden="true" />
-                  新建规则
+                  {tr("tunnel.new")}规则
                 </button>
               ) : null}
             </div>
@@ -395,34 +386,34 @@ export function TunnelPanel({ activeConnectionId = null, connections }: TunnelPa
                   <div className="tunnel-meta">
                     <span>{connectionState.label}</span>
                     <em>{tunnelKindLabel(rule.kind)}</em>
-                    {rule.auto_start ? <em>自动启动</em> : null}
-                    {state.active_connections > 0 ? <em>{state.active_connections.toString()} 路连接</em> : null}
+                    {rule.auto_start ? <em>{tr("tunnel.autoStart")}</em> : null}
+                    {state.active_connections > 0 ? <em>{tr("tunnel.activeConnections", { count: state.active_connections })}</em> : null}
                   </div>
                   {state.last_error ? <p className="tunnel-item-error">{state.last_error}</p> : null}
                   <footer>
                     {running ? (
                       <button type="button" disabled={busy} onClick={() => void stopRule(rule)}>
                         <Square className="ui-icon" aria-hidden="true" />
-                        停止
+                        {tr("tunnel.stop")}
                       </button>
                     ) : (
                       <button
                         type="button"
                         disabled={busy || !connectionState.canStart}
-                        title={connectionState.canStart ? undefined : "关联的 SSH 连接不存在"}
+                        title={connectionState.canStart ? undefined : tr("tunnel.connectionMissing")}
                         onClick={() => void startRule(rule)}
                       >
                         {busy ? <Loader2 className="ui-icon spin" aria-hidden="true" /> : <Play className="ui-icon" aria-hidden="true" />}
-                        启动
+                        {tr("tunnel.start")}
                       </button>
                     )}
-                    <Tooltip label={running ? "请先停止隧道" : "编辑规则"}>
-                      <button className="tunnel-icon-button" type="button" disabled={running || busy} aria-label="编辑规则" onClick={() => openEditForm(rule)}>
+                    <Tooltip label={running ? tr("tunnel.stopBeforeEdit") : tr("tunnel.editRule")}>
+                      <button className="tunnel-icon-button" type="button" disabled={running || busy} aria-label={tr("tunnel.editRule")} onClick={() => openEditForm(rule)}>
                         <Pencil className="ui-icon" aria-hidden="true" />
                       </button>
                     </Tooltip>
-                    <Tooltip label="删除规则">
-                      <button className="tunnel-icon-button danger" type="button" disabled={busy} aria-label="删除规则" onClick={() => setDeleteTarget(rule)}>
+                    <Tooltip label={tr("tunnel.deleteRule")}>
+                      <button className="tunnel-icon-button danger" type="button" disabled={busy} aria-label={tr("tunnel.deleteRule")} onClick={() => setDeleteTarget(rule)}>
                         <Trash2 className="ui-icon" aria-hidden="true" />
                       </button>
                     </Tooltip>
@@ -457,9 +448,9 @@ export function TunnelPanel({ activeConnectionId = null, connections }: TunnelPa
       />
       <ConfirmDialog
         open={Boolean(deleteTarget)}
-        title="删除隧道规则"
-        description={deleteTarget ? `确认删除“${deleteTarget.name}”吗？运行中的隧道会先停止。` : ""}
-        confirmLabel="删除"
+        title={tr("tunnel.delete.title")}
+        description={deleteTarget ? tr("tunnel.delete.description", { name: deleteTarget.name }) : ""}
+        confirmLabel={tr("tunnel.delete.confirm")}
         onConfirm={confirmDeleteRule}
         onOpenChange={(open) => {
           if (!open) {
@@ -531,27 +522,27 @@ function TunnelRuleDialog({
             <form onSubmit={onSubmit}>
               <header className="dialog-head">
                 <span className="dialog-title-group">
-                  <Dialog.Title>{form.id ? "编辑隧道" : "新建隧道"}</Dialog.Title>
+                  <Dialog.Title>{form.id ? tr("tunnel.dialog.edit") : tr("tunnel.dialog.new")}</Dialog.Title>
                   <Dialog.Description className="dialog-subtitle">{copy.description}</Dialog.Description>
                 </span>
                 <Dialog.Close asChild>
-                  <button className="icon-button dialog-close-button" type="button" aria-label="关闭">
+                  <button className="icon-button dialog-close-button" type="button" aria-label={tr("tunnel.close")}>
                     <X className="ui-icon" aria-hidden="true" />
                   </button>
                 </Dialog.Close>
               </header>
               <div className="dialog-body tunnel-dialog-body">
                 <label>
-                  <span>名称</span>
-                  <input value={form.name} placeholder="例如：远端 PostgreSQL" onChange={(event) => onChange({ ...form, name: event.currentTarget.value })} />
+                  <span>{tr("tunnel.field.name")}</span>
+                  <input value={form.name} placeholder={tr("tunnel.field.namePlaceholder")} onChange={(event) => onChange({ ...form, name: event.currentTarget.value })} />
                 </label>
                 <label>
-                  <span>类型</span>
-                  <AppSelect ariaLabel="隧道类型" value={form.kind} options={tunnelKindOptions} onChange={changeKind} />
+                  <span>{tr("tunnel.field.kind")}</span>
+                  <AppSelect ariaLabel={tr("tunnel.field.kindAria")} value={form.kind} options={tunnelKindOptions()} onChange={changeKind} />
                 </label>
                 <label>
-                  <span>SSH 连接</span>
-                  <AppSelect ariaLabel="SSH 连接" value={form.connectionId} options={connectionOptions} onChange={(connectionId) => onChange({ ...form, connectionId })} />
+                  <span>{tr("tunnel.field.connection")}</span>
+                  <AppSelect ariaLabel={tr("tunnel.field.connection")} value={form.connectionId} options={connectionOptions} onChange={(connectionId) => onChange({ ...form, connectionId })} />
                 </label>
                 <div className="tunnel-form-grid">
                   <label>
@@ -564,7 +555,7 @@ function TunnelRuleDialog({
                   </label>
                 </div>
                 {form.kind === "dynamic" ? (
-                  <p className="tunnel-helper-note">无认证 SOCKS5，仅支持 TCP CONNECT。</p>
+                  <p className="tunnel-helper-note">{tr("tunnel.dynamic.note")}</p>
                 ) : (
                   <div className="tunnel-form-grid">
                     <label>
@@ -580,8 +571,8 @@ function TunnelRuleDialog({
                 <label className="tunnel-check-row">
                   <input type="checkbox" checked={form.autoStart} onChange={(event) => onChange({ ...form, autoStart: event.currentTarget.checked })} />
                   <span>
-                    <strong>应用启动后自动启动</strong>
-                    <small>prompt 凭据连接会标记为需要手动输入。</small>
+                    <strong>{tr("tunnel.autoStart.title")}</strong>
+                    <small>{tr("tunnel.autoStart.description")}</small>
                   </span>
                 </label>
                 {formError ? <p className="remote-file-dialog-error">{formError}</p> : null}
@@ -589,11 +580,11 @@ function TunnelRuleDialog({
               <footer className="dialog-actions tunnel-dialog-actions">
                 <span />
                 <Dialog.Close asChild>
-                  <button type="button" disabled={saving}>取消</button>
+                  <button type="button" disabled={saving}>{tr("tunnel.cancel")}</button>
                 </Dialog.Close>
                 <button className="primary-button" type="submit" disabled={saving}>
                   {saving ? <Loader2 className="ui-icon spin" aria-hidden="true" /> : null}
-                  保存
+                  {tr("tunnel.save")}
                 </button>
               </footer>
             </form>
@@ -626,11 +617,11 @@ function CredentialPromptDialog({
             <form onSubmit={onSubmit}>
               <header className="dialog-head">
                 <span className="dialog-title-group">
-                  <Dialog.Title>输入本次凭据</Dialog.Title>
-                  <Dialog.Description className="dialog-subtitle">{prompt.rule.name} 不会保存这些内容</Dialog.Description>
+                  <Dialog.Title>{tr("tunnel.credentials.title")}</Dialog.Title>
+                  <Dialog.Description className="dialog-subtitle">{tr("tunnel.credentials.description", { name: prompt.rule.name })}</Dialog.Description>
                 </span>
                 <Dialog.Close asChild>
-                  <button className="icon-button dialog-close-button" type="button" aria-label="关闭">
+                  <button className="icon-button dialog-close-button" type="button" aria-label={tr("tunnel.close")}>
                     <X className="ui-icon" aria-hidden="true" />
                   </button>
                 </Dialog.Close>
@@ -638,25 +629,25 @@ function CredentialPromptDialog({
               <div className="dialog-body tunnel-dialog-body">
                 <div className="tunnel-dialog-icon-head">
                   <KeyRound className="ui-icon" aria-hidden="true" />
-                  <span>该连接使用 prompt 凭据模式。</span>
+                  <span>{tr("tunnel.credentials.prompt")}</span>
                 </div>
                 <label>
-                  <span>认证方式</span>
-                  <AppSelect ariaLabel="认证方式" value={prompt.authKind} options={authKindOptions} onChange={onAuthKindChange} />
+                  <span>{tr("tunnel.credentials.auth")}</span>
+                  <AppSelect ariaLabel={tr("tunnel.credentials.auth")} value={prompt.authKind} options={authKindOptions()} onChange={onAuthKindChange} />
                 </label>
                 {prompt.authKind === "password" ? (
                   <label>
-                    <span>密码</span>
+                    <span>{tr("tunnel.credentials.password")}</span>
                     <input type="password" value={prompt.password} onChange={(event) => onChange({ ...prompt, password: event.currentTarget.value })} />
                   </label>
                 ) : (
                   <>
                     <label>
-                      <span>私钥路径</span>
+                      <span>{tr("tunnel.credentials.privateKeyPath")}</span>
                       <input value={prompt.privateKeyPath} placeholder="~/.ssh/id_ed25519" onChange={(event) => onChange({ ...prompt, privateKeyPath: event.currentTarget.value })} />
                     </label>
                     <label>
-                      <span>私钥口令</span>
+                      <span>{tr("tunnel.credentials.passphrase")}</span>
                       <input type="password" value={prompt.privateKeyPassphrase} onChange={(event) => onChange({ ...prompt, privateKeyPassphrase: event.currentTarget.value })} />
                     </label>
                   </>
@@ -666,11 +657,11 @@ function CredentialPromptDialog({
               <footer className="dialog-actions tunnel-dialog-actions">
                 <span />
                 <Dialog.Close asChild>
-                  <button type="button" disabled={prompt.submitting}>取消</button>
+                  <button type="button" disabled={prompt.submitting}>{tr("tunnel.cancel")}</button>
                 </Dialog.Close>
                 <button className="primary-button" type="submit" disabled={prompt.submitting}>
                   {prompt.submitting ? <Loader2 className="ui-icon spin" aria-hidden="true" /> : null}
-                  继续启动
+                  {tr("tunnel.credentials.continue")}
                 </button>
               </footer>
             </form>
@@ -698,11 +689,11 @@ function HostKeyPromptDialog({
           <Dialog.Content className="tunnel-dialog tunnel-host-key-dialog">
             <header className="dialog-head">
               <span className="dialog-title-group">
-                <Dialog.Title>确认主机密钥</Dialog.Title>
-                <Dialog.Description className="dialog-subtitle">{prompt.parsed.decision === "changed" ? "主机密钥已变化" : prompt.parsed.hostKey.key_algorithm}</Dialog.Description>
+                <Dialog.Title>{tr("tunnel.hostKey.title")}</Dialog.Title>
+                <Dialog.Description className="dialog-subtitle">{prompt.parsed.decision === "changed" ? tr("tunnel.hostKey.changed") : prompt.parsed.hostKey.key_algorithm}</Dialog.Description>
               </span>
               <Dialog.Close asChild>
-                <button className="icon-button dialog-close-button" type="button" aria-label="关闭">
+                <button className="icon-button dialog-close-button" type="button" aria-label={tr("tunnel.close")}>
                   <X className="ui-icon" aria-hidden="true" />
                 </button>
               </Dialog.Close>
@@ -710,20 +701,20 @@ function HostKeyPromptDialog({
             <div className="dialog-body tunnel-dialog-body">
               <div className="tunnel-dialog-icon-head warning">
                 <LockKeyhole className="ui-icon" aria-hidden="true" />
-                <span>信任后会重试启动该隧道。</span>
+                <span>{tr("tunnel.hostKey.retry")}</span>
               </div>
-              {prompt.parsed.oldFingerprint ? <code>旧指纹：{prompt.parsed.oldFingerprint}</code> : null}
+              {prompt.parsed.oldFingerprint ? <code>{tr("tunnel.hostKey.old", { value: prompt.parsed.oldFingerprint })}</code> : null}
               <code>{prompt.parsed.hostKey.fingerprint_sha256}</code>
               {prompt.error ? <p className="remote-file-dialog-error">{prompt.error}</p> : null}
             </div>
             <footer className="dialog-actions tunnel-dialog-actions">
               <span />
               <Dialog.Close asChild>
-                <button type="button" disabled={prompt.submitting}>取消</button>
+                <button type="button" disabled={prompt.submitting}>{tr("tunnel.cancel")}</button>
               </Dialog.Close>
               <button className="primary-button" type="button" disabled={prompt.submitting} onClick={onTrust}>
                 {prompt.submitting ? <Loader2 className="ui-icon spin" aria-hidden="true" /> : <CheckCircle2 className="ui-icon" aria-hidden="true" />}
-                信任并继续
+                {tr("tunnel.hostKey.trust")}
               </button>
             </footer>
           </Dialog.Content>
@@ -735,16 +726,16 @@ function HostKeyPromptDialog({
 
 function formToInput(form: TunnelFormState): TunnelRuleInput {
   const copy = tunnelFormCopy(form.kind);
-  const localPort = parsePort(form.localPort, `${copy.localPortLabel}无效。`);
-  const remotePort = form.kind === "dynamic" ? 1 : parsePort(form.remotePort, `${copy.remotePortLabel}无效。`);
+  const localPort = parsePort(form.localPort, tr("tunnel.validation.port", { field: copy.localPortLabel }));
+  const remotePort = form.kind === "dynamic" ? 1 : parsePort(form.remotePort, tr("tunnel.validation.port", { field: copy.remotePortLabel }));
   if (!form.connectionId.trim()) {
-    throw new Error("请选择 SSH 连接。");
+    throw new Error(tr("tunnel.validation.connection"));
   }
   if (!form.localHost.trim()) {
-    throw new Error(`请填写${copy.localHostLabel}。`);
+    throw new Error(tr("tunnel.validation.field", { field: copy.localHostLabel }));
   }
   if (form.kind !== "dynamic" && !form.remoteHost.trim()) {
-    throw new Error(`请填写${copy.remoteHostLabel}。`);
+    throw new Error(tr("tunnel.validation.field", { field: copy.remoteHostLabel }));
   }
   return {
     auto_start: form.autoStart,
@@ -790,7 +781,7 @@ function compareTunnelItems(left: TunnelRuleWithState, right: TunnelRuleWithStat
   if (statusDelta !== 0) {
     return statusDelta;
   }
-  return left.rule.name.localeCompare(right.rule.name, "zh-Hans-CN");
+  return left.rule.name.localeCompare(right.rule.name, getLocale() === "zh-CN" ? "zh-Hans-CN" : "en");
 }
 
 function statusPriority(status: TunnelStatus) {
@@ -805,23 +796,20 @@ function statusPriority(status: TunnelStatus) {
 }
 
 function tunnelStatusLabel(status: TunnelStatus) {
-  const labels: Record<TunnelStatus, string> = {
-    credential_required: "需要凭据",
-    failed: "失败",
-    running: "运行中",
-    starting: "启动中",
-    stopped: "已停止",
+  const keys: Record<TunnelStatus, Parameters<typeof tr>[0]> = {
+    credential_required: "tunnel.status.credential",
+    failed: "tunnel.status.failed",
+    running: "tunnel.status.running",
+    starting: "tunnel.status.starting",
+    stopped: "tunnel.status.stopped",
   };
-  return labels[status];
+  return tr(keys[status]);
 }
 
 function tunnelKindLabel(kind: TunnelKind) {
-  const labels: Record<TunnelKind, string> = {
-    dynamic: "动态 SOCKS",
-    local: "本地转发",
-    remote: "远程转发",
-  };
-  return labels[kind];
+  if (kind === "dynamic") return tr("tunnel.kind.dynamic");
+  if (kind === "remote") return tr("tunnel.kind.remote");
+  return tr("tunnel.kind.local");
 }
 
 function formatTunnelRoute(rule: TunnelRule) {
@@ -851,29 +839,44 @@ function formatDefaultTunnelName(input: TunnelRuleInput) {
 function tunnelFormCopy(kind: TunnelKind) {
   if (kind === "dynamic") {
     return {
-      description: "本机 SOCKS5 代理通过 SSH 访问远端网络",
-      localHostLabel: "本地 SOCKS 地址",
-      localPortLabel: "本地 SOCKS 端口",
-      remoteHostLabel: "远端目标地址",
-      remotePortLabel: "远端目标端口",
+      description: tr("tunnel.form.dynamic.description"),
+      localHostLabel: tr("tunnel.form.dynamic.localHost"),
+      localPortLabel: tr("tunnel.form.dynamic.localPort"),
+      remoteHostLabel: tr("tunnel.form.dynamic.remoteHost"),
+      remotePortLabel: tr("tunnel.form.dynamic.remotePort"),
     };
   }
   if (kind === "remote") {
     return {
-      description: "远端监听端口转发到本机服务",
-      localHostLabel: "本机目标地址",
-      localPortLabel: "本机目标端口",
-      remoteHostLabel: "远端监听地址",
-      remotePortLabel: "远端监听端口",
+      description: tr("tunnel.form.remote.description"),
+      localHostLabel: tr("tunnel.form.remote.localHost"),
+      localPortLabel: tr("tunnel.form.remote.localPort"),
+      remoteHostLabel: tr("tunnel.form.remote.remoteHost"),
+      remotePortLabel: tr("tunnel.form.remote.remotePort"),
     };
   }
   return {
-    description: "本地端口转发到远端网络目标",
-    localHostLabel: "本地监听地址",
-    localPortLabel: "本地监听端口",
-    remoteHostLabel: "远端目标地址",
-    remotePortLabel: "远端目标端口",
+    description: tr("tunnel.form.local.description"),
+    localHostLabel: tr("tunnel.form.local.localHost"),
+    localPortLabel: tr("tunnel.form.local.localPort"),
+    remoteHostLabel: tr("tunnel.form.local.remoteHost"),
+    remotePortLabel: tr("tunnel.form.local.remotePort"),
   };
+}
+
+function authKindOptions(): Array<{ label: string; value: ConnectionAuthKind }> {
+  return [
+    { label: tr("tunnel.auth.password"), value: "password" },
+    { label: tr("tunnel.auth.privateKey"), value: "private_key" },
+  ];
+}
+
+function tunnelKindOptions(): Array<{ label: string; value: TunnelKind }> {
+  return [
+    { label: tr("tunnel.kind.local"), value: "local" },
+    { label: tr("tunnel.kind.dynamic"), value: "dynamic" },
+    { label: tr("tunnel.kind.remote"), value: "remote" },
+  ];
 }
 
 function isCredentialPromptError(error: unknown) {
@@ -912,7 +915,7 @@ function previewTunnelItems(connectionId: string): TunnelRuleWithState[] {
     kind: "local",
     local_host: "127.0.0.1",
     local_port: 15432,
-    name: "预览数据库隧道",
+    name: tr("tunnel.preview.name"),
     remote_host: "127.0.0.1",
     remote_port: 5432,
     updated_at: "preview",
