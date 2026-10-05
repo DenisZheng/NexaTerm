@@ -1,5 +1,6 @@
 import type { RefObject } from "react";
 
+import { useI18n } from "../../shared/i18n";
 import { AnchoredSurfacePortal } from "../../shared/ui/AnchoredSurfacePortal";
 import { formatFileSize } from "./remoteFileTransferUtils";
 import {
@@ -33,6 +34,7 @@ export function RemoteFileInfoTooltip({
   state,
   onOpenChange,
 }: RemoteFileInfoTooltipProps) {
+  const { t } = useI18n();
   if (!entry) {
     return null;
   }
@@ -60,35 +62,35 @@ export function RemoteFileInfoTooltip({
         <strong>{entry.name}</strong>
       </header>
       <dl className="remote-file-info-list">
-        <RemoteFileInfoRow label="类型" value={remoteFileKindLabel(kind)} />
+        <RemoteFileInfoRow label={t("files.info.type")} value={remoteFileKindLabel(kind)} />
         {metadata && shouldShowRemoteFileSize(kind) ? (
-          <RemoteFileInfoRow label="大小" value={formatFileSize(metadata.size)} />
+          <RemoteFileInfoRow label={t("files.info.size")} value={formatFileSize(metadata.size)} />
         ) : null}
         {metadata ? (
           <>
             <RemoteFileInfoRow
-              label="用户"
+              label={t("files.info.user")}
               value={formatRemoteFileIdentity(metadata.owner, metadata.uid, "UID")}
             />
             <RemoteFileInfoRow
-              label="用户组"
+              label={t("files.info.group")}
               value={formatRemoteFileIdentity(metadata.group, metadata.gid, "GID")}
             />
-            <RemoteFileInfoRow label="权限" value={metadata.mode || "未知"} />
+            <RemoteFileInfoRow label={t("files.info.permissions")} value={metadata.mode || t("files.info.unknown")} />
             <RemoteFileInfoRow
-              label="修改时间"
-              value={formatRemoteFileTimestamp(metadata.mtime, "未知")}
+              label={t("files.info.modified")}
+              value={formatRemoteFileTimestamp(metadata.mtime, t("files.info.unknown"))}
             />
             <RemoteFileInfoRow
-              label="创建时间"
-              value={formatRemoteFileTimestamp(metadata.birthtime, "系统不支持")}
+              label={t("files.info.created")}
+              value={formatRemoteFileTimestamp(metadata.birthtime, t("files.info.unsupported"))}
             />
           </>
         ) : null}
-        <RemoteFileInfoRow label="路径" value={entry.path} wrap />
+        <RemoteFileInfoRow label={t("files.info.path")} value={entry.path} wrap />
       </dl>
       {state?.status === "loading" ? (
-        <p className="remote-file-info-status" aria-live="polite">正在读取属性...</p>
+        <p className="remote-file-info-status" aria-live="polite">{t("files.info.loading")}</p>
       ) : state?.status === "error" ? (
         <p className="remote-file-info-status is-error" aria-live="polite">{state.error}</p>
       ) : null}
