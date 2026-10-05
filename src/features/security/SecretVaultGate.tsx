@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Eye, EyeOff, Loader2, LockKeyhole } from "lucide-react";
 
+import { useI18n } from "../../shared/i18n";
 import type { SecretVaultStatus } from "../../shared/tauri/commands";
 
 interface SecretVaultGateProps {
@@ -22,21 +23,22 @@ export function SecretVaultGate({
   status,
   unlocking,
 }: SecretVaultGateProps) {
+  const { t } = useI18n();
   const [masterPassword, setMasterPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const acceptsPassword = masterPasswordEnabled && status !== null;
   const title = !masterPasswordEnabled
-    ? "无法自动解锁保险库"
+    ? t("vault.title.autoUnlockFailed")
     : status === null
-      ? "读取保险库状态"
-      : status.initialized ? "解锁加密保险库" : "创建加密保险库";
+      ? t("vault.title.readStatus")
+      : status.initialized ? t("vault.title.unlock") : t("vault.title.create");
   const buttonLabel = !masterPasswordEnabled
-    ? "重试自动解锁"
+    ? t("vault.action.retryAuto")
     : status === null
-      ? "重试读取状态"
-      : status.initialized ? "解锁" : "创建并解锁";
+      ? t("vault.action.retryStatus")
+      : status.initialized ? t("vault.action.unlock") : t("vault.action.createUnlock");
 
   useEffect(() => {
     if (!loading && acceptsPassword) {
@@ -55,7 +57,7 @@ export function SecretVaultGate({
     }
     const password = masterPassword.trim();
     if (!password) {
-      setLocalError("请输入安全密码。");
+      setLocalError(t("vault.error.passwordRequired"));
       return;
     }
 
@@ -75,18 +77,18 @@ export function SecretVaultGate({
           </span>
           <span>
             <strong>{title}</strong>
-            <small>保存的 SSH 密码和私钥口令会写入本机加密文件。</small>
+            <small>{t("vault.description")}</small>
           </span>
         </header>
 
         {loading ? (
           <div className="vault-gate-loading" aria-live="polite">
             <Loader2 className="ui-icon spinning" />
-            <span>{unlocking ? "正在解锁保险库，请留意系统授权窗口..." : "正在读取保险库状态..."}</span>
+            <span>{unlocking ? t("vault.loading.unlock") : t("vault.loading.status")}</span>
           </div>
         ) : acceptsPassword ? (
           <label className="vault-gate-field">
-            <span>安全密码</span>
+            <span>{t("vault.password")}</span>
             <span className="vault-gate-secret-field">
               <input
                 ref={inputRef}
@@ -97,7 +99,7 @@ export function SecretVaultGate({
               />
               <button
                 type="button"
-                aria-label={showPassword ? "隐藏安全密码" : "显示安全密码"}
+                aria-label={showPassword ? t("vault.password.hide") : t("vault.password.show")}
                 onClick={() => setShowPassword((visible) => !visible)}
               >
                 {showPassword ? <EyeOff className="ui-icon" /> : <Eye className="ui-icon" />}
@@ -108,10 +110,10 @@ export function SecretVaultGate({
 
         <p className="vault-gate-note">
           {!masterPasswordEnabled
-            ? "当前使用本机自动解锁，无需创建安全密码。如系统请求凭据访问，请在系统窗口中授权后重试。"
+            ? t("vault.note.autoUnlock")
             : acceptsPassword
-              ? "忘记安全密码后无法恢复已保存的密码和口令。"
-              : "尚未确认保险库状态，请重试读取。"}
+              ? t("vault.note.password")
+              : t("vault.note.status")}
         </p>
 
         {localError || error ? (
