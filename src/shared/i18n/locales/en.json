@@ -2515,5 +2515,11 @@
   "workspace.file.validation.required": "Enter a name.",
   "workspace.file.validation.dot": "The name cannot be . or ..",
   "workspace.file.validation.path": "Enter only a name, not a path.",
-  "workspace.file.validation.invalid": "Enter a valid name."
+  "workspace.file.validation.invalid": "Enter a valid name.",
+  "workspace.local.status.opening": "Opening",
+  "workspace.local.status.preview": "Preview",
+  "workspace.local.status.connected": "Connected",
+  "workspace.local.status.connecting": "Connecting",
+  "workspace.rdp.copyPreview": "Copy preview",
+  "workspace.vnc.copyPreview": "Copy preview"
 }
