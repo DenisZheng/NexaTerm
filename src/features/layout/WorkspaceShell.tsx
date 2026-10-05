@@ -415,7 +415,7 @@ import { AppActionBar } from "./AppActionBar";
 import { AppTitlebar } from "./AppTitlebar";
 import { buildTitlebarItems } from "./titlebarItems";
 import { useWorkspaceActionRuntime } from "./useWorkspaceActionRuntime";
-import { useI18n } from "../../shared/i18n";
+import { t as tr, useI18n } from "../../shared/i18n";
 import { buildSshRemoteFilePanelStack } from "./remoteFilePanelStrategy";
 import { closeConfirmationCopy } from "./closeConfirmationText";
 import { useCloseRequest } from "../workspace/sessionTabs/useCloseRequest";
@@ -1015,7 +1015,7 @@ export function WorkspaceShell() {
     useState<CommandHistoryEntry | null>(null);
   const [commandHistoryClearOpen, setCommandHistoryClearOpen] = useState(false);
   const [commandSenderLastSentLabel, setCommandSenderLastSentLabel] =
-    useState("上次发送：尚未发送");
+    useState(tr("workspace.command.last.none"));
   const [commandSenderDeliveryByKey, setCommandSenderDeliveryByKey] =
     useState<Record<string, { message?: string; status: CommandSenderDeliveryStatus }>>({});
   const [terminalSearchByTabId, setTerminalSearchByTabId] =
@@ -1071,7 +1071,7 @@ export function WorkspaceShell() {
   const [remoteFileProperties, setRemoteFileProperties] =
     useState<RemoteFilePropertiesState | null>(null);
   const handleTransferTaskError = useCallback((transferId: string, error: unknown) => {
-    failTransfer(transferId, "传输失败", error);
+    failTransfer(transferId, tr("workspace.transfer.failed"), error);
   }, []);
   const {
     enqueueRemoteFileTransfer,
@@ -1353,7 +1353,7 @@ export function WorkspaceShell() {
     start: (connectionId) => {
       const connection = connections.find((item) => item.id === connectionId);
       const handle = connection ? openNewConnectionSessionWithActivation(connection, false) : null;
-      if (!handle) throw new Error("连接已不存在，无法启动批量会话。");
+      if (!handle) throw new Error(tr("workspace.batch.connectionMissing"));
       return handle;
     },
     wait: (handle, reportStatus) => waitForBatchWorkspaceHandle(handle, () => ({ localTerminalTabs: localTerminalTabsRef.current, rdpSessions: rdpSessionsRef.current, terminalTabs: terminalTabsRef.current, vncSessions: vncSessionsRef.current }), reportStatus),
@@ -1982,7 +1982,7 @@ export function WorkspaceShell() {
         return {
           binding: { kind: "ssh" as const, tabId: tab.id },
           group:
-            tab.connectionId === activeConnectionId ? "当前 SSH 连接" : "其他 SSH 连接",
+            tab.connectionId === activeConnectionId ? tr("workspace.connection.currentSsh") : tr("workspace.connection.otherSsh"),
           icon: <SquareTerminal className="ui-icon" aria-hidden="true" />,
           label: `${connection?.name || connection?.host || "SSH"} · ${tab.title}`,
           searchText: [
@@ -2006,16 +2006,16 @@ export function WorkspaceShell() {
             : tab.source === "telnet"
               ? "Telnet"
               : tab.source === "serial"
-                ? "串口"
-                : "本地";
+                ? tr("workspace.local.serial")
+                : tr("workspace.local.local");
         return {
           binding: { kind: "local" as const, tabId: tab.id },
           group:
             tab.profileKind === "wsl"
               ? "WSL"
               : tab.source === "local" || !tab.source
-                ? "本地终端"
-                : "Telnet / 串口",
+                ? tr("workspace.local.terminal")
+                : tr("workspace.local.character"),
           icon: <LocalTerminalIcon className="ui-icon" kind={tab.profileKind} title={tab.title} />,
           label: `${source} · ${tab.title}`,
           searchText: `${source} ${tab.title}`,
@@ -2057,15 +2057,15 @@ export function WorkspaceShell() {
         })),
       {
         disabled: !defaultLocalTerminalProfile,
-        group: "新建会话",
-        label: "新建默认本地终端",
+        group: tr("workspace.newSession.group"),
+        label: tr("workspace.newSession.defaultLocal"),
         value: "action:new-local",
         variant: "action" as const,
       },
       {
         disabled: terminalTabs.length === 0 && !isSshConnection(activeConnection),
-        group: "新建会话",
-        label: "新建当前连接 SSH 终端",
+        group: tr("workspace.newSession.group"),
+        label: tr("workspace.newSession.currentSsh"),
         value: "action:new-ssh",
         variant: "action" as const,
       },
@@ -2148,7 +2148,7 @@ export function WorkspaceShell() {
   }, [shouldShowAiAssistantPanel]);
 
   const aiAssistantPanelNode = shouldRenderAiAssistantPanel ? (
-    <Suspense fallback={<p className="file-panel-empty">正在加载 AI 面板...</p>}>
+    <Suspense fallback={<p className="file-panel-empty">{tr("workspace.loading.ai")}</p>}>
       <AiAssistantPanel
         active={showWorkspaceToolPane && !rightPaneCollapsed && rightTool === "ai"}
         commandDraft={commandSenderInput}
@@ -2653,7 +2653,7 @@ export function WorkspaceShell() {
     const retry = item.retry;
     const connection = retry.action === "download" ? null : connectionForTransfer(retry.connectionId);
     if (retry.action !== "download" && !connection) {
-      failTransfer(transferId, "重试失败", new Error("连接已不存在，无法重试传输。"));
+      failTransfer(transferId, tr("workspace.transfer.retryFailed"), new Error(tr("workspace.transfer.connectionMissing")));
       return;
     }
 
@@ -2710,7 +2710,7 @@ export function WorkspaceShell() {
     const mappedStage = code ? transferErrorStage(code) : null;
     const suggestion = code ? transferErrorSuggestion(code) : null;
     const baseError = formatDetailedError(error);
-    const errorText = suggestion ? `${baseError}\n建议：${suggestion}` : baseError;
+    const errorText = suggestion ? `${baseError}\n${tr("workspace.error.suggestion", { suggestion })}` : baseError;
     updateRemoteFileTransfer(transferId, {
       error: errorText,
       progressIndeterminate: false,
@@ -2750,13 +2750,13 @@ export function WorkspaceShell() {
       detail: null,
       indeterminate: true,
       progress: 2,
-      stage: "检查本地目标",
+      stage: tr("workspace.transfer.checkLocal"),
     });
     let check;
     try {
       check = await remoteFileCheckDownloadTarget(downloadOptions);
     } catch (error) {
-      failTransfer(transferId, "检查本地目标失败", error);
+      failTransfer(transferId, tr("workspace.transfer.checkLocalFailed"), error);
       return "failed";
     }
     if (!check.exists) {
@@ -2765,7 +2765,7 @@ export function WorkspaceShell() {
 
     return promptTransferConflictPolicy(
       check.name,
-      `本地目标已存在：${check.local_path}。请选择本次下载的处理方式。`,
+      tr("workspace.transfer.localExists", { path: check.local_path }),
     );
   }
 
@@ -2787,13 +2787,13 @@ export function WorkspaceShell() {
       detail: null,
       indeterminate: true,
       progress: 2,
-      stage: "检查同名目标",
+      stage: tr("workspace.transfer.checkRemote"),
     });
     let check;
     try {
       check = await remoteFileCheckPath(connection.id, remotePath);
     } catch (error) {
-      failTransfer(transferId, "检查同名目标失败", error);
+      failTransfer(transferId, tr("workspace.transfer.checkRemoteFailed"), error);
       return "failed";
     }
     if (!check.exists) {
@@ -2802,7 +2802,7 @@ export function WorkspaceShell() {
 
     return promptTransferConflictPolicy(
       remoteFileName(remotePath),
-      `远程目标已存在：${check.path}。请选择本次上传的处理方式。`,
+      tr("workspace.transfer.remoteExists", { path: check.path }),
     );
   }
 
@@ -2935,7 +2935,7 @@ export function WorkspaceShell() {
       path,
       savedContent: "",
       saveState: "loading",
-      statusMessage: "读取中",
+      statusMessage: tr("workspace.editor.reading"),
     };
 
     setRemoteFileTabs((tabs) => [...tabs, tab]);
@@ -2971,7 +2971,7 @@ export function WorkspaceShell() {
         path: result.path,
         savedContent: result.content,
         saveState: "ready",
-        statusMessage: "就绪",
+        statusMessage: tr("workspace.editor.ready"),
       }));
     } catch (error) {
       updateRemoteFileTab(tabId, (tab) => ({
@@ -2991,7 +2991,7 @@ export function WorkspaceShell() {
       content,
       dirty: content !== tab.savedContent,
       saveState: content === tab.savedContent ? "ready" : "dirty",
-      statusMessage: content === tab.savedContent ? "就绪" : "已修改",
+      statusMessage: content === tab.savedContent ? tr("workspace.editor.ready") : tr("workspace.editor.modified"),
     }));
   }
 
@@ -3005,7 +3005,7 @@ export function WorkspaceShell() {
       ...item,
       error: null,
       saveState: "saving",
-      statusMessage: "保存中",
+      statusMessage: tr("workspace.editor.saving"),
     }));
 
     void (hasTauriRuntime()
@@ -3033,7 +3033,7 @@ export function WorkspaceShell() {
           metadata: result.metadata,
           savedContent: item.content,
           saveState: "saved",
-          statusMessage: "已保存",
+          statusMessage: tr("workspace.editor.saved"),
         }));
         triggerRemoteFileRefresh(tab.connectionId, remotePathParent(tab.path));
       })
@@ -3043,7 +3043,7 @@ export function WorkspaceShell() {
             ...item,
             error: formatError(error),
             saveState: "conflict",
-            statusMessage: "远端已变化",
+            statusMessage: tr("workspace.editor.remoteChanged"),
           }));
           setPendingRemoteFileConflictId(tabId);
           return;
@@ -3069,7 +3069,7 @@ export function WorkspaceShell() {
       ...item,
       error: null,
       saveState: "loading",
-      statusMessage: "读取中",
+      statusMessage: tr("workspace.editor.reading"),
     }));
     void loadRemoteFileTab(connection, tab.path, tabId);
   }
@@ -3081,7 +3081,7 @@ export function WorkspaceShell() {
       dirty: false,
       error: null,
       saveState: "ready",
-      statusMessage: "已放弃更改",
+      statusMessage: tr("workspace.editor.discarded"),
     }));
   }
 
@@ -3400,7 +3400,7 @@ export function WorkspaceShell() {
           });
         })
         .catch((error: unknown) => {
-          showTransferPickerError("上传文件", parentPath, error);
+          showTransferPickerError(tr("workspace.transfer.uploadFile"), parentPath, error);
         });
       return;
     }
@@ -3429,7 +3429,7 @@ export function WorkspaceShell() {
           });
         })
         .catch((error: unknown) => {
-          showTransferPickerError("上传文件夹", parentPath, error);
+          showTransferPickerError(tr("workspace.transfer.uploadFolder"), parentPath, error);
         });
       return;
     }
@@ -3525,7 +3525,7 @@ export function WorkspaceShell() {
       progress: 100,
       progressDetail: null,
       remotePath: parentPath,
-      stage: "选择失败",
+      stage: tr("workspace.transfer.selectionFailed"),
     });
     updateRemoteFileTransfer(transferId, {
       error: formatError(error),
@@ -3542,7 +3542,7 @@ export function WorkspaceShell() {
     const connection = options.connection ?? activeConnection;
     if (!connection) {
       if (options.transferId) {
-        failTransfer(options.transferId, "重试失败", new Error("连接已不存在，无法重试传输。"));
+        failTransfer(options.transferId, tr("workspace.transfer.retryFailed"), new Error(tr("workspace.transfer.connectionMissing")));
       }
       return;
     }
@@ -3556,10 +3556,10 @@ export function WorkspaceShell() {
       name: localName,
       progress: 0,
       remotePath: uploadPath,
-      stage: "等待上传",
+      stage: tr("workspace.transfer.waitUpload"),
     });
     if (options.transferId) {
-      prepareTransferRetry(transferId, "准备重试");
+      prepareTransferRetry(transferId, tr("workspace.transfer.prepareRetry"));
     }
 
     enqueueRemoteFileTransfer(transferId, async () => {
@@ -3588,7 +3588,7 @@ export function WorkspaceShell() {
         setTransferProgress(transferId, {
           indeterminate: true,
           progress: 4,
-          stage: "上传中",
+          stage: tr("workspace.transfer.uploading"),
         });
         const result = await remoteFileUploadLocalFile({
           connectionId: connection.id,
@@ -3599,7 +3599,7 @@ export function WorkspaceShell() {
         });
         finishUploadTransfer(transferId, connection.id, result);
       } catch (error) {
-        failTransfer(transferId, "上传失败", error);
+        failTransfer(transferId, tr("workspace.transfer.uploadFailed"), error);
       }
     });
   }
@@ -3612,7 +3612,7 @@ export function WorkspaceShell() {
     const connection = options.connection ?? activeConnection;
     if (!connection) {
       if (options.transferId) {
-        failTransfer(options.transferId, "重试失败", new Error("连接已不存在，无法重试传输。"));
+        failTransfer(options.transferId, tr("workspace.transfer.retryFailed"), new Error(tr("workspace.transfer.connectionMissing")));
       }
       return;
     }
@@ -3626,10 +3626,10 @@ export function WorkspaceShell() {
       name: rootName,
       progress: 0,
       remotePath,
-      stage: "等待上传",
+      stage: tr("workspace.transfer.waitUpload"),
     });
     if (options.transferId) {
-      prepareTransferRetry(transferId, "准备重试");
+      prepareTransferRetry(transferId, tr("workspace.transfer.prepareRetry"));
     }
 
     enqueueRemoteFileTransfer(transferId, async () => {
@@ -3662,7 +3662,7 @@ export function WorkspaceShell() {
         setTransferProgress(transferId, {
           indeterminate: true,
           progress: 4,
-          stage: compress ? "打包并上传目录" : "扫描目录",
+          stage: compress ? tr("workspace.transfer.packUpload") : tr("workspace.transfer.scanDirectory"),
         });
         const result = await remoteFileUploadLocalArchive({
           compress,
@@ -3676,7 +3676,7 @@ export function WorkspaceShell() {
         });
         finishArchiveUploadTransfer(transferId, connection.id, result);
       } catch (error) {
-        failTransfer(transferId, "目录上传失败", error);
+        failTransfer(transferId, tr("workspace.transfer.directoryUploadFailed"), error);
       }
     });
   }
@@ -3689,7 +3689,7 @@ export function WorkspaceShell() {
     const connection = options.connection ?? activeConnection;
     if (!connection) {
       if (options.transferId) {
-        failTransfer(options.transferId, "重试失败", new Error("连接已不存在，无法重试传输。"));
+        failTransfer(options.transferId, tr("workspace.transfer.retryFailed"), new Error(tr("workspace.transfer.connectionMissing")));
       }
       return;
     }
@@ -3702,10 +3702,10 @@ export function WorkspaceShell() {
       name: item.file.name,
       progress: 0,
       remotePath: uploadPath,
-      stage: "等待上传",
+      stage: tr("workspace.transfer.waitUpload"),
     });
     if (options.transferId) {
-      prepareTransferRetry(transferId, "准备重试");
+      prepareTransferRetry(transferId, tr("workspace.transfer.prepareRetry"));
     }
 
     enqueueRemoteFileTransfer(transferId, async () => {
@@ -3714,7 +3714,7 @@ export function WorkspaceShell() {
           cap: 92,
           detail: formatTransferProgressBytes(0, item.file.size),
           start: 8,
-          stage: "上传中",
+          stage: tr("workspace.transfer.uploading"),
         });
         const result = await wait(240).then(() => {
           stopPulse();
@@ -3750,7 +3750,7 @@ export function WorkspaceShell() {
         setTransferProgress(transferId, {
           detail: formatTransferProgressBytes(0, item.file.size),
           progress: 4,
-          stage: "写入本地上传缓存",
+          stage: tr("workspace.transfer.writeUploadCache"),
         });
         const temp = await remoteFilePrepareUploadTemp(item.file.name);
         localPath = temp.local_path;
@@ -3760,14 +3760,14 @@ export function WorkspaceShell() {
             detail: formatTransferProgressBytes(loaded, total),
             progress: interpolateTransferProgress(4, 34, loaded, total),
             speedText: localSpeed.sample(loaded),
-            stage: "写入本地上传缓存",
+            stage: tr("workspace.transfer.writeUploadCache"),
           });
         });
         setTransferProgress(transferId, {
           detail: formatTransferProgressBytes(0, item.file.size),
           indeterminate: false,
           progress: 36,
-          stage: "上传中",
+          stage: tr("workspace.transfer.uploading"),
         });
         const result = await remoteFileUploadLocalFile({
           connectionId: connection.id,
@@ -3778,7 +3778,7 @@ export function WorkspaceShell() {
         });
         finishUploadTransfer(transferId, connection.id, result);
       } catch (error) {
-        failTransfer(transferId, "上传失败", error);
+        failTransfer(transferId, tr("workspace.transfer.uploadFailed"), error);
       } finally {
         if (localPath) {
           void remoteFileDeleteUploadTemp(localPath).catch(() => undefined);
@@ -3796,7 +3796,7 @@ export function WorkspaceShell() {
     const connection = options.connection ?? activeConnection;
     if (!connection) {
       if (options.transferId) {
-        failTransfer(options.transferId, "重试失败", new Error("连接已不存在，无法重试传输。"));
+        failTransfer(options.transferId, tr("workspace.transfer.retryFailed"), new Error(tr("workspace.transfer.connectionMissing")));
       }
       return;
     }
@@ -3809,10 +3809,10 @@ export function WorkspaceShell() {
       name: rootName,
       progress: 0,
       remotePath,
-      stage: "等待打包",
+      stage: tr("workspace.transfer.waitPack"),
     });
     if (options.transferId) {
-      prepareTransferRetry(transferId, "准备重试");
+      prepareTransferRetry(transferId, tr("workspace.transfer.prepareRetry"));
     }
 
     enqueueRemoteFileTransfer(transferId, async () => {
@@ -3821,7 +3821,7 @@ export function WorkspaceShell() {
           cap: 92,
           detail: formatTransferProgressBytes(0, totalUploadBytes(items)),
           start: 8,
-          stage: "上传归档并远程解压",
+          stage: tr("workspace.transfer.uploadExtract"),
         });
         const result = await wait(320).then(() => {
           stopPulse();
@@ -3862,14 +3862,14 @@ export function WorkspaceShell() {
         setTransferProgress(transferId, {
           detail: formatTransferProgressBytes(0, totalBytes),
           progress: 3,
-          stage: "本地打包 tar.gz",
+          stage: tr("workspace.transfer.localTar"),
         });
         const temp = await remoteFilePrepareUploadTemp(`${rootName}.tar.gz`);
         localPath = temp.local_path;
         const archiveSize = await buildTarGzArchiveToTemp(localPath, items, (progress) => {
           const detail =
             progress.phase === "compress"
-              ? `压缩包 ${formatFileSize(progress.archiveBytes)}`
+              ? tr("workspace.transfer.archiveSize", { size: formatFileSize(progress.archiveBytes) })
               : formatTransferProgressBytes(progress.loadedBytes, progress.totalBytes);
           const speedBytes = progress.phase === "compress" ? progress.archiveBytes : progress.loadedBytes;
           setTransferProgress(transferId, {
@@ -3879,14 +3879,14 @@ export function WorkspaceShell() {
                 ? 34
                 : interpolateTransferProgress(3, 32, progress.loadedBytes, progress.totalBytes),
             speedText: archiveSpeed.sample(speedBytes),
-            stage: progress.phase === "compress" ? "压缩 tar.gz" : "本地打包 tar.gz",
+            stage: progress.phase === "compress" ? tr("workspace.transfer.compressTar") : tr("workspace.transfer.localTar"),
           });
         });
         const stopPulse = startTransferProgressPulse(transferId, {
           cap: 92,
-          detail: `压缩包 ${formatFileSize(archiveSize)}`,
+          detail: tr("workspace.transfer.archiveSize", { size: formatFileSize(archiveSize) }),
           start: 38,
-          stage: "上传归档并远程解压",
+          stage: tr("workspace.transfer.uploadExtract"),
         });
         const result = await remoteFileUploadLocalArchive({
           compress: true,
@@ -3900,7 +3900,7 @@ export function WorkspaceShell() {
         }).finally(stopPulse);
         finishArchiveUploadTransfer(transferId, connection.id, result);
       } catch (error) {
-        failTransfer(transferId, "目录上传失败", error);
+        failTransfer(transferId, tr("workspace.transfer.directoryUploadFailed"), error);
       } finally {
         if (localPath) {
           void remoteFileDeleteUploadTemp(localPath).catch(() => undefined);
@@ -3924,7 +3924,7 @@ export function WorkspaceShell() {
       progressIndeterminate: false,
       remotePath: result.path,
       speedText: null,
-      stage: result.skipped ? "已跳过" : "上传完成",
+      stage: result.skipped ? tr("workspace.transfer.skipped") : tr("workspace.transfer.uploadComplete"),
       status: result.skipped ? "skipped" : "success",
     });
     triggerRemoteFileRefresh(connectionId, remotePathParent(result.path));
@@ -3945,7 +3945,7 @@ export function WorkspaceShell() {
       progressIndeterminate: false,
       remotePath: result.path,
       speedText: null,
-      stage: result.skipped ? "已跳过" : "目录上传完成",
+      stage: result.skipped ? tr("workspace.transfer.skipped") : tr("workspace.transfer.directoryUploadComplete"),
       status: result.skipped ? "skipped" : "success",
     });
     triggerRemoteFileRefresh(connectionId, remotePathParent(result.path));
@@ -3977,7 +3977,7 @@ export function WorkspaceShell() {
       : activeConnection;
     if (!connection) {
       if (options.transferId) {
-        failTransfer(options.transferId, "重试失败", new Error("连接已不存在，无法重试传输。"));
+        failTransfer(options.transferId, tr("workspace.transfer.retryFailed"), new Error(tr("workspace.transfer.connectionMissing")));
       }
       return;
     }
@@ -3989,10 +3989,10 @@ export function WorkspaceShell() {
       name: entry.name,
       progress: 0,
       remotePath: entry.path,
-      stage: isDirectory ? "等待扫描" : "等待下载",
+      stage: isDirectory ? tr("workspace.transfer.waitScan") : tr("workspace.transfer.waitDownload"),
     });
     if (options.transferId) {
-      prepareTransferRetry(transferId, "准备重试");
+      prepareTransferRetry(transferId, tr("workspace.transfer.prepareRetry"));
     }
 
     enqueueRemoteFileTransfer(transferId, async () => {
@@ -4032,9 +4032,9 @@ export function WorkspaceShell() {
             progress: 4,
             stage: isDirectory
               ? request.compress
-                ? "压缩中"
-                : "扫描目录"
-              : "准备下载",
+                ? tr("workspace.transfer.compressing")
+                : tr("workspace.transfer.scanDirectory")
+              : tr("workspace.transfer.prepareDownload"),
           });
           result = await remoteFileDownloadToLocal({
             ...request,
@@ -4045,7 +4045,7 @@ export function WorkspaceShell() {
             cap: 92,
             detail: null,
             start: 8,
-            stage: isDirectory ? "模拟目录下载" : "下载到本地",
+            stage: isDirectory ? tr("workspace.transfer.previewDirectoryDownload") : tr("workspace.transfer.downloadLocal"),
           });
           result = await wait(300).then(() =>
             previewRemoteFileDownloadToLocalResult(entry, isDirectory),
@@ -4055,7 +4055,7 @@ export function WorkspaceShell() {
         finishDownloadTransfer(transferId, result);
       } catch (error) {
         stopPulse?.();
-        failTransfer(transferId, "下载失败", error);
+        failTransfer(transferId, tr("workspace.transfer.downloadFailed"), error);
       }
     });
   }
@@ -4072,7 +4072,7 @@ export function WorkspaceShell() {
       progressIndeterminate: false,
       remotePath: result.remote_path,
       speedText: null,
-      stage: result.skipped ? "已跳过" : "下载完成",
+      stage: result.skipped ? tr("workspace.transfer.skipped") : tr("workspace.transfer.downloadComplete"),
       status: result.skipped ? "skipped" : "success",
     });
   }
@@ -4201,7 +4201,7 @@ export function WorkspaceShell() {
       ordinal,
       status: connectionStepStatusTitle(step),
       temporaryContextRef: step.temporaryContextRef || undefined,
-      title: step.mode === "terminal" ? "连接准备" : "连接测试",
+      title: step.mode === "terminal" ? tr("workspace.connection.prepare") : tr("workspace.connection.test"),
       type: "connecting",
       warmupOutput: [],
     };
@@ -4240,10 +4240,10 @@ export function WorkspaceShell() {
               status: connectionStepStatusTitle(step),
               title:
                 step.status === "error"
-                  ? "连接失败"
+                  ? tr("workspace.connection.failed")
                   : step.mode === "terminal"
-                    ? "连接准备"
-                    : "连接测试",
+                    ? tr("workspace.connection.prepare")
+                    : tr("workspace.connection.test"),
             }
           : tab,
         );
@@ -4481,7 +4481,7 @@ export function WorkspaceShell() {
   function retryRestoredSshTab(tabId: string) {
     const tab = terminalTabsRef.current.find((item) => item.id === tabId); const connection = tab ? connectionById.get(tab.connectionId) : null;
     if (tab && isSshConnection(connection)) { startConnectionStep(connection, "terminal", false, tab.id); return; }
-    if (tab) { const next = terminalTabsRef.current.map((item) => item.id === tabId ? { ...item, error: "保存的 SSH 连接已不存在。", status: "连接失败" } : item); terminalTabsRef.current = next; setTerminalTabs(next); }
+    if (tab) { const next = terminalTabsRef.current.map((item) => item.id === tabId ? { ...item, error: tr("workspace.savedSshMissing"), status: "连接失败" } : item); terminalTabsRef.current = next; setTerminalTabs(next); }
   }
 
   function retryRestoredLocalTab(tabId: string) {
@@ -4496,7 +4496,7 @@ export function WorkspaceShell() {
       const profile = localTerminalProfilesRef.current.find((item) => item.id === tab.profileId) || null;
       if (profile) { const next = { ...tab, error: undefined, profileKind: profile.kind, requestId, sessionId: undefined, source: "local" as const, status: "正在连接", title: localTerminalTitle(profile, displayOrdinal(tab.ordinal)), warmupOutput: [] }; const tabs = localTerminalTabsRef.current.map((item) => item.id === tab.id ? next : item); localTerminalTabsRef.current = tabs; setLocalTerminalTabs(tabs); void openRuntimeLocalTerminalSession(next, "local-preview", () => localTerminalOpen({ cols: 80, cwd: profile.cwd || undefined, profile: toLocalTerminalProfileInput(profile), request_id: requestId, rows: 24 })).catch(() => undefined); return; }
     }
-    const next = localTerminalTabsRef.current.map((item) => item.id === tab.id ? { ...item, error: "保存的本地终端或连接配置已不存在。", status: "连接失败" } : item); localTerminalTabsRef.current = next; setLocalTerminalTabs(next);
+    const next = localTerminalTabsRef.current.map((item) => item.id === tab.id ? { ...item, error: tr("workspace.savedLocalMissing"), status: "连接失败" } : item); localTerminalTabsRef.current = next; setLocalTerminalTabs(next);
   }
 
   function openHome() {
@@ -4779,7 +4779,7 @@ export function WorkspaceShell() {
     }
     if (multiExecTargets.size === 0) {
       setMultiExecMode("off");
-      setTerminalSplitSyncError("请先明确选择至少一个同步目标。");
+      setTerminalSplitSyncError(tr("workspace.split.chooseTarget"));
       return;
     }
     setMultiExecMode("live");
@@ -4831,7 +4831,7 @@ export function WorkspaceShell() {
         return next;
       });
       setTerminalSplitSyncError(
-        `同步输入有 ${failedKeys.size.toString()} 个目标写入失败，已从本次目标移除。`,
+        tr("workspace.split.writeFailed", { count: failedKeys.size }),
       );
     });
   }
@@ -5021,13 +5021,13 @@ export function WorkspaceShell() {
       const tab = remoteFileTabs.find(
         (item) => item.id === payload.id && item.connectionId === payload.connectionId,
       );
-      return tab?.name || "远程文件";
+      return tab?.name || tr("workspace.file.fallback");
     }
 
     const tab = terminalTabs.find(
       (item) => item.id === payload.id && item.connectionId === payload.connectionId,
     );
-    return tab?.title || "终端";
+    return tab?.title || tr("workspace.terminal.fallback");
   }
 
   function isTerminalSubtabActive(tab: TerminalTab) {
@@ -5152,7 +5152,7 @@ export function WorkspaceShell() {
       hideSplit: true,
       prepend: [
         {
-          label: "关闭分屏组",
+          label: tr("workspace.split.closeGroup"),
           onSelect: () => requestCloseTerminalSplitGroup(),
         },
       ],
@@ -5167,11 +5167,11 @@ export function WorkspaceShell() {
           <button
             className="subtab terminal-split-group-subtab"
             type="button"
-            aria-label={`打开分屏组，共 ${boundPaneCount.toString()} 个终端`}
+            aria-label={tr("workspace.split.openGroup", { count: boundPaneCount })}
             onClick={() => activateTerminalSplitTab()}
           >
             <PanelsTopLeft className="ui-icon" aria-hidden="true" />
-            <span>分屏</span>
+            <span>{tr("workspace.split.label")}</span>
             <span className="terminal-split-group-count" aria-hidden="true">
               {boundPaneCount.toString()}
             </span>
@@ -5179,7 +5179,7 @@ export function WorkspaceShell() {
           <button
             className="subtab-close"
             type="button"
-            aria-label="关闭分屏组"
+            aria-label={tr("workspace.split.closeGroup")}
             onClick={requestCloseTerminalSplitGroup}
           >
             <X className="ui-icon" aria-hidden="true" />
@@ -5361,23 +5361,23 @@ export function WorkspaceShell() {
     }
 
     return (
-      <div className="workbench-tab-scroll-controls" aria-label={`${label}滚动控制`}>
-        <Tooltip label="向左滚动标签">
+      <div className="workbench-tab-scroll-controls" aria-label={tr("workspace.tabs.scrollControls", { label })}>
+        <Tooltip label={tr("workspace.tabs.scrollLeft")}>
           <button
             className="workbench-tab-scroll-button"
             type="button"
-            aria-label={`向左滚动${label}`}
+            aria-label={tr("workspace.tabs.scrollLeftAria", { label })}
             disabled={!tabScroll.canScrollLeft}
             onClick={tabScroll.scrollLeft}
           >
             <ChevronLeft className="ui-icon" aria-hidden="true" />
           </button>
         </Tooltip>
-        <Tooltip label="向右滚动标签">
+        <Tooltip label={tr("workspace.tabs.scrollRight")}>
           <button
             className="workbench-tab-scroll-button"
             type="button"
-            aria-label={`向右滚动${label}`}
+            aria-label={tr("workspace.tabs.scrollRightAria", { label })}
             disabled={!tabScroll.canScrollRight}
             onClick={tabScroll.scrollRight}
           >
@@ -5397,41 +5397,41 @@ export function WorkspaceShell() {
         actions={[
           {
             hint: "Ctrl+F4",
-            label: "关闭",
+            label: tr("workspace.tabs.close"),
             onSelect: () => closeRemoteFileTab(tab.id),
           },
           {
             disabled: activeRemoteFileTabs.length <= 1,
-            label: "关闭其他",
+            label: tr("workspace.tabs.closeOthers"),
             onSelect: () => closeOtherRemoteFileTabs(tab.id),
           },
           {
             disabled: index >= activeRemoteFileTabs.length - 1,
-            label: "关闭右侧标签页",
+            label: tr("workspace.tabs.closeRight"),
             onSelect: () => closeRemoteFileTabsToRight(tab.id),
           },
           {
             disabled: savedTabs.length === 0,
             hint: "Ctrl+K U",
-            label: "关闭已保存",
+            label: tr("workspace.tabs.closeSaved"),
             onSelect: () => closeSavedRemoteFileTabsForConnection(tab.connectionId),
           },
           {
             disabled: activeRemoteFileTabs.length === 0,
             hint: "Ctrl+K W",
-            label: "全部关闭",
+            label: tr("workspace.tabs.closeAll"),
             onSelect: () => closeAllRemoteFileTabsForConnection(tab.connectionId),
           },
           {
             hint: "Shift+Alt+C",
-            label: "复制路径",
+            label: tr("workspace.tabs.copyPath"),
             onSelect: () => copyRemotePath(tab.path),
             separatorBefore: true,
           },
           ...(isConnectionTerminalFileUnified(tab.connectionId)
             ? [
                 {
-                  label: "恢复上下分屏",
+                  label: tr("workspace.tabs.restoreSplit"),
                   onSelect: () =>
                     restoreConnectionTerminalFileSplit(tab.connectionId, "file", {
                       connectionId: tab.connectionId,
@@ -5463,7 +5463,7 @@ export function WorkspaceShell() {
           >
             <RemoteFileIcon className="file-tab-icon" entry={{ name: tab.name, type: "file" }} />
             <span className="file-tab-name">{tab.name}</span>
-            {tab.dirty ? <span className="dirty-dot" aria-label="已修改" /> : null}
+            {tab.dirty ? <span className="dirty-dot" aria-label={tr("workspace.tabs.modified")} /> : null}
           </button>
           <button
             className="subtab-close"
@@ -5574,12 +5574,12 @@ export function WorkspaceShell() {
     const sshTab = terminalTabsRef.current.find((tab) => tab.id === tabId);
     const localTab = localTerminalTabsRef.current.find((tab) => tab.id === tabId);
     const sourceConnection = sshTab ? connectionById.get(sshTab.connectionId) || null : null;
-    const source = sourceConnection?.name || localTab?.title || sshTab?.title || "终端选区";
+    const source = sourceConnection?.name || localTab?.title || sshTab?.title || tr("workspace.ai.selectionSource");
     const directory = terminalDirectories[tabId];
     setAiInitialContexts([
       buildAiContextBlock({
         kind: "terminal_selection",
-        title: "终端选中文本",
+        title: tr("workspace.ai.selectionTitle"),
         source: directory ? `${source} · ${directory}` : source,
         content,
       }),
@@ -5609,8 +5609,8 @@ export function WorkspaceShell() {
   async function sendAiCommandToTerminal(command: string) {
     const target = resolveActiveAiCommandTarget();
     if (!target) {
-      setCommandSenderLastSentLabel("上次发送：当前没有可写入的激活终端");
-      throw new Error("当前没有可写入的激活终端。");
+      setCommandSenderLastSentLabel(tr("workspace.command.noWritable"));
+      throw new Error(tr("workspace.command.noWritableError"));
     }
     setSelectedCommandSnippetId(null);
     setSelectedCommandHistoryId(null);
@@ -5635,7 +5635,7 @@ export function WorkspaceShell() {
         },
         key: terminalPaneBindingKey({ kind: "local", tabId: activeLocalTerminalTab.id }),
         kind: "local",
-        label: "当前激活终端",
+        label: tr("workspace.command.activeTerminal"),
         sessionId: activeLocalTerminalTab.sessionId,
         tabId: activeLocalTerminalTab.id,
         tabTitle: activeLocalTerminalTab.title,
@@ -5661,7 +5661,7 @@ export function WorkspaceShell() {
         },
         key: terminalPaneBindingKey({ kind: "ssh", tabId: activeConnectedTerminalTab.id }),
         kind: "ssh",
-        label: connection?.name || "当前激活终端",
+        label: connection?.name || tr("workspace.command.activeTerminal"),
         sessionId: activeConnectedTerminalTab.sessionId,
         tabId: activeConnectedTerminalTab.id,
         tabTitle: activeConnectedTerminalTab.title,
@@ -5688,7 +5688,7 @@ export function WorkspaceShell() {
   async function runCommandSnippet(snippet: CommandSnippet) {
     const targets = prepareCommandSenderTargets();
     if (targets.length === 0) {
-      setCommandSenderLastSentLabel("上次发送：请选择目标后再执行片段");
+      setCommandSenderLastSentLabel(tr("workspace.command.chooseTargetSnippet"));
       return;
     }
     await sendCommandTextToTargets(snippet.command, true, snippet.id, targets, {
@@ -5699,7 +5699,7 @@ export function WorkspaceShell() {
   async function runCommandHistoryEntry(entry: CommandHistoryEntry) {
     const targets = prepareCommandSenderTargets();
     if (targets.length === 0) {
-      setCommandSenderLastSentLabel("上次发送：请选择目标后再执行历史命令");
+      setCommandSenderLastSentLabel(tr("workspace.command.chooseTargetHistory"));
       return;
     }
     await sendCommandTextToTargets(entry.command, true, null, targets, {
@@ -5716,10 +5716,10 @@ export function WorkspaceShell() {
   async function copyCommandLibraryText(command: string, label: string) {
     try {
       await copyText(command);
-      setCommandSenderLastSentLabel(`上次操作：已复制${label}`);
+      setCommandSenderLastSentLabel(tr("workspace.command.copied", { label }));
       setCommandLibraryError(null);
     } catch (error) {
-      setCommandLibraryError(`复制失败：${formatError(error)}`);
+      setCommandLibraryError(tr("workspace.command.copyFailed", { message: formatError(error) }));
     }
   }
 
@@ -5892,7 +5892,7 @@ export function WorkspaceShell() {
     }
 
     if (!hasTauriRuntime()) {
-      setCommandSnippetFormError("当前环境无法保存命令片段。");
+      setCommandSnippetFormError(tr("workspace.command.saveUnavailable"));
       return;
     }
 
@@ -6123,7 +6123,7 @@ export function WorkspaceShell() {
       targetKeys: targets.map((target) => target.key),
       write: async (sessionId, data) => {
         if (!hasTauriRuntime()) {
-          throw new Error("当前环境无法写入终端输入流。");
+          throw new Error(tr("workspace.command.writeUnavailable"));
         }
         await terminalWrite(sessionId, data);
       },
@@ -6136,7 +6136,7 @@ export function WorkspaceShell() {
           delivery.status === "failed"
             ? { message: formatError(delivery.error), status: "failed" }
             : delivery.status === "disconnected"
-              ? { message: "目标在发送前已断线或关闭。", status: "disconnected" }
+              ? { message: tr("workspace.command.targetDisconnected"), status: "disconnected" }
               : { status: "written" };
       });
       return nextDeliveryByKey;
@@ -6164,8 +6164,8 @@ export function WorkspaceShell() {
 
     setCommandSenderLastSentLabel(
       failedCount > 0 || disconnectedCount > 0
-        ? `上次发送：写入 ${successCount.toString()}，失败 ${failedCount.toString()}，断线 ${disconnectedCount.toString()}`
-        : `上次发送：已写入 ${successCount.toString()} 个目标`,
+        ? tr("workspace.command.sendSummary", { success: successCount, failed: failedCount, disconnected: disconnectedCount })
+        : tr("workspace.command.sendSuccess", { count: successCount }),
     );
     if (options.clearInput ?? true) {
       clearCommandSenderInput();
@@ -6288,7 +6288,7 @@ export function WorkspaceShell() {
     activate = true,
   ) {
     if (!profile) {
-      setLocalTerminalProfilesError("没有可用的本地终端类型。");
+      setLocalTerminalProfilesError(tr("workspace.local.noProfiles"));
       return null;
     }
 
@@ -6628,7 +6628,7 @@ export function WorkspaceShell() {
     updateRdpSession(sessionId, (session) => ({
       ...session,
       error: null,
-      message: "正在选择可用 RDP runner 并启动客户端。",
+      message: tr("workspace.rdp.launching"),
       preview: null,
       result: null,
       status: "launching",
@@ -6641,7 +6641,7 @@ export function WorkspaceShell() {
       }
       updateRdpSession(sessionId, (session) => ({
         ...session,
-        message: "浏览器预览模式不会启动桌面客户端，真实运行时会打开 RDP runner 或原生子窗口。",
+        message: tr("workspace.rdp.preview"),
         preview: previewRdpLaunchForBrowser(connection, desktopPlatform),
         status: "external",
       }));
@@ -6664,10 +6664,10 @@ export function WorkspaceShell() {
         message:
           result.fallback_reason ||
           (result.embedded
-            ? "嵌入式 RDP 会话已创建。"
+            ? tr("workspace.rdp.embeddedCreated")
             : nativeActiveX
-              ? "RDP 原生子窗口已打开。"
-            : "RDP 客户端已启动，凭据由客户端提示。"),
+              ? tr("workspace.rdp.nativeOpened")
+            : tr("workspace.rdp.externalStarted")),
         result,
         status: result.embedded ? "embedded" : nativeActiveX ? "native" : "external",
       }));
@@ -6694,14 +6694,14 @@ export function WorkspaceShell() {
     if (!connection) {
       updateRdpSession(sessionId, (current) => ({
         ...current,
-        message: "连接已删除，无法生成启动预览。",
+        message: tr("workspace.vnc.connectionDeleted"),
       }));
       return;
     }
 
     updateRdpSession(sessionId, (current) => ({
       ...current,
-      message: "正在生成启动预览。",
+      message: tr("workspace.rdp.previewGenerating"),
     }));
 
     try {
@@ -6710,13 +6710,13 @@ export function WorkspaceShell() {
         : previewRdpLaunchForBrowser(connection, desktopPlatform);
       updateRdpSession(sessionId, (current) => ({
         ...current,
-        message: "启动预览已更新，内容已隐藏敏感凭据。",
+        message: tr("workspace.rdp.previewReady"),
         preview,
       }));
     } catch (error) {
       updateRdpSession(sessionId, (current) => ({
         ...current,
-        message: `启动预览失败：${formatError(error)}`,
+        message: tr("workspace.rdp.previewFailed", { message: formatError(error) }),
       }));
     }
   }
@@ -6880,8 +6880,8 @@ export function WorkspaceShell() {
       ...session,
       error: null,
       message: openInRunnerHost
-        ? "正在创建 VNC 本地桥接并打开 runner host。"
-        : "正在创建 VNC 本地桥接并启动 noVNC。",
+        ? tr("workspace.vnc.hostLaunching")
+        : tr("workspace.vnc.embeddedLaunching"),
       preview: null,
       result: null,
       status: "launching",
@@ -6896,8 +6896,8 @@ export function WorkspaceShell() {
       updateVncSession(sessionId, (session) => ({
         ...session,
         message: openInRunnerHost
-          ? "浏览器预览模式不会创建 VNC 桥接，真实运行时会打开 VNC runner host。"
-          : "浏览器预览模式不会创建 VNC 桥接，真实运行时会打开 noVNC 内嵌画面。",
+          ? tr("workspace.vnc.previewHost")
+          : tr("workspace.vnc.previewEmbedded"),
         preview: previewVncLaunchForBrowser(connection),
         status: openInRunnerHost ? "windowed" : "external",
       }));
@@ -6927,7 +6927,7 @@ export function WorkspaceShell() {
           updateVncSession(sessionId, (session) => ({
             ...session,
             error: null,
-            message: result.fallback_reason || "VNC 画面已交给 RDP 风格 runner host。",
+            message: result.fallback_reason || tr("workspace.vnc.hostReady"),
             result,
             status: "windowed",
             windowLabel,
@@ -6938,7 +6938,7 @@ export function WorkspaceShell() {
           await vncCloseSession(result.session_id).catch(() => undefined);
           updateVncSession(sessionId, (session) => ({
             ...session,
-            error: `VNC runner host 打开失败：${formatDetailedError(error)}`,
+            error: tr("workspace.vnc.hostFailed", { message: formatDetailedError(error) }),
             message: null,
             status: "error",
           }));
@@ -6951,8 +6951,8 @@ export function WorkspaceShell() {
         message:
           result.fallback_reason ||
           (result.embedded
-            ? "VNC 桥接已创建，正在连接远程画面。"
-            : "VNC 客户端已启动，凭据由客户端提示。"),
+            ? tr("workspace.vnc.bridgeReady")
+            : tr("workspace.vnc.externalStarted")),
         result,
         status: result.embedded ? "embedded" : "external",
         windowLabel: null,
@@ -7034,14 +7034,14 @@ export function WorkspaceShell() {
     if (!connection) {
       updateVncSession(sessionId, (current) => ({
         ...current,
-        message: "连接已删除，无法生成启动预览。",
+        message: tr("workspace.vnc.connectionDeleted"),
       }));
       return;
     }
 
     updateVncSession(sessionId, (current) => ({
       ...current,
-      message: "正在生成 VNC 启动预览。",
+      message: tr("workspace.vnc.previewGenerating"),
     }));
 
     try {
@@ -7050,13 +7050,13 @@ export function WorkspaceShell() {
         : previewVncLaunchForBrowser(connection);
       updateVncSession(sessionId, (current) => ({
         ...current,
-        message: "VNC 启动预览已更新，内容已隐藏敏感凭据。",
+        message: tr("workspace.vnc.previewReady"),
         preview,
       }));
     } catch (error) {
       updateVncSession(sessionId, (current) => ({
         ...current,
-        message: `VNC 启动预览失败：${formatError(error)}`,
+        message: tr("workspace.vnc.previewFailed", { message: formatError(error) }),
       }));
     }
   }
@@ -7433,7 +7433,7 @@ export function WorkspaceShell() {
     if (!isSshConnection(activeConnection)) {
       return;
     }
-    const title = `容器 ${container.name || shortDockerRuntimeId(container.id)}`;
+    const title = tr("workspace.docker.containerTitle", { name: container.name || shortDockerRuntimeId(container.id) });
     const tab = buildDirectTerminalTab(terminalTabsRef.current, activeConnection, title);
     const command = `docker exec -it ${quotePosixShellForTerminal(container.id)} sh\r`;
     setTerminalTabs((tabs) => {
@@ -7636,7 +7636,7 @@ export function WorkspaceShell() {
       hostKeyDecision: null,
       id: Date.now(),
       logs: [
-        `${mode === "terminal" ? "打开终端" : "测试连接"}：${formatConnectionAddress(connection)}`,
+        `${mode === "terminal" ? tr("workspace.connection.openTerminal") : tr("workspace.connection.test")}：${formatConnectionAddress(connection)}`,
       ],
       mode,
       password: "",
@@ -7676,7 +7676,7 @@ export function WorkspaceShell() {
       error: null,
       hostKey: null,
       hostKeyDecision: null,
-      logs: [...step.logs, "读取连接配置", "建立网络连接"],
+      logs: [...step.logs, tr("workspace.connection.readConfig"), tr("workspace.connection.network")],
       oldHostKeyFingerprint: null,
       sessionId: null,
       status: "running",
@@ -7690,7 +7690,7 @@ export function WorkspaceShell() {
       }
       const previewStep = {
         ...runningStep,
-        logs: [...runningStep.logs, "普通浏览器预览已跳过真实 SSH", "连接步骤完成"],
+        logs: [...runningStep.logs, tr("workspace.connection.browserSkip"), tr("workspace.connection.stepComplete")],
         status: "success" as ConnectionStepStatus,
       };
       if (step.mode === "terminal") {
@@ -7739,7 +7739,7 @@ export function WorkspaceShell() {
         void probeSystem(runtimeCredential).catch(() => null);
         updateConnectingTabStep(tabId, {
           ...runningStep,
-          logs: [...runningStep.logs, "认证通过", "连接测试通过"],
+          logs: [...runningStep.logs, tr("workspace.connection.authPassed"), tr("workspace.connection.testPassed")],
           status: "success",
         });
         return;
@@ -7787,7 +7787,7 @@ export function WorkspaceShell() {
           errorDetail,
           hostKey: hostKeyError.hostKey,
           hostKeyDecision: hostKeyError.decision,
-          logs: [...runningStep.logs, "等待确认主机密钥"],
+          logs: [...runningStep.logs, tr("workspace.connection.waitHostKey")],
           oldHostKeyFingerprint: hostKeyError.oldFingerprint,
           status: "waiting_host_key",
         });
@@ -7796,14 +7796,14 @@ export function WorkspaceShell() {
       const requestedPrompt = parseCredentialPromptTarget(nextError);
       if (requestedPrompt) {
         const promptTarget = { ...requestedPrompt, name: connectionById.get(requestedPrompt.connectionId)?.name };
-        updateConnectingTabStep(tabId, { ...runningStep, authKind: promptTarget.authKind, error: errorDetail.message, errorDetail, promptTarget, password: "", privateKeyPassphrase: "", privateKeyPath: "", logs: [...runningStep.logs, `等待 ${promptTarget.name || promptTarget.connectionId} 凭据`], status: "prompt" });
+        updateConnectingTabStep(tabId, { ...runningStep, authKind: promptTarget.authKind, error: errorDetail.message, errorDetail, promptTarget, password: "", privateKeyPassphrase: "", privateKeyPath: "", logs: [...runningStep.logs, tr("workspace.connection.waitCredentials", { name: promptTarget.name || promptTarget.connectionId })], status: "prompt" });
         return;
       }
       const nodeFailure = parseSshNodeFailure(nextError);
       const retryProfile = nodeFailure?.stage === "auth" ? connectionById.get(nodeFailure.connectionId) : step.connection.credential_mode === "prompt" && connectionStepErrorIndex(errorDetail.code) === 3 ? step.connection : null;
       if (retryProfile?.credential_mode === "prompt") {
         const promptTarget = credentialPromptTargetFromConnection(retryProfile);
-        updateConnectingTabStep(tabId, { ...runningStep, authKind: promptTarget.authKind, error: errorDetail.message, errorDetail, promptTarget, password: "", privateKeyPassphrase: "", privateKeyPath: "", logs: [...runningStep.logs, `${promptTarget.name} 认证未通过，等待重新输入`], status: "prompt" });
+        updateConnectingTabStep(tabId, { ...runningStep, authKind: promptTarget.authKind, error: errorDetail.message, errorDetail, promptTarget, password: "", privateKeyPassphrase: "", privateKeyPath: "", logs: [...runningStep.logs, tr("workspace.connection.authRetry", { name: promptTarget.name })], status: "prompt" });
         return;
       }
       const nodeLabel = nodeFailure ? connectionById.get(nodeFailure.connectionId)?.name || nodeFailure.connectionId : "";
@@ -7838,8 +7838,8 @@ export function WorkspaceShell() {
       logs: [
         ...step.logs,
         step.hostKeyDecision === "changed"
-          ? "已更新主机密钥信任，重新连接"
-          : "已信任主机密钥，重新连接",
+          ? tr("workspace.connection.trustUpdated")
+          : tr("workspace.connection.trusted"),
       ],
       status: "running",
     };
@@ -7872,7 +7872,7 @@ export function WorkspaceShell() {
   ) {
     event.preventDefault();
     const runtimeCredentials = upsertRuntimeCredential(step.runtimeCredentials, step.promptTarget?.connectionId || step.connection.id, step.authKind, step.password, step.privateKeyPath, step.privateKeyPassphrase);
-    void runConnectionStep(tabId, { ...step, runtimeCredentials, logs: [...step.logs, "已输入本次凭据"] });
+    void runConnectionStep(tabId, { ...step, runtimeCredentials, logs: [...step.logs, tr("workspace.connection.credentialsEntered")] });
   }
 
   function handlePaneResizeStart(
@@ -8960,23 +8960,23 @@ export function WorkspaceShell() {
                         actions={[
                           {
                             hint: "Ctrl+F4",
-                            label: "关闭",
+                            label: tr("workspace.tabs.close"),
                             onSelect: () => closeRdpSession(session.id),
                           },
                           {
                             disabled: activeRdpSessions.length <= 1,
-                            label: "关闭其他",
+                            label: tr("workspace.tabs.closeOthers"),
                             onSelect: () => closeOtherRdpSessions(session.id),
                           },
                           {
                             disabled: index >= activeRdpSessions.length - 1,
-                            label: "关闭右侧标签页",
+                            label: tr("workspace.tabs.closeRight"),
                             onSelect: () => closeRdpSessionsToRight(session.id),
                           },
                           {
                             disabled: activeRdpSessions.length === 0,
                             hint: "Ctrl+K W",
-                            label: "全部关闭",
+                            label: tr("workspace.tabs.closeAll"),
                             onSelect: () => closeAllRdpSessionsForConnection(session.connectionId),
                           },
                         ]}
@@ -9061,23 +9061,23 @@ export function WorkspaceShell() {
                         actions={[
                           {
                             hint: "Ctrl+F4",
-                            label: "关闭",
+                            label: tr("workspace.tabs.close"),
                             onSelect: () => closeVncSession(session.id),
                           },
                           {
                             disabled: activeVncSessions.length <= 1,
-                            label: "关闭其他",
+                            label: tr("workspace.tabs.closeOthers"),
                             onSelect: () => closeOtherVncSessions(session.id),
                           },
                           {
                             disabled: index >= activeVncSessions.length - 1,
-                            label: "关闭右侧标签页",
+                            label: tr("workspace.tabs.closeRight"),
                             onSelect: () => closeVncSessionsToRight(session.id),
                           },
                           {
                             disabled: activeVncSessions.length === 0,
                             hint: "Ctrl+K W",
-                            label: "全部关闭",
+                            label: tr("workspace.tabs.closeAll"),
                             onSelect: () => closeAllVncSessionsForConnection(session.connectionId),
                           },
                         ]}
@@ -10796,7 +10796,7 @@ function DirectTerminalStatusPanel({
         ) : (
           <Loader2 className="ui-icon spin" aria-hidden="true" />
         )}
-        <strong>{failed ? "连接失败" : "正在添加终端"}</strong>
+        <strong>{failed ? tr("workspace.connection.failed") : "正在添加终端"}</strong>
         <span>
           {connection
             ? `${connection.username}@${connection.host}:${connection.port.toString()}`
