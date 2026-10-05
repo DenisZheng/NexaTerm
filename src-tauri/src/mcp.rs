@@ -1640,10 +1640,31 @@ pub fn sidecar_executable_path() -> Result<PathBuf, AppError> {
             true,
         )
     })?;
-    Ok(parent.join(sidecar_executable_name()))
+
+    let canonical = parent.join(sidecar_executable_name());
+    if canonical.is_file() {
+        return Ok(canonical);
+    }
+
+    // Development and upgrades from older builds may still have only the
+    // historical sidecar filename. New installers bundle the canonical name.
+    let legacy = parent.join(legacy_sidecar_executable_name());
+    if legacy.is_file() {
+        return Ok(legacy);
+    }
+
+    Ok(canonical)
 }
 
 fn sidecar_executable_name() -> &'static str {
+    if cfg!(windows) {
+        "nexaterm-mcp.exe"
+    } else {
+        "nexaterm-mcp"
+    }
+}
+
+fn legacy_sidecar_executable_name() -> &'static str {
     if cfg!(windows) {
         "mxterm-mcp.exe"
     } else {
@@ -1652,11 +1673,12 @@ fn sidecar_executable_name() -> &'static str {
 }
 
 #[cfg(windows)]
+const MCP_SIDECAR_PROCESS_NAMES: [&str; 2] = ["nexaterm-mcp.exe", "mxterm-mcp.exe"];
+
+#[cfg(windows)]
 fn running_mcp_process_count() -> Result<u32, AppError> {
     let mut command = Command::new("tasklist");
-    command
-        .args(["/FI", "IMAGENAME eq mxterm-mcp.exe", "/FO", "CSV", "/NH"])
-        .creation_flags(CREATE_NO_WINDOW);
+    command.args(["/FO", "CSV", "/NH"]).creation_flags(CREATE_NO_WINDOW);
     let output = command.output().map_err(|error| {
         AppError::new(
             "mcp_update_process_check_failed",
@@ -1682,9 +1704,10 @@ fn parse_tasklist_mcp_process_count(output: &str) -> u32 {
     output
         .lines()
         .filter(|line| {
-            line.trim_start()
-                .to_ascii_lowercase()
-                .starts_with("\"mxterm-mcp.exe\",")
+            let normalized = line.trim_start().to_ascii_lowercase();
+            MCP_SIDECAR_PROCESS_NAMES
+                .iter()
+                .any(|name| normalized.starts_with(&format!("\"{name}\",")))
         })
         .count() as u32
 }
@@ -1699,25 +1722,36 @@ fn terminate_external_mcp_processes() -> Result<(), AppError> {
     if running_mcp_process_count()? == 0 {
         return Ok(());
     }
-    let mut command = Command::new("taskkill");
-    command
-        .args(["/IM", "mxterm-mcp.exe", "/F", "/T"])
-        .creation_flags(CREATE_NO_WINDOW);
-    let output = command.output().map_err(|error| {
-        AppError::new(
-            "mcp_update_process_stop_failed",
-            "无法关闭阻止更新的 MCP 进程。",
-            error,
-            true,
-        )
-    })?;
-    if output.status.success() || running_mcp_process_count()? == 0 {
+
+    let mut failures = Vec::new();
+    for image in MCP_SIDECAR_PROCESS_NAMES {
+        let mut command = Command::new("taskkill");
+        command
+            .args(["/IM", image, "/F", "/T"])
+            .creation_flags(CREATE_NO_WINDOW);
+        let output = command.output().map_err(|error| {
+            AppError::new(
+                "mcp_update_process_stop_failed",
+                "无法关闭阻止更新的 MCP 进程。",
+                error,
+                true,
+            )
+        })?;
+        if !output.status.success() {
+            failures.push(format!(
+                "{image}: {}",
+                String::from_utf8_lossy(&output.stderr).trim()
+            ));
+        }
+    }
+
+    if running_mcp_process_count()? == 0 {
         return Ok(());
     }
     Err(AppError::new(
         "mcp_update_process_stop_failed",
         "无法关闭阻止更新的 MCP 进程。",
-        String::from_utf8_lossy(&output.stderr),
+        failures.join("; "),
         true,
     ))
 }
@@ -2764,10 +2798,10 @@ mod tests {
 
     #[cfg(windows)]
     #[test]
-    fn tasklist_parser_counts_only_mcp_sidecars() {
-        let output = "\"mxterm-mcp.exe\",\"123\",\"Console\",\"1\",\"10,000 K\"\r\n\
+    fn tasklist_parser_counts_canonical_and_legacy_mcp_sidecars() {
+        let output = "\"nexaterm-mcp.exe\",\"123\",\"Console\",\"1\",\"10,000 K\"\r\n\
                       \"MXTERM-MCP.EXE\",\"456\",\"Console\",\"1\",\"11,000 K\"\r\n\
-                      \"m-xterm.exe\",\"789\",\"Console\",\"1\",\"90,000 K\"\r\n";
+                      \"nexaterm.exe\",\"789\",\"Console\",\"1\",\"90,000 K\"\r\n";
         assert_eq!(parse_tasklist_mcp_process_count(output), 2);
         assert_eq!(
             parse_tasklist_mcp_process_count("INFO: No tasks are running"),
