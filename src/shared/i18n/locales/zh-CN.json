@@ -1998,5 +1998,6 @@
   "docker.container.action.remove": "容器已删除。",
   "docker.container.action.restart": "容器已重启。",
   "docker.container.action.start": "容器已启动。",
-  "docker.container.action.stop": "容器已停止。"
+  "docker.container.action.stop": "容器已停止。",
+  "docker.schedule.cleanupName": "清理临时目录"
 }
