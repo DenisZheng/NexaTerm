@@ -2370,7 +2370,7 @@ function CredentialSettingsSection({
                       onClick={choosePrivateKeyPath}
                     >
                       <FolderOpen className="ui-icon" aria-hidden="true" />
-                      <span>{t("settings.downloadRoot.choose")}</span>
+                      <span>选择</span>
                     </button>
                   </div>
                 </label>
