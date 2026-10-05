@@ -29,6 +29,7 @@ export function ShortcutSettingsSection({
   settings,
   onUpdate,
 }: ShortcutSettingsSectionProps) {
+  const { t } = useI18n();
   const [query, setQuery] = useState("");
   const [editingActionId, setEditingActionId] = useState<string | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
@@ -49,7 +50,7 @@ export function ShortcutSettingsSection({
           .toLowerCase()
           .includes(normalizedQuery);
       }),
-    [currentBindings, normalizedQuery],
+    [currentBindings, normalizedQuery, t],
   );
 
   function updateBinding(action: ShortcutAction, binding: string | null) {
