@@ -26,10 +26,11 @@
     "10-04-wf04c-multiexec-entry",
     "10-04-wf-08a-release-migration-baseline",
     "10-05-wf-08b-cross-brand-migration",
-    "10-05-wf-08c-release-surface-audit"
+    "10-05-wf-08c-release-surface-audit",
+    "10-05-wf-08d-performance-stability-baseline"
   ],
   "parent": null,
   "relatedFiles": [],
-  "notes": "2026-10-05: WF-08C brand/i18n/release-surface hardening started stacked on WF-08B. A09/A10 still block final A15/v1 sign-off.",
+  "notes": "2026-10-05: WF-08D performance/stability measurement tooling started stacked on WF-08C. Real packaged benchmarks remain WF-08E/A15 evidence; A09/A10 still block final sign-off.",
   "meta": {}
 }
