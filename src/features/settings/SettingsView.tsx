@@ -46,7 +46,7 @@ import {
   X,
 } from "lucide-react";
 
-import { useI18n } from "../../shared/i18n";
+import { useI18n, type MessageKey } from "../../shared/i18n";
 import { AppSelect } from "../../shared/ui/AppSelect";
 import { AppCombobox } from "../../shared/ui/AppCombobox";
 import { Tooltip } from "../../shared/ui/Tooltip";
@@ -179,21 +179,21 @@ interface SettingsViewProps {
 }
 
 const settingsSections: Array<{
-  description: string;
+  descriptionKey: MessageKey;
   icon: typeof Settings;
   id: SettingsSectionId;
-  label: string;
+  labelKey: MessageKey;
 }> = [
-  { id: "basic", label: "基础设置", description: "启动、连接与面板行为", icon: Settings },
-  { id: "credentials", label: "账号管理", description: "复用登录账号（用户名+密码/私钥）", icon: Shield },
-  { id: "mcp", label: "MCP", description: "AI Agent 连接与受控 SSH 工具", icon: Waypoints },
-  { id: "ai", label: "AI", description: "对话模型配置与 API Key", icon: Bot },
-  { id: "security", label: "安全", description: "安全密码与本机保护", icon: ShieldCheck },
-  { id: "sync", label: "同步", description: "WebDAV 手动同步", icon: Cloud },
-  { id: "shortcuts", label: "快捷键", description: "应用内键盘操作与冲突管理", icon: Keyboard },
-  { id: "appearance", label: "外观", description: "主题、密度与强调色", icon: Palette },
-  { id: "localTerminal", label: "终端设置", description: "终端行为与 profile 管理", icon: HardDrive },
-  { id: "terminalTheme", label: "终端配色", description: "终端 ANSI 主题方案", icon: Terminal },
+  { id: "basic", labelKey: "settings.nav.basic.label", descriptionKey: "settings.nav.basic.description", icon: Settings },
+  { id: "credentials", labelKey: "settings.nav.credentials.label", descriptionKey: "settings.nav.credentials.description", icon: Shield },
+  { id: "mcp", labelKey: "settings.nav.mcp.label", descriptionKey: "settings.nav.mcp.description", icon: Waypoints },
+  { id: "ai", labelKey: "settings.nav.ai.label", descriptionKey: "settings.nav.ai.description", icon: Bot },
+  { id: "security", labelKey: "settings.nav.security.label", descriptionKey: "settings.nav.security.description", icon: ShieldCheck },
+  { id: "sync", labelKey: "settings.nav.sync.label", descriptionKey: "settings.nav.sync.description", icon: Cloud },
+  { id: "shortcuts", labelKey: "settings.nav.shortcuts.label", descriptionKey: "settings.nav.shortcuts.description", icon: Keyboard },
+  { id: "appearance", labelKey: "settings.nav.appearance.label", descriptionKey: "settings.nav.appearance.description", icon: Palette },
+  { id: "localTerminal", labelKey: "settings.nav.localTerminal.label", descriptionKey: "settings.nav.localTerminal.description", icon: HardDrive },
+  { id: "terminalTheme", labelKey: "settings.nav.terminalTheme.label", descriptionKey: "settings.nav.terminalTheme.description", icon: Terminal },
 ];
 
 const credentialKindOptions: Array<{
@@ -234,6 +234,7 @@ export function SettingsView({
   onUpdateShortcuts,
   onUpdateTerminalTheme,
 }: SettingsViewProps) {
+  const { t } = useI18n();
   const [activeSection, setActiveSection] = useState<SettingsSectionId>("basic");
   const [accentDraft, setAccentDraft] = useState(settings.appearance.accentColorCustom);
   const effectiveAllowPasswordReveal =
@@ -250,14 +251,14 @@ export function SettingsView({
   }, [requestedActiveSection, activeSectionRequestKey]);
 
   return (
-    <section className="settings-view" hidden={hidden} aria-label="设置" aria-hidden={hidden}>
-      <aside className="settings-sidebar app-sidebar" aria-label="设置分类">
+    <section className="settings-view" hidden={hidden} aria-label={t("settings.shell.aria")} aria-hidden={hidden}>
+      <aside className="settings-sidebar app-sidebar" aria-label={t("settings.nav.aria")}>
         <button className="settings-return" type="button" onClick={onReturnWorkspace}>
           <ArrowLeft className="ui-icon" aria-hidden="true" />
-          <span>返回工作区</span>
+          <span>{t("settings.returnWorkspace")}</span>
         </button>
 
-        <nav className="settings-nav" aria-label="设置导航">
+        <nav className="settings-nav" aria-label={t("settings.nav.navigation")}>
           {settingsSections.map((section) => {
             const Icon = section.icon;
             return (
@@ -270,15 +271,15 @@ export function SettingsView({
               >
                 <Icon className="ui-icon" aria-hidden="true" />
                 <span>
-                  <strong>{section.label}</strong>
-                  <small>{section.description}</small>
+                  <strong>{t(section.labelKey)}</strong>
+                  <small>{t(section.descriptionKey)}</small>
                 </span>
               </button>
             );
           })}
         </nav>
 
-        <div className="settings-sidebar-foot">设置会自动保存到本机。</div>
+        <div className="settings-sidebar-foot">{t("settings.autoSave")}</div>
       </aside>
 
       <div className="settings-content">
@@ -2369,7 +2370,7 @@ function CredentialSettingsSection({
                       onClick={choosePrivateKeyPath}
                     >
                       <FolderOpen className="ui-icon" aria-hidden="true" />
-                      <span>选择</span>
+                      <span>{t("settings.downloadRoot.choose")}</span>
                     </button>
                   </div>
                 </label>
@@ -2693,31 +2694,31 @@ function BasicSettingsSection({
         onUpdateFileTransfer({ downloadRoot: selectedPath });
       }
     } catch (error) {
-      setDownloadRootError(error instanceof Error ? error.message : "无法打开目录选择器");
+      setDownloadRootError(error instanceof Error ? error.message : t("settings.downloadRoot.error"));
     }
   }
 
   return (
     <section className="settings-page-section">
       <header className="settings-section-head">
-        <h1>基础设置</h1>
-        <p>控制 MXterm 启动、连接失败和文件面板跟随行为。</p>
+        <h1>{t("settings.basic.title")}</h1>
+        <p>{t("settings.basic.description")}</p>
       </header>
 
       <div className="settings-panel settings-update-panel" id="settings-app-update">
         <SettingsRow
           icon={Download}
-          title="应用更新"
+          title={t("settings.update.title")}
           description={
             <span>
-              当前 {appUpdate.currentVersion} · {appUpdate.distributionLabel}
+              {t("settings.update.current", { version: appUpdate.currentVersion, distribution: appUpdate.distributionLabel })}
             </span>
           }
         >
           <div className="settings-update-control">
             <div className="settings-update-status" role="status">
               <strong>{appUpdate.statusLabel}</strong>
-              <small>{appUpdate.message || "通过 GitHub Release 检查新版本。"}</small>
+              <small>{appUpdate.message || t("settings.update.releaseFallback")}</small>
             </div>
             <div className="settings-update-actions">
               <button
@@ -2730,7 +2731,7 @@ function BasicSettingsSection({
                   className={`ui-icon ${appUpdate.checking ? "spin" : ""}`}
                   aria-hidden="true"
                 />
-                <span>{appUpdate.checking ? "检查中" : "立即检查"}</span>
+                <span>{appUpdate.checking ? t("settings.update.checking") : t("settings.update.checkNow")}</span>
               </button>
               <button
                 className="settings-action-button"
@@ -2743,7 +2744,7 @@ function BasicSettingsSection({
                 ) : (
                   <Download className="ui-icon" aria-hidden="true" />
                 )}
-                <span>{appUpdate.installing ? "安装中" : "安装并重启"}</span>
+                <span>{appUpdate.installing ? t("settings.update.installing") : t("settings.update.installRestart")}</span>
               </button>
               <button
                 className="settings-action-button"
@@ -2758,12 +2759,12 @@ function BasicSettingsSection({
         </SettingsRow>
         <SettingsRow
           icon={RefreshCw}
-          title="自动检查更新"
-          description="启动后静默检查新版本；不会自动下载或安装。"
+          title={t("settings.update.auto.title")}
+          description={t("settings.update.auto.description")}
         >
           <SettingsToggle
             checked={settings.autoCheckAppUpdate}
-            label="自动检查更新"
+            label={t("settings.update.auto.title")}
             onChange={(autoCheckAppUpdate) => onUpdate({ autoCheckAppUpdate })}
           />
         </SettingsRow>
@@ -2789,34 +2790,34 @@ function BasicSettingsSection({
         </SettingsRow>
         <SettingsRow
           icon={RotateCcw}
-          title="启动时恢复布局"
-          description="重新打开应用后恢复上次的工作区布局。"
+          title={t("settings.restore.title")}
+          description={t("settings.restore.description")}
         >
           <SettingsToggle
             checked={settings.restoreWorkspaceOnLaunch}
-            label="启动时恢复布局"
+            label={t("settings.restore.title")}
             onChange={(restoreWorkspaceOnLaunch) => onUpdate({ restoreWorkspaceOnLaunch })}
           />
         </SettingsRow>
         <SettingsRow
           icon={Server}
-          title="保留失败页"
-          description="连接失败时保留当前会话页，方便查看原因、重试或编辑连接。"
+          title={t("settings.keepFailed.title")}
+          description={t("settings.keepFailed.description")}
         >
           <SettingsToggle
             checked={settings.keepFailedTerminalTabs}
-            label="保留失败页"
+            label={t("settings.keepFailed.title")}
             onChange={(keepFailedTerminalTabs) => onUpdate({ keepFailedTerminalTabs })}
           />
         </SettingsRow>
         <SettingsRow
           icon={Folder}
-          title="文件面板跟随连接"
-          description="切换活动连接时，右侧文件面板跟随当前会话。"
+          title={t("settings.filePanelFollow.title")}
+          description={t("settings.filePanelFollow.description")}
         >
           <SettingsToggle
             checked={settings.filePanelFollowsActiveConnection}
-            label="文件面板跟随连接"
+            label={t("settings.filePanelFollow.title")}
             onChange={(filePanelFollowsActiveConnection) =>
               onUpdate({ filePanelFollowsActiveConnection })
             }
@@ -2824,24 +2825,24 @@ function BasicSettingsSection({
         </SettingsRow>
         <SettingsRow
           icon={Rows3}
-          title="远程文件打开方式"
-          description="控制新会话中远程文件编辑器和终端的默认布局。"
+          title={t("settings.remoteFileOpen.title")}
+          description={t("settings.remoteFileOpen.description")}
         >
           <AppSelect
-            ariaLabel="远程文件打开方式"
+            ariaLabel={t("settings.remoteFileOpen.title")}
             menuMinWidth={150}
             value={settings.remoteFileOpenMode}
             options={[
-              { label: "上下分屏", value: "split" },
-              { label: "统一 tab", value: "unified" },
+              { label: t("settings.remoteFileOpen.split"), value: "split" },
+              { label: t("settings.remoteFileOpen.unified"), value: "unified" },
             ]}
             onChange={(remoteFileOpenMode) => onUpdate({ remoteFileOpenMode })}
           />
         </SettingsRow>
         <SettingsRow
           icon={Clock3}
-          title="左侧最近连接"
-          description="限制左侧连接树“最近”分组展示数量。"
+          title={t("settings.recent.title")}
+          description={t("settings.recent.description")}
         >
           <Stepper
             value={settings.recentConnectionLimit}
@@ -2854,11 +2855,11 @@ function BasicSettingsSection({
       <div className="settings-panel">
         <SettingsRow
           icon={Download}
-          title="下载根目录"
+          title={t("settings.downloadRoot.title")}
           description={
             hasCustomDownloadRoot
-              ? "使用自定义本地根目录，可随时恢复系统默认。"
-              : "未设置时使用系统 Downloads，可选择自定义目录。"
+              ? t("settings.downloadRoot.customDescription")
+              : t("settings.downloadRoot.defaultDescription")
           }
         >
           <div className="settings-path-control">
@@ -2866,9 +2867,9 @@ function BasicSettingsSection({
               <input
                 className="settings-input settings-path-input"
                 value={fileTransferSettings.downloadRoot}
-                placeholder="使用系统 Downloads"
+                placeholder={t("settings.downloadRoot.placeholder")}
                 spellCheck={false}
-                aria-label="下载根目录"
+                aria-label={t("settings.downloadRoot.title")}
                 onChange={(event) => {
                   setDownloadRootError(null);
                   onUpdateFileTransfer({ downloadRoot: event.currentTarget.value });
@@ -2878,7 +2879,7 @@ function BasicSettingsSection({
                 className="settings-action-button settings-path-button"
                 type="button"
                 disabled={!hasTauriRuntime()}
-                title={hasTauriRuntime() ? "选择下载目录" : "桌面模式可选择目录"}
+                title={hasTauriRuntime() ? t("settings.downloadRoot.chooseTitle") : t("settings.downloadRoot.desktopTitle")}
                 onClick={() => void chooseDownloadRoot()}
               >
                 <FolderOpen className="ui-icon" aria-hidden="true" />
@@ -2888,14 +2889,14 @@ function BasicSettingsSection({
                 className="settings-action-button settings-path-button"
                 type="button"
                 disabled={!hasCustomDownloadRoot}
-                title="恢复系统 Downloads"
+                title={t("settings.downloadRoot.resetTitle")}
                 onClick={() => {
                   setDownloadRootError(null);
                   onUpdateFileTransfer({ downloadRoot: "" });
                 }}
               >
                 <X className="ui-icon" aria-hidden="true" />
-                <span>默认</span>
+                <span>{t("settings.downloadRoot.default")}</span>
               </button>
             </div>
             {downloadRootError ? <small className="settings-path-error">{downloadRootError}</small> : null}
@@ -2903,8 +2904,8 @@ function BasicSettingsSection({
         </SettingsRow>
         <SettingsRow
           icon={Waypoints}
-          title="文件传输并发数"
-          description="同时执行的上传和下载任务数；超过后进入传输队列等待。"
+          title={t("settings.transfer.concurrent.title")}
+          description={t("settings.transfer.concurrent.description")}
         >
           <Stepper<FileTransferConcurrency>
             value={fileTransferSettings.concurrentTransfers}
@@ -2916,61 +2917,61 @@ function BasicSettingsSection({
         </SettingsRow>
         <SettingsRow
           icon={Folder}
-          title="按连接分组"
-          description="下载到 <连接名称>/<时间戳> 子目录。"
+          title={t("settings.transfer.group.title")}
+          description={t("settings.transfer.group.description")}
         >
           <SettingsToggle
             checked={fileTransferSettings.groupBySession}
-            label="按连接分组"
+            label={t("settings.transfer.group.title")}
             onChange={(groupBySession) => onUpdateFileTransfer({ groupBySession })}
           />
         </SettingsRow>
         <SettingsRow
           icon={Clock3}
-          title="时间戳目录"
-          description="每轮下载放入独立时间戳目录。"
+          title={t("settings.transfer.timestampDir.title")}
+          description={t("settings.transfer.timestampDir.description")}
         >
           <SettingsToggle
             checked={fileTransferSettings.timestampDirectory}
-            label="时间戳目录"
+            label={t("settings.transfer.timestampDir.title")}
             onChange={(timestampDirectory) => onUpdateFileTransfer({ timestampDirectory })}
           />
         </SettingsRow>
-        <SettingsRow icon={Clock3} title="时间戳格式" description="用于默认下载目录命名。">
+        <SettingsRow icon={Clock3} title={t("settings.transfer.timestampFormat.title")} description={t("settings.transfer.timestampFormat.description")}>
           <SegmentedControl<FileTransferTimestampFormat>
             value={fileTransferSettings.timestampFormat}
             options={[
-              { value: "yyyyMMddHHmm", label: "紧凑" },
-              { value: "yyyyMMdd-HHmm", label: "短横" },
-              { value: "yyyy-MM-dd-HHmm", label: "日期" },
+              { value: "yyyyMMddHHmm", label: t("settings.transfer.timestampFormat.compact") },
+              { value: "yyyyMMdd-HHmm", label: t("settings.transfer.timestampFormat.dash") },
+              { value: "yyyy-MM-dd-HHmm", label: t("settings.transfer.timestampFormat.date") },
             ]}
             onChange={(timestampFormat) => onUpdateFileTransfer({ timestampFormat })}
           />
         </SettingsRow>
-        <SettingsRow icon={Save} title="保留压缩包" description="目录上传/下载后保留中间 tar.gz。">
+        <SettingsRow icon={Save} title={t("settings.transfer.keepArchives.title")} description={t("settings.transfer.keepArchives.description")}>
           <SettingsToggle
             checked={fileTransferSettings.keepArchives}
-            label="保留压缩包"
+            label={t("settings.transfer.keepArchives.title")}
             onChange={(keepArchives) => onUpdateFileTransfer({ keepArchives })}
           />
         </SettingsRow>
-        <SettingsRow icon={Archive} title="压缩目录传输" description="上传/下载目录时打包成 tar.gz 传输，节省带宽。服务器或本机缺少 tar 时自动降级为逐文件传输。">
+        <SettingsRow icon={Archive} title={t("settings.transfer.compress.title")} description={t("settings.transfer.compress.description")}>
           <SettingsToggle
             checked={fileTransferSettings.compressDirectories}
-            label="压缩目录传输"
+            label={t("settings.transfer.compress.title")}
             onChange={(compressDirectories) =>
               onUpdateFileTransfer({ compressDirectories })
             }
           />
         </SettingsRow>
-        <SettingsRow icon={Rows3} title="同名冲突" description="上传/下载遇到同名目标时的默认策略。">
+        <SettingsRow icon={Rows3} title={t("settings.transfer.conflict.title")} description={t("settings.transfer.conflict.description")}>
           <SegmentedControl<FileTransferConflictPolicy>
             value={fileTransferSettings.conflictPolicyDefault}
             options={[
-              { value: "ask", label: "询问" },
-              { value: "rename", label: "重命名" },
-              { value: "overwrite", label: "覆盖" },
-              { value: "skip", label: "跳过" },
+              { value: "ask", label: t("settings.transfer.conflict.ask") },
+              { value: "rename", label: t("settings.transfer.conflict.rename") },
+              { value: "overwrite", label: t("settings.transfer.conflict.overwrite") },
+              { value: "skip", label: t("settings.transfer.conflict.skip") },
             ]}
             onChange={(conflictPolicyDefault) =>
               onUpdateFileTransfer({ conflictPolicyDefault })
@@ -2981,9 +2982,9 @@ function BasicSettingsSection({
 
       <ConfirmDialog
         open={appUpdate.mcpStopConfirmationOpen}
-        title="关闭 MCP 后安装更新"
-        description={`检测到 ${appUpdate.mcpStopProcessCount.toString()} 个 MCP 进程正在使用更新文件。继续会关闭这些进程，并中断其它 Agent 当前的 MCP 调用，然后安装更新并重启 MXterm。`}
-        confirmLabel="关闭并安装"
+        title={t("settings.update.mcpConfirm.title")}
+        description={t("settings.update.mcpConfirm.description", { count: appUpdate.mcpStopProcessCount })}
+        confirmLabel={t("settings.update.mcpConfirm.confirm")}
         onConfirm={appUpdate.confirmInstallAfterMcpStop}
         onOpenChange={(open) => {
           if (!open) {
