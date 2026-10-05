@@ -3,6 +3,7 @@ import { StrictMode } from "react";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { getLocale, setLocalePreference, type Locale } from "../../shared/i18n";
 import { SecretVaultGate } from "./SecretVaultGate";
 import { useSecretVault } from "./useSecretVault";
 import { secretVaultStatus, secretVaultUnlock, secretVaultUnlockLocal } from "../../shared/tauri/commands";
@@ -37,13 +38,20 @@ function VaultHarness({ masterPasswordEnabled = false }: { masterPasswordEnabled
   </>;
 }
 
+let previousLocale: Locale;
+
 beforeEach(() => {
+  previousLocale = getLocale();
+  setLocalePreference("zh-CN");
   vi.resetAllMocks();
   vi.mocked(secretVaultStatus).mockResolvedValue(locked);
   vi.mocked(secretVaultUnlockLocal).mockRejectedValue(keychainError);
   vi.mocked(secretVaultUnlock).mockResolvedValue(unlocked);
 });
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  setLocalePreference(previousLocale);
+});
 
 describe("保险库启动与恢复", () => {
   it("已有保险库自动解锁失败只提供重试，不要求创建安全密码", async () => {
