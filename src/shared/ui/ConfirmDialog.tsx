@@ -1,6 +1,7 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { AlertTriangle } from "lucide-react";
 import { useState } from "react";
+import { useI18n } from "../i18n";
 
 interface ConfirmDialogProps {
   cancelLabel?: string;
@@ -13,14 +14,17 @@ interface ConfirmDialogProps {
 }
 
 export function ConfirmDialog({
-  cancelLabel = "取消",
-  confirmLabel = "确认",
+  cancelLabel,
+  confirmLabel,
   description,
   open,
   title,
   onConfirm,
   onOpenChange,
 }: ConfirmDialogProps) {
+  const { t } = useI18n();
+  const resolvedCancelLabel = cancelLabel ?? t("common.cancel");
+  const resolvedConfirmLabel = confirmLabel ?? t("common.confirm");
   const [busy, setBusy] = useState(false);
 
   async function confirm() {
@@ -67,7 +71,7 @@ export function ConfirmDialog({
           <footer className="confirm-dialog-actions">
             <Dialog.Close asChild>
               <button disabled={busy} type="button">
-                {cancelLabel}
+                {resolvedCancelLabel}
               </button>
             </Dialog.Close>
             <button
@@ -76,7 +80,7 @@ export function ConfirmDialog({
               type="button"
               onClick={() => void confirm()}
             >
-              {confirmLabel}
+              {resolvedConfirmLabel}
             </button>
           </footer>
         </Dialog.Content>
