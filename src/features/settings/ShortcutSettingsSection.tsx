@@ -42,7 +42,6 @@ export function ShortcutSettingsSection({
           return true;
         }
         const binding = resolveShortcutBinding(currentBindings, action);
-        const category = shortcutCategories.find((item) => item.id === action.category);
         const actionCopy = shortcutActionCopy(action.id, t);
         const categoryLabel = shortcutCategoryLabel(action.category, t);
         return [actionCopy.label, actionCopy.description, binding || "", categoryLabel]
