@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { t as tr, useI18n } from "../../shared/i18n";
+
 import {
   connectionDelete,
   connectionList,
@@ -29,15 +31,16 @@ import {
   type VncConnectionConfig,
 } from "./connectionTypes";
 
-const demoConnections: ConnectionProfile[] = [
+function demoConnections(): ConnectionProfile[] {
+  return [
   {
     id: "demo-dev-core",
-    name: "开发环境 / edgs",
+    name: tr("demo.connection.devName"),
     protocol: "ssh",
     host: "203.0.113.70",
     port: 22,
     username: "root",
-    group: "开发环境",
+    group: tr("demo.connection.devGroup"),
     credential_mode: "inline",
     inline_auth_kind: "password",
     inline_password: "",
@@ -45,7 +48,7 @@ const demoConnections: ConnectionProfile[] = [
     jump: defaultJumpConfig,
     advanced: defaultAdvancedConfig,
     rdp: null,
-    notes: "开发 收藏 k8s",
+    notes: tr("demo.connection.devNotes"),
     is_favorite: true,
     last_connected_at: "demo",
     created_at: "demo",
@@ -53,12 +56,12 @@ const demoConnections: ConnectionProfile[] = [
   },
   {
     id: "demo-test-web",
-    name: "测试环境 / web",
+    name: tr("demo.connection.testName"),
     protocol: "ssh",
     host: "203.0.113.131",
     port: 22,
     username: "root",
-    group: "测试环境",
+    group: tr("demo.connection.testGroup"),
     credential_mode: "inline",
     inline_auth_kind: "password",
     inline_password: "",
@@ -66,7 +69,7 @@ const demoConnections: ConnectionProfile[] = [
     jump: defaultJumpConfig,
     advanced: defaultAdvancedConfig,
     rdp: null,
-    notes: "测试 qa",
+    notes: tr("demo.connection.testNotes"),
     is_favorite: false,
     last_connected_at: "demo",
     created_at: "demo",
@@ -74,12 +77,12 @@ const demoConnections: ConnectionProfile[] = [
   },
   {
     id: "demo-bastion",
-    name: "生产跳板",
+    name: tr("demo.connection.bastionName"),
     protocol: "ssh",
     host: "100.93.140.33",
     port: 22,
     username: "root",
-    group: "生产环境",
+    group: tr("demo.connection.productionGroup"),
     credential_mode: "inline",
     inline_auth_kind: "private_key",
     inline_private_key_path: "~/.ssh/id_ed25519",
@@ -88,7 +91,7 @@ const demoConnections: ConnectionProfile[] = [
     jump: defaultJumpConfig,
     advanced: defaultAdvancedConfig,
     rdp: null,
-    notes: "跳板 tailscale bastion",
+    notes: tr("demo.connection.bastionNotes"),
     is_favorite: false,
     last_connected_at: "demo",
     created_at: "demo",
@@ -96,12 +99,12 @@ const demoConnections: ConnectionProfile[] = [
   },
   {
     id: "demo-cloud-ubuntu",
-    name: "云主机 / ubuntu",
+    name: tr("demo.connection.cloudName"),
     protocol: "ssh",
     host: "198.51.100.24",
     port: 22,
     username: "ubuntu",
-    group: "云主机",
+    group: tr("demo.connection.cloudGroup"),
     credential_mode: "inline",
     inline_auth_kind: "private_key",
     inline_private_key_path: "~/.ssh/cloud.pem",
@@ -113,7 +116,7 @@ const demoConnections: ConnectionProfile[] = [
     },
     advanced: defaultAdvancedConfig,
     rdp: null,
-    notes: "云 aws",
+    notes: tr("demo.connection.cloudNotes"),
     is_favorite: false,
     last_connected_at: "demo",
     created_at: "demo",
@@ -126,14 +129,14 @@ const demoConnections: ConnectionProfile[] = [
     host: "203.0.113.16",
     port: 22,
     username: "root",
-    group: "开发环境",
+    group: tr("demo.connection.devGroup"),
     credential_mode: "prompt",
     prompt_auth_kind: "password",
     proxy: defaultProxyConfig,
     jump: defaultJumpConfig,
     advanced: defaultAdvancedConfig,
     rdp: null,
-    notes: "开发 k8s preview",
+    notes: tr("demo.connection.devK8sNotes"),
     is_favorite: false,
     last_connected_at: "demo",
     created_at: "demo",
@@ -141,12 +144,12 @@ const demoConnections: ConnectionProfile[] = [
   },
   {
     id: "demo-rdp-win",
-    name: "办公 Windows",
+    name: tr("demo.connection.rdpName"),
     protocol: "rdp",
     host: "198.51.100.45",
     port: 3389,
     username: "administrator",
-    group: "生产环境",
+    group: tr("demo.connection.productionGroup"),
     credential_mode: "prompt",
     proxy: defaultProxyConfig,
     jump: defaultJumpConfig,
@@ -161,12 +164,12 @@ const demoConnections: ConnectionProfile[] = [
   },
   {
     id: "demo-vnc-linux",
-    name: "Linux 图形桌面",
+    name: tr("demo.connection.vncName"),
     protocol: "vnc",
     host: "198.51.100.88",
     port: 5900,
     username: "vncuser",
-    group: "生产环境",
+    group: tr("demo.connection.productionGroup"),
     credential_mode: "prompt",
     proxy: defaultProxyConfig,
     jump: defaultJumpConfig,
@@ -181,12 +184,12 @@ const demoConnections: ConnectionProfile[] = [
   },
   {
     id: "demo-stage",
-    name: "预发环境 / stage",
+    name: tr("demo.connection.stageName"),
     protocol: "ssh",
     host: "198.51.100.78",
     port: 22,
     username: "deploy",
-    group: "预发环境",
+    group: tr("demo.connection.stageGroup"),
     credential_mode: "inline",
     inline_auth_kind: "password",
     inline_password: "",
@@ -194,15 +197,17 @@ const demoConnections: ConnectionProfile[] = [
     jump: defaultJumpConfig,
     advanced: defaultAdvancedConfig,
     rdp: null,
-    notes: "stage 测试",
+    notes: tr("demo.connection.stageNotes"),
     is_favorite: false,
     last_connected_at: "demo",
     created_at: "demo",
     updated_at: "demo",
   },
 ];
+}
 
 export function useConnections(options: { enabled?: boolean } = {}) {
+  const { locale } = useI18n();
   const [connections, setConnections] = useState<ConnectionProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -220,7 +225,7 @@ export function useConnections(options: { enabled?: boolean } = {}) {
     }
 
     if (!isTauri) {
-      setConnections(demoConnections);
+      setConnections(demoConnections());
       setLoading(false);
       return;
     }
@@ -232,7 +237,7 @@ export function useConnections(options: { enabled?: boolean } = {}) {
     } finally {
       setLoading(false);
     }
-  }, [enabled, isTauri]);
+  }, [enabled, isTauri, locale]);
 
   useEffect(() => {
     void reload();
@@ -817,7 +822,7 @@ function defaultConnectionName(input: ConnectionProfileInput) {
     return `Telnet ${input.host.trim()}:${input.port.toString()}`;
   }
   if (input.protocol === "serial") {
-    return `串口 ${(input.serial?.port_name || input.host).trim()}`;
+    return `${tr("demo.connection.serialPrefix")} ${(input.serial?.port_name || input.host).trim()}`;
   }
   return `${input.username.trim()}@${input.host.trim()}`;
 }
