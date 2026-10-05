@@ -1414,5 +1414,7 @@
   "monitor.cpu.threadsUnknown": "Thread count unavailable",
   "monitor.cpu.sockets": "{count} sockets · {physical} · {logical}",
   "monitor.cpu.topology": "{physical} cores / {logical} threads",
-  "monitor.cpu.vcpuUnknown": "vCPU unavailable"
+  "monitor.cpu.vcpuUnknown": "vCPU unavailable",
+  "monitor.network.interfaceList": "Interface list",
+  "monitor.process.management": "Process management"
 }
