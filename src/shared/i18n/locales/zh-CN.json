@@ -2523,5 +2523,22 @@
   "workspace.rdp.copyPreview": "复制预览",
   "workspace.vnc.copyPreview": "复制预览",
   "workspace.command.sendFailed": "命令发送失败：{message}",
-  "workspace.local.state": "终端状态"
+  "workspace.local.state": "终端状态",
+  "connection.runner.rdp.macos": "macOS 系统 RDP 客户端",
+  "connection.runner.rdp.custom": "自定义 RDP 客户端",
+  "connection.runner.auto": "自动选择",
+  "connection.runner.rdp.system": "系统 RDP 客户端",
+  "connection.runner.rdp.mstscMode": "mstsc.exe 模式",
+  "connection.runner.rdp.note.macos": "系统 RDP 客户端模式会通过 Windows App / Microsoft Remote Desktop 打开 .rdp 文件，适合需要官方客户端兼容行为的场景。",
+  "connection.runner.rdp.note.freerdp": "FreeRDP 模式会通过系统 FreeRDP 客户端打开，适合需要外部客户端兼容行为的场景。",
+  "connection.runner.rdp.note.mstsc": "mstsc.exe 模式会通过系统远程桌面客户端打开，适合需要系统客户端兼容行为的场景。",
+  "connection.runner.vnc.embedded": "noVNC 内嵌",
+  "connection.runner.vnc.custom": "自定义 VNC 客户端",
+  "jump.issue.cycle.title": "跳板链存在循环",
+  "jump.issue.cycle.detail": "所选跳板链会回到当前连接或形成循环，请改用其他跳板机。",
+  "jump.issue.depth.title": "跳板层级超过上限",
+  "jump.issue.depth.detail": "当前最多支持两级 SSH 跳板，请缩短已保存连接的跳板链。",
+  "jump.issue.missing.title": "跳板机连接不存在",
+  "jump.issue.missing.detail": "跳板链引用的已保存连接不存在，请重新选择跳板机。",
+  "window.material.auto": "默认"
 }
