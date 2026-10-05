@@ -7006,7 +7006,7 @@ export function WorkspaceShell() {
         minWidth: 720,
         parent: "main",
         resizable: true,
-        title: "mXterm VNC",
+        title: "NexaTerm VNC",
         url: vncRunnerWindowUrl(),
         visible: true,
         width: 1280,
@@ -13777,7 +13777,7 @@ async function prewarmLazyModuleBatch(
 }
 
 function transferSessionName(connection: ConnectionProfile) {
-  return sanitizeLocalSegment(connection.name || connection.host || "mxterm-session");
+  return sanitizeLocalSegment(connection.name || connection.host || "nexaterm-session");
 }
 
 function formatTransferTimestamp(date: Date, format: FileTransferTimestampFormat) {
@@ -13802,7 +13802,7 @@ function padDatePart(value: number) {
 
 function sanitizeLocalSegment(value: string) {
   const sanitized = value.trim().replace(/[<>:"/\\|?*\u0000-\u001f]/g, "_");
-  return sanitized || "mxterm-session";
+  return sanitized || "nexaterm-session";
 }
 
 function previewRemoteFileUploadResult(path: string, size: number): RemoteFileUploadResult {
@@ -13855,7 +13855,7 @@ function previewRemoteFileEntryMetadata(entry: RemoteFileEntry): RemoteFileEntry
   return {
     birthtime: Date.now() / 1000 - 86400,
     gid: 1000,
-    group: "mxterm",
+    group: "nexaterm",
     mode: entry.type === "directory" ? "755" : "644",
     mtime: Date.now() / 1000,
     name: entry.name,
