@@ -25,6 +25,7 @@ interface LegacySettingsProbeOutcome {
 }
 
 const settingsMigrationMarkerKey = "nexaterm.brandMigration.settings.v1";
+type SettingsMigrationMarker = "done" | "none" | "unsupported" | "unsupported-ack";
 const legacySettingsProbeAttempts = 50;
 const legacySettingsProbeIntervalMs = 50;
 
@@ -42,15 +43,26 @@ function describeError(error: unknown) {
   return "unknown error";
 }
 
-function settingsMigrationMarked() {
+function readSettingsMigrationMarker(): SettingsMigrationMarker | null {
   try {
-    return Boolean(window.localStorage.getItem(settingsMigrationMarkerKey));
+    const value = window.localStorage.getItem(settingsMigrationMarkerKey);
+    return value === "done" ||
+      value === "none" ||
+      value === "unsupported" ||
+      value === "unsupported-ack"
+      ? value
+      : null;
   } catch {
-    return false;
+    return null;
   }
 }
 
-function markSettingsMigration(status: "done" | "none") {
+function settingsMigrationMarked() {
+  const marker = readSettingsMigrationMarker();
+  return marker === "done" || marker === "none" || marker === "unsupported-ack";
+}
+
+function markSettingsMigration(status: SettingsMigrationMarker) {
   try {
     window.localStorage.setItem(settingsMigrationMarkerKey, status);
   } catch {
@@ -105,6 +117,7 @@ export function LegacyAppDataMigrationGate({ children }: LegacyAppDataMigrationG
   const { t } = useI18n();
   const [preview, setPreview] = useState<LegacyAppDataMigrationPreview | null>(null);
   const [settingsOnlyValue, setSettingsOnlyValue] = useState<string | null>(null);
+  const [settingsUnsupported, setSettingsUnsupported] = useState(false);
   const [checking, setChecking] = useState(isTauriRuntime);
   const [dismissed, setDismissed] = useState(false);
   const [applying, setApplying] = useState(false);
@@ -124,7 +137,9 @@ export function LegacyAppDataMigrationGate({ children }: LegacyAppDataMigrationG
         if (cancelled) return;
         setPreview(result);
 
-        if (!result.available && !settingsMigrationMarked()) {
+        if (!result.available && readSettingsMigrationMarker() === "unsupported") {
+          setSettingsUnsupported(true);
+        } else if (!result.available && !settingsMigrationMarked()) {
           try {
             const settings = await probeLegacySettings();
             if (cancelled) return;
@@ -180,6 +195,28 @@ export function LegacyAppDataMigrationGate({ children }: LegacyAppDataMigrationG
 
   if (!preview) {
     return children;
+  }
+
+  if (!preview.available && settingsUnsupported) {
+    const acknowledgeUnsupported = () => {
+      markSettingsMigration("unsupported-ack");
+      setDismissed(true);
+    };
+
+    return (
+      <MigrationCard title={t("brandMigration.settingsUnsupportedTitle")}>
+        <p>{t("brandMigration.settingsUnsupportedDescription")}</p>
+        <div className="brand-migration-actions">
+          <button
+            className="brand-migration-primary"
+            type="button"
+            onClick={acknowledgeUnsupported}
+          >
+            {t("brandMigration.continue")}
+          </button>
+        </div>
+      </MigrationCard>
+    );
   }
 
   if (!preview.available && settingsOnlyValue) {
@@ -274,6 +311,8 @@ export function LegacyAppDataMigrationGate({ children }: LegacyAppDataMigrationG
         installLegacySettings(legacySettings.value);
       } else if (legacySettings && shouldMarkNoLegacySettings(legacySettings)) {
         markSettingsMigration("none");
+      } else if (legacySettings?.complete && !legacySettings.supported) {
+        markSettingsMigration("unsupported");
       }
 
       try {
