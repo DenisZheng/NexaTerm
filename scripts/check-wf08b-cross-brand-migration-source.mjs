@@ -36,7 +36,9 @@ requireAll(legacySettings, [
   "app_local_data_dir()",
   "LEGACY_APP_IDENTIFIER",
   "CURRENT_APP_IDENTIFIER",
+  "pub async fn legacy_webview_settings_probe_start",
   "WebviewWindowBuilder::new",
+  ".initialization_script(initialization_script)",
   ".data_directory(legacy_root)",
   "MAX_SETTINGS_BYTES",
   "macos-default-wkwebview-store-unaddressable",
@@ -61,8 +63,8 @@ requireAll(commands, [
 ], "frontend bridge");
 
 requireAll(app, [
-  'view === "legacy-settings-probe"',
-  "<LegacySettingsProbeWindow />",
+  "__NEXATERM_LEGACY_SETTINGS_PROBE_TOKEN__",
+  "<LegacySettingsProbeWindow token={legacyProbeToken} />",
   "<LegacyAppDataMigrationGate>",
   "<WorkspaceShell />",
 ], "startup routing");
