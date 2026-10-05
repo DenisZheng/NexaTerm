@@ -2076,7 +2076,7 @@ function DockerEngineView({
   const configDirty = Boolean(config && config.content !== configDraft);
   const controlDisabled = !status?.can_control_service || Boolean(busyKey);
   const engineStateClass = status ? (status.running ? "running" : "stopped") : "unknown";
-  const engineStateLabel = status ? (status.running ? "引擎运行中" : "引擎已停止") : "引擎状态未知";
+  const engineStateLabel = status ? (status.running ? tr("docker.engine.running") : tr("docker.engine.stopped")) : tr("docker.engine.unknown");
   const engineResourceMetrics: Array<{ icon: LucideIcon; label: string; value: string }> = [
     { icon: Cpu, label: "CPU", value: formatPercent(status?.daemon_cpu_percent) },
     { icon: MemoryStick, label: "RAM", value: formatBytes(status?.daemon_memory_bytes) },
@@ -2093,23 +2093,23 @@ function DockerEngineView({
     .map((metric) => `${metric.label} ${metric.value}`)
     .join(" · ");
   const engineFacts: Array<[string, string | null | undefined]> = [
-    ["Docker 版本", status?.version],
-    ["API 版本", status?.api_version],
+    [tr("docker.engine.version"), status?.version],
+    [tr("docker.engine.apiVersion"), status?.api_version],
     ["Server OS", status?.server_os],
     ["Root Dir", status?.root_dir],
     ["Storage", status?.storage_driver],
     ["Cgroup", status?.cgroup_driver],
     [
-      "容器",
+      tr("docker.engine.containers"),
       status?.containers === undefined || status?.containers === null
         ? null
         : `${status.containers.toString()} / ${formatOptionalNumber(
             status.containers_running,
           )} running`,
     ],
-    ["镜像", formatOptionalNumber(status?.images)],
-    ["网络", formatOptionalNumber(status?.networks)],
-    ["卷", formatOptionalNumber(status?.volumes)],
+    [tr("docker.engine.images"), formatOptionalNumber(status?.images)],
+    [tr("docker.engine.networks"), formatOptionalNumber(status?.networks)],
+    [tr("docker.engine.volumes"), formatOptionalNumber(status?.volumes)],
   ];
 
   return (
@@ -2131,9 +2131,9 @@ function DockerEngineView({
           </div>
         </div>
         <div className="docker-engine-actions">
-          <Tooltip label="刷新引擎状态">
+          <Tooltip label={tr("docker.engine.refresh")}>
             <button
-              aria-label="刷新引擎状态"
+              aria-label={tr("docker.engine.refresh")}
               className="toolbox-icon-button"
               type="button"
               disabled={loading}
@@ -2142,9 +2142,9 @@ function DockerEngineView({
               <RefreshCw className={`ui-icon ${loading ? "spin" : ""}`} aria-hidden="true" />
             </button>
           </Tooltip>
-          <Tooltip label="启动 Docker">
+          <Tooltip label={tr("docker.engine.start")}>
             <button
-              aria-label="启动 Docker"
+              aria-label={tr("docker.engine.start")}
               className="toolbox-icon-button"
               type="button"
               disabled={controlDisabled || busyKey === "engine:start"}
@@ -2153,9 +2153,9 @@ function DockerEngineView({
               <Power className="ui-icon" aria-hidden="true" />
             </button>
           </Tooltip>
-          <Tooltip label="停止 Docker">
+          <Tooltip label={tr("docker.engine.stopAction")}>
             <button
-              aria-label="停止 Docker"
+              aria-label={tr("docker.engine.stopAction")}
               className="toolbox-icon-button danger"
               type="button"
               disabled={controlDisabled || busyKey === "engine:stop"}
@@ -2164,9 +2164,9 @@ function DockerEngineView({
               <PowerOff className="ui-icon" aria-hidden="true" />
             </button>
           </Tooltip>
-          <Tooltip label="重启 Docker">
+          <Tooltip label={tr("docker.engine.restartAction")}>
             <button
-              aria-label="重启 Docker"
+              aria-label={tr("docker.engine.restartAction")}
               className="toolbox-icon-button"
               type="button"
               disabled={controlDisabled || busyKey === "engine:restart"}
@@ -2190,7 +2190,7 @@ function DockerEngineView({
         <header>
           <span>
             <Settings2 className="ui-icon" aria-hidden="true" />
-            基础信息
+            {tr("docker.engine.basic")}
           </span>
         </header>
         <dl className="docker-engine-facts">
@@ -2208,7 +2208,7 @@ function DockerEngineView({
         <header>
           <span>
             <FileJson className="ui-icon" aria-hidden="true" />
-            配置文件
+            {tr("docker.engine.config")}
           </span>
           <button
             className="toolbox-mini-button"
@@ -2217,7 +2217,7 @@ function DockerEngineView({
             onClick={onRefreshConfig}
           >
             <RefreshCw className={`ui-icon ${loadingConfig ? "spin" : ""}`} aria-hidden="true" />
-            刷新
+            {tr("docker.refresh")}
           </button>
         </header>
         <div className="docker-engine-config-toolbar">
@@ -2226,7 +2226,7 @@ function DockerEngineView({
             title={config?.path || "/etc/docker/daemon.json"}
           >
             {config?.path || "/etc/docker/daemon.json"}
-            {config && !config.exists ? <em>未创建</em> : null}
+            {config && !config.exists ? <em>{tr("docker.notCreated")}</em> : null}
           </span>
         </div>
         <textarea
@@ -2243,7 +2243,7 @@ function DockerEngineView({
             onClick={onSave}
           >
             <Save className="ui-icon" aria-hidden="true" />
-            保存配置
+            {tr("docker.engine.saveConfig")}
           </button>
           <button
             className="toolbox-mini-button primary"
@@ -2252,7 +2252,7 @@ function DockerEngineView({
             onClick={onSaveRestart}
           >
             <RotateCw className="ui-icon" aria-hidden="true" />
-            保存并重启 Docker
+            {tr("docker.engine.saveRestart")}
           </button>
         </div>
       </section>
@@ -2342,14 +2342,14 @@ function ContainerList({
     return (
       <ToolboxEmptyState
         icon={Box}
-        title={loading ? "正在读取容器..." : "暂无容器"}
-        description={loading ? "正在通过 SSH 执行 docker ps。" : "远端 Docker 当前没有容器。"}
+        title={loading ? tr("docker.container.loading") : tr("docker.container.empty")}
+        description={loading ? tr("docker.container.loadingDescription") : tr("docker.container.emptyDescription")}
       />
     );
   }
 
   return (
-    <div className="docker-list docker-list--containers" aria-label="Docker 容器">
+    <div className="docker-list docker-list--containers" aria-label={tr("docker.container.aria")}>
       <div
         ref={scrollportRef}
         className="docker-container-scrollport"
@@ -2412,20 +2412,20 @@ function renderContainerCard({
   const cardTimeText = formatContainerCardTime(container);
   const contextActions: TabContextMenuAction[] = [
     {
-      label: "查看详情",
+      label: tr("docker.container.viewDetails"),
       onSelect: () => onInspect(container),
     },
     {
-      label: "进入终端",
+      label: tr("docker.container.openTerminal"),
       disabled: !running || !onOpenTerminal,
       onSelect: () => onOpenTerminal?.(container),
     },
     {
-      label: "复制名称",
+      label: tr("docker.container.copyName"),
       onSelect: () => onCopy(container),
     },
     {
-      label: "删除容器",
+      label: tr("docker.container.delete"),
       danger: true,
       separatorBefore: true,
       disabled: Boolean(busyKey),
@@ -2445,7 +2445,7 @@ function renderContainerCard({
             <button
               className="docker-row-name-button"
               type="button"
-              title="查看容器详情"
+              title={tr("docker.container.details")}
               onClick={() => onInspect(container)}
             >
               {container.name || shortDockerId(container.id)}
@@ -2459,11 +2459,11 @@ function renderContainerCard({
           </div>
         </div>
         <div className="docker-row-actions">
-          <Tooltip label={running ? "停止容器" : "启动容器"}>
+          <Tooltip label={running ? tr("docker.container.stop") : tr("docker.container.start")}>
             <button
               className="toolbox-icon-button"
               type="button"
-              aria-label={running ? "停止容器" : "启动容器"}
+              aria-label={running ? tr("docker.container.stop") : tr("docker.container.start")}
               disabled={busyKey === `${running ? "stop" : "start"}:${container.id}`}
               onClick={() => onRunAction(container, running ? "stop" : "start")}
             >
@@ -2474,22 +2474,22 @@ function renderContainerCard({
               )}
             </button>
           </Tooltip>
-          <Tooltip label="重启容器">
+          <Tooltip label={tr("docker.container.restart")}>
             <button
               className="toolbox-icon-button"
               type="button"
-              aria-label="重启容器"
+              aria-label={tr("docker.container.restart")}
               disabled={busyKey === `restart:${container.id}`}
               onClick={() => onRunAction(container, "restart")}
             >
               <RotateCw className="ui-icon" aria-hidden="true" />
             </button>
           </Tooltip>
-          <Tooltip label="查看日志">
+          <Tooltip label={tr("docker.container.logs")}>
             <button
               className="toolbox-icon-button"
               type="button"
-              aria-label="查看日志"
+              aria-label={tr("docker.container.logs")}
               onClick={() => onLogs(container)}
             >
               <ScrollText className="ui-icon" aria-hidden="true" />
@@ -2537,7 +2537,7 @@ function ImageList({
   return (
     <div className="docker-image-view">
       <div className="docker-list-head">
-        <span>镜像列表</span>
+        <span>{tr("docker.image.list")}</span>
         <button
           className="toolbox-mini-button primary"
           type="button"
@@ -2551,11 +2551,11 @@ function ImageList({
       {!hasRows ? (
         <ToolboxEmptyState
           icon={ImageIcon}
-          title={loading ? "正在读取镜像..." : "暂无镜像"}
-          description={loading ? "正在通过 SSH 执行 docker images。" : "远端 Docker 当前没有镜像。"}
+          title={loading ? tr("docker.image.loading") : tr("docker.image.empty")}
+          description={loading ? tr("docker.image.loadingDescription") : tr("docker.image.emptyDescription")}
         />
       ) : (
-        <div className="docker-list docker-list--images" aria-label="Docker 镜像">
+        <div className="docker-list docker-list--images" aria-label={tr("docker.image.aria")}>
           {pullTasks.map((task) => (
             <article
               className={`docker-row docker-pull-row ${task.status}`}
@@ -2585,22 +2585,22 @@ function ImageList({
                 </small>
               </div>
               <div className="docker-row-actions">
-                <Tooltip label="复制镜像名称">
+                <Tooltip label={tr("docker.image.copyName")}>
                   <button
                     className="toolbox-icon-button"
                     type="button"
-                    aria-label="复制镜像名称"
+                    aria-label={tr("docker.image.copyName")}
                     onClick={() => onCopyPullImage(task.image)}
                   >
                     <Copy className="ui-icon" aria-hidden="true" />
                   </button>
                 </Tooltip>
                 {task.status !== "running" ? (
-                  <Tooltip label="移除拉取记录">
+                  <Tooltip label={tr("docker.image.removePullRecord")}>
                     <button
                       className="toolbox-icon-button"
                       type="button"
-                      aria-label="移除拉取记录"
+                      aria-label={tr("docker.image.removePullRecord")}
                       onClick={() => onDismissPullTask(task.pullId)}
                     >
                       <X className="ui-icon" aria-hidden="true" />
@@ -2636,31 +2636,31 @@ function ImageList({
                   </div>
                 </div>
                 <div className="docker-row-actions">
-                  <Tooltip label="快捷运行">
+                  <Tooltip label={tr("docker.image.quickRun")}>
                     <button
                       className="toolbox-icon-button"
                       type="button"
-                      aria-label="快捷运行"
+                      aria-label={tr("docker.image.quickRun")}
                       onClick={() => onRun(image)}
                     >
                       <Play className="ui-icon" aria-hidden="true" />
                     </button>
                   </Tooltip>
-                  <Tooltip label="复制镜像名称">
+                  <Tooltip label={tr("docker.image.copyName")}>
                     <button
                       className="toolbox-icon-button"
                       type="button"
-                      aria-label="复制镜像名称"
+                      aria-label={tr("docker.image.copyName")}
                       onClick={() => onCopy(image)}
                     >
                       <Copy className="ui-icon" aria-hidden="true" />
                     </button>
                   </Tooltip>
-                  <Tooltip label="删除镜像">
+                  <Tooltip label={tr("docker.image.delete")}>
                     <button
                       className="toolbox-icon-button danger"
                       type="button"
-                      aria-label="删除镜像"
+                      aria-label={tr("docker.image.delete")}
                       disabled={busyKey === `image-remove:${image.id}`}
                       onClick={() => onRemove(image)}
                     >
@@ -2678,7 +2678,7 @@ function ImageList({
           })}
           <button className="toolbox-refresh-row" type="button" onClick={onRefresh}>
             <RefreshCw className={`ui-icon ${loading ? "spin" : ""}`} aria-hidden="true" />
-            刷新镜像
+            {tr("docker.refresh")}镜像
           </button>
         </div>
       )}
@@ -2710,7 +2710,7 @@ function DockerImageRunDialog({
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
   const networkOptions = [
-    { label: "默认网络", value: dockerRunDefaultNetworkValue },
+    { label: tr("docker.run.defaultNetwork"), value: dockerRunDefaultNetworkValue },
     ...networks.map((network) => ({
       label: `${network.name}${network.driver ? ` · ${network.driver}` : ""}`,
       value: network.id || network.name,
@@ -2755,13 +2755,13 @@ function DockerImageRunDialog({
         <Dialog.Overlay className="dialog-backdrop" />
         <Dialog.Content className="docker-run-dialog">
           <Dialog.Title className="docker-dialog-title">
-            快捷运行 {target ? formatImageReference(target) : ""}
+            {tr("docker.run.title", { image: target ? formatImageReference(target) : "" })}
           </Dialog.Title>
           <form className="docker-run-form" onSubmit={onSubmit}>
             <div className="docker-run-body">
               <section className="docker-run-section">
                 <label>
-                  <span>容器名称</span>
+                  <span>{tr("docker.run.containerName")}</span>
                   <input
                     autoFocus
                     placeholder="mx-nginx"
@@ -2796,7 +2796,7 @@ function DockerImageRunDialog({
                   <DismissableLayerBranch asChild>
                     <div>
                       <AppSelect
-                        ariaLabel="选择 Docker 网络"
+                        ariaLabel={tr("docker.run.networkAria")}
                         className="docker-run-select"
                         disabled={loadingNetworks}
                         options={networkOptions}
@@ -2843,13 +2843,13 @@ function DockerImageRunDialog({
                     className={`ui-icon ${loadingNetworks ? "spin" : ""}`}
                     aria-hidden="true"
                   />
-                  网络
+                  {tr("docker.run.network")}
                 </button>
               </section>
 
               <DockerRunRows
-                title="端口映射"
-                columns={["主机端口", "容器端口"]}
+                title={tr("docker.run.portMapping")}
+                columns={[tr("docker.run.hostPort"), tr("docker.run.containerPort")]}
                 onAdd={() =>
                   patchDraft({
                     ports: [...draft.ports, { host_port: "", container_port: "" }],
@@ -2875,7 +2875,7 @@ function DockerImageRunDialog({
                     <button
                       className="toolbox-icon-button"
                       type="button"
-                      aria-label="删除端口映射"
+                      aria-label={tr("docker.run.deletePort")}
                       onClick={() =>
                         patchDraft({
                           ports: draft.ports.filter((_, currentIndex) => currentIndex !== index),
@@ -2889,7 +2889,7 @@ function DockerImageRunDialog({
               </DockerRunRows>
 
               <DockerRunRows
-                title="环境变量"
+                title={tr("docker.run.environment")}
                 columns={["Key", "Value"]}
                 onAdd={() =>
                   patchDraft({
@@ -2912,7 +2912,7 @@ function DockerImageRunDialog({
                     <button
                       className="toolbox-icon-button"
                       type="button"
-                      aria-label="删除环境变量"
+                      aria-label={tr("docker.run.deleteEnv")}
                       onClick={() =>
                         patchDraft({
                           env: draft.env.filter((_, currentIndex) => currentIndex !== index),
@@ -2926,8 +2926,8 @@ function DockerImageRunDialog({
               </DockerRunRows>
 
               <DockerRunRows
-                title="数据卷"
-                columns={["主机路径", "容器路径"]}
+                title={tr("docker.run.volumes")}
+                columns={[tr("docker.run.hostPath"), tr("docker.run.containerPath")]}
                 onAdd={() =>
                   patchDraft({
                     volumes: [...draft.volumes, { host_path: "", container_path: "" }],
@@ -2953,7 +2953,7 @@ function DockerImageRunDialog({
                     <button
                       className="toolbox-icon-button"
                       type="button"
-                      aria-label="删除数据卷"
+                      aria-label={tr("docker.run.deleteVolume")}
                       onClick={() =>
                         patchDraft({
                           volumes: draft.volumes.filter(
@@ -2980,7 +2980,7 @@ function DockerImageRunDialog({
                 ) : (
                   <Play className="ui-icon" aria-hidden="true" />
                 )}
-                运行容器
+                {tr("docker.run.run")}
               </button>
             </footer>
           </form>
@@ -3007,7 +3007,7 @@ function DockerRunRows({
         <span>{title}</span>
         <button className="toolbox-mini-button" type="button" onClick={onAdd}>
           <Plus className="ui-icon" aria-hidden="true" />
-          添加
+          {tr("docker.add")}
         </button>
       </header>
       <div className="docker-run-row docker-run-row-head">
@@ -3200,7 +3200,7 @@ function DockerContainerDetailDialog({
                       <DismissableLayerBranch asChild>
                         <div>
                           <AppSelect
-                            ariaLabel="选择 Docker 网络"
+                            ariaLabel={tr("docker.run.networkAria")}
                             className="docker-detail-select"
                             disabled={networkOptions.length === 0}
                             options={networkOptions}
