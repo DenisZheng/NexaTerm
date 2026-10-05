@@ -8,9 +8,9 @@
 
 唯一产品主线继续使用 `09-23-nexaterm-workflow-mainline`。WF-02B / WF-03 与图标更新已在 main；WF-04A 由 [PR #26](https://github.com/DenisZheng/NexaTerm/pull/26) 交付，A07 macOS 的真实 GUI / 导入 / 重启、legacy 冲突映射和三主题均 PASS（[归档证据](.trellis/tasks/archive/2026-10/10-02-wf-04a-session-tree-consistency/validation/a07.md)），Windows/Linux 仍仅 CI 自动化证据。
 
-WF-04B/04C/05/06/07 已进入集中验收分支，验收基线为 `feat/wf07-workspace-restore` @ `3ff0c8e`（CI #304 SUCCESS）；此处不据此宣称全部已合入 main。维护者在 Windows 真实 Tauri 已确认 A01/A02/A04/A11/A12/A13，通过项及平台边界见 [A01–A15 报告](.trellis/tasks/09-23-nexaterm-workflow-mainline/validation/acceptance-report-2026-10-04.md)；A08、A14 另有既有验收记录。WS-X09 / WS-X04 已在 WORKFLOW_SPEC v0.5 / v0.6 确认。
+WF-04B/04C/05/06/07 及 WF-08A–08E 已通过 integration PR #40 合入 `main`；当前 release-candidate 基线为 `main @ 4bd88f9060fe089ee6e52a042a5e589c1bb739bd`，main CI #383 SUCCESS。维护者在 Windows 真实 Tauri 已确认 A01/A02/A04/A11/A12/A13，通过项及平台边界见 [A01–A15 报告](.trellis/tasks/09-23-nexaterm-workflow-mainline/validation/acceptance-report-2026-10-04.md)；A08、A14 另有既有验收记录。WS-X09 / WS-X04 已在 WORKFLOW_SPEC v0.5 / v0.6 确认。
 
-当前执行顺序（2026-10-04 维护者确认并行）：`10-04-wf04c-multiexec-entry` 已提交并进入 WF-08 堆叠；A09/A10 已于 2026-10-05 在最终 WF-08E 分支完成真实 Tauri 验收并 PASS，已不再是 A15 / v1 sign-off blocker。WF-08A 从“发布与迁移基线门禁”开始，证据见 `10-04-wf-08a-release-migration-baseline/A15_BASELINE.md`。 WF-08B 实现已完成并由 CI #343 验证三平台编译/测试，真实旧版本升级留到 WF-08E/A15；WF-08C 已完成代码收口并由 CI #357 验证品牌、English/zh-CN parity、canonical MCP sidecar 与三平台编译/测试。WF-08D 已完成测量工具并由 CI #364 验证三平台编译/测试、sampler 单测与性能/稳定性门禁；WF-08E 自动化证据框架已由 CI #369 全绿验证。A09/A10 已于 2026-10-05 由维护者在真实 Tauri 验收中确认 PASS；A15 仍进行中，剩余三平台真实安装/签名/升级回滚、迁移、性能、updater 任一未通过都阻止最终签字。
+当前执行顺序（2026-10-04 维护者确认并行）：`10-04-wf04c-multiexec-entry` 已提交并进入 WF-08 堆叠；A09/A10 已于 2026-10-05 在最终 WF-08E 分支完成真实 Tauri 验收并 PASS，已不再是 A15 / v1 sign-off blocker。WF-08A 从“发布与迁移基线门禁”开始，证据见 `10-04-wf-08a-release-migration-baseline/A15_BASELINE.md`。 WF-08B 实现已完成并由 CI #343 验证三平台编译/测试，真实旧版本升级留到 WF-08E/A15；WF-08C 已完成代码收口并由 CI #357 验证品牌、English/zh-CN parity、canonical MCP sidecar 与三平台编译/测试。WF-08D 已完成测量工具并由 CI #364 验证三平台编译/测试、sampler 单测与性能/稳定性门禁；WF-08E 自动化证据框架已由 CI #369 验证，并通过 PR #40 合入 main。A09/A10 已于 2026-10-05 由维护者在真实 Tauri 验收中确认 PASS；main CI #383 的 final CI / Security / License 也已 PASS。A15 仍进行中，剩余三平台真实安装/签名/升级回滚、迁移、性能、updater 任一未通过都阻止最终签字。
 
 ## 当前评审整改状态
 
