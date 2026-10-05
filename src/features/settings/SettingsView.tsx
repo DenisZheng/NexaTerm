@@ -359,12 +359,8 @@ interface AiProviderDraft {
   api_key_touched: boolean;
 }
 
-const aiAccessModeOptions: Array<{ label: string; value: AiApiFormat }> = [
-  { label: "Claude Messages（原生）", value: "anthropic" },
-  { label: "OpenAI Chat Completions（兼容）", value: "openai_compatible" },
-];
-
 function AiSettingsSection() {
+  const { t } = useI18n();
   const desktopRuntime = hasTauriRuntime();
   const [configs, setConfigs] = useState<AiProviderConfig[]>([]);
   const [selectedId, setSelectedId] = useState("");
@@ -384,17 +380,17 @@ function AiSettingsSection() {
   const savedApiKeyCount = configs.filter((config) => config.api_key_saved).length;
   const apiKeyStatus = draft.api_key_touched
     ? draft.api_key.trim()
-      ? "将更新 API Key"
-      : "将清空 API Key"
+      ? t("settings.ai.key.willUpdate")
+      : t("settings.ai.key.willClear")
     : selectedConfig?.api_key_saved
       ? draft.api_key
-        ? "已显示 API Key，未修改则保持原 Key"
-        : "已保存 API Key"
-      : "未保存 API Key";
-  const formTitle = selectedConfig ? "编辑配置" : "新增配置";
+        ? t("settings.ai.key.revealed")
+        : t("settings.ai.key.saved")
+      : t("settings.ai.key.notSaved");
+  const formTitle = selectedConfig ? t("settings.ai.form.edit") : t("settings.ai.form.new");
   const formDescription = selectedConfig
-    ? `${formatAiAccessModeLabel(draft.api_format)} · ${draft.model || "未设置模型"}`
-    : "配置名称用于在 AI 面板中切换；接入模式决定请求协议。";
+    ? `${formatAiAccessModeLabel(draft.api_format, t)} · ${draft.model || t("settings.ai.form.unsetModel")}`
+    : t("settings.ai.form.description");
   const modelSourceKey = [
     draft.api_format,
     draft.endpoint.trim(),
@@ -447,7 +443,7 @@ function AiSettingsSection() {
         setDraft(nextSelected ? draftFromConfig(next.find((config) => config.id === nextSelected) || null) : emptyAiProviderDraft());
       } catch (nextError) {
         if (!disposed) {
-          setError(formatSettingsError(nextError, "AI 配置读取失败。"));
+          setError(formatSettingsError(nextError, t("settings.ai.error.load")));
         }
       } finally {
         if (!disposed) {
@@ -460,7 +456,7 @@ function AiSettingsSection() {
       disposed = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [desktopRuntime]);
+  }, [desktopRuntime, t]);
 
   function selectConfig(id: string) {
     setSelectedId(id);
@@ -518,7 +514,7 @@ function AiSettingsSection() {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!desktopRuntime) {
-      setError("桌面端才能保存 AI 配置。");
+      setError(t("settings.ai.error.saveDesktop"));
       return;
     }
     setSaving(true);
@@ -528,9 +524,9 @@ function AiSettingsSection() {
       const input = buildAiProviderConfigInput(draft);
       const saved = await aiProviderConfigSave(input);
       await reloadConfigs(saved.id);
-      setMessage("AI 配置已保存。");
+      setMessage(t("settings.ai.message.saved"));
     } catch (nextError) {
-      setError(formatSettingsError(nextError, "AI 配置保存失败。"));
+      setError(formatSettingsError(nextError, t("settings.ai.error.save")));
     } finally {
       setSaving(false);
     }
@@ -538,7 +534,7 @@ function AiSettingsSection() {
 
   async function testConfig() {
     if (!desktopRuntime) {
-      setError("桌面端才能测试 AI 配置。");
+      setError(t("settings.ai.error.testDesktop"));
       return;
     }
     setTesting(true);
@@ -548,7 +544,7 @@ function AiSettingsSection() {
       const result = await aiProviderConfigTest(buildAiProviderConfigInput(draft));
       setMessage(result.message);
     } catch (nextError) {
-      setError(formatSettingsError(nextError, "AI 配置测试失败。"));
+      setError(formatSettingsError(nextError, t("settings.ai.error.test")));
     } finally {
       setTesting(false);
     }
@@ -556,7 +552,7 @@ function AiSettingsSection() {
 
   async function fetchModels() {
     if (!desktopRuntime) {
-      setError("桌面端才能获取模型列表。");
+      setError(t("settings.ai.error.modelsDesktop"));
       return;
     }
     setModelsLoading(true);
@@ -569,12 +565,12 @@ function AiSettingsSection() {
         return;
       }
       setModelOptions(models);
-      setMessage(`已获取 ${models.length.toString()} 个模型，可直接选择，也可以继续手填。`);
+      setMessage(t("settings.ai.message.models", { count: models.length }));
     } catch (nextError) {
       if (modelSourceKeyRef.current !== requestSourceKey) {
         return;
       }
-      setError(formatSettingsError(nextError, "模型列表获取失败。"));
+      setError(formatSettingsError(nextError, t("settings.ai.error.models")));
       setModelOptions([]);
     } finally {
       if (modelSourceKeyRef.current === requestSourceKey) {
@@ -591,9 +587,9 @@ function AiSettingsSection() {
       await aiProviderConfigDelete(deleteTarget.id);
       setDeleteTarget(null);
       await reloadConfigs();
-      setMessage("AI 配置已删除。");
+      setMessage(t("settings.ai.message.deleted"));
     } catch (nextError) {
-      setError(formatSettingsError(nextError, "AI 配置删除失败。"));
+      setError(formatSettingsError(nextError, t("settings.ai.error.delete")));
     }
   }
 
@@ -607,7 +603,7 @@ function AiSettingsSection() {
       return;
     }
     if (!desktopRuntime) {
-      setError("桌面端才能查看已保存的 API Key。");
+      setError(t("settings.ai.error.revealDesktop"));
       return;
     }
     const configId = draft.id || selectedConfig.id;
@@ -630,7 +626,7 @@ function AiSettingsSection() {
       );
       setShowApiKey(true);
     } catch (nextError) {
-      setError(formatSettingsError(nextError, "API Key 读取失败。"));
+      setError(formatSettingsError(nextError, t("settings.ai.error.reveal")));
     } finally {
       setApiKeyRevealBusy(false);
     }
@@ -639,21 +635,21 @@ function AiSettingsSection() {
   return (
     <section className="settings-page-section">
       <header className="settings-section-head">
-        <h1>AI</h1>
-        <p>维护对话模型配置；名称用于显示，API Key 只保存到本机 vault。</p>
+        <h1>{t("settings.ai.title")}</h1>
+        <p>{t("settings.ai.description")}</p>
       </header>
 
       <div className="ai-settings-layout">
-        <section className="settings-panel ai-settings-list-panel" aria-label="AI 配置列表">
+        <section className="settings-panel ai-settings-list-panel" aria-label={t("settings.ai.listAria")}>
           <header className="ai-settings-list-head">
             <span>
-              <strong>模型配置</strong>
-              <small>{aiConfigSummary(configs.length, savedApiKeyCount)}</small>
+              <strong>{t("settings.ai.list.title")}</strong>
+              <small>{aiConfigSummary(configs.length, savedApiKeyCount, t)}</small>
             </span>
             <button
               className="repository-icon-button"
               type="button"
-              aria-label="新增 AI 配置"
+              aria-label={t("settings.ai.list.newAria")}
               disabled={loading || saving || testing || modelsLoading}
               onClick={newConfig}
             >
@@ -662,14 +658,14 @@ function AiSettingsSection() {
           </header>
 
           <div className="ai-settings-list-body">
-            {loading ? <p className="settings-note">加载 AI 配置中...</p> : null}
+            {loading ? <p className="settings-note">{t("settings.ai.list.loading")}</p> : null}
             {configs.length === 0 && !loading ? (
               <div className="ai-settings-empty-state">
                 <Bot className="ui-icon" aria-hidden="true" />
-                <strong>还没有保存 AI 配置</strong>
-                <small>先添加配置名称、接入模式、API 地址和模型，AI 面板就可以直接切换使用。</small>
+                <strong>{t("settings.ai.empty.title")}</strong>
+                <small>{t("settings.ai.empty.description")}</small>
                 <div>
-                  <button type="button" onClick={newConfig}>新增配置</button>
+                  <button type="button" onClick={newConfig}>{t("settings.ai.empty.new")}</button>
                 </div>
               </div>
             ) : null}
@@ -686,14 +682,14 @@ function AiSettingsSection() {
                 </span>
                 <span className="ai-settings-list-copy">
                   <strong>{config.name}</strong>
-                  <small>{aiConfigMetaSummary(config)}</small>
+                  <small>{aiConfigMetaSummary(config, t)}</small>
                 </span>
                 <span
                   className={`ai-settings-list-kind ${
                     config.api_key_saved ? "saved" : "missing"
                   }`}
                 >
-                  {config.api_key_saved ? "已存 Key" : "未存 Key"}
+                  {config.api_key_saved ? t("settings.ai.key.badge.saved") : t("settings.ai.key.badge.missing")}
                 </span>
               </button>
             ))}
@@ -718,12 +714,12 @@ function AiSettingsSection() {
             <SettingsRow
               className="ai-provider-row-field"
               icon={Bot}
-              title="配置名称"
-              description="用于在列表和 AI 面板中识别这条配置。"
+              title={t("settings.ai.name.title")}
+              description={t("settings.ai.name.description")}
             >
               <input
                 value={draft.name}
-                placeholder="例如 MiniMax · MiniMax-M3"
+                placeholder={t("settings.ai.name.placeholder")}
                 onChange={(event) => {
                   const value = event.target?.value;
                   if (value !== undefined) {
@@ -735,8 +731,8 @@ function AiSettingsSection() {
             <SettingsRow
               className="ai-provider-row-field"
               icon={Server}
-              title="请求地址"
-              description="可填写官方 API、代理或企业网关地址。"
+              title={t("settings.ai.endpoint.title")}
+              description={t("settings.ai.endpoint.description")}
             >
               <input
                 value={draft.endpoint}
@@ -757,13 +753,13 @@ function AiSettingsSection() {
             <SettingsRow
               className="ai-provider-row-field"
               icon={Layers}
-              title="接入模式"
-              description="选择实际请求协议；国内兼容服务通常使用 OpenAI Chat Completions。"
+              title={t("settings.ai.access.title")}
+              description={t("settings.ai.access.description")}
             >
               <AppSelect
-                ariaLabel="AI 配置接入模式"
+                ariaLabel={t("settings.ai.access.aria")}
                 className="ai-settings-inline-select"
-                options={aiAccessModeOptions}
+                options={[{ label: t("settings.ai.access.anthropic"), value: "anthropic" }, { label: t("settings.ai.access.openai"), value: "openai_compatible" }]}
                 value={draft.api_format}
                 onChange={(api_format) =>
                   setDraft((value) => ({
@@ -784,7 +780,7 @@ function AiSettingsSection() {
                 <input
                   value={draft.api_key}
                   type={showApiKey ? "text" : "password"}
-                  placeholder={selectedConfig?.api_key_saved ? "留空保留已保存 key" : "粘贴 API Key"}
+                  placeholder={selectedConfig?.api_key_saved ? t("settings.ai.key.placeholder.keep") : t("settings.ai.key.placeholder.input")}
                   spellCheck={false}
                   autoComplete="off"
                   onChange={(event) => {
@@ -800,7 +796,7 @@ function AiSettingsSection() {
                 />
                 <button
                   type="button"
-                  aria-label={showApiKey ? "隐藏 API Key" : "显示 API Key"}
+                  aria-label={showApiKey ? t("settings.ai.key.hide") : t("settings.ai.key.show")}
                   disabled={apiKeyRevealBusy || loading || saving}
                   onClick={() => void toggleApiKeyVisibility()}
                 >
@@ -817,19 +813,19 @@ function AiSettingsSection() {
             <SettingsRow
               className="ai-provider-row-field ai-model-row-field"
               icon={FileKey}
-              title="模型"
-              description="可手工填写模型 id，也可通过接口自动获取后选择。"
+              title={t("settings.ai.model.title")}
+              description={t("settings.ai.model.description")}
             >
               <div className="ai-model-field">
                 <div className="ai-model-input-row">
                   <AppCombobox
-                    ariaLabel="AI 模型"
+                    ariaLabel={t("settings.ai.model.aria")}
                     className="ai-model-combobox"
                     disabled={loading || saving || testing || modelsLoading || !desktopRuntime}
-                    emptyText="没有匹配的已获取模型"
+                    emptyText={t("settings.ai.model.empty")}
                     menuMinWidth={420}
                     options={modelSelectOptions}
-                    placeholder="例如 gpt-4.1-mini / claude-sonnet-4 / MiniMax-M3"
+                    placeholder={t("settings.ai.model.placeholder")}
                     value={draft.model}
                     onChange={(value) => {
                       setDraft((current) => ({ ...current, model: value }));
@@ -846,7 +842,7 @@ function AiSettingsSection() {
                     ) : (
                       <RefreshCw className="ui-icon" aria-hidden="true" />
                     )}
-                    <span>{modelsLoading ? "获取中" : "获取模型"}</span>
+                    <span>{modelsLoading ? t("settings.ai.model.loading") : t("settings.ai.model.fetch")}</span>
                   </button>
                 </div>
               </div>
@@ -854,7 +850,7 @@ function AiSettingsSection() {
           </div>
 
           {!desktopRuntime ? (
-            <p className="settings-note">浏览器预览不能保存 AI 配置，请在桌面端操作。</p>
+            <p className="settings-note">{t("settings.ai.preview")}</p>
           ) : null}
           {error ? <p className="settings-path-error" role="alert">{error}</p> : null}
           {message ? <p className="settings-note" role="status">{message}</p> : null}
@@ -879,7 +875,7 @@ function AiSettingsSection() {
                 type="button"
                 onClick={resetDraft}
               >
-                {selectedConfig ? "重置" : "清空"}
+                {selectedConfig ? t("settings.ai.reset") : t("settings.ai.clear")}
               </button>
               <button
                 disabled={saving || loading || testing || modelsLoading || !desktopRuntime}
@@ -891,7 +887,7 @@ function AiSettingsSection() {
                 ) : (
                   <RefreshCw className="ui-icon" aria-hidden="true" />
                 )}
-                <span>{testing ? "测试中" : "测试配置"}</span>
+                <span>{testing ? t("settings.ai.testing") : t("settings.ai.test")}</span>
               </button>
               <button
                 className="primary-button"
@@ -899,7 +895,7 @@ function AiSettingsSection() {
                 disabled={saving || loading || testing || modelsLoading || !desktopRuntime}
               >
                 <Save className="ui-icon" aria-hidden="true" />
-                <span>{saving ? "保存中" : "保存配置"}</span>
+                <span>{saving ? t("settings.ai.saving") : t("settings.ai.save")}</span>
               </button>
             </div>
           </footer>
@@ -908,8 +904,8 @@ function AiSettingsSection() {
 
       <ConfirmDialog
         open={Boolean(deleteTarget)}
-        title="删除 AI 配置"
-        description={`确认删除“${deleteTarget?.name || "该配置"}”吗？API Key 也会从 vault 删除。`}
+        title={t("settings.ai.delete.title")}
+        description={t("settings.ai.delete.description", { name: deleteTarget?.name || t("settings.ai.delete.fallback") })}
         confirmLabel={t("settings.credentials.deleteConfirm")}
         onConfirm={confirmDeleteConfig}
         onOpenChange={(open) => {
@@ -2626,20 +2622,25 @@ function providerFromAiApiFormat(apiFormat: AiApiFormat): AiProviderKind {
   return apiFormat === "anthropic" ? "claude" : "openai";
 }
 
-function formatAiAccessModeLabel(apiFormat: AiApiFormat) {
-  return apiFormat === "anthropic" ? "Claude Messages" : "OpenAI Chat Completions";
+function formatAiAccessModeLabel(apiFormat: AiApiFormat, t: Translate) {
+  return apiFormat === "anthropic"
+    ? t("settings.ai.access.anthropic")
+    : t("settings.ai.access.openai");
 }
 
-function aiConfigSummary(total: number, savedApiKeyCount: number) {
+function aiConfigSummary(total: number, savedApiKeyCount: number, t: Translate) {
   if (total === 0) {
-    return "0 项配置";
+    return t("settings.ai.summary.zero");
   }
-  return `${total.toString()} 项 · ${savedApiKeyCount.toString()} 项已存 Key`;
+  return t("settings.ai.summary", { total, saved: savedApiKeyCount });
 }
 
-function aiConfigMetaSummary(config: Pick<AiProviderConfig, "provider" | "api_format" | "model" | "endpoint">) {
+function aiConfigMetaSummary(
+  config: Pick<AiProviderConfig, "provider" | "api_format" | "model" | "endpoint">,
+  t: Translate,
+) {
   return [
-    formatAiAccessModeLabel(config.api_format),
+    formatAiAccessModeLabel(config.api_format, t),
     config.model,
     summarizeAiEndpoint(config.endpoint),
   ]
