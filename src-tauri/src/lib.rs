@@ -19,6 +19,7 @@ mod legacy_webview_settings;
 mod mobaxterm_import;
 pub mod mcp;
 mod network_tools;
+mod performance_probe;
 mod rdp;
 mod remote_exec_pool;
 mod remote_files;
@@ -57,6 +58,7 @@ pub fn run() {
         .manage(docker_tools::DockerExecSessionManager::default())
         .manage(docker_tools::DockerLogStreamManager::default())
         .manage(network_tools::NetworkDiagnosticSessionManager::default())
+        .manage(performance_probe::PerformanceProbeState::default())
         .manage(remote_files::RemoteFileManager::default())
         .manage(terminal::manager::TerminalManager::default())
         .manage(temporary_connections::TemporaryConnectionManager::default())
@@ -87,6 +89,7 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            performance_probe::performance_probe_mark_interactive,
             brand_migration::legacy_app_data_migration_preview,
             brand_migration::legacy_app_data_migration_apply,
             brand_migration::legacy_app_data_migration_rollback,
