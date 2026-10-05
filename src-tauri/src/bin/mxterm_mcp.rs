@@ -158,7 +158,7 @@ impl RateLimiter {
 
 fn main() {
     let config = parse_cli_config().unwrap_or_else(|error| {
-        eprintln!("mxterm-mcp: {}", error.message);
+        eprintln!("nexaterm-mcp: {}", error.message);
         std::process::exit(1);
     });
 
@@ -167,7 +167,7 @@ fn main() {
         Transport::Http(http) => serve_http(&config.data_dir, http),
     };
     if let Err(error) = result {
-        eprintln!("mxterm-mcp: {error}");
+        eprintln!("nexaterm-mcp: {error}");
         std::process::exit(1);
     }
 }
@@ -373,7 +373,7 @@ async fn handle_message_async(data_dir: &Path, message: Value) -> Value {
             id,
             json!({
                 "protocolVersion": "2024-11-05",
-                "serverInfo": { "name": "mxterm-mcp", "version": "0.1.0" },
+                "serverInfo": { "name": "nexaterm-mcp", "version": "0.1.0" },
                 "capabilities": { "tools": {} }
             }),
         ),
@@ -927,9 +927,9 @@ fn request_token(request: &HttpRequest) -> Option<String> {
             return Some(token.trim().to_string());
         }
     }
-    request
-        .headers
-        .get("x-mxterm-mcp-token")
+    ["x-nexaterm-mcp-token", "x-mxterm-mcp-token"]
+        .into_iter()
+        .find_map(|name| request.headers.get(name))
         .map(|token| token.trim().to_string())
         .filter(|token| !token.is_empty())
 }
@@ -975,7 +975,7 @@ fn cors_headers(request: &HttpRequest) -> Vec<(String, String)> {
         ("Access-Control-Allow-Origin".to_string(), allow_origin),
         (
             "Access-Control-Allow-Headers".to_string(),
-            "Authorization, Content-Type, X-MXterm-MCP-Token, MCP-Session-Id".to_string(),
+            "Authorization, Content-Type, X-NexaTerm-MCP-Token, X-MXterm-MCP-Token, MCP-Session-Id".to_string(),
         ),
         (
             "Access-Control-Allow-Methods".to_string(),
@@ -1050,7 +1050,7 @@ async fn call_tool(
     let settings = mcp::load_settings(&metadata_repository)?;
 
     match name {
-        "get_mxterm_mcp_status" => {
+        "get_nexaterm_mcp_status" | "get_mxterm_mcp_status" => {
             let summary = if settings.enabled && settings.expose_connections {
                 mcp::connection_summary(&metadata_repository, &settings).ok()
             } else {
@@ -1250,7 +1250,7 @@ mod tests {
 
         let response = serde_json::from_str::<Value>(text.trim()).unwrap();
         assert_eq!(response["id"], json!(1));
-        assert_eq!(response["result"]["serverInfo"]["name"], "mxterm-mcp");
+        assert_eq!(response["result"]["serverInfo"]["name"], "nexaterm-mcp");
     }
 
     #[test]
@@ -1270,7 +1270,7 @@ mod tests {
 
         let initialize = serde_json::from_str::<Value>(responses[1]).unwrap();
         assert_eq!(initialize["id"], json!(2));
-        assert_eq!(initialize["result"]["serverInfo"]["name"], "mxterm-mcp");
+        assert_eq!(initialize["result"]["serverInfo"]["name"], "nexaterm-mcp");
     }
 
     #[test]
@@ -1289,7 +1289,7 @@ mod tests {
         assert!(request_authorized(&bearer_request, &token_hash));
 
         let mut custom_headers = HashMap::new();
-        custom_headers.insert("x-mxterm-mcp-token".to_string(), token.to_string());
+        custom_headers.insert("x-nexaterm-mcp-token".to_string(), token.to_string());
         let custom_request = HttpRequest {
             method: "POST".to_string(),
             path: "/mcp".to_string(),
@@ -1298,6 +1298,17 @@ mod tests {
             body: Vec::new(),
         };
         assert!(request_authorized(&custom_request, &token_hash));
+
+        let mut legacy_headers = HashMap::new();
+        legacy_headers.insert("x-mxterm-mcp-token".to_string(), token.to_string());
+        let legacy_request = HttpRequest {
+            method: "POST".to_string(),
+            path: "/mcp".to_string(),
+            query: String::new(),
+            headers: legacy_headers,
+            body: Vec::new(),
+        };
+        assert!(request_authorized(&legacy_request, &token_hash));
     }
 
     #[test]
@@ -1354,10 +1365,13 @@ mod tests {
         let lowercase = http_request("POST", "/mcp", &[("authorization", "bearer mx_token")]);
         assert_eq!(request_token(&lowercase).as_deref(), Some("mx_token"));
 
-        let spaced = http_request("POST", "/mcp", &[("x-mxterm-mcp-token", "  mx_token  ")]);
+        let spaced = http_request("POST", "/mcp", &[("x-nexaterm-mcp-token", "  mx_token  ")]);
         assert_eq!(request_token(&spaced).as_deref(), Some("mx_token"));
 
-        let empty = http_request("POST", "/mcp", &[("x-mxterm-mcp-token", "   ")]);
+        let legacy = http_request("POST", "/mcp", &[("x-mxterm-mcp-token", "  mx_token  ")]);
+        assert_eq!(request_token(&legacy).as_deref(), Some("mx_token"));
+
+        let empty = http_request("POST", "/mcp", &[("x-nexaterm-mcp-token", "   ")]);
         assert_eq!(request_token(&empty), None);
 
         // `Bearer` 与 token 之间没有空格时不构成凭据头，不能误判为已携带 token。
