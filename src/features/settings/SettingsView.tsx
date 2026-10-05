@@ -1734,6 +1734,7 @@ function SecuritySettingsSection({
   onUnlockSecuritySettings: (masterPassword: string) => Promise<boolean>;
   onUpdate: (update: Partial<SecuritySettings>) => void;
 }) {
+  const { t } = useI18n();
   const [enabling, setEnabling] = useState(false);
   const [settingsUnlocked, setSettingsUnlocked] = useState(false);
   const [masterPassword, setMasterPassword] = useState("");
@@ -1756,11 +1757,11 @@ function SecuritySettingsSection({
     event.preventDefault();
     const password = masterPassword.trim();
     if (!password) {
-      setLocalError("请输入安全密码。");
+      setLocalError(t("settings.security.error.passwordRequired"));
       return;
     }
     if (password !== confirmPassword.trim()) {
-      setLocalError("两次输入的安全密码不一致。");
+      setLocalError(t("settings.security.error.passwordMismatch"));
       return;
     }
 
@@ -1779,7 +1780,7 @@ function SecuritySettingsSection({
     event.preventDefault();
     const password = unlockPassword.trim();
     if (!password) {
-      setLocalError("请输入安全密码。");
+      setLocalError(t("settings.security.error.passwordRequired"));
       return;
     }
     setLocalError(null);
@@ -1794,11 +1795,11 @@ function SecuritySettingsSection({
     event.preventDefault();
     const password = nextPassword.trim();
     if (!password) {
-      setLocalError("请输入新的安全密码。");
+      setLocalError(t("settings.security.error.newPasswordRequired"));
       return;
     }
     if (password !== nextConfirmPassword.trim()) {
-      setLocalError("两次输入的安全密码不一致。");
+      setLocalError(t("settings.security.error.passwordMismatch"));
       return;
     }
     setLocalError(null);
@@ -1821,33 +1822,33 @@ function SecuritySettingsSection({
   }
 
   const autoLockOptions = [
-    { label: "不自动锁定", value: "0" },
-    { label: "5 分钟", value: "5" },
-    { label: "15 分钟", value: "15" },
-    { label: "30 分钟", value: "30" },
-    { label: "60 分钟", value: "60" },
+    { label: t("settings.security.autoLock.never"), value: "0" },
+    { label: t("settings.security.autoLock.minutes", { count: 5 }), value: "5" },
+    { label: t("settings.security.autoLock.minutes", { count: 15 }), value: "15" },
+    { label: t("settings.security.autoLock.minutes", { count: 30 }), value: "30" },
+    { label: t("settings.security.autoLock.minutes", { count: 60 }), value: "60" },
   ];
 
   return (
     <section className="settings-page-section">
       <header className="settings-section-head">
-        <h1>安全</h1>
-        <p>默认无打扰；需要更强保护时，可开启总安全密码。</p>
+        <h1>{t("settings.security.title")}</h1>
+        <p>{t("settings.security.description")}</p>
       </header>
 
       <div className="settings-panel">
         <SettingsRow
           icon={LockKeyhole}
-          title="高级安全保护"
+          title={t("settings.security.advanced.title")}
           description={
             settings.masterPasswordEnabled
-              ? "已开启。vault 使用安全密码加密，启动后必须解锁。"
-              : "默认关闭；macOS/Windows 的本机解锁 key 存入系统凭据存储，Linux 使用 0600 权限本地 key。"
+              ? t("settings.security.advanced.enabledDescription")
+              : t("settings.security.advanced.disabledDescription")
           }
         >
           <SettingsToggle
             checked={settings.masterPasswordEnabled}
-            label="高级安全保护"
+            label={t("settings.security.advanced.label")}
             onChange={(checked) => {
               if (checked) {
                 setEnabling(true);
@@ -1863,7 +1864,7 @@ function SecuritySettingsSection({
         {!settings.masterPasswordEnabled && enabling ? (
           <form className="settings-security-master-form" onSubmit={submitEnable}>
             <label className="credential-field">
-              <span>安全密码</span>
+              <span>{t("settings.security.password")}</span>
               <input
                 className="settings-input"
                 type="password"
@@ -1873,7 +1874,7 @@ function SecuritySettingsSection({
               />
             </label>
             <label className="credential-field">
-              <span>确认安全密码</span>
+              <span>{t("settings.security.passwordConfirm")}</span>
               <input
                 className="settings-input"
                 type="password"
@@ -1884,7 +1885,7 @@ function SecuritySettingsSection({
             </label>
             <div className="settings-security-master-actions">
               <button className="settings-action-button" type="submit" disabled={busy}>
-                启用
+                {t("settings.security.enable")}
               </button>
               <button
                 className="settings-action-button"
@@ -1897,7 +1898,7 @@ function SecuritySettingsSection({
                   setConfirmPassword("");
                 }}
               >
-                取消
+                {t("settings.security.cancel")}
               </button>
             </div>
           </form>
@@ -1906,7 +1907,7 @@ function SecuritySettingsSection({
         {settings.masterPasswordEnabled && !settingsUnlocked ? (
           <form className="settings-security-master-form" onSubmit={submitUnlock}>
             <label className="credential-field">
-              <span>安全密码</span>
+              <span>{t("settings.security.password")}</span>
               <input
                 className="settings-input"
                 type="password"
@@ -1917,7 +1918,7 @@ function SecuritySettingsSection({
             </label>
             <div className="settings-security-master-actions">
               <button className="settings-action-button" type="submit" disabled={busy}>
-                解锁安全设置
+                {t("settings.security.unlock")}
               </button>
             </div>
           </form>
@@ -1927,11 +1928,11 @@ function SecuritySettingsSection({
           <>
             <SettingsRow
               icon={Clock3}
-              title="闲置自动锁定"
-              description="锁定后会清除内存中的 vault 解锁状态，需要重新输入安全密码。"
+              title={t("settings.security.autoLock.title")}
+              description={t("settings.security.autoLock.description")}
             >
               <AppSelect
-                ariaLabel="闲置自动锁定"
+                ariaLabel={t("settings.security.autoLock.aria")}
                 className="settings-select"
                 value={String(settings.autoLockMinutes)}
                 options={autoLockOptions}
@@ -1943,12 +1944,12 @@ function SecuritySettingsSection({
 
             <SettingsRow
               icon={Eye}
-              title="允许查看已保存密码"
-              description="关闭后，连接编辑和账号管理不显示眼睛按钮，只能替换密码。"
+              title={t("settings.security.reveal.title")}
+              description={t("settings.security.reveal.description")}
             >
               <SettingsToggle
                 checked={settings.allowPasswordReveal}
-                label="允许查看已保存密码"
+                label={t("settings.security.reveal.label")}
                 onChange={(allowPasswordReveal) => onUpdate({ allowPasswordReveal })}
               />
             </SettingsRow>
@@ -1956,7 +1957,7 @@ function SecuritySettingsSection({
             {changingPassword ? (
               <form className="settings-security-master-form" onSubmit={submitChangePassword}>
                 <label className="credential-field">
-                  <span>新的安全密码</span>
+                  <span>{t("settings.security.newPassword")}</span>
                   <input
                     className="settings-input"
                     type="password"
@@ -1966,7 +1967,7 @@ function SecuritySettingsSection({
                   />
                 </label>
                 <label className="credential-field">
-                  <span>确认安全密码</span>
+                  <span>{t("settings.security.passwordConfirm")}</span>
                   <input
                     className="settings-input"
                     type="password"
@@ -1977,7 +1978,7 @@ function SecuritySettingsSection({
                 </label>
                 <div className="settings-security-master-actions">
                   <button className="settings-action-button" type="submit" disabled={busy}>
-                    保存新密码
+                    {t("settings.security.saveNewPassword")}
                   </button>
                   <button
                     className="settings-action-button"
@@ -1989,7 +1990,7 @@ function SecuritySettingsSection({
                       setNextConfirmPassword("");
                     }}
                   >
-                    取消
+                    {t("settings.security.cancel")}
                   </button>
                 </div>
               </form>
@@ -2001,7 +2002,7 @@ function SecuritySettingsSection({
                   disabled={busy}
                   onClick={() => setChangingPassword(true)}
                 >
-                  修改安全密码
+                  {t("settings.security.changePassword")}
                 </button>
                 <button
                   className="danger-button credential-danger-button"
@@ -2009,7 +2010,7 @@ function SecuritySettingsSection({
                   disabled={busy}
                   onClick={() => void disableMasterPassword()}
                 >
-                  关闭高级保护
+                  {t("settings.security.disable")}
                 </button>
               </div>
             )}
@@ -2017,7 +2018,7 @@ function SecuritySettingsSection({
         ) : null}
 
         <p className="settings-note">
-          密码与口令始终保存在加密 vault；高级保护关闭时仅由本机解锁 key 自动打开。开启后如果忘记安全密码，已保存的密码和口令无法恢复。
+          {t("settings.security.note")}
         </p>
 
         {localError || error ? (
