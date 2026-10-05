@@ -1,10 +1,13 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen, waitFor, cleanup } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { getLocale, setLocalePreference, type Locale } from "../../shared/i18n";
 import { migrateGroupExpansion, type LegacyGroupReport } from "./connectionGroupModel";
 import LegacyGroupMigrationNotice from "./LegacyGroupMigrationNotice";
 const report: LegacyGroupReport = { complete: true, backup_path: "backup.json", issue: null, repairs: [], rows: [{ id: "old", name: "Linux", color: "#64748b", parentId: null }], mappings: [{ legacy_id: "old", canonical_id: "new" }] };
-afterEach(() => { cleanup(); localStorage.clear(); });
+let previousLocale: Locale;
+beforeEach(() => { previousLocale = getLocale(); setLocalePreference("zh-CN"); });
+afterEach(() => { cleanup(); localStorage.clear(); setLocalePreference(previousLocale); });
 describe("legacy migration presentation", () => {
   it("maps expansion separately, retains old raw and never reapplies after completion", () => {
     const raw = JSON.stringify({ "group-old": false, favorites: true, recent: false });
