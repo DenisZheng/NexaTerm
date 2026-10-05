@@ -7,6 +7,7 @@ import {
 import type RFB from "@novnc/novnc";
 import { Clipboard, KeyRound } from "lucide-react";
 
+import { t as tr, useI18n } from "../../shared/i18n";
 import type {
   VncConnectionConfig,
   VncLaunchResult,
@@ -33,6 +34,7 @@ export function VncViewerSurface({
   onError,
   onMessage,
 }: VncViewerSurfaceProps) {
+  useI18n();
   const mountRef = useRef<HTMLDivElement | null>(null);
   const rfbRef = useRef<RFB | null>(null);
   const onErrorRef = useRef(onError);
@@ -84,7 +86,7 @@ export function VncViewerSurface({
       setConnected(true);
       setPasswordRequired(false);
       setPasswordDraft("");
-      onMessageRef.current("VNC 画面已连接。");
+      onMessageRef.current(tr("vnc.viewer.message.connected"));
     };
     const handleDisconnect = (event: CustomEvent<{ clean: boolean }>) => {
       setConnected(false);
@@ -96,7 +98,7 @@ export function VncViewerSurface({
         }
         return;
       }
-      onMessageRef.current(event.detail.clean ? "VNC 画面已断开。" : "VNC 连接已中断。");
+      onMessageRef.current(event.detail.clean ? tr("vnc.viewer.message.disconnected") : tr("vnc.viewer.message.interrupted"));
     };
     const handleCredentialsRequired = () => {
       credentialsRequested = true;
@@ -108,11 +110,11 @@ export function VncViewerSurface({
         return;
       }
       setPasswordRequired(true);
-      onMessageRef.current("VNC 服务端要求输入密码。");
+      onMessageRef.current(tr("vnc.viewer.message.passwordRequired"));
     };
     const handleSecurityFailure = (event: CustomEvent<{ reason: string; status: number }>) => {
       failureReported = true;
-      onErrorRef.current(event.detail.reason || `VNC 安全协商失败（${event.detail.status.toString()}）。`);
+      onErrorRef.current(event.detail.reason || tr("vnc.viewer.error.security", { status: event.detail.status }));
     };
     const handleDesktopName = (event: CustomEvent<{ name: string }>) => {
       setDesktopName(event.detail.name || "");
@@ -141,7 +143,7 @@ export function VncViewerSurface({
         return cleanupWheelForwarding;
       } catch (error) {
         if (!disposed) {
-          onErrorRef.current(`VNC 画面加载失败：${formatError(error)}`);
+          onErrorRef.current(tr("vnc.viewer.error.load", { message: formatError(error) }));
         }
         return undefined;
       }
@@ -225,21 +227,21 @@ export function VncViewerSurface({
     >
       <div className="vnc-viewer-toolbar">
         <span>
-          {connected ? "已连接" : "连接中"}
+          {connected ? tr("vnc.viewer.connected") : tr("vnc.viewer.connecting")}
           {desktopName ? ` · ${desktopName}` : ""}
         </span>
         <div>
           {config.input.clipboard ? (
             <>
               <input
-                aria-label="VNC 剪贴板文本"
+                aria-label={tr("vnc.viewer.clipboardAria")}
                 value={clipboardDraft}
                 onChange={(event) => setClipboardDraft(event.target.value)}
-                placeholder="剪贴板文本"
+                placeholder={tr("vnc.viewer.clipboardPlaceholder")}
               />
               <button type="button" disabled={!clipboardDraft} onClick={pasteClipboard}>
                 <Clipboard className="ui-icon" aria-hidden="true" />
-                <span>粘贴</span>
+                <span>{tr("vnc.viewer.paste")}</span>
               </button>
             </>
           ) : null}
@@ -252,17 +254,17 @@ export function VncViewerSurface({
       <div className="vnc-viewer-mount" ref={mountRef} />
       {passwordRequired ? (
         <form className="vnc-password-prompt" onSubmit={submitPassword}>
-          <span>VNC 密码</span>
+          <span>{tr("vnc.viewer.password")}</span>
           <input
             autoFocus
-            aria-label="VNC 密码"
+            aria-label={tr("vnc.viewer.password")}
             type="password"
             value={passwordDraft}
             onChange={(event) => setPasswordDraft(event.target.value)}
           />
           <button type="submit" disabled={!passwordDraft}>
             <KeyRound className="ui-icon" aria-hidden="true" />
-            <span>发送</span>
+            <span>{tr("vnc.viewer.send")}</span>
           </button>
         </form>
       ) : null}
@@ -272,7 +274,7 @@ export function VncViewerSurface({
 
 function vncTargetLabel(connection: VncRunnerWindowConnectionInfo | null) {
   if (!connection?.host) {
-    return "VNC 目标主机";
+    return tr("vnc.viewer.target");
   }
   return `${connection.host}:${(connection.port || 5900).toString()}`;
 }
@@ -283,9 +285,9 @@ function vncPreConnectDisconnectMessage(
 ) {
   const target = vncTargetLabel(connection);
   if (credentialsRequested) {
-    return `VNC 在认证完成前断开，请检查 ${target} 的密码、屏幕共享权限或服务端安全类型。`;
+    return tr("vnc.viewer.error.authDisconnect", { target });
   }
-  return `VNC 未能连接到 ${target}，请检查屏幕共享/VNC 服务是否开启、端口和防火墙设置。`;
+  return tr("vnc.viewer.error.connect", { target });
 }
 
 function applyVncRfbSettings(rfb: RFB, config: VncConnectionConfig) {
