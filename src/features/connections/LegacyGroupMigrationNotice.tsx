@@ -1,6 +1,7 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import { useState } from "react";
+import { useI18n } from "../../shared/i18n";
 import { AppSelect } from "../../shared/ui/AppSelect";
 import { groupOptions, type ConnectionGroup, type LegacyGroupReport, type LegacyGroupResolution } from "./connectionGroupModel";
 import { groupErrorMessage } from "./useConnectionGroups";
@@ -11,6 +12,7 @@ export default function LegacyGroupMigrationNotice({ report, groups, onResolve }
   groups: ConnectionGroup[];
   onResolve: (resolutions?: LegacyGroupResolution[]) => Promise<unknown>;
 }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,31 +37,31 @@ export default function LegacyGroupMigrationNotice({ report, groups, onResolve }
     finally { setBusy(false); }
   }
   return <>
-    <button type="button" onClick={show}>{report.complete ? "查看旧分组迁移报告" : "处理旧分组迁移"}</button>
+    <button type="button" onClick={show}>{report.complete ? t("legacyGroups.showReport") : t("legacyGroups.process")}</button>
     <Dialog.Root open={open} onOpenChange={(next) => { if (!busy) setOpen(next); }}>
       <Dialog.Portal>
         <Dialog.Overlay className="dialog-backdrop" />
         <Dialog.Content className="connection-dialog legacy-group-migration-dialog" onInteractOutside={(event) => event.preventDefault()}>
           <header className="dialog-head">
-            <div className="dialog-title-group"><Dialog.Title asChild><strong>旧分组迁移</strong></Dialog.Title></div>
-            <Dialog.Close asChild><button className="dialog-close-button" type="button" aria-label="关闭" disabled={busy}><X className="ui-icon" aria-hidden="true" /></button></Dialog.Close>
+            <div className="dialog-title-group"><Dialog.Title asChild><strong>{t("legacyGroups.title")}</strong></Dialog.Title></div>
+            <Dialog.Close asChild><button className="dialog-close-button" type="button" aria-label={t("legacyGroups.close")} disabled={busy}><X className="ui-icon" aria-hidden="true" /></button></Dialog.Close>
           </header>
           <Dialog.Description className="dialog-subtitle">
-            {report.complete ? "迁移已完成。后续启动不会重新应用旧树。" : "请逐行确认名称、父组和目标。选择已有分组会更新其名称、位置和颜色，连接仍归属于原 ID；新建分组不会转移已有连接。"}
+            {report.complete ? t("legacyGroups.description.complete") : t("legacyGroups.description.pending")}
           </Dialog.Description>
           <div className="dialog-body">
-            <p>原文备份：{report.backup_path}</p>
+            <p>{t("legacyGroups.backup", { path: report.backup_path })}</p>
             {report.issue ? <p className="pane-error" role="alert">{report.issue}</p> : null}
             {report.repairs.map((repair, index) => <p key={index}>{repair}</p>)}
             {report.complete ? report.mappings.map((mapping, index) => <p key={index}>{mapping.legacy_id} → {mapping.canonical_id}</p>) : draft.map((row) => <section className="dialog-section" key={row.index}>
-              <h3 className="dialog-section-title">旧分组 {row.index + 1}：{report.rows[row.index].name}（{report.rows[row.index].id}）</h3>
-              <label className="field"><span>名称</span><input disabled={busy} aria-label={`名称 ${row.index + 1}`} value={row.name} onChange={(event) => update(row.index, { name: event.target.value })} /></label>
-              <label className="field"><span>父组</span><AppSelect disabled={busy} ariaLabel={`父组 ${row.index + 1}`} value={row.parent_index === null ? "" : String(row.parent_index)} options={[{ value: "", label: "根目录" }, ...draft.filter((candidate) => candidate.index !== row.index).map((candidate) => ({ value: String(candidate.index), label: `${candidate.index + 1}. ${candidate.name}` }))]} onChange={(value) => update(row.index, { parent_index: value === "" ? null : Number(value) })} /></label>
-              <label className="field"><span>目标分组</span><AppSelect disabled={busy} ariaLabel={`目标分组 ${row.index + 1}`} value={row.target_id || ""} options={[{ value: "", label: "新建分组（不转移已有连接）" }, ...groupOptions(groups)]} onChange={(value) => update(row.index, { target_id: value || null })} /></label>
+              <h3 className="dialog-section-title">{t("legacyGroups.row", { index: row.index + 1, name: report.rows[row.index].name, id: report.rows[row.index].id })}</h3>
+              <label className="field"><span>{t("legacyGroups.name")}</span><input disabled={busy} aria-label={t("legacyGroups.nameAria", { index: row.index + 1 })} value={row.name} onChange={(event) => update(row.index, { name: event.target.value })} /></label>
+              <label className="field"><span>{t("legacyGroups.parent")}</span><AppSelect disabled={busy} ariaLabel={t("legacyGroups.parentAria", { index: row.index + 1 })} value={row.parent_index === null ? "" : String(row.parent_index)} options={[{ value: "", label: t("legacyGroups.root") }, ...draft.filter((candidate) => candidate.index !== row.index).map((candidate) => ({ value: String(candidate.index), label: `${candidate.index + 1}. ${candidate.name}` }))]} onChange={(value) => update(row.index, { parent_index: value === "" ? null : Number(value) })} /></label>
+              <label className="field"><span>{t("legacyGroups.target")}</span><AppSelect disabled={busy} ariaLabel={t("legacyGroups.targetAria", { index: row.index + 1 })} value={row.target_id || ""} options={[{ value: "", label: t("legacyGroups.newTarget") }, ...groupOptions(groups)]} onChange={(value) => update(row.index, { target_id: value || null })} /></label>
             </section>)}
             {error ? <p className="pane-error" role="alert">{error}</p> : null}
           </div>
-          {!report.complete ? <footer className="dialog-actions"><button className="primary-button" type="button" disabled={busy} onClick={() => void apply()}>{busy ? "正在迁移…" : report.rows.length ? "确认映射并迁移" : "重试读取原数据"}</button></footer> : null}
+          {!report.complete ? <footer className="dialog-actions"><button className="primary-button" type="button" disabled={busy} onClick={() => void apply()}>{busy ? t("legacyGroups.migrating") : report.rows.length ? t("legacyGroups.apply") : t("legacyGroups.retry")}</button></footer> : null}
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
