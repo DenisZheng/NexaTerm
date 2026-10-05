@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 
+import { useI18n } from "../../shared/i18n";
 import { AppSelect } from "../../shared/ui/AppSelect";
 import {
   connectionTransferExport,
@@ -40,17 +41,17 @@ interface ConnectionTransferDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const conflictOptions = [
-  { label: "跳过本地已有项", value: "skip" },
-  { label: "使用导入内容覆盖", value: "overwrite" },
-] satisfies Array<{ label: string; value: ConnectionTransferConflictStrategy }>;
-
 export function ConnectionTransferDialog({
   mode,
   open,
   onImported,
   onOpenChange,
 }: ConnectionTransferDialogProps) {
+  const { t } = useI18n();
+  const conflictOptions = [
+    { label: t("transfer.conflict.skip"), value: "skip" as const },
+    { label: t("transfer.conflict.overwrite"), value: "overwrite" as const },
+  ] satisfies Array<{ label: string; value: ConnectionTransferConflictStrategy }>;
   const [path, setPath] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
@@ -98,22 +99,22 @@ export function ConnectionTransferDialog({
         setPreview(null);
       }
     } catch (selectionError) {
-      setError(formatError(selectionError, "无法打开文件选择器。"));
+      setError(formatError(selectionError, t("transfer.error.filePicker")));
     }
   }
 
   async function exportConnections(event: FormEvent) {
     event.preventDefault();
     if (!path) {
-      setError("请先选择导出位置。");
+      setError(t("transfer.error.exportPath"));
       return;
     }
     if (!password) {
-      setError("请输入导出密码。");
+      setError(t("transfer.error.exportPassword"));
       return;
     }
     if (password !== passwordConfirmation) {
-      setError("两次输入的密码不一致。");
+      setError(t("transfer.error.passwordMismatch"));
       return;
     }
     setBusy(true);
@@ -123,7 +124,7 @@ export function ConnectionTransferDialog({
       setPassword("");
       setPasswordConfirmation("");
     } catch (exportError) {
-      setError(formatError(exportError, "连接导出失败。"));
+      setError(formatError(exportError, t("transfer.error.export")));
     } finally {
       setBusy(false);
     }
@@ -132,11 +133,11 @@ export function ConnectionTransferDialog({
   async function runPreview(event?: FormEvent, nextStrategy = strategy) {
     event?.preventDefault();
     if (!path) {
-      setError("请先选择连接迁移文件。");
+      setError(t("transfer.error.importFile"));
       return;
     }
     if (!password) {
-      setError("请输入文件密码。");
+      setError(t("transfer.error.filePassword"));
       return;
     }
     setBusy(true);
@@ -145,7 +146,7 @@ export function ConnectionTransferDialog({
       setPreview(await connectionTransferPreview(path, password, nextStrategy));
     } catch (previewError) {
       setPreview(null);
-      setError(formatError(previewError, "连接迁移文件预检失败。"));
+      setError(formatError(previewError, t("transfer.error.preview")));
     } finally {
       setBusy(false);
     }
@@ -167,21 +168,21 @@ export function ConnectionTransferDialog({
       setImportResult(result);
       setPassword("");
     } catch (importError) {
-      setError(formatError(importError, "连接导入失败。"));
+      setError(formatError(importError, t("transfer.error.import")));
       setBusy(false);
       return;
     }
     try {
       await onImported();
     } catch (refreshError) {
-      setError(formatError(refreshError, "导入已完成，但连接列表刷新失败，请手动刷新。"));
+      setError(formatError(refreshError, t("transfer.error.refresh")));
     } finally {
       setBusy(false);
     }
   }
 
   const complete = Boolean(exportResult || importResult);
-  const title = mode === "import" ? "导入连接" : "导出连接";
+  const title = mode === "import" ? t("transfer.title.import") : t("transfer.title.export");
 
   return (
     <Dialog.Root
@@ -207,12 +208,12 @@ export function ConnectionTransferDialog({
               <Dialog.Title>{title}</Dialog.Title>
               <Dialog.Description>
                 {mode === "import"
-                  ? "预检后再写入连接、分组、账号和加密凭据。"
-                  : "导出全部连接、分组、账号和保存凭据。"}
+                  ? t("transfer.description.import")
+                  : t("transfer.description.export")}
               </Dialog.Description>
             </span>
             <Dialog.Close asChild>
-              <button className="connection-transfer-close" disabled={busy} type="button" aria-label="关闭">
+              <button className="connection-transfer-close" disabled={busy} type="button" aria-label={t("transfer.close")}>
                 <X className="ui-icon" aria-hidden="true" />
               </button>
             </Dialog.Close>
@@ -226,10 +227,10 @@ export function ConnectionTransferDialog({
               </>
             ) : mode === "export" ? (
               <form className="connection-transfer-form" onSubmit={(event) => void exportConnections(event)}>
-                <FilePicker path={path} busy={busy} label="导出位置" onChoose={() => void choosePath()} />
+                <FilePicker path={path} busy={busy} label={t("transfer.export.location")} onChoose={() => void choosePath()} />
                 <PasswordField
                   id="connection-transfer-export-password"
-                  label="导出密码"
+                  label={t("transfer.export.password")}
                   value={password}
                   visible={showPassword}
                   busy={busy}
@@ -237,7 +238,7 @@ export function ConnectionTransferDialog({
                   onToggle={() => setShowPassword((visible) => !visible)}
                 />
                 <label className="connection-transfer-field" htmlFor="connection-transfer-export-confirmation">
-                  <span>确认密码</span>
+                  <span>{t("transfer.export.confirmPassword")}</span>
                   <input
                     id="connection-transfer-export-confirmation"
                     autoComplete="new-password"
@@ -252,14 +253,14 @@ export function ConnectionTransferDialog({
                 </label>
                 <p className="connection-transfer-note">
                   <ShieldCheck className="ui-icon" aria-hidden="true" />
-                  私钥文件不会打包；密码和私钥口令仅以 AES-256-GCM 密文保存。
+                  {t("transfer.export.note")}
                 </p>
                 {error ? <p className="connection-transfer-error" role="alert">{error}</p> : null}
                 <footer className="connection-transfer-actions">
-                  <Dialog.Close asChild><button disabled={busy} type="button">取消</button></Dialog.Close>
+                  <Dialog.Close asChild><button disabled={busy} type="button">{t("transfer.cancel")}</button></Dialog.Close>
                   <button className="primary-button" disabled={busy} type="submit">
                     {busy ? <Loader2 className="ui-icon spin" aria-hidden="true" /> : <Download className="ui-icon" aria-hidden="true" />}
-                    导出
+                    {t("transfer.export.action")}
                   </button>
                 </footer>
               </form>
@@ -286,12 +287,12 @@ export function ConnectionTransferDialog({
                   }}
                 >
                   <Upload className="ui-icon" aria-hidden="true" />
-                  从 MobaXterm .mxtsessions 导入
+                  {t("transfer.mobaxterm.open")}
                 </button>
-                <FilePicker path={path} busy={busy} label="迁移文件" onChoose={() => void choosePath()} />
+                <FilePicker path={path} busy={busy} label={t("transfer.import.file")} onChoose={() => void choosePath()} />
                 <PasswordField
                   id="connection-transfer-import-password"
-                  label="文件密码"
+                  label={t("transfer.import.password")}
                   value={password}
                   visible={showPassword}
                   busy={busy}
@@ -299,23 +300,23 @@ export function ConnectionTransferDialog({
                   onToggle={() => setShowPassword((visible) => !visible)}
                 />
                 <label className="connection-transfer-field">
-                  <span>冲突处理</span>
-                  <AppSelect ariaLabel="冲突处理" disabled={busy} options={conflictOptions} value={strategy}
+                  <span>{t("transfer.import.conflict")}</span>
+                  <AppSelect ariaLabel={t("transfer.import.conflict")} disabled={busy} options={conflictOptions} value={strategy}
                     onChange={(value) => { setStrategy(value); setPreview(null); if (path && password) void runPreview(undefined, value); }} />
                 </label>
                 {preview ? <PreviewPanel preview={preview} /> : null}
                 {error ? <p className="connection-transfer-error" role="alert">{error}</p> : null}
                 <footer className="connection-transfer-actions">
-                  <Dialog.Close asChild><button disabled={busy} type="button">取消</button></Dialog.Close>
+                  <Dialog.Close asChild><button disabled={busy} type="button">{t("transfer.cancel")}</button></Dialog.Close>
                   {preview ? (
                     <button className="primary-button" disabled={busy} type="button" onClick={() => void importConnections()}>
                       {busy ? <Loader2 className="ui-icon spin" aria-hidden="true" /> : <Upload className="ui-icon" aria-hidden="true" />}
-                      确认导入
+                      {t("transfer.import.action")}
                     </button>
                   ) : (
                     <button className="primary-button" disabled={busy} type="submit">
                       {busy ? <Loader2 className="ui-icon spin" aria-hidden="true" /> : <ShieldCheck className="ui-icon" aria-hidden="true" />}
-                      预检
+                      {t("transfer.preview.action")}
                     </button>
                   )}
                 </footer>
