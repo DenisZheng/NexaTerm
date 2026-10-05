@@ -9617,7 +9617,7 @@ export function WorkspaceShell() {
       </Dialog.Root>
 
       <ConfirmDialog
-        confirmLabel={t("connectionHome.deleteConfirm")}
+        confirmLabel="删除"
         description={
           pendingCommandSnippetDelete
             ? `删除“${pendingCommandSnippetDelete.title}”后，命令操作台将不再展示这个片段。`
@@ -9834,7 +9834,7 @@ export function WorkspaceShell() {
               </header>
               <div className="dialog-body">
                 <label className="remote-file-name-field">
-                  <span>{t("connectionHome.column.name")}</span>
+                  <span>名称</span>
                   <input
                     autoFocus
                     spellCheck={false}
@@ -11537,7 +11537,7 @@ function ConnectionHome({
             <span>{t("connectionHome.column.system")}</span>
             <span>{t("connectionHome.column.last")}</span>
             <span>{t("connectionHome.column.latency")}</span>
-            <span>名称</span>
+            <span>{t("connectionHome.column.name")}</span>
             <span>{t("connectionHome.column.notes")}</span>
             <span className="action-head">{t("connectionHome.column.actions")}</span>
           </div>
@@ -11690,7 +11690,7 @@ function ConnectionHome({
         </aside>
       </div>
       <ConfirmDialog
-        confirmLabel="删除"
+        confirmLabel={t("connectionHome.deleteConfirm")}
         description={
           deleteTarget ? t("connectionHome.deleteDescription", { name: deleteTarget.name }) : ""
         }
