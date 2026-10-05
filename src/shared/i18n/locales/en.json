@@ -1998,5 +1998,6 @@
   "docker.container.action.remove": "Container deleted.",
   "docker.container.action.restart": "Container restarted.",
   "docker.container.action.start": "Container started.",
-  "docker.container.action.stop": "Container stopped."
+  "docker.container.action.stop": "Container stopped.",
+  "docker.schedule.cleanupName": "Clean temporary files"
 }
