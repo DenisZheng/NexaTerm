@@ -199,7 +199,7 @@ jobs:
 
       - name: Build platform bundle
         env:
-          MXTERM_CREATE_UPDATER_ARTIFACTS: "1"
+          NEXATERM_CREATE_UPDATER_ARTIFACTS: "1"
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: pnpm run ${{ matrix.package_script }}
