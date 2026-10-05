@@ -2585,5 +2585,11 @@
   "files.transfer.stage.awaitingRemote": "等待远端确认",
   "files.transfer.archiveSize": "压缩包 {size}",
   "settings.controls.decrease": "减小",
-  "settings.controls.increase": "增大"
+  "settings.controls.increase": "增大",
+  "workspace.restore.missing": "工作区恢复项缺失。",
+  "workspace.restore.profileMissing": "保存的连接或终端配置已不存在，可修复配置后重试。",
+  "workspace.restore.temporaryCredentials": "临时连接凭据不会持久化，请重新建立或认证该连接。",
+  "workspace.restore.restoring": "正在恢复",
+  "workspace.restore.manualRetry": "工作区已恢复；自动重连未开启，可手动重试。",
+  "workspace.restore.desktopStopped": "工作区已恢复；桌面会话保持停止，可手动重试。"
 }
