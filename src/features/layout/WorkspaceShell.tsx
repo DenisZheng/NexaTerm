@@ -8997,7 +8997,7 @@ export function WorkspaceShell() {
                           <button
                             className="subtab-close"
                             type="button"
-                            aria-label={`关闭 ${session.title}`}
+                            aria-label={tr("workspace.closeNamed", { name: session.title })}
                             onClick={() => closeRdpSession(session.id)}
                           >
                             <X className="ui-icon" aria-hidden="true" />
@@ -9098,7 +9098,7 @@ export function WorkspaceShell() {
                           <button
                             className="subtab-close"
                             type="button"
-                            aria-label={`关闭 ${session.title}`}
+                            aria-label={tr("workspace.closeNamed", { name: session.title })}
                             onClick={() => closeVncSession(session.id)}
                           >
                             <X className="ui-icon" aria-hidden="true" />
@@ -10143,7 +10143,7 @@ function RdpSessionStatusPanel({
   return (
     <section
       className={`rdp-session-status ${session.status} ${active ? "" : "is-hidden"}`}
-      aria-label={`${session.title} RDP 状态`}
+      aria-label={`${session.title} ${tr("workspace.rdp.state")}`}
       aria-hidden={!active}
     >
       <div className="rdp-session-shell">
@@ -10163,14 +10163,14 @@ function RdpSessionStatusPanel({
             <span>
               <strong>{connection?.name || session.title}</strong>
               <small>
-                {connection ? `RDP · ${formatConnectionAddress(connection)}` : "连接已不可用"}
+                {connection ? `RDP · ${formatConnectionAddress(connection)}` : tr("workspace.rdp.connectionUnavailable")}
               </small>
             </span>
           </div>
           <div className="rdp-session-actions">
             <button type="button" onClick={onPreview}>
               <FileText className="ui-icon" aria-hidden="true" />
-              <span>预览</span>
+              <span>{tr("workspace.rdp.preview")}</span>
             </button>
             <button type="button" disabled={!hasCommand} onClick={onCopyCommand}>
               <Clipboard className="ui-icon" aria-hidden="true" />
@@ -10182,9 +10182,9 @@ function RdpSessionStatusPanel({
             </button>
             <button type="button" onClick={onRetry}>
               <RefreshCw className="ui-icon" aria-hidden="true" />
-              <span>重试</span>
+              <span>{tr("workspace.rdp.retry")}</span>
             </button>
-            <button type="button" aria-label={`关闭 ${session.title}`} onClick={onClose}>
+            <button type="button" aria-label={tr("workspace.closeNamed", { name: session.title })} onClick={onClose}>
               <X className="ui-icon" aria-hidden="true" />
             </button>
           </div>
@@ -10196,7 +10196,7 @@ function RdpSessionStatusPanel({
           </span>
           <span>{formatRdpRunnerKind(runner)}</span>
           {session.result?.process_id ? <span>PID {session.result.process_id.toString()}</span> : null}
-          {session.result?.rdp_file_path ? <span title={session.result.rdp_file_path}>临时 .rdp</span> : null}
+          {session.result?.rdp_file_path ? <span title={session.result.rdp_file_path}>{tr("workspace.rdp.tempFile")}</span> : null}
         </div>
 
         {session.message ? (
@@ -10212,12 +10212,12 @@ function RdpSessionStatusPanel({
             <MonitorPlay className="ui-icon" aria-hidden="true" />
             <span>
               <strong>
-                {session.status === "embedded" ? "嵌入式 RDP 会话区域" : "正在准备嵌入式会话"}
+                {session.status === "embedded" ? tr("workspace.rdp.embeddedArea") : tr("workspace.rdp.embeddedPreparing")}
               </strong>
               <small>
                 {session.status === "embedded"
-                  ? "Windows 原生宿主已接管该区域，切换标签或调整窗口时会同步尺寸。"
-                  : "RDP 客户端启动后会自动挂载到这里；不可嵌入时会回退到外部窗口。"}
+                  ? tr("workspace.rdp.nativeOwned")
+                  : tr("workspace.rdp.mounting")}
               </small>
             </span>
           </div>
@@ -10229,13 +10229,13 @@ function RdpSessionStatusPanel({
             </section>
             {session.preview?.rdp_file_content ? (
               <section className="rdp-session-preview-card">
-                <strong>生成的 .rdp</strong>
+                <strong>{tr("workspace.rdp.generated")}</strong>
                 <pre>{session.preview.rdp_file_content}</pre>
               </section>
             ) : null}
             {session.preview?.warnings.length ? (
               <section className="rdp-session-preview-card subtle">
-                <strong>提示</strong>
+                <strong>{tr("workspace.rdp.hint")}</strong>
                 {session.preview.warnings.map((warning) => (
                   <small key={warning}>{warning}</small>
                 ))}
@@ -10266,7 +10266,7 @@ function RdpSessionToolPanel({
   if (!connection || !session) {
     return (
       <section className="rdp-tool-panel">
-        <p className="file-panel-empty">打开一个 RDP 会话后显示 runner 状态。</p>
+        <p className="file-panel-empty">{tr("workspace.rdp.empty")}</p>
       </section>
     );
   }
@@ -10278,7 +10278,7 @@ function RdpSessionToolPanel({
   const resources = connection.rdp?.resources;
 
   return (
-    <section className="rdp-tool-panel" aria-label="RDP 工具">
+    <section className="rdp-tool-panel" aria-label={tr("workspace.rdp.tools")}>
       <header className="rdp-tool-head">
         <span>
           <strong>{connection.name}</strong>
@@ -10312,15 +10312,15 @@ function RdpSessionToolPanel({
           <dd>{formatRdpRunnerKind(runner)}</dd>
         </div>
         <div>
-          <dt>模式</dt>
+          <dt>{tr("workspace.rdp.mode")}</dt>
           <dd>{rdpRenderModeLabel(connection.rdp?.runner.render_mode || "embedded")}</dd>
         </div>
         <div>
-          <dt>显示</dt>
+          <dt>{tr("workspace.rdp.display")}</dt>
           <dd>{rdpDisplaySummary(display)}</dd>
         </div>
         <div>
-          <dt>资源</dt>
+          <dt>{tr("workspace.rdp.resources")}</dt>
           <dd>{rdpResourceSummary(resources)}</dd>
         </div>
       </dl>
@@ -10331,8 +10331,8 @@ function RdpSessionToolPanel({
 
       {session.preview || session.result ? (
         <section className="rdp-tool-preview">
-          <strong>启动材料</strong>
-          <code>{rdpSessionCommandText(session) || "嵌入式 runner 不需要外部命令。"}</code>
+          <strong>{tr("workspace.rdp.launchMaterial")}</strong>
+          <code>{rdpSessionCommandText(session) || tr("workspace.rdp.noExternalCommand")}</code>
           {session.preview?.setup_hint || session.result?.setup_hint ? (
             <small>{session.preview?.setup_hint || session.result?.setup_hint}</small>
           ) : null}
@@ -10341,7 +10341,7 @@ function RdpSessionToolPanel({
           ) : null}
         </section>
       ) : (
-        <p className="rdp-tool-note">启动后可在这里查看 runner、生成命令和脱敏 `.rdp` 预览。</p>
+        <p className="rdp-tool-note">{tr("workspace.rdp.toolNote")}</p>
       )}
     </section>
   );
@@ -10379,7 +10379,7 @@ function VncSessionStatusPanel({
   return (
     <section
       className={`rdp-session-status vnc-session-status ${session.status} ${active ? "" : "is-hidden"}`}
-      aria-label={`${session.title} VNC 状态`}
+      aria-label={`${session.title} ${tr("workspace.vnc.state")}`}
       aria-hidden={!active}
     >
       <div className="rdp-session-shell vnc-session-shell">
@@ -10399,14 +10399,14 @@ function VncSessionStatusPanel({
             <span>
               <strong>{connection?.name || session.title}</strong>
               <small>
-                {connection ? `VNC · ${formatConnectionAddress(connection)}` : "连接已不可用"}
+                {connection ? `VNC · ${formatConnectionAddress(connection)}` : tr("workspace.vnc.connectionUnavailable")}
               </small>
             </span>
           </div>
           <div className="rdp-session-actions">
             <button type="button" onClick={onPreview}>
               <FileText className="ui-icon" aria-hidden="true" />
-              <span>预览</span>
+              <span>{tr("workspace.rdp.preview")}</span>
             </button>
             <button type="button" disabled={!hasCommand} onClick={onCopyCommand}>
               <Clipboard className="ui-icon" aria-hidden="true" />
@@ -10414,9 +10414,9 @@ function VncSessionStatusPanel({
             </button>
             <button type="button" onClick={onRetry}>
               <RefreshCw className="ui-icon" aria-hidden="true" />
-              <span>重试</span>
+              <span>{tr("workspace.rdp.retry")}</span>
             </button>
-            <button type="button" aria-label={`关闭 ${session.title}`} onClick={onClose}>
+            <button type="button" aria-label={tr("workspace.closeNamed", { name: session.title })} onClick={onClose}>
               <X className="ui-icon" aria-hidden="true" />
             </button>
           </div>
@@ -10428,7 +10428,7 @@ function VncSessionStatusPanel({
           </span>
           <span>{formatVncRunnerKind(runner)}</span>
           {session.result?.process_id ? <span>PID {session.result.process_id.toString()}</span> : null}
-          {session.result?.embedded ? <span>本地桥接</span> : null}
+          {session.result?.embedded ? <span>{tr("workspace.vnc.bridge")}</span> : null}
         </div>
 
         {session.message ? (
@@ -10440,7 +10440,7 @@ function VncSessionStatusPanel({
         ) : null}
 
         {showEmbeddedViewer && session.result ? (
-          <Suspense fallback={<p className="file-panel-empty">正在加载 VNC 画面...</p>}>
+          <Suspense fallback={<p className="file-panel-empty">{tr("workspace.vnc.loading")}</p>}>
             <VncViewerSurface
               active={active}
               config={config}
@@ -10458,7 +10458,7 @@ function VncSessionStatusPanel({
             </section>
             {session.preview?.warnings.length || session.result?.warnings.length ? (
               <section className="rdp-session-preview-card subtle">
-                <strong>提示</strong>
+                <strong>{tr("workspace.rdp.hint")}</strong>
                 {(session.preview?.warnings || session.result?.warnings || []).map((warning) => (
                   <small key={warning}>{warning}</small>
                 ))}
@@ -10487,7 +10487,7 @@ function VncSessionToolPanel({
   if (!connection || !session) {
     return (
       <section className="rdp-tool-panel vnc-tool-panel">
-        <p className="file-panel-empty">打开一个 VNC 会话后显示 runner 状态。</p>
+        <p className="file-panel-empty">{tr("workspace.vnc.empty")}</p>
       </section>
     );
   }
@@ -10498,7 +10498,7 @@ function VncSessionToolPanel({
   const input = connection.vnc?.input;
 
   return (
-    <section className="rdp-tool-panel vnc-tool-panel" aria-label="VNC 工具">
+    <section className="rdp-tool-panel vnc-tool-panel" aria-label={tr("workspace.vnc.tools")}>
       <header className="rdp-tool-head">
         <span>
           <strong>{connection.name}</strong>
@@ -10528,15 +10528,15 @@ function VncSessionToolPanel({
           <dd>{formatVncRunnerKind(runner)}</dd>
         </div>
         <div>
-          <dt>模式</dt>
+          <dt>{tr("workspace.rdp.mode")}</dt>
           <dd>{vncRenderModeLabel(connection.vnc?.runner.render_mode || "embedded")}</dd>
         </div>
         <div>
-          <dt>显示</dt>
+          <dt>{tr("workspace.rdp.display")}</dt>
           <dd>{vncDisplaySummary(display)}</dd>
         </div>
         <div>
-          <dt>输入</dt>
+          <dt>{tr("workspace.vnc.input")}</dt>
           <dd>{vncInputSummary(input)}</dd>
         </div>
       </dl>
@@ -10547,8 +10547,8 @@ function VncSessionToolPanel({
 
       {session.preview || session.result ? (
         <section className="rdp-tool-preview">
-          <strong>启动材料</strong>
-          <code>{vncSessionCommandText(session) || "noVNC 模式不需要外部命令。"}</code>
+          <strong>{tr("workspace.rdp.launchMaterial")}</strong>
+          <code>{vncSessionCommandText(session) || tr("workspace.vnc.noExternalCommand")}</code>
           {session.preview?.setup_hint || session.result?.setup_hint ? (
             <small>{session.preview?.setup_hint || session.result?.setup_hint}</small>
           ) : null}
@@ -10557,7 +10557,7 @@ function VncSessionToolPanel({
           ) : null}
         </section>
       ) : (
-        <p className="rdp-tool-note">启动后可在这里查看 bridge、runner 和脱敏命令预览。</p>
+        <p className="rdp-tool-note">{tr("workspace.vnc.toolNote")}</p>
       )}
     </section>
   );
@@ -10581,7 +10581,7 @@ function LocalTerminalEmptyPanel({
   return (
     <section
       className={`terminal-direct-status local-terminal-empty ${active ? "" : "is-hidden"}`}
-      aria-label="本地终端空状态"
+      aria-label={tr("workspace.local.emptyAria")}
       aria-hidden={!active}
     >
       <div>
@@ -10592,21 +10592,21 @@ function LocalTerminalEmptyPanel({
         ) : (
           <LocalTerminalIcon className="ui-icon" kind={profileName ? "powershell_core" : "custom"} />
         )}
-        <strong>{loading ? "探测本地终端中" : "打开本地终端"}</strong>
+        <strong>{loading ? tr("workspace.local.detecting") : tr("workspace.local.open")}</strong>
         <span>
           {error
             ? error
             : profileName
-              ? `默认会打开 ${profileName}，也可以在上方下拉中切换其他类型。`
-              : "还没有可用的本地终端类型，请先检查设置或补充自定义 profile。"}
+              ? tr("workspace.local.defaultHint", { name: profileName })
+              : tr("workspace.local.noTypeHint")}
         </span>
         <div className="local-terminal-status-actions">
           <button className="primary-button" type="button" disabled={!profileName || loading} onClick={onOpenDefault}>
             <Play className="ui-icon" aria-hidden="true" />
-            打开默认终端
+            {tr("workspace.local.openDefault")}
           </button>
           <button type="button" onClick={onOpenSettings}>
-            打开设置
+            {tr("workspace.local.openSettings")}
           </button>
         </div>
       </div>
@@ -10642,7 +10642,7 @@ function LocalTerminalStatusPanel({
   onRetry?: () => void;
 }) {
   const failed = status === "连接失败";
-  const subject = source === "telnet" ? "Telnet 会话" : source === "serial" ? "串口会话" : "本地终端";
+  const subject = source === "telnet" ? tr("workspace.local.telnetSession") : source === "serial" ? tr("workspace.local.serialSession") : tr("workspace.local.subject");
   const description = profile ? `${profile.name} · ${profile.command}` : title;
 
   return (
@@ -10650,7 +10650,7 @@ function LocalTerminalStatusPanel({
       className={`terminal-direct-status local-terminal-status ${failed ? "is-error" : "is-loading"} ${
         visible ? "" : "is-hidden"
       } ${className || ""}`}
-      aria-label={`${title} 状态`}
+      aria-label={`${title} ${tr("workspace.rdp.state")}`}
       aria-hidden={!visible}
       style={style}
       onPointerDown={onPaneFocus}
@@ -10661,14 +10661,14 @@ function LocalTerminalStatusPanel({
         ) : (
           <Loader2 className="ui-icon spin" aria-hidden="true" />
         )}
-        <strong>{failed ? `${subject}打开失败` : status}</strong>
+        <strong>{failed ? tr("workspace.local.openFailed", { subject }) : localTerminalStatusLabel(status)}</strong>
         <span>{description}</span>
         {error ? <small>{error}</small> : null}
         {failed && onRetry ? (
           <div className="local-terminal-status-actions">
             <button className="primary-button" type="button" onClick={onRetry}>
               <RefreshCw className="ui-icon" aria-hidden="true" />
-              重试
+              {tr("workspace.rdp.retry")}
             </button>
             {source === "local" ? <button type="button" onClick={onOpenSettings}>打开设置</button> : null}
           </div>
@@ -10701,12 +10701,12 @@ function LocalTerminalLauncher({
 
   return (
     <div className="local-terminal-launcher">
-      <Tooltip label={loading ? "正在探测终端类型" : "选择终端类型"}>
+      <Tooltip label={loading ? tr("workspace.local.detectingTypes") : tr("workspace.local.chooseType")}>
         <button
           ref={triggerRef}
           className="add-subtab local-terminal-launch-button"
           type="button"
-          aria-label={loading ? "正在探测终端类型" : "选择终端类型"}
+          aria-label={loading ? tr("workspace.local.detectingTypes") : tr("workspace.local.chooseType")}
           aria-expanded={open}
           aria-haspopup="menu"
           disabled={menuDisabled}
@@ -10722,7 +10722,7 @@ function LocalTerminalLauncher({
       </Tooltip>
       <AnchoredSurfacePortal
         anchorRef={triggerRef}
-        ariaLabel="选择终端类型"
+        ariaLabel={tr("workspace.local.chooseTypeAria")}
         className="local-terminal-profile-menu dropdown-menu-content"
         desiredHeight={420}
         minHeight={180}
@@ -10785,7 +10785,7 @@ function DirectTerminalStatusPanel({
       className={`terminal-direct-status ${failed ? "is-error" : "is-loading"} ${
         visible ? "" : "is-hidden"
       } ${className || ""}`}
-      aria-label={`${title} 状态`}
+      aria-label={`${title} ${tr("workspace.rdp.state")}`}
       aria-hidden={!visible}
       style={style}
       onPointerDown={onPaneFocus}
@@ -10796,14 +10796,14 @@ function DirectTerminalStatusPanel({
         ) : (
           <Loader2 className="ui-icon spin" aria-hidden="true" />
         )}
-        <strong>{failed ? tr("workspace.connection.failed") : "正在添加终端"}</strong>
+        <strong>{failed ? tr("workspace.connection.failed") : tr("workspace.local.adding")}</strong>
         <span>
           {connection
             ? `${connection.username}@${connection.host}:${connection.port.toString()}`
-            : "当前连接"}
+            : tr("workspace.local.currentConnection")}
         </span>
         {error ? <small>{error}</small> : null}
-        {failed && onRetry ? <button className="primary-button" type="button" onClick={onRetry}><RefreshCw className="ui-icon" aria-hidden="true" />重试</button> : null}
+        {failed && onRetry ? <button className="primary-button" type="button" onClick={onRetry}><RefreshCw className="ui-icon" aria-hidden="true" />{tr("workspace.rdp.retry")}</button> : null}
       </div>
     </section>
   );
@@ -11084,7 +11084,7 @@ function ConnectionStepPanel({
                       onClick={onRetry}
                     >
                       <RefreshCw className="ui-icon" aria-hidden="true" />
-                      <span>重试</span>
+                      <span>{tr("workspace.rdp.retry")}</span>
                     </button>
                     {!step.temporary ? (
                       <button className="connection-step-secondary-button" type="button" onClick={() => onEdit(step.connection)}>
