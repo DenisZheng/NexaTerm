@@ -809,5 +809,6 @@
   "settings.terminalTheme.noMatch": "未找到匹配的配色方案。",
   "settings.terminalTheme.current": "当前方案：",
   "settings.terminalTheme.saved": "已保存",
-  "settings.terminalTheme.discard": "放弃更改"
+  "settings.terminalTheme.discard": "放弃更改",
+  "settings.localTerminal.preview.cmd": "命令提示符"
 }
