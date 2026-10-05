@@ -163,5 +163,8 @@
   "brandMigration.blockedDescription": "为避免覆盖，NexaTerm 不会自动迁移。请继续使用当前数据，或先导出/备份后再进行人工迁移。",
   "brandMigration.continue": "继续使用当前 NexaTerm 数据",
   "brandMigration.error": "迁移失败：{message}",
-  "brandMigration.restartFailed": "迁移已完成，但自动重启失败。请手动重新启动 NexaTerm。"
+  "brandMigration.restartFailed": "迁移已完成，但自动重启失败。请手动重新启动 NexaTerm。",
+  "brandMigration.settingsTitle": "迁移旧 mXterm 设置",
+  "brandMigration.settingsDescription": "NexaTerm 检测到旧 mXterm WebView 配置。迁移后可恢复外观、快捷键、启动偏好以及自定义 Local/WSL 配置；旧 mXterm 配置不会被修改。",
+  "brandMigration.settingsApply": "迁移设置并重启"
 }
