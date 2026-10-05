@@ -679,18 +679,20 @@ const minCenterPaneWidth = 520;
 const paneKeyboardResizeStep = 16;
 const defaultEditorTerminalSplitPercent = 44;
 const commandSnippetRootGroup = "";
-const commandSnippetRootGroupLabel = "根目录";
+const commandSnippetRootGroupLabel = () => tr("workspace.snippet.root");
 const legacyCommandSnippetGroup = "未分组";
 const commandHistoryAllScopeKey = "all";
 const commandHistorySshScopePrefix = "ssh:";
 const commandHistoryLocalScopePrefix = "local:";
-const connectionPromptAuthKindOptions: Array<{
+function connectionPromptAuthKindOptions(): Array<{
   label: string;
   value: ConnectionAuthKind;
-}> = [
-  { label: "密码", value: "password" },
-  { label: "私钥", value: "private_key" },
-];
+}> {
+  return [
+    { label: tr("workspace.connection.auth.password"), value: "password" },
+    { label: tr("workspace.connection.auth.privateKey"), value: "private_key" },
+  ];
+}
 const minEditorTerminalSplitPercent = 24;
 const maxEditorTerminalSplitPercent = 72;
 const editorTerminalKeyboardResizeStep = 3;
@@ -1486,7 +1488,7 @@ export function WorkspaceShell() {
   );
   const commandSnippetGroupOptions = useMemo(
     () => [
-      { label: commandSnippetRootGroupLabel, value: commandSnippetRootGroup },
+      { label: commandSnippetRootGroupLabel(), value: commandSnippetRootGroup },
       ...commandSnippetGroups.map((group) => ({ label: group, value: group })),
     ],
     [commandSnippetGroups],
@@ -10994,7 +10996,7 @@ function ConnectionStepPanel({
                     <AppSelect
                       ariaLabel={tr("workspace.connection.authMethod")}
                       value={step.authKind}
-                      options={connectionPromptAuthKindOptions}
+                      options={connectionPromptAuthKindOptions()}
                       onChange={onPromptAuthKindChange}
                     />
                   </label>
