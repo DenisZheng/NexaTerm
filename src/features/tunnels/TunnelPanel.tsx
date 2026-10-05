@@ -354,7 +354,7 @@ export function TunnelPanel({ activeConnectionId = null, connections }: TunnelPa
               {connections.length && !unavailableReason ? (
                 <button type="button" onClick={openCreateForm}>
                   <Plus className="ui-icon" aria-hidden="true" />
-                  {tr("tunnel.new")}规则
+                  {tr("tunnel.newRule")}
                 </button>
               ) : null}
             </div>
