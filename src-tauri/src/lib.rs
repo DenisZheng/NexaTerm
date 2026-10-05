@@ -15,6 +15,7 @@ mod credentials;
 mod docker_tools;
 mod events;
 mod known_hosts;
+mod legacy_webview_settings;
 mod mobaxterm_import;
 pub mod mcp;
 mod network_tools;
@@ -65,6 +66,7 @@ pub fn run() {
         .manage(webdav_sync::WebDavSyncManager::default())
         .manage(mcp::McpRemoteServiceManager::default())
         .manage(VaultState::default())
+        .manage(legacy_webview_settings::LegacyWebviewSettingsProbeState::default())
         .setup(|app| {
             #[cfg(windows)]
             {
@@ -88,6 +90,9 @@ pub fn run() {
             brand_migration::legacy_app_data_migration_preview,
             brand_migration::legacy_app_data_migration_apply,
             brand_migration::legacy_app_data_migration_rollback,
+            legacy_webview_settings::legacy_webview_settings_probe_start,
+            legacy_webview_settings::legacy_webview_settings_probe_capture,
+            legacy_webview_settings::legacy_webview_settings_probe_take,
             workspace_snapshot::workspace_snapshot_load,
             workspace_snapshot::workspace_snapshot_save,
             workspace_snapshot::workspace_snapshot_clear,
