@@ -376,11 +376,11 @@ export function WebDavSyncSettingsSection() {
                 </div>
                 <div>
                   <dt>{t("settings.sync.remote.dataSize")}</dt>
-                  <dd>{formatBytes(remoteInfo.data_size)}</dd>
+                  <dd>{formatBytes(remoteInfo.data_size, t)}</dd>
                 </div>
                 <div>
                   <dt>Secrets</dt>
-                  <dd>{remoteInfo.secrets_size ? formatBytes(remoteInfo.secrets_size) : t("settings.sync.remote.none")}</dd>
+                  <dd>{remoteInfo.secrets_size ? formatBytes(remoteInfo.secrets_size, t) : t("settings.sync.remote.none")}</dd>
                 </div>
               </dl>
             </div>
@@ -591,9 +591,9 @@ function formatTimestamp(value: string | null, locale: "en" | "zh-CN", t: Transl
   return date.toLocaleString(locale === "zh-CN" ? "zh-CN" : "en-US");
 }
 
-function formatBytes(value: number | null) {
+function formatBytes(value: number | null, t: Translate) {
   if (!value || value <= 0) {
-    return "无";
+    return t("settings.sync.remote.none");
   }
   if (value < 1024) {
     return `${value.toString()} B`;
