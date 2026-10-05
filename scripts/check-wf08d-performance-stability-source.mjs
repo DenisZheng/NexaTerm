@@ -6,6 +6,7 @@ const probe = readFileSync(new URL("../src-tauri/src/performance_probe.rs", impo
 const lib = readFileSync(new URL("../src-tauri/src/lib.rs", import.meta.url), "utf8");
 const commands = readFileSync(new URL("../src/shared/tauri/commands.ts", import.meta.url), "utf8");
 const workspace = readFileSync(new URL("../src/features/layout/WorkspaceShell.tsx", import.meta.url), "utf8");
+const app = readFileSync(new URL("../src/App.tsx", import.meta.url), "utf8");
 const sampler = readFileSync(new URL("./perf-runtime-sampler.mjs", import.meta.url), "utf8");
 const startupBoundary = readFileSync(new URL("./check-startup-module-boundary-source.mjs", import.meta.url), "utf8");
 
@@ -54,10 +55,14 @@ requireAll(lib, [
   "performance_probe::performance_probe_mark_interactive",
 ], "Tauri probe registration");
 requireAll(commands, ["performanceProbeMarkInteractive"], "frontend performance bridge");
-requireAll(workspace, [
+requireAll(app, [
+  "function WorkspaceInteractiveMarker()",
   "void performanceProbeMarkInteractive().catch(() => undefined)",
-  "useEffect(() =>",
+  "<WorkspaceInteractiveMarker />",
 ], "workspace interactive mark");
+if (workspace.includes("performanceProbeMarkInteractive")) {
+  fail("performance probe must not grow WorkspaceShell; keep the marker at the lightweight App boundary");
+}
 requireAll(sampler, [
   "STARTUP_REVIEW_TARGET_MS = 2000",
   "IDLE_MEMORY_REVIEW_RATIO = 1.25",
