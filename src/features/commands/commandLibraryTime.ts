@@ -1,3 +1,5 @@
+import { getLocale, t } from "../../shared/i18n";
+
 export function commandLibraryTimestampMs(value?: string | null) {
   const normalized = value?.trim();
   if (!normalized) {
@@ -22,7 +24,7 @@ export function compareCommandLibraryTimestampsDesc(left?: string | null, right?
 
 export function formatCommandLibraryTime(value?: string | null) {
   if (!value) {
-    return "未使用";
+    return t("commands.time.never");
   }
 
   const timestamp = commandLibraryTimestampMs(value);
@@ -30,7 +32,7 @@ export function formatCommandLibraryTime(value?: string | null) {
     return value;
   }
 
-  return new Date(timestamp).toLocaleString("zh-CN", {
+  return new Date(timestamp).toLocaleString(getLocale() === "zh-CN" ? "zh-CN" : "en-US", {
     day: "2-digit",
     hour: "2-digit",
     hour12: false,
