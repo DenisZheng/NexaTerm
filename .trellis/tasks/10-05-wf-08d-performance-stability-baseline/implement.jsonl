@@ -1,0 +1,7 @@
+{"file":"NEXATERM_REQUIREMENTS.md","reason":"§49 performance, §50 stability and §60 no-obvious-resource-leak release gate"}
+{"file":"docs/tasks/09-performance-stability-e2e-release-gate.md","reason":"historical task defines workload/release evidence scope reused by WF-08D"}
+{"file":".trellis/tasks/archive/2026-08/06-27-startup-performance/design.md","reason":"existing startup lazy-loading design must be preserved"}
+{"file":"scripts/check-startup-module-boundary-source.mjs","reason":"existing startup graph regression gate"}
+{"file":"src-tauri/src/performance_probe.rs","reason":"opt-in startup interactive evidence"}
+{"file":"scripts/perf-runtime-sampler.mjs","reason":"real packaged process-tree CPU/RSS sampler"}
+{"file":"tests/performance/wf08d-workload.json","reason":"repeatable 10 SSH and resource-release workload"}
