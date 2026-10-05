@@ -330,12 +330,13 @@ export function ConnectionTransferDialog({
 }
 
 function FilePicker({ path, busy, label, onChoose }: { path: string; busy: boolean; label: string; onChoose: () => void }) {
+  const { t } = useI18n();
   return (
     <div className="connection-transfer-field">
       <span>{label}</span>
       <button className="connection-transfer-file" disabled={busy} type="button" title={path || undefined} onClick={onChoose}>
         <FileJson className="ui-icon" aria-hidden="true" />
-        <span>{path ? fileName(path) : "尚未选择文件"}</span>
+        <span>{path ? fileName(path) : t("transfer.file.none")}</span>
         <FolderOpen className="ui-icon" aria-hidden="true" />
       </button>
     </div>
@@ -343,12 +344,13 @@ function FilePicker({ path, busy, label, onChoose }: { path: string; busy: boole
 }
 
 function PasswordField({ id, label, value, visible, busy, onChange, onToggle }: { id: string; label: string; value: string; visible: boolean; busy: boolean; onChange: (value: string) => void; onToggle: () => void }) {
+  const { t } = useI18n();
   return (
     <label className="connection-transfer-field" htmlFor={id}>
       <span>{label}</span>
       <span className="connection-transfer-password">
         <input id={id} autoComplete="new-password" disabled={busy} type={visible ? "text" : "password"} value={value} onChange={(event) => onChange(event.target.value)} />
-        <button disabled={busy} type="button" aria-label={visible ? "隐藏密码" : "显示密码"} onClick={onToggle}>
+        <button disabled={busy} type="button" aria-label={visible ? t("transfer.password.hide") : t("transfer.password.show")} onClick={onToggle}>
           {visible ? <EyeOff className="ui-icon" aria-hidden="true" /> : <Eye className="ui-icon" aria-hidden="true" />}
         </button>
       </span>
@@ -357,19 +359,20 @@ function PasswordField({ id, label, value, visible, busy, onChange, onToggle }: 
 }
 
 function PreviewPanel({ preview }: { preview: ConnectionTransferPreviewResult }) {
+  const { t } = useI18n();
   const { summary } = preview;
   return (
-    <section className="connection-transfer-preview" aria-label="预检结果">
+    <section className="connection-transfer-preview" aria-label={t("transfer.preview.aria")}>
       <div className="connection-transfer-stats">
-        <TransferStat label="连接" value={summary.connections} />
-        <TransferStat label="账号" value={summary.credentials} />
-        <TransferStat label="分组" value={summary.groups} />
+        <TransferStat label={t("transfer.preview.connections")} value={summary.connections} />
+        <TransferStat label={t("transfer.preview.accounts")} value={summary.credentials} />
+        <TransferStat label={t("transfer.preview.groups")} value={summary.groups} />
       </div>
       {summary.private_key_warnings.length ? (
         <div className="connection-transfer-warning">
           <AlertTriangle className="ui-icon" aria-hidden="true" />
           <span>
-            <strong>{summary.private_key_warnings.length.toString()} 个私钥路径当前不可访问</strong>
+            <strong>{t("transfer.preview.privateKeyWarning", { count: summary.private_key_warnings.length })}</strong>
             <ul>
               {summary.private_key_warnings.map((path) => <li key={path} title={path}>{path}</li>)}
             </ul>
@@ -381,18 +384,20 @@ function PreviewPanel({ preview }: { preview: ConnectionTransferPreviewResult })
 }
 
 function TransferStat({ label, value }: { label: string; value: { total: number; new: number; conflicts: number } }) {
-  return <div><strong>{value.total.toString()}</strong><span>{label}</span><small>新增 {value.new.toString()} · 冲突 {value.conflicts.toString()}</small></div>;
+  const { t } = useI18n();
+  return <div><strong>{value.total.toString()}</strong><span>{label}</span><small>{t("transfer.preview.stat", { newCount: value.new, conflicts: value.conflicts })}</small></div>;
 }
 
 function TransferComplete({ mode, exportResult, importResult }: { mode: ConnectionTransferMode; exportResult: ConnectionTransferExportResult | null; importResult: ConnectionTransferImportResult | null }) {
+  const { t } = useI18n();
   const connectionCount = exportResult?.connections ?? (importResult ? importResult.connections.created + importResult.connections.updated : 0);
   return (
     <div className="connection-transfer-complete">
       <CheckCircle2 className="ui-icon" aria-hidden="true" />
-      <strong>{mode === "import" ? "连接已导入" : "连接已导出"}</strong>
-      <span>{connectionCount.toString()} 个连接，{(exportResult?.credentials ?? (importResult ? importResult.credentials.created + importResult.credentials.updated : 0)).toString()} 个账号</span>
+      <strong>{mode === "import" ? t("transfer.complete.import") : t("transfer.complete.export")}</strong>
+      <span>{t("transfer.complete.summary", { connections: connectionCount, accounts: exportResult?.credentials ?? (importResult ? importResult.credentials.created + importResult.credentials.updated : 0) })}</span>
       {exportResult ? <small>{exportResult.file_name}</small> : null}
-      <Dialog.Close asChild><button className="primary-button" type="button">完成</button></Dialog.Close>
+      <Dialog.Close asChild><button className="primary-button" type="button">{t("transfer.complete.done")}</button></Dialog.Close>
     </div>
   );
 }
