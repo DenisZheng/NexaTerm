@@ -636,7 +636,7 @@ function MonitorNetworkView({
   return (
     <>
       <NetworkCard history={history} network={network} />
-      <MonitorCard badge={tr("monitor.network.interfaces", { count: interfaces.length })} title="接口列表">
+      <MonitorCard badge={tr("monitor.network.interfaces", { count: interfaces.length })} title={tr("monitor.network.interfaceList")}>
         <div className="monitor-interface-list">
           {interfaces.length ? (
             interfaces.map((item) => (
@@ -701,7 +701,7 @@ function MonitorProcessView({
     });
 
   return (
-    <MonitorCard badge={busyOnly ? tr("monitor.process.hot") : tr("monitor.process.all")} errors={snapshot.processes.errors} title="进程管理">
+    <MonitorCard badge={busyOnly ? tr("monitor.process.hot") : tr("monitor.process.all")} errors={snapshot.processes.errors} title={tr("monitor.process.management")}>
       <div className="monitor-process-tools">
         <label className="monitor-search-field">
           <Search className="ui-icon" aria-hidden="true" />
