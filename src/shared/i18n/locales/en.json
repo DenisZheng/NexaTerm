@@ -2585,5 +2585,11 @@
   "files.transfer.stage.awaitingRemote": "Waiting for remote confirmation",
   "files.transfer.archiveSize": "Archive {size}",
   "settings.controls.decrease": "Decrease",
-  "settings.controls.increase": "Increase"
+  "settings.controls.increase": "Increase",
+  "workspace.restore.missing": "Workspace restore item is missing.",
+  "workspace.restore.profileMissing": "The saved connection or terminal profile no longer exists. Fix the configuration and retry.",
+  "workspace.restore.temporaryCredentials": "Temporary connection credentials are not persisted. Recreate or authenticate the connection.",
+  "workspace.restore.restoring": "Restoring",
+  "workspace.restore.manualRetry": "Workspace restored; automatic reconnect is disabled. Retry manually.",
+  "workspace.restore.desktopStopped": "Workspace restored; desktop sessions remain stopped. Retry manually."
 }
