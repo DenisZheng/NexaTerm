@@ -166,5 +166,7 @@
   "brandMigration.restartFailed": "Migration completed, but automatic restart failed. Please restart NexaTerm manually.",
   "brandMigration.settingsTitle": "Migrate your mXterm settings",
   "brandMigration.settingsDescription": "NexaTerm found settings from the previous mXterm WebView profile. Importing them restores appearance, shortcuts, startup preferences, and custom Local/WSL profiles. The old mXterm profile is left untouched.",
-  "brandMigration.settingsApply": "Import settings and restart"
+  "brandMigration.settingsApply": "Import settings and restart",
+  "brandMigration.settingsUnsupportedTitle": "Core mXterm data migrated; some settings need review",
+  "brandMigration.settingsUnsupportedDescription": "On macOS, the previous mXterm default WKWebView store cannot be addressed safely by NexaTerm through the supported Tauri data-directory API. Core app data and encrypted secrets were migrated, but appearance, shortcuts, startup preferences, and custom Local/WSL profiles may need to be configured again. The original mXterm data remains untouched."
 }
