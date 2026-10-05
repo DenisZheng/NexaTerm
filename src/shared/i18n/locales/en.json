@@ -809,5 +809,6 @@
   "settings.terminalTheme.noMatch": "No matching color schemes.",
   "settings.terminalTheme.current": "Current scheme:",
   "settings.terminalTheme.saved": "Saved",
-  "settings.terminalTheme.discard": "Discard changes"
+  "settings.terminalTheme.discard": "Discard changes",
+  "settings.localTerminal.preview.cmd": "Command Prompt"
 }
