@@ -31,7 +31,7 @@ import {
   resolveDesktopPlatform,
 } from "../../shared/tauri/platformCapabilities";
 import { hasTauriRuntime } from "../../shared/tauri/runtime";
-import { useI18n } from "../../shared/i18n";
+import { t as tr, useI18n } from "../../shared/i18n";
 import { selectLocalPrivateKeyFile } from "../../shared/tauri/dialog";
 import type {
   ConnectionAuthKind,
@@ -171,43 +171,51 @@ const protocolDefaultPorts = {
   serial: 1,
 } as const;
 
-const protocolOptions: Array<{
+function protocolOptions(): Array<{
   icon: typeof Terminal;
   label: string;
   value: ConnectionProtocol;
-}> = [
-  { icon: Terminal, label: "SSH", value: "ssh" },
-  { icon: Monitor, label: "RDP", value: "rdp" },
-  { icon: MonitorPlay, label: "VNC", value: "vnc" },
-  { icon: TerminalSquare, label: "Telnet", value: "telnet" },
-  { icon: Cable, label: "串口", value: "serial" },
-];
+}> {
+  return [
+    { icon: Terminal, label: "SSH", value: "ssh" },
+    { icon: Monitor, label: "RDP", value: "rdp" },
+    { icon: MonitorPlay, label: "VNC", value: "vnc" },
+    { icon: TerminalSquare, label: "Telnet", value: "telnet" },
+    { icon: Cable, label: tr("connectionDialog.protocol.serial"), value: "serial" },
+  ];
+}
 
-const credentialModeOptions: Array<{
+function credentialModeOptions(): Array<{
   label: string;
   value: ConnectionCredentialMode;
-}> = [
-  { label: "使用保存的账号", value: "saved" },
-  { label: "在此连接中保存", value: "inline" },
-  { label: "每次询问", value: "prompt" },
-];
+}> {
+  return [
+    { label: tr("connectionDialog.credential.saved"), value: "saved" },
+    { label: tr("connectionDialog.credential.inline"), value: "inline" },
+    { label: tr("connectionDialog.credential.prompt"), value: "prompt" },
+  ];
+}
 
-const authKindOptions: Array<{
+function authKindOptions(): Array<{
   label: string;
   value: ConnectionAuthKind;
-}> = [
-  { label: "密码", value: "password" },
-  { label: "私钥", value: "private_key" },
-];
+}> {
+  return [
+    { label: tr("connectionDialog.auth.password"), value: "password" },
+    { label: tr("connectionDialog.auth.privateKey"), value: "private_key" },
+  ];
+}
 
-const networkPathOptions: Array<{
+function networkPathOptions(): Array<{
   label: string;
   value: ConnectionNetworkPathMode;
-}> = [
-  { label: "直连", value: "direct" },
-  { label: "网络代理", value: "proxy" },
-  { label: "SSH 跳板机", value: "ssh_jump" },
-];
+}> {
+  return [
+    { label: tr("connectionDialog.network.direct"), value: "direct" },
+    { label: tr("connectionDialog.network.proxy"), value: "proxy" },
+    { label: tr("connectionDialog.network.jump"), value: "ssh_jump" },
+  ];
+}
 
 const proxyKindOptions: Array<{
   label: string;
@@ -217,55 +225,71 @@ const proxyKindOptions: Array<{
   { label: "SOCKS5", value: "socks5" },
 ];
 
-const rdpDisplayOptions: Array<{ label: string; value: RdpDisplayMode }> = [
-  { label: "禁用", value: "embedded" },
-  { label: "允许（单显示器）", value: "fullscreen" },
-  { label: "允许（所有显示器）", value: "all_monitors" },
-];
+function rdpDisplayOptions(): Array<{ label: string; value: RdpDisplayMode }> {
+  return [
+    { label: tr("connectionDialog.rdp.fullscreen.embedded"), value: "embedded" },
+    { label: tr("connectionDialog.rdp.fullscreen.single"), value: "fullscreen" },
+    { label: tr("connectionDialog.rdp.fullscreen.all"), value: "all_monitors" },
+  ];
+}
 
-const rdpResolutionModeOptions: Array<{ label: string; value: "adaptive" | "fixed" }> = [
-  { label: "适应窗口大小", value: "adaptive" },
-  { label: "固定分辨率", value: "fixed" },
-];
+function rdpResolutionModeOptions(): Array<{ label: string; value: "adaptive" | "fixed" }> {
+  return [
+    { label: tr("connectionDialog.rdp.resolution.adaptive"), value: "adaptive" },
+    { label: tr("connectionDialog.rdp.resolution.fixed"), value: "fixed" },
+  ];
+}
 
-const rdpAudioOptions: Array<{ label: string; value: RdpAudioMode }> = [
-  { label: "本机播放", value: "local" },
-  { label: "远端播放", value: "remote" },
-  { label: "禁用", value: "disabled" },
-];
+function rdpAudioOptions(): Array<{ label: string; value: RdpAudioMode }> {
+  return [
+    { label: tr("connectionDialog.rdp.audio.local"), value: "local" },
+    { label: tr("connectionDialog.rdp.audio.remote"), value: "remote" },
+    { label: tr("connectionDialog.option.disabled"), value: "disabled" },
+  ];
+}
 
-const rdpGatewayOptions: Array<{ label: string; value: RdpGatewayMode }> = [
-  { label: "关闭", value: "disabled" },
-  { label: "自动", value: "auto" },
-  { label: "指定网关", value: "explicit" },
-];
+function rdpGatewayOptions(): Array<{ label: string; value: RdpGatewayMode }> {
+  return [
+    { label: tr("connectionDialog.option.disabled"), value: "disabled" },
+    { label: tr("connectionDialog.option.auto"), value: "auto" },
+    { label: tr("connectionDialog.rdp.gateway.explicit"), value: "explicit" },
+  ];
+}
 
-const rdpPerformanceOptions: Array<{ label: string; value: RdpPerformancePreset }> = [
-  { label: "自动", value: "auto" },
-  { label: "局域网", value: "lan" },
-  { label: "均衡", value: "balanced" },
-  { label: "低带宽", value: "low_bandwidth" },
-];
+function rdpPerformanceOptions(): Array<{ label: string; value: RdpPerformancePreset }> {
+  return [
+    { label: tr("connectionDialog.option.auto"), value: "auto" },
+    { label: tr("connectionDialog.performance.lan"), value: "lan" },
+    { label: tr("connectionDialog.performance.balanced"), value: "balanced" },
+    { label: tr("connectionDialog.performance.lowBandwidth"), value: "low_bandwidth" },
+  ];
+}
 
-const vncRunnerModeOptions: Array<{ label: string; value: VncRenderMode }> = [
-  { label: "内嵌 noVNC", value: "embedded" },
-  { label: "RDP 窗口 noVNC", value: "windowed" },
-  { label: "外部 Viewer", value: "external" },
-  { label: "自定义客户端", value: "custom" },
-];
+function vncRunnerModeOptions(): Array<{ label: string; value: VncRenderMode }> {
+  return [
+    { label: tr("connectionDialog.vnc.runner.embedded"), value: "embedded" },
+    { label: tr("connectionDialog.vnc.runner.windowed"), value: "windowed" },
+    { label: tr("connectionDialog.vnc.runner.external"), value: "external" },
+    { label: tr("connectionDialog.vnc.runner.custom"), value: "custom" },
+  ];
+}
 
-const vncScaleModeOptions: Array<{ label: string; value: VncScaleMode }> = [
-  { label: "适应窗口", value: "fit" },
-  { label: "拉伸填满", value: "stretch" },
-  { label: "原始尺寸", value: "actual" },
-];
+function vncScaleModeOptions(): Array<{ label: string; value: VncScaleMode }> {
+  return [
+    { label: tr("connectionDialog.vnc.scale.fit"), value: "fit" },
+    { label: tr("connectionDialog.vnc.scale.stretch"), value: "stretch" },
+    { label: tr("connectionDialog.vnc.scale.actual"), value: "actual" },
+  ];
+}
 
-const vncPerformanceOptions: Array<{ label: string; value: VncPerformancePreset }> = [
-  { label: "自动", value: "auto" },
-  { label: "画质优先", value: "quality" },
-  { label: "均衡", value: "balanced" },
-  { label: "低带宽", value: "low_bandwidth" },
-];
+function vncPerformanceOptions(): Array<{ label: string; value: VncPerformancePreset }> {
+  return [
+    { label: tr("connectionDialog.option.auto"), value: "auto" },
+    { label: tr("connectionDialog.performance.quality"), value: "quality" },
+    { label: tr("connectionDialog.performance.balanced"), value: "balanced" },
+    { label: tr("connectionDialog.performance.lowBandwidth"), value: "low_bandwidth" },
+  ];
+}
 
 const telnetEnterModeOptions: Array<{ label: string; value: TelnetEnterMode }> = [
   { label: "CRLF", value: "crlf" },
@@ -296,23 +320,29 @@ const serialStopBitsOptions: Array<{ label: string; value: SerialStopBits }> = [
   { label: "2", value: "two" },
 ];
 
-const serialFlowControlOptions: Array<{ label: string; value: SerialFlowControl }> = [
-  { label: "无", value: "none" },
-  { label: "软件", value: "software" },
-  { label: "硬件", value: "hardware" },
-];
+function serialFlowControlOptions(): Array<{ label: string; value: SerialFlowControl }> {
+  return [
+    { label: tr("connectionDialog.option.none"), value: "none" },
+    { label: tr("connectionDialog.option.software"), value: "software" },
+    { label: tr("connectionDialog.option.hardware"), value: "hardware" },
+  ];
+}
 
-const rdpNlaOptions: Array<{ label: string; value: RdpNetworkLevelAuthentication }> = [
-  { label: "自动", value: "auto" },
-  { label: "启用", value: "enabled" },
-  { label: "禁用", value: "disabled" },
-];
+function rdpNlaOptions(): Array<{ label: string; value: RdpNetworkLevelAuthentication }> {
+  return [
+    { label: tr("connectionDialog.option.auto"), value: "auto" },
+    { label: tr("connectionDialog.option.enabled"), value: "enabled" },
+    { label: tr("connectionDialog.option.disabled"), value: "disabled" },
+  ];
+}
 
-const rdpCertificateOptions: Array<{ label: string; value: RdpCertificatePolicy }> = [
-  { label: "警告后可继续", value: "prompt" },
-  { label: "信任证书错误", value: "trust" },
-  { label: "严格校验", value: "strict" },
-];
+function rdpCertificateOptions(): Array<{ label: string; value: RdpCertificatePolicy }> {
+  return [
+    { label: tr("connectionDialog.rdp.nla.prompt"), value: "prompt" },
+    { label: tr("connectionDialog.rdp.cert.trust"), value: "trust" },
+    { label: tr("connectionDialog.rdp.cert.strict"), value: "strict" },
+  ];
+}
 
 export function ConnectionDialog({
   connection,
@@ -795,7 +825,7 @@ export function ConnectionDialog({
               </header>
 
               <div className="protocol-switch" aria-label="连接协议">
-                {protocolOptions.map((item) => {
+                {protocolOptions().map((item) => {
                   const Icon = item.icon;
                   const active = protocol === item.value;
                   return (
@@ -1238,7 +1268,7 @@ export function ConnectionDialog({
               <AppSelect
                 ariaLabel="流控"
                 value={serial.flow_control}
-                options={serialFlowControlOptions}
+                options={serialFlowControlOptions()}
                 onChange={(flowControl) =>
                   setForm({ ...form, serial: { ...serial, flow_control: flowControl } })
                 }
@@ -1324,7 +1354,7 @@ export function ConnectionDialog({
               <AppSelect
                 ariaLabel="账号来源"
                 value={credentialMode}
-                options={credentialModeOptions}
+                options={credentialModeOptions()}
                 onChange={(credentialMode) =>
                   setForm({
                     ...form,
@@ -1545,7 +1575,7 @@ export function ConnectionDialog({
                 <AppSelect
                   ariaLabel="账号来源"
                   value={credentialMode}
-                  options={credentialModeOptions}
+                  options={credentialModeOptions()}
                   onChange={(credentialMode) =>
                     setForm({
                       ...form,
@@ -1559,7 +1589,7 @@ export function ConnectionDialog({
                 <AppSelect
                   ariaLabel="认证方式"
                   value={inlineAuthKind}
-                  options={authKindOptions}
+                  options={authKindOptions()}
                   onChange={changeInlineAuthKind}
                 />
               </label>
@@ -1701,7 +1731,7 @@ export function ConnectionDialog({
               <AppSelect
                 ariaLabel="账号来源"
                 value={credentialMode}
-                options={credentialModeOptions}
+                options={credentialModeOptions()}
                 onChange={(credentialMode) =>
                   setForm({
                     ...form,
@@ -1746,7 +1776,7 @@ export function ConnectionDialog({
               <AppSelect
                 ariaLabel="账号来源"
                 value={credentialMode}
-                options={credentialModeOptions}
+                options={credentialModeOptions()}
                 onChange={(credentialMode) =>
                   setForm({
                     ...form,
@@ -1792,7 +1822,7 @@ export function ConnectionDialog({
           <AppSelect
             ariaLabel="连接方式"
             value={networkPathMode}
-            options={networkPathOptions}
+            options={networkPathOptions()}
             onChange={(mode) => {
               setForm({
                 ...form,
@@ -1997,7 +2027,7 @@ export function ConnectionDialog({
               <AppSelect
                 ariaLabel="RDP 全屏模式"
                 value={fullScreenMode}
-                options={rdpDisplayOptions}
+                options={rdpDisplayOptions()}
                 onChange={(mode) =>
                   updateRdp({
                     display: {
@@ -2016,7 +2046,7 @@ export function ConnectionDialog({
               <AppSelect
                 ariaLabel="RDP 分辨率"
                 value={resolutionMode}
-                options={rdpResolutionModeOptions}
+                options={rdpResolutionModeOptions()}
                 onChange={(mode) =>
                   updateRdp({
                     display: {
@@ -2084,7 +2114,7 @@ export function ConnectionDialog({
               <AppSelect
                 ariaLabel="RDP 音频"
                 value={rdp.resources.audio}
-                options={rdpAudioOptions}
+                options={rdpAudioOptions()}
                 onChange={(audio) =>
                   updateRdp({
                     resources: {
@@ -2130,7 +2160,7 @@ export function ConnectionDialog({
               <AppSelect
                 ariaLabel="RDP 网关"
                 value={gatewayMode}
-                options={rdpGatewayOptions}
+                options={rdpGatewayOptions()}
                 onChange={(mode) =>
                   updateRdp({
                     gateway:
@@ -2233,7 +2263,7 @@ export function ConnectionDialog({
               <AppSelect
                 ariaLabel="VNC 打开方式"
                 value={renderMode}
-                options={vncRunnerModeOptions}
+                options={vncRunnerModeOptions()}
                 onChange={(nextRenderMode) =>
                   updateVnc({
                     runner: {
@@ -2257,7 +2287,7 @@ export function ConnectionDialog({
               <AppSelect
                 ariaLabel="VNC 缩放模式"
                 value={vnc.display.scale_mode}
-                options={vncScaleModeOptions}
+                options={vncScaleModeOptions()}
                 onChange={(scaleMode) =>
                   updateVnc({
                     display: {
@@ -2362,7 +2392,7 @@ export function ConnectionDialog({
               <AppSelect
                 ariaLabel="VNC 性能预设"
                 value={vnc.performance.preset}
-                options={vncPerformanceOptions}
+                options={vncPerformanceOptions()}
                 onChange={(preset) => {
                   const presetDefaults = vncPerformancePresetDefaults[preset];
                   updateVnc({
@@ -2495,7 +2525,7 @@ export function ConnectionDialog({
               <AppSelect
                 ariaLabel="RDP 性能预设"
                 value={rdp.performance.preset}
-                options={rdpPerformanceOptions}
+                options={rdpPerformanceOptions()}
                 onChange={(preset) =>
                   updateRdp({
                     performance: {
@@ -2516,7 +2546,7 @@ export function ConnectionDialog({
               <AppSelect
                 ariaLabel="RDP NLA"
                 value={rdp.security.nla}
-                options={rdpNlaOptions}
+                options={rdpNlaOptions()}
                 onChange={(nla) =>
                   updateRdp({
                     security: {
@@ -2532,7 +2562,7 @@ export function ConnectionDialog({
               <AppSelect
                 ariaLabel="RDP 证书策略"
                 value={rdp.security.certificate_policy}
-                options={rdpCertificateOptions}
+                options={rdpCertificateOptions()}
                 onChange={(certificatePolicy) =>
                   updateRdp({
                     security: {
