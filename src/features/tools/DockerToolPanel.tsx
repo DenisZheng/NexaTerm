@@ -48,7 +48,7 @@ import {
   type SVGProps,
 } from "react";
 
-import { getLocale, t as tr, useI18n } from "../../shared/i18n";
+import { t as tr, useI18n } from "../../shared/i18n";
 import type { ConnectionProfile } from "../connections/connectionTypes";
 import {
   dockerContainerAction,
