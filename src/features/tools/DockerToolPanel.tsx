@@ -2378,7 +2378,7 @@ function ContainerList({
       </div>
       <button className="toolbox-refresh-row" type="button" onClick={onRefresh}>
         <RefreshCw className={`ui-icon ${loading ? "spin" : ""}`} aria-hidden="true" />
-        刷新容器
+        {tr("docker.container.refresh")}
       </button>
     </div>
   );
@@ -2545,7 +2545,7 @@ function ImageList({
           onClick={onPull}
         >
           <Download className="ui-icon" aria-hidden="true" />
-          拉取
+          {tr("docker.image.pull")}
         </button>
       </div>
       {!hasRows ? (
@@ -2678,7 +2678,7 @@ function ImageList({
           })}
           <button className="toolbox-refresh-row" type="button" onClick={onRefresh}>
             <RefreshCw className={`ui-icon ${loading ? "spin" : ""}`} aria-hidden="true" />
-            {tr("docker.refresh")}镜像
+            {tr("docker.image.refresh")}
           </button>
         </div>
       )}
@@ -3695,7 +3695,7 @@ function ScheduledTasksView({
             />
             <button className="toolbox-mini-button primary" type="button" onClick={onNew}>
               <Plus className="ui-icon" aria-hidden="true" />
-              {tr("docker.schedule.new")}任务
+              {tr("docker.schedule.newTask")}
             </button>
           </div>
         ) : (
@@ -3792,7 +3792,7 @@ function ScheduledTaskRow({
           <button
             className="toolbox-icon-button"
             type="button"
-            aria-label={`${task.enabled ? tr("docker.engine.stop") : tr("docker.option.enabled")} ${task.name}`}
+            aria-label={`${task.enabled ? tr("docker.schedule.disable") : tr("docker.schedule.enableAction")} ${task.name}`}
             disabled={busy}
             onClick={() => onToggle(task)}
           >
@@ -4481,7 +4481,7 @@ function normalizeScheduledRunStatus(
 function formatScheduledRunStatus(status: string | null | undefined) {
   const value = normalizeScheduledRunStatus(status);
   const labels: Record<"success" | "failed" | "running" | "unknown", string> = {
-    failed: "失败",
+    failed: tr("docker.status.failed"),
     running: tr("docker.status.running"),
     success: tr("docker.status.success"),
     unknown: tr("docker.status.unknown"),
@@ -4572,7 +4572,7 @@ function previewScheduledTasks(): ScheduledTaskSummary[] {
     },
     {
       id: "preview-cleanup",
-      name: getLocale() === "zh-CN" ? "清理临时目录" : "Clean temporary files",
+      name: tr("docker.schedule.cleanupName"),
       cron: "@daily",
       command: "find /tmp -maxdepth 1 -name 'nexaterm-*' -mtime +3 -delete",
       enabled: false,
