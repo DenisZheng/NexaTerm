@@ -19,6 +19,7 @@ interface LegacyAppDataMigrationGateProps {
 
 interface LegacySettingsProbeOutcome {
   complete: boolean;
+  reason: string | null;
   supported: boolean;
   value: string | null;
 }
@@ -62,6 +63,16 @@ function installLegacySettings(value: string) {
   markSettingsMigration("done");
 }
 
+function shouldMarkNoLegacySettings(outcome: LegacySettingsProbeOutcome) {
+  return (
+    outcome.complete &&
+    outcome.supported &&
+    !outcome.value &&
+    (outcome.reason === "legacy-webview-data-not-found" ||
+      outcome.reason === "legacy-settings-key-not-found")
+  );
+}
+
 function sleep(milliseconds: number) {
   return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
 }
@@ -69,20 +80,25 @@ function sleep(milliseconds: number) {
 async function probeLegacySettings(): Promise<LegacySettingsProbeOutcome> {
   const start = await legacyWebviewSettingsProbeStart();
   if (!start.supported) {
-    return { complete: true, supported: false, value: null };
+    return { complete: true, reason: start.reason, supported: false, value: null };
   }
   if (!start.started || !start.token) {
-    return { complete: true, supported: true, value: null };
+    return { complete: true, reason: start.reason, supported: true, value: null };
   }
 
   for (let attempt = 0; attempt < legacySettingsProbeAttempts; attempt += 1) {
     const result = await legacyWebviewSettingsProbeTake(start.token);
     if (result.complete) {
-      return { complete: true, supported: true, value: result.value };
+      return {
+        complete: true,
+        reason: result.value ? null : "legacy-settings-key-not-found",
+        supported: true,
+        value: result.value,
+      };
     }
     await sleep(legacySettingsProbeIntervalMs);
   }
-  return { complete: false, supported: true, value: null };
+  return { complete: false, reason: "legacy-settings-probe-timeout", supported: true, value: null };
 }
 
 export function LegacyAppDataMigrationGate({ children }: LegacyAppDataMigrationGateProps) {
@@ -112,12 +128,10 @@ export function LegacyAppDataMigrationGate({ children }: LegacyAppDataMigrationG
           try {
             const settings = await probeLegacySettings();
             if (cancelled) return;
-            if (settings.complete && settings.supported) {
-              if (settings.value) {
-                setSettingsOnlyValue(settings.value);
-              } else {
-                markSettingsMigration("none");
-              }
+            if (settings.complete && settings.supported && settings.value) {
+              setSettingsOnlyValue(settings.value);
+            } else if (shouldMarkNoLegacySettings(settings)) {
+              markSettingsMigration("none");
             }
           } catch {
             // Core startup must remain usable; a failed probe can retry next launch.
@@ -256,12 +270,10 @@ export function LegacyAppDataMigrationGate({ children }: LegacyAppDataMigrationG
 
       await legacyAppDataMigrationApply();
 
-      if (legacySettings?.complete && legacySettings.supported) {
-        if (legacySettings.value) {
-          installLegacySettings(legacySettings.value);
-        } else {
-          markSettingsMigration("none");
-        }
+      if (legacySettings?.complete && legacySettings.supported && legacySettings.value) {
+        installLegacySettings(legacySettings.value);
+      } else if (legacySettings && shouldMarkNoLegacySettings(legacySettings)) {
+        markSettingsMigration("none");
       }
 
       try {
