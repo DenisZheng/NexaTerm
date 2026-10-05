@@ -8063,7 +8063,7 @@ export function WorkspaceShell() {
 
   function renderCommandLibraryPanel() {
     return (
-      <Suspense fallback={<p className="file-panel-empty">正在加载命令库...</p>}>
+      <Suspense fallback={<p className="file-panel-empty">{tr("workspace.loading.commands")}</p>}>
         <CommandLibraryPanel
           activeHistoryId={selectedCommandHistoryId}
           activeSnippetId={selectedCommandSnippetId}
@@ -8076,8 +8076,8 @@ export function WorkspaceShell() {
           snippets={commandSnippets}
           unavailableReason={commandLibraryUnavailableReason}
           onClearHistory={() => setCommandHistoryClearOpen(true)}
-          onCopyHistory={(entry) => void copyCommandLibraryText(entry.command, "历史命令")}
-          onCopySnippet={(snippet) => void copyCommandLibraryText(snippet.command, `片段“${snippet.title}”`)}
+          onCopyHistory={(entry) => void copyCommandLibraryText(entry.command, tr("workspace.command.copyHistory"))}
+          onCopySnippet={(snippet) => void copyCommandLibraryText(snippet.command, tr("workspace.command.copySnippet", { name: snippet.title }))}
           onCreateGroup={() => openCommandSnippetGroupCreateDialog()}
           onCreateSnippet={(group) => openCommandSnippetDialog(null, group)}
           onDeleteGroup={(group) => setPendingCommandSnippetGroupDelete(group)}
@@ -8102,15 +8102,15 @@ export function WorkspaceShell() {
     }
 
     return (
-      <section className="command-sender-panel" aria-label="命令操作台">
+      <section className="command-sender-panel" aria-label={tr("workspace.command.panelAria")}>
         <div className="command-sender-console">
           <header className="command-sender-console-head">
             <div className="command-sender-title">
-              <span>命令操作台</span>
+              <span>{tr("workspace.command.panelTitle")}</span>
             </div>
             <div className="command-select-row">
               <AppSelect
-                ariaLabel="发送模式"
+                ariaLabel={tr("workspace.command.modeAria")}
                 className="command-toolbar-app-select command-send-mode-select"
                 value="sequential"
                 options={[
@@ -8118,7 +8118,7 @@ export function WorkspaceShell() {
                     label: (
                       <span className="command-select-label">
                         <Send className="ui-icon" aria-hidden="true" />
-                        <span>逐条发送</span>
+                        <span>{tr("workspace.command.lineMode")}</span>
                       </span>
                     ),
                     value: "sequential",
@@ -8133,22 +8133,22 @@ export function WorkspaceShell() {
               <button
                 className="command-console-toggle command-sender-close"
                 type="button"
-                aria-label="关闭命令操作台"
+                aria-label={tr("workspace.command.close")}
                 onClick={closeCommandSender}
               >
                 <X className="ui-icon" aria-hidden="true" />
-                <span className="command-close-text">关闭</span>
+                <span className="command-close-text">{tr("workspace.command.close")}</span>
               </button>
             </div>
           </header>
 
           <div className="command-sender-console-body">
-            <aside className="command-sender-block command-target-pane" aria-label="投递目标">
+            <aside className="command-sender-block command-target-pane" aria-label={tr("workspace.command.targetsAria")}>
               <div className="command-sender-label">
                 <span className="command-target-title">
-                  <span>目标</span>
+                  <span>{tr("workspace.command.targets")}</span>
                   <span className="command-target-count">
-                    已选 {commandSenderSelectedCount.toString()} / {commandSenderTargets.length.toString()}
+                    {tr("workspace.command.selected", { selected: commandSenderSelectedCount, total: commandSenderTargets.length })}
                   </span>
                 </span>
                 <span className="command-target-tools">
@@ -8167,14 +8167,14 @@ export function WorkspaceShell() {
                       checked={commandSenderAllSelected}
                       onChange={toggleCommandSenderAllTargets}
                     />
-                    <span>{commandSenderAllSelected ? "取消全选" : "全选"}</span>
+                    <span>{commandSenderAllSelected ? tr("workspace.command.clearSelection") : tr("workspace.command.selectAll")}</span>
                   </label>
                 </span>
               </div>
 
               <div className="command-target-list">
                 {commandSenderTargets.length === 0 ? (
-                  <p className="command-sender-empty">暂无可写入的终端。</p>
+                  <p className="command-sender-empty">{tr("workspace.command.noTargets")}</p>
                 ) : (
                   commandSenderTargets.map((target) => {
                     const selected = selectedCommandTargetKeySet.has(target.key);
@@ -8209,12 +8209,12 @@ export function WorkspaceShell() {
                             <span className="command-target-terminal-instance">{target.tabTitle}</span>
                           </span>
                           <span className="command-target-state">
-                            {target.deliveryStatus === "disconnected" ? "断开" : "在线"}
+                            {target.deliveryStatus === "disconnected" ? tr("workspace.command.disconnected") : tr("workspace.command.online")}
                           </span>
                           <button
                             className={`command-target-delivery command-sender-status ${target.deliveryStatus}`}
                             type="button"
-                            title={target.deliveryMessage || "点击查看对应终端"}
+                            title={target.deliveryMessage || tr("workspace.command.openTarget")}
                             onClick={() => activateCommandSenderTarget(target)}
                           >
                             {commandSenderDeliveryLabel(target.deliveryStatus)}
@@ -8227,12 +8227,12 @@ export function WorkspaceShell() {
               </div>
             </aside>
 
-            <section className="command-sender-block command-compose-pane" aria-label="命令编辑">
-              <div className="command-compose-label">命令</div>
+            <section className="command-sender-block command-compose-pane" aria-label={tr("workspace.command.composeAria")}>
+              <div className="command-compose-label">{tr("workspace.command.command")}</div>
               <textarea
                 className="command-input command-sender-input"
                 value={commandSenderInput}
-                placeholder="输入要投递到目标终端的命令"
+                placeholder={tr("workspace.command.placeholder")}
                 spellCheck={false}
                 onChange={(event) =>
                   handleCommandSenderInputChange(event.currentTarget.value)
@@ -8251,16 +8251,16 @@ export function WorkspaceShell() {
               ) : null}
               {commandSenderRisky ? (
                 <div className="command-risk-warning command-sender-risk-warning show" role="status">
-                  检测到高风险片段，请确认目标机器和命令内容。
+                  {tr("workspace.command.risk")}
                 </div>
               ) : null}
               <div className="command-compose-footer command-sender-actions">
                 <div className="command-send-result">
                   {commandSenderInput.trim()
                     ? commandSenderSelectedCount > 0
-                      ? `${commandSenderSelectedCount.toString()} 个目标待发送。`
-                      : "请选择至少一个目标。"
-                    : "等待输入命令。"}
+                      ? tr("workspace.command.targetsReady", { count: commandSenderSelectedCount })
+                      : tr("workspace.command.chooseTarget")
+                    : tr("workspace.command.waitInput")}
                 </div>
                 <div className="command-actions">
                   <button
@@ -8270,7 +8270,7 @@ export function WorkspaceShell() {
                     onClick={() => void sendCommandToTargets(true)}
                   >
                     <CornerDownLeft className="ui-icon" aria-hidden="true" />
-                    <span>发送并回车</span>
+                    <span>{tr("workspace.command.sendEnter")}</span>
                   </button>
                   <button
                     className="secondary-button command-sender-secondary"
@@ -8278,7 +8278,7 @@ export function WorkspaceShell() {
                     disabled={!commandSenderCanSend}
                     onClick={() => void sendCommandToTargets(false)}
                   >
-                    发送不回车
+                    {tr("workspace.command.sendNoEnter")}
                   </button>
                   <button
                     className="secondary-button clear-command-button command-sender-secondary"
@@ -8287,7 +8287,7 @@ export function WorkspaceShell() {
                     onClick={clearCommandSenderInput}
                   >
                     <Trash2 className="ui-icon" aria-hidden="true" />
-                    <span>清空</span>
+                    <span>{tr("workspace.command.clear")}</span>
                   </button>
                 </div>
               </div>
@@ -8329,7 +8329,7 @@ export function WorkspaceShell() {
         appUpdateNotice={
           appUpdate.workspaceNoticeVisible
             ? {
-                label: appUpdate.workspaceNoticeLabel || "有可用更新",
+                label: appUpdate.workspaceNoticeLabel || tr("workspace.update.available"),
                 onDismiss: appUpdate.dismissWorkspaceNotice,
                 onOpen: () => openSettingsSection("basic"),
               }
@@ -8406,7 +8406,7 @@ export function WorkspaceShell() {
           <div
             className="pane-resizer left-pane-resizer"
             role="separator"
-            aria-label="拖拽调整左侧栏宽度，双击恢复默认"
+            aria-label={tr("workspace.layout.resizeLeft")}
             aria-orientation="vertical"
             aria-valuemin={minLeftPaneWidth}
             aria-valuemax={maxLeftPaneWidth}
@@ -8418,7 +8418,7 @@ export function WorkspaceShell() {
           />
         ) : null}
 
-        <section className={`main-workbench ${showMultiExecBar ? "multi-exec-open" : ""}`} aria-label="工作区">
+        <section className={`main-workbench ${showMultiExecBar ? "multi-exec-open" : ""}`} aria-label={tr("workspace.aria")}>
           <ConnectionHome
             connections={connections}
             error={error}
@@ -8442,24 +8442,24 @@ export function WorkspaceShell() {
                 activeRemoteFileTabs.length > 0 && !isActiveTerminalFileUnified ? "true" : "false"
               }
               data-workbench-tab-dragging={workbenchTabMouseDrag?.active ? "true" : undefined}
-              aria-label="编辑器和终端"
+              aria-label={tr("workspace.aria.editorTerminal")}
               aria-hidden={showingHome}
             >
               {activeRemoteFileTabs.length > 0 && !isActiveTerminalFileUnified ? (
-                <section className="remote-editor-pane" aria-label="远程文件编辑区">
+                <section className="remote-editor-pane" aria-label={tr("workspace.aria.remoteEditor")}>
                   <nav
                     className="remote-editor-tabs"
-                    aria-label="远程文件标签"
+                    aria-label={tr("workspace.aria.remoteTabs")}
                     data-workbench-tab-drop-zone="file"
                     data-workbench-tab-drop-active={workbenchTabDropZone === "file" ? "true" : undefined}
                   >
                     <div className="workbench-tab-scroll-list" ref={remoteEditorTabScroll.ref}>
                       {activeRemoteFileTabs.map(renderRemoteFileSubtab)}
                     </div>
-                    {renderWorkbenchTabScrollControls(remoteEditorTabScroll, "远程文件标签")}
+                    {renderWorkbenchTabScrollControls(remoteEditorTabScroll, tr("workspace.aria.remoteTabs"))}
                   </nav>
 
-                  <section className="remote-editor-stack" aria-label="文件编辑器">
+                  <section className="remote-editor-stack" aria-label={tr("workspace.aria.fileEditor")}>
                     <Suspense fallback={<RemoteEditorLoadingFallback />}>
                       {remoteFileTabs.map((tab) => (
                         <RemoteFileEditor
@@ -8487,7 +8487,7 @@ export function WorkspaceShell() {
                 <div
                   className="editor-terminal-resizer"
                   role="separator"
-                  aria-label="拖拽调整文件编辑器和终端高度，双击恢复默认"
+                  aria-label={tr("workspace.layout.resizeEditor")}
                   aria-orientation="horizontal"
                   aria-valuemin={minEditorTerminalSplitPercent}
                   aria-valuemax={maxEditorTerminalSplitPercent}
@@ -8505,12 +8505,12 @@ export function WorkspaceShell() {
                 } ${showTerminalWorkbench ? "" : "is-hidden"}`}
                 data-workbench-surface={activeWorkbenchSurface}
                 data-terminal-tone={terminalTone}
-                aria-label="终端区"
+                aria-label={tr("workspace.aria.terminalArea")}
                 aria-hidden={!showTerminalWorkbench}
               >
                 <nav
                   className={`terminal-subtabs ${isActiveTerminalFileUnified ? "unified-subtabs" : ""}`}
-                  aria-label={isActiveTerminalFileUnified ? "当前连接终端和文件标签" : "当前连接终端标签"}
+                  aria-label={isActiveTerminalFileUnified ? tr("workspace.aria.unifiedTabs") : tr("workspace.aria.terminalTabs")}
                   data-workbench-tab-drop-zone="terminal"
                   data-workbench-tab-drop-active={workbenchTabDropZone === "terminal" ? "true" : undefined}
                 >
@@ -8521,11 +8521,11 @@ export function WorkspaceShell() {
                     {isActiveTerminalFileUnified ? activeRemoteFileTabs.map(renderRemoteFileSubtab) : null}
                     {activeWorkspaceMode === "local" ? (
                       <>
-                        <Tooltip label="新建默认终端">
+                        <Tooltip label={tr("workspace.terminal.newDefault")}>
                           <button
                             className="add-subtab"
                             type="button"
-                            aria-label="新建默认终端"
+                            aria-label={tr("workspace.terminal.newDefault")}
                             disabled={!defaultLocalTerminalProfile}
                             onClick={() =>
                               void openLocalTerminalByProfile(resolveDefaultLocalTerminalProfile())
@@ -8553,11 +8553,11 @@ export function WorkspaceShell() {
                         ) : null}
                       </>
                     ) : activeConnectedTerminalTab ? (
-                      <Tooltip label="新建同连接终端">
+                      <Tooltip label={tr("workspace.terminal.newSameConnection")}>
                         <button
                           className="add-subtab"
                           type="button"
-                          aria-label="新建同连接终端"
+                          aria-label={tr("workspace.terminal.newSameConnection")}
                           onClick={openTerminalInActiveConnection}
                         >
                           <Plus className="ui-icon" aria-hidden="true" />
@@ -8565,7 +8565,7 @@ export function WorkspaceShell() {
                       </Tooltip>
                     ) : null}
                   </div>
-                  {renderWorkbenchTabScrollControls(sshTerminalTabScroll, "终端标签")}
+                  {renderWorkbenchTabScrollControls(sshTerminalTabScroll, tr("workspace.tabs.terminal"))}
                   <div className="terminal-subtab-actions">
                     <TerminalSplitMenu
                       autoCreateSameSession={terminalSplitAutoCreateSameSession}
@@ -8585,11 +8585,11 @@ export function WorkspaceShell() {
                           onEnabledChange={setTerminalSplitSyncState}
                           onParticipantChange={setTerminalSplitSyncParticipant}
                         />
-                        <Tooltip label="均分所有 pane">
+                        <Tooltip label={tr("workspace.split.equalize")}>
                           <button
                             className="add-subtab terminal-split-equalize"
                             type="button"
-                            aria-label="均分所有终端 pane"
+                            aria-label={tr("workspace.split.equalize")}
                             onClick={equalizeTerminalSplitPanes}
                           >
                             <LayoutGrid className="ui-icon" aria-hidden="true" />
@@ -8610,24 +8610,24 @@ export function WorkspaceShell() {
                     ) : null}
                     {!terminalSplitActive && activeTerminalToolbarTabId ? (
                       <>
-                        <Tooltip label={activeTerminalToolbarSearch?.open ? "关闭终端搜索" : "搜索终端输出"}>
+                        <Tooltip label={activeTerminalToolbarSearch?.open ? tr("workspace.terminal.searchClose") : tr("workspace.terminal.search")}>
                           <button
                             className={`add-subtab terminal-search-toggle ${
                               activeTerminalToolbarSearch?.open ? "active" : ""
                             }`}
                             type="button"
-                            aria-label="搜索终端输出"
+                            aria-label={tr("workspace.terminal.search")}
                             aria-expanded={Boolean(activeTerminalToolbarSearch?.open)}
                             onClick={() => toggleTerminalSearch(activeTerminalToolbarTabId)}
                           >
                             <Search className="ui-icon" aria-hidden="true" />
                           </button>
                         </Tooltip>
-                        <Tooltip label="清屏">
+                        <Tooltip label={tr("workspace.terminal.clear")}>
                           <button
                             className="add-subtab terminal-clear-button"
                             type="button"
-                            aria-label="清屏"
+                            aria-label={tr("workspace.terminal.clear")}
                             onClick={() => clearTerminalTab(activeTerminalToolbarTabId)}
                           >
                             <Eraser className="ui-icon" aria-hidden="true" />
@@ -8640,7 +8640,7 @@ export function WorkspaceShell() {
                         <button
                           className={`add-subtab command-sender-toggle ${commandSenderOpen ? "active" : ""}`}
                           type="button"
-                          aria-label="打开命令操作台 Command Sender"
+                          aria-label={tr("workspace.command.open")}
                           aria-expanded={commandSenderOpen}
                           onClick={openCommandSender}
                         >
@@ -8648,11 +8648,11 @@ export function WorkspaceShell() {
                         </button>
                       </Tooltip>
                     ) : null}
-                    <Tooltip label={rightPaneCollapsed ? "展开右侧面板" : "收起右侧面板"}>
+                    <Tooltip label={rightPaneCollapsed ? tr("workspace.right.expand") : tr("workspace.right.collapse")}>
                       <button
                         className="add-subtab terminal-subtab-panel-toggle"
                         type="button"
-                        aria-label={rightPaneCollapsed ? "展开右侧面板" : "收起右侧面板"}
+                        aria-label={rightPaneCollapsed ? tr("workspace.right.expand") : tr("workspace.right.collapse")}
                         aria-expanded={!rightPaneCollapsed}
                         onClick={() => setRightPaneCollapsed((collapsed) => !collapsed)}
                       >
@@ -8671,7 +8671,7 @@ export function WorkspaceShell() {
                     terminalSplitActive ? "terminal-split-stack" : ""
                   }`}
                   data-unified-active-kind={activeUnifiedTabKind || undefined}
-                  aria-label={isActiveTerminalFileUnified ? "终端和文件编辑器" : "终端"}
+                  aria-label={isActiveTerminalFileUnified ? tr("workspace.aria.terminalAndEditor") : tr("workspace.aria.terminal")}
                 >
                   {terminalSplitActive && terminalSplitLayout ? (
                     <TerminalSplitLayout
@@ -8760,7 +8760,7 @@ export function WorkspaceShell() {
                             {...terminalSplitStatusProps({ kind: "ssh", tabId: tab.id })}
                             connection={connectionById.get(tab.connectionId) || null}
                             error={null}
-                            status="正在加载终端"
+                            status={tr("workspace.terminal.loading")}
                             title={tab.title}
                           />
                         }
@@ -8844,7 +8844,7 @@ export function WorkspaceShell() {
                                     : null
                                 }
                                 source={tab.source || "local"}
-                                status="正在加载终端"
+                                status={tr("workspace.terminal.loading")}
                                 title={tab.title}
                                 onOpenSettings={openLocalTerminalSettings}
                               />
@@ -8949,10 +8949,10 @@ export function WorkspaceShell() {
                   showRdpWorkspace ? "" : "is-hidden"
                 }`}
                 data-workbench-surface="panel"
-                aria-label="RDP 会话区"
+                aria-label={tr("workspace.rdp.area")}
                 aria-hidden={!showRdpWorkspace}
               >
-                <nav className="terminal-subtabs rdp-subtabs" aria-label="RDP 会话标签">
+                <nav className="terminal-subtabs rdp-subtabs" aria-label={tr("workspace.rdp.tabs")}>
                   <div className="workbench-tab-scroll-list" ref={rdpTabScroll.ref}>
                     {activeRdpSessions.map((session, index) => (
                       <TabContextMenu
@@ -9006,13 +9006,13 @@ export function WorkspaceShell() {
                       </TabContextMenu>
                     ))}
                   </div>
-                  {renderWorkbenchTabScrollControls(rdpTabScroll, "RDP 会话标签")}
+                  {renderWorkbenchTabScrollControls(rdpTabScroll, tr("workspace.rdp.tabs"))}
                   <div className="terminal-subtab-actions">
-                    <Tooltip label={rightPaneCollapsed ? "展开右侧面板" : "收起右侧面板"}>
+                    <Tooltip label={rightPaneCollapsed ? tr("workspace.right.expand") : tr("workspace.right.collapse")}>
                       <button
                         className="add-subtab terminal-subtab-panel-toggle"
                         type="button"
-                        aria-label={rightPaneCollapsed ? "展开右侧面板" : "收起右侧面板"}
+                        aria-label={rightPaneCollapsed ? tr("workspace.right.expand") : tr("workspace.right.collapse")}
                         aria-expanded={!rightPaneCollapsed}
                         onClick={() => setRightPaneCollapsed((collapsed) => !collapsed)}
                       >
@@ -9026,7 +9026,7 @@ export function WorkspaceShell() {
                   </div>
                 </nav>
 
-                <section className="rdp-stack" aria-label="RDP 会话状态">
+                <section className="rdp-stack" aria-label={tr("workspace.rdp.state")}>
                   {rdpSessions.map((session) => (
                     <RdpSessionStatusPanel
                       active={showRdpWorkspace && session.id === activeRdpSession?.id}
@@ -9050,10 +9050,10 @@ export function WorkspaceShell() {
                   showVncWorkspace ? "" : "is-hidden"
                 }`}
                 data-workbench-surface="panel"
-                aria-label="VNC 会话区"
+                aria-label={tr("workspace.vnc.area")}
                 aria-hidden={!showVncWorkspace}
               >
-                <nav className="terminal-subtabs rdp-subtabs vnc-subtabs" aria-label="VNC 会话标签">
+                <nav className="terminal-subtabs rdp-subtabs vnc-subtabs" aria-label={tr("workspace.vnc.tabs")}>
                   <div className="workbench-tab-scroll-list" ref={vncTabScroll.ref}>
                     {activeVncSessions.map((session, index) => (
                       <TabContextMenu
@@ -9107,13 +9107,13 @@ export function WorkspaceShell() {
                       </TabContextMenu>
                     ))}
                   </div>
-                  {renderWorkbenchTabScrollControls(vncTabScroll, "VNC 会话标签")}
+                  {renderWorkbenchTabScrollControls(vncTabScroll, tr("workspace.vnc.tabs"))}
                   <div className="terminal-subtab-actions">
-                    <Tooltip label={rightPaneCollapsed ? "展开右侧面板" : "收起右侧面板"}>
+                    <Tooltip label={rightPaneCollapsed ? tr("workspace.right.expand") : tr("workspace.right.collapse")}>
                       <button
                         className="add-subtab terminal-subtab-panel-toggle"
                         type="button"
-                        aria-label={rightPaneCollapsed ? "展开右侧面板" : "收起右侧面板"}
+                        aria-label={rightPaneCollapsed ? tr("workspace.right.expand") : tr("workspace.right.collapse")}
                         aria-expanded={!rightPaneCollapsed}
                         onClick={() => setRightPaneCollapsed((collapsed) => !collapsed)}
                       >
@@ -9127,7 +9127,7 @@ export function WorkspaceShell() {
                   </div>
                 </nav>
 
-                <section className="rdp-stack vnc-stack" aria-label="VNC 会话状态">
+                <section className="rdp-stack vnc-stack" aria-label={tr("workspace.vnc.state")}>
                   {vncSessions.map((session) => (
                     <VncSessionStatusPanel
                       active={showVncWorkspace && session.id === activeVncSession?.id}
@@ -9181,7 +9181,7 @@ export function WorkspaceShell() {
           <div
             className="pane-resizer right-pane-resizer"
             role="separator"
-            aria-label="拖拽调整右侧工具面板宽度，双击恢复默认"
+            aria-label={tr("workspace.layout.resizeRight")}
             aria-orientation="vertical"
             aria-valuemin={minRightPaneWidth}
             aria-valuemax={maxRightPaneWidth}
@@ -9196,8 +9196,8 @@ export function WorkspaceShell() {
         {showWorkspaceToolPane ? (
           <Suspense
             fallback={
-              <aside className="tool-pane" aria-label="右侧工具面板">
-                <p className="file-panel-empty">正在加载工具面板...</p>
+              <aside className="tool-pane" aria-label={tr("workspace.right.aria")}>
+                <p className="file-panel-empty">{tr("workspace.loading.tools")}</p>
               </aside>
             }
           >
@@ -9256,7 +9256,7 @@ export function WorkspaceShell() {
                         key={panel.key}
                         monitorPanel={
                           panel.active && rightTool === "monitor" ? (
-                            <Suspense fallback={<p className="file-panel-empty">正在加载监控...</p>}>
+                            <Suspense fallback={<p className="file-panel-empty">{tr("workspace.loading.monitor")}</p>}>
                               <MonitorPanel active connection={panelConnection} />
                             </Suspense>
                           ) : null
@@ -9265,7 +9265,7 @@ export function WorkspaceShell() {
                         commandPanel={panel.active && rightTool === "commands" ? renderCommandLibraryPanel() : null}
                         tunnelPanel={
                           panel.active && rightTool === "tunnels" ? (
-                            <Suspense fallback={<p className="file-panel-empty">正在加载隧道...</p>}>
+                            <Suspense fallback={<p className="file-panel-empty">{tr("workspace.loading.tunnels")}</p>}>
                               <TunnelPanel
                                 activeConnectionId={panel.connectionId}
                                 connections={connections.filter(isSshConnection)}
@@ -9275,7 +9275,7 @@ export function WorkspaceShell() {
                         }
                         toolsPanel={
                           panel.renderDockerTools ? (
-                            <Suspense fallback={<p className="file-panel-empty">正在加载 Docker 面板...</p>}>
+                            <Suspense fallback={<p className="file-panel-empty">{tr("workspace.loading.docker")}</p>}>
                               <DockerToolPanel
                                 active={panel.active && rightTool === "tools"}
                                 activeConnectionId={panel.connectionId}
@@ -9300,7 +9300,7 @@ export function WorkspaceShell() {
                     aiPanel={aiAssistantPanelNode}
                     tunnelPanel={
                       rightTool === "tunnels" && isSshConnection(activeConnection) ? (
-                        <Suspense fallback={<p className="file-panel-empty">正在加载隧道...</p>}>
+                        <Suspense fallback={<p className="file-panel-empty">{tr("workspace.loading.tunnels")}</p>}>
                           <TunnelPanel
                             activeConnectionId={activeConnection.id}
                             connections={connections.filter(isSshConnection)}
