@@ -6,6 +6,17 @@ import { restoreCurrentWindowState, showCurrentWindow } from "./shared/tauri/win
 const startupWindowRestoreTimeoutMs = 1600;
 
 async function bootstrap() {
+  const legacyProbeToken = (window as Window & {
+    __NEXATERM_LEGACY_SETTINGS_PROBE_TOKEN__?: string;
+  }).__NEXATERM_LEGACY_SETTINGS_PROBE_TOKEN__;
+  if (legacyProbeToken) {
+    const { default: App } = await import("./App");
+    ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
+      <App />,
+    );
+    return;
+  }
+
   const startupSettings = readStartupSettings();
   applyStartupTheme(startupSettings);
   setLocalePreference(startupSettings.basic.locale);
