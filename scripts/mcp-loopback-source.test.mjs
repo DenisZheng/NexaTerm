@@ -34,9 +34,13 @@ test("MCP sidecar independently rejects non-loopback --host values", () => {
 
 test("settings UI exposes port and SSH tunnel guidance, not LAN bind controls", () => {
   const settings = read("src/features/settings/SettingsView.tsx");
+  const en = JSON.parse(read("src/shared/i18n/locales/en.json"));
+  const zh = JSON.parse(read("src/shared/i18n/locales/zh-CN.json"));
 
   assert.match(settings, /value="127\.0\.0\.1"[\s\S]*disabled[\s\S]*readOnly/);
-  assert.match(settings, /跨机器访问只允许通过 SSH 隧道转发/);
+  assert.match(settings, /t\("settings\.mcp\.remote\.description"\)/);
+  assert.match(en["settings.mcp.remote.description"], /SSH tunnel/i);
+  assert.match(zh["settings.mcp.remote.description"], /跨机器访问只允许通过 SSH 隧道转发/);
   assert.match(settings, /ssh -N -L/);
   assert.doesNotMatch(settings, /setRemoteHostDraft/);
   assert.doesNotMatch(settings, /允许 MCP 服务监听非本机地址/);
