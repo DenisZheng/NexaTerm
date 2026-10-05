@@ -2579,5 +2579,9 @@
   "demo.credential.privateKeyName": "Cloud private-key account",
   "demo.credential.notes": "Preview account",
   "demo.credential.defaultPrivateKey": "SSH private-key account",
-  "demo.credential.defaultPassword": "SSH password account"
+  "demo.credential.defaultPassword": "SSH password account",
+  "settings.stepper.decrease": "Decrease",
+  "settings.stepper.increase": "Increase",
+  "files.transfer.stage.awaitingRemote": "Waiting for remote confirmation",
+  "files.transfer.archiveSize": "Archive {size}"
 }
