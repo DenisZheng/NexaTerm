@@ -1831,7 +1831,7 @@ function previewRemoteFileInfoMetadata(entry: RemoteFileEntry): RemoteFileEntryM
   return {
     birthtime: 1717710000,
     gid: 1000,
-    group: "mxterm",
+    group: "nexaterm",
     mode: entry.type === "directory" ? "755" : "644",
     mtime: 1717712222,
     name: entry.name,
