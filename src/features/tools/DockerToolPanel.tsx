@@ -48,6 +48,7 @@ import {
   type SVGProps,
 } from "react";
 
+import { t as tr, useI18n } from "../../shared/i18n";
 import type { ConnectionProfile } from "../connections/connectionTypes";
 import {
   dockerContainerAction,
@@ -151,27 +152,31 @@ interface DockerToolPanelProps {
   onOpenContainerTerminal?: (container: DockerContainerSummary) => void;
 }
 
-const toolboxViews: Array<{ icon: LucideIcon; label: string; value: ToolboxView }> = [
-  { icon: Box, label: "Docker", value: "docker" },
-  { icon: Route, label: "隧道", value: "tunnels" },
-  { icon: Network, label: "网络诊断", value: "network" },
-  { icon: Timer, label: "定时任务", value: "schedule" },
-];
+function toolboxViews(): Array<{ icon: LucideIcon; label: string; value: ToolboxView }> {
+  return [
+    { icon: Box, label: "Docker", value: "docker" },
+    { icon: Route, label: tr("docker.toolbox.tunnels"), value: "tunnels" },
+    { icon: Network, label: tr("docker.toolbox.network"), value: "network" },
+    { icon: Timer, label: tr("docker.toolbox.schedule"), value: "schedule" },
+  ];
+}
 
 const containerAutoRefreshMs = 10_000;
 const imageAutoRefreshMs = 30_000;
 const engineAutoRefreshMs = 30_000;
-const networkDiagnosticOptions: Array<{
+function networkDiagnosticOptions(): Array<{
   icon: LucideIcon;
   label: string;
   value: NetworkDiagnosticKind;
-}> = [
-  { icon: RadioTower, label: "Ping", value: "ping" },
-  { icon: Network, label: "TCP", value: "tcp" },
-  { icon: Globe2, label: "DNS", value: "dns" },
-  { icon: Route, label: "路由", value: "trace" },
-  { icon: ScrollText, label: "HTTP", value: "http" },
-];
+}> {
+  return [
+    { icon: RadioTower, label: "Ping", value: "ping" },
+    { icon: Network, label: "TCP", value: "tcp" },
+    { icon: Globe2, label: "DNS", value: "dns" },
+    { icon: Route, label: tr("docker.network.trace"), value: "trace" },
+    { icon: ScrollText, label: "HTTP", value: "http" },
+  ];
+}
 const dockerRestartPolicyOptions: Array<{ label: string; value: DockerRestartPolicyKind }> = [
   { label: "No", value: "no" },
   { label: "Always", value: "always" },
@@ -252,6 +257,7 @@ export function DockerToolPanel({
   onCopyText,
   onOpenContainerTerminal,
 }: DockerToolPanelProps) {
+  useI18n();
   const initialConnectionId = connection?.id || null;
   const initialCacheRef = useRef<DockerToolPanelCacheSnapshot | null>(
     cachedDockerToolPanelState(initialConnectionId),
@@ -917,7 +923,7 @@ export function DockerToolPanel({
     try {
       const result = hasTauriRuntime()
         ? await dockerImageRemove(connectionId, target.id)
-        : { ok: true, message: "镜像已删除。", output: null };
+        : { ok: true, message: tr("docker.image.deleted"), output: null };
       setNotice(result.message);
       await refreshImages();
     } catch (nextError) {
@@ -959,7 +965,7 @@ export function DockerToolPanel({
     try {
       normalized = `${JSON.stringify(JSON.parse(engineConfigDraft), null, 2)}\n`;
     } catch {
-      setError("Docker 配置不是合法 JSON。");
+      setError(tr("docker.config.invalidJson"));
       return;
     }
 
@@ -969,7 +975,7 @@ export function DockerToolPanel({
     try {
       const result = hasTauriRuntime()
         ? await dockerEngineSaveConfig(connectionId, normalized)
-        : { ok: true, message: "Docker 配置已保存。", output: null };
+        : { ok: true, message: tr("docker.config.saved"), output: null };
       setEngineConfigDraft(normalized);
       setEngineConfig((current) => ({
         content: normalized,
@@ -1059,7 +1065,7 @@ export function DockerToolPanel({
             detailTarget.id,
             restartPolicyDraft,
           )
-        : { ok: true, message: "容器重启策略已更新。", output: null };
+        : { ok: true, message: tr("docker.container.restartPolicyUpdated"), output: null };
       setNotice(result.message);
       await loadContainerDetail(detailTarget);
       await refreshContainers({ silent: true });
@@ -1072,7 +1078,7 @@ export function DockerToolPanel({
 
   async function connectContainerNetwork(networkId = networkDraft) {
     if (!connectionId || !detailTarget || !networkId) {
-      setDetailError("请选择要加入的 Docker 网络。");
+      setDetailError(tr("docker.container.chooseNetwork"));
       return;
     }
     setDetailBusyKey("network-connect");
@@ -1080,7 +1086,7 @@ export function DockerToolPanel({
     try {
       const result = hasTauriRuntime()
         ? await dockerContainerConnectNetwork(connectionId, detailTarget.id, networkId)
-        : { ok: true, message: "容器已加入网络。", output: null };
+        : { ok: true, message: tr("docker.container.networkJoined"), output: null };
       setNotice(result.message);
       await loadContainerDetail(detailTarget);
       await refreshContainers({ silent: true });
@@ -1202,7 +1208,7 @@ export function DockerToolPanel({
     }
     const image = pullImage.trim();
     if (!image) {
-      setPullError("请输入镜像名称。");
+      setPullError(tr("docker.image.nameRequired"));
       return;
     }
     const pullId = createDockerPullId();
@@ -1211,7 +1217,7 @@ export function DockerToolPanel({
       connectionId,
       image,
       status: "running",
-      message: "等待 Docker 返回拉取进度。",
+      message: tr("docker.image.pullWaiting"),
       percent: null,
       currentLayer: null,
     };
@@ -1302,7 +1308,7 @@ export function DockerToolPanel({
     try {
       const result = hasTauriRuntime()
         ? await dockerImageRun(connectionId, normalized)
-        : { ok: true, message: "容器已启动。", output: "preview-container" };
+        : { ok: true, message: tr("docker.container.started"), output: "preview-container" };
       setNotice(result.message);
       setImageRunTarget(null);
       setImageRunDraft(createImageRunDraft(""));
@@ -1361,7 +1367,7 @@ export function DockerToolPanel({
     setLogsLoading(false);
     setLogsStreaming(false);
     if (event.kind === "error") {
-      setLogsError(event.message || "Docker 容器日志读取失败。");
+      setLogsError(event.message || tr("docker.logs.readFailed"));
     }
   }
 
@@ -1402,12 +1408,12 @@ export function DockerToolPanel({
   async function runNetworkDiagnostic(event?: FormEvent<HTMLFormElement>) {
     event?.preventDefault();
     if (!connectionId) {
-      setDiagnosticError("请先打开一个 SSH 会话。");
+      setDiagnosticError(tr("docker.network.requireSsh"));
       return;
     }
     const target = diagnosticTarget.trim();
     if (!target) {
-      setDiagnosticError("请输入诊断目标。");
+      setDiagnosticError(tr("docker.network.targetRequired"));
       return;
     }
     const portValue = Number(diagnosticPort);
@@ -1415,7 +1421,7 @@ export function DockerToolPanel({
       diagnosticKind === "tcp" &&
       (!Number.isInteger(portValue) || portValue < 1 || portValue > 65535)
     ) {
-      setDiagnosticError("请输入 1-65535 之间的 TCP 端口。");
+      setDiagnosticError(tr("docker.network.portInvalid"));
       return;
     }
 
@@ -1504,15 +1510,15 @@ export function DockerToolPanel({
       command: scheduledTaskDraft.command.trim(),
     };
     if (!draft.name) {
-      setScheduledTaskError("请输入任务名称。");
+      setScheduledTaskError(tr("docker.schedule.nameRequired"));
       return;
     }
     if (!draft.cron) {
-      setScheduledTaskError("请输入 cron 表达式。");
+      setScheduledTaskError(tr("docker.schedule.cronRequired"));
       return;
     }
     if (!draft.command) {
-      setScheduledTaskError("请输入要执行的命令。");
+      setScheduledTaskError(tr("docker.schedule.commandRequired"));
       return;
     }
 
@@ -1525,7 +1531,7 @@ export function DockerToolPanel({
         : previewSaveScheduledTask(scheduledTasks, draft);
       setScheduledTasks((items) => upsertScheduledTask(items, saved));
       setScheduledTaskDraft(null);
-      setScheduledTaskNotice(draft.id ? "定时任务已更新。" : "定时任务已创建。");
+      setScheduledTaskNotice(draft.id ? tr("docker.schedule.updated") : tr("docker.schedule.created"));
     } catch (nextError) {
       setScheduledTaskError(formatDockerError(nextError));
     } finally {
@@ -1546,7 +1552,7 @@ export function DockerToolPanel({
         ? await scheduledTaskSetEnabled(connectionId, task.id, enabled)
         : { ...task, enabled, updated_at: previewTimestamp() };
       setScheduledTasks((items) => upsertScheduledTask(items, updated));
-      setScheduledTaskNotice(enabled ? "定时任务已启用。" : "定时任务已停用。");
+      setScheduledTaskNotice(enabled ? tr("docker.schedule.enabled") : tr("docker.schedule.disabled"));
     } catch (nextError) {
       setScheduledTaskError(formatDockerError(nextError));
     } finally {
@@ -1600,7 +1606,7 @@ export function DockerToolPanel({
     try {
       const result = hasTauriRuntime()
         ? await scheduledTaskDelete(connectionId, target.id)
-        : { ok: true, message: "定时任务已删除。", output: null };
+        : { ok: true, message: tr("docker.schedule.deleted"), output: null };
       setScheduledTasks((items) => items.filter((item) => item.id !== target.id));
       if (scheduledTaskDraft?.id === target.id) {
         setScheduledTaskDraft(null);
@@ -1618,10 +1624,10 @@ export function DockerToolPanel({
   async function copyDiagnosticOutput() {
     const content = formatNetworkDiagnosticOutput(diagnosticResult);
     if (!content) {
-      setDiagnosticError("当前没有可复制的诊断输出。");
+      setDiagnosticError(tr("docker.network.noCopy"));
       return;
     }
-    await copyValue(content, "诊断输出");
+    await copyValue(content, tr("docker.network.outputLabel"));
   }
 
   async function copyValue(value: string, label: string) {
@@ -1631,23 +1637,23 @@ export function DockerToolPanel({
       } else {
         await navigator.clipboard?.writeText(value);
       }
-      setNotice(`已复制${label}。`);
+      setNotice(tr("docker.copy.success", { label }));
     } catch (nextError) {
-      setError(`复制失败：${formatDockerError(nextError)}`);
+      setError(tr("docker.copy.failed", { message: formatDockerError(nextError) }));
     }
   }
 
   async function copyLogs() {
     if (!logsContent.trim()) {
-      setLogsError("当前没有可复制的日志。");
+      setLogsError(tr("docker.logs.noCopy"));
       return;
     }
-    await copyValue(logsContent, "日志");
+    await copyValue(logsContent, tr("docker.logs.label"));
   }
 
   async function downloadLogs() {
     if (!logsTarget || !logsContent.trim()) {
-      setLogsError("当前没有可下载的日志。");
+      setLogsError(tr("docker.logs.noDownload"));
       return;
     }
     const fileName = dockerLogFileName(logsTarget);
@@ -1655,7 +1661,7 @@ export function DockerToolPanel({
       if (!hasTauriRuntime()) {
         downloadBrowserTextFile(fileName, logsContent);
         setLogsError(null);
-        setNotice("日志已下载。");
+        setNotice(tr("docker.logs.downloaded"));
         return;
       }
       const localPath = await selectDockerLogSavePath(fileName);
@@ -1664,23 +1670,23 @@ export function DockerToolPanel({
       }
       await dockerContainerLogsSave(localPath, logsContent);
       setLogsError(null);
-      setNotice(`日志已保存：${localPath}`);
+      setNotice(tr("docker.logs.saved", { path: localPath }));
     } catch (nextError) {
       setLogsError(formatDockerError(nextError));
     }
   }
 
   return (
-    <section className="toolbox-tool" aria-label="工具">
+    <section className="toolbox-tool" aria-label={tr("docker.toolbox.aria")}>
       <header className="toolbox-head">
         <div className="toolbox-title">
-          <strong>工具</strong>
-          <span>{connection ? `${connection.name} · 远端工具箱` : "打开 SSH 会话后可用"}</span>
+          <strong>{tr("docker.toolbox.title")}</strong>
+          <span>{connection ? tr("docker.toolbox.remote", { name: connection.name }) : tr("docker.toolbox.requiresSsh")}</span>
         </div>
       </header>
 
-      <nav className="toolbox-mode-tabs" aria-label="工具类型">
-        {toolboxViews.map((item) => {
+      <nav className="toolbox-mode-tabs" aria-label={tr("docker.toolbox.typeAria")}>
+        {toolboxViews().map((item) => {
           const Icon = item.icon;
           return (
             <button
@@ -1703,15 +1709,15 @@ export function DockerToolPanel({
               <strong>Docker</strong>
               <span>
                 {connection
-                  ? `容器 ${containers.length.toString()} 个 · 运行 ${runningCount.toString()} 个 · 镜像 ${images.length.toString()} 个`
-                  : "需要当前 SSH 连接"}
+                  ? tr("docker.summary", { containers: containers.length, running: runningCount, images: images.length })
+                  : tr("docker.requiresCurrentSsh")}
               </span>
             </div>
-            <Tooltip label="刷新 Docker 数据">
+            <Tooltip label={tr("docker.refreshAll")}>
               <button
                 className="toolbox-icon-button"
                 type="button"
-                aria-label="刷新 Docker 数据"
+                aria-label={tr("docker.refreshAll")}
                 disabled={!connection || loadingContainers || loadingImages}
                 onClick={() => void refreshCurrentDockerView()}
               >
@@ -1723,14 +1729,14 @@ export function DockerToolPanel({
             </Tooltip>
           </header>
 
-          <div className="docker-view-tabs" aria-label="Docker 视图">
+          <div className="docker-view-tabs" aria-label={tr("docker.viewsAria")}>
             <button
               className={dockerView === "containers" ? "active" : ""}
               type="button"
               onClick={() => changeDockerView("containers")}
             >
               <Box className="ui-icon" aria-hidden="true" />
-              容器
+              {tr("docker.view.containers")}
             </button>
             <button
               className={dockerView === "images" ? "active" : ""}
@@ -1738,7 +1744,7 @@ export function DockerToolPanel({
               onClick={() => changeDockerView("images")}
             >
               <ImageIcon className="ui-icon" aria-hidden="true" />
-              镜像
+              {tr("docker.view.images")}
             </button>
             <button
               className={dockerView === "engine" ? "active" : ""}
@@ -1746,7 +1752,7 @@ export function DockerToolPanel({
               onClick={() => changeDockerView("engine")}
             >
               <DockerBrandIcon className="ui-icon" aria-hidden="true" />
-              引擎
+              {tr("docker.view.engine")}
             </button>
           </div>
 
@@ -1756,15 +1762,15 @@ export function DockerToolPanel({
           {!connection ? (
             <ToolboxEmptyState
               icon={Box}
-              title="暂无 SSH 会话"
-              description="打开或切换到一个 SSH 会话后，可以查看远端 Docker 容器和镜像。"
+              title={tr("docker.empty.sshTitle")}
+              description={tr("docker.empty.sshDescription")}
             />
           ) : dockerView === "containers" ? (
             <ContainerList
               busyKey={busyKey}
               containers={containers}
               loading={loadingContainers}
-              onCopy={(container) => void copyValue(container.name || container.id, "容器名称")}
+              onCopy={(container) => void copyValue(container.name || container.id, tr("docker.copy.containerName"))}
               onInspect={(container) => void openContainerDetail(container)}
               onLogs={(container) => void openLogs(container)}
               onOpenTerminal={onOpenContainerTerminal}
@@ -1779,8 +1785,8 @@ export function DockerToolPanel({
               pullDisabled={pulling}
               pullTasks={imagePullTasks}
               loading={loadingImages}
-              onCopy={(image) => void copyValue(formatImageReference(image), "镜像名称")}
-              onCopyPullImage={(image) => void copyValue(image, "镜像名称")}
+              onCopy={(image) => void copyValue(formatImageReference(image), tr("docker.copy.imageName"))}
+              onCopyPullImage={(image) => void copyValue(image, tr("docker.copy.imageName"))}
               onDismissPullTask={(pullId) =>
                 setImagePullTasks((items) => items.filter((item) => item.pullId !== pullId))
               }
@@ -1894,7 +1900,7 @@ export function DockerToolPanel({
         onClose={closeContainerDetail}
         onConnectNetwork={(networkId) => void connectContainerNetwork(networkId)}
         onCopyJson={() =>
-          containerDetail ? void copyValue(containerDetail.raw_json, "容器 Inspect JSON") : undefined
+          containerDetail ? void copyValue(containerDetail.raw_json, tr("docker.copy.inspect")) : undefined
         }
         onRefresh={() => void loadContainerDetail()}
         onUpdateRestartPolicy={() => void updateContainerRestartPolicy()}
@@ -1927,10 +1933,10 @@ export function DockerToolPanel({
         <Dialog.Portal>
           <Dialog.Overlay className="dialog-backdrop" />
           <Dialog.Content className="docker-pull-dialog">
-            <Dialog.Title className="docker-dialog-title">拉取镜像</Dialog.Title>
+            <Dialog.Title className="docker-dialog-title">{tr("docker.pull.title")}</Dialog.Title>
             <form className="docker-pull-form" onSubmit={submitPullImage}>
               <label>
-                <span>镜像名称</span>
+                <span>{tr("docker.field.imageName")}</span>
                 <input
                   autoFocus
                   placeholder="nginx:latest"
@@ -1943,7 +1949,7 @@ export function DockerToolPanel({
               <footer className="docker-dialog-actions">
                 <Dialog.Close asChild>
                   <button className="secondary-button" type="button" disabled={pulling}>
-                    取消
+                    {tr("docker.cancel")}
                   </button>
                 </Dialog.Close>
                 <button className="primary-button" type="submit" disabled={pulling}>
@@ -1952,7 +1958,7 @@ export function DockerToolPanel({
                   ) : (
                     <Download className="ui-icon" aria-hidden="true" />
                   )}
-                  拉取
+                  {tr("docker.pull.action")}
                 </button>
               </footer>
             </form>
@@ -1962,13 +1968,13 @@ export function DockerToolPanel({
 
       <ConfirmDialog
         open={Boolean(containerDeleteTarget)}
-        title="删除容器"
+        title={tr("docker.delete.containerTitle")}
         description={
           containerDeleteTarget
-            ? `确认删除容器“${containerDeleteTarget.name || containerDeleteTarget.id}”吗？运行中的容器需要先停止。`
+            ? tr("docker.delete.containerDescription", { name: containerDeleteTarget.name || containerDeleteTarget.id })
             : ""
         }
-        confirmLabel="删除"
+        confirmLabel={tr("docker.delete.confirm")}
         onConfirm={confirmRemoveContainer}
         onOpenChange={(open) => {
           if (!open) {
@@ -1979,13 +1985,13 @@ export function DockerToolPanel({
 
       <ConfirmDialog
         open={Boolean(imageDeleteTarget)}
-        title="删除镜像"
+        title={tr("docker.delete.imageTitle")}
         description={
           imageDeleteTarget
-            ? `确认删除镜像“${formatImageReference(imageDeleteTarget)}”吗？被容器占用时 Docker 会拒绝删除。`
+            ? tr("docker.delete.imageDescription", { name: formatImageReference(imageDeleteTarget) })
             : ""
         }
-        confirmLabel="删除"
+        confirmLabel={tr("docker.delete.confirm")}
         onConfirm={confirmRemoveImage}
         onOpenChange={(open) => {
           if (!open) {
@@ -1996,13 +2002,13 @@ export function DockerToolPanel({
 
       <ConfirmDialog
         open={Boolean(engineActionTarget)}
-        title={engineActionTarget === "stop" ? "停止 Docker 服务" : "重启 Docker 服务"}
+        title={engineActionTarget === "stop" ? tr("docker.engine.stopTitle") : tr("docker.engine.restartTitle")}
         description={
           engineActionTarget === "stop"
-            ? "停止 Docker 服务会影响该主机上的所有容器，确认继续吗？"
-            : "重启 Docker 服务可能中断正在运行的容器和网络连接，确认继续吗？"
+            ? tr("docker.engine.stopDescription")
+            : tr("docker.engine.restartDescription")
         }
-        confirmLabel={engineActionTarget === "stop" ? "停止" : "重启"}
+        confirmLabel={engineActionTarget === "stop" ? tr("docker.engine.stop") : tr("docker.engine.restart")}
         onConfirm={() => (engineActionTarget ? runEngineAction(engineActionTarget) : undefined)}
         onOpenChange={(open) => {
           if (!open) {
@@ -2013,22 +2019,22 @@ export function DockerToolPanel({
 
       <ConfirmDialog
         open={restartAfterSave}
-        title="保存并重启 Docker"
-        description="保存配置后会立即重启 Docker 服务，可能影响该主机上的所有容器。确认继续吗？"
-        confirmLabel="保存并重启"
+        title={tr("docker.engine.saveRestartTitle")}
+        description={tr("docker.engine.saveRestartDescription")}
+        confirmLabel={tr("docker.engine.saveRestart")}
         onConfirm={() => saveEngineConfig(true)}
         onOpenChange={(open) => setRestartAfterSave(open)}
       />
 
       <ConfirmDialog
         open={Boolean(scheduledTaskDeleteTarget)}
-        title="删除定时任务"
+        title={tr("docker.schedule.deleteTitle")}
         description={
           scheduledTaskDeleteTarget
-            ? `确认删除定时任务“${scheduledTaskDeleteTarget.name}”吗？远端 crontab 中对应的 mXterm 管理项会被移除。`
+            ? tr("docker.schedule.deleteDescription", { name: scheduledTaskDeleteTarget.name })
             : ""
         }
-        confirmLabel="删除"
+        confirmLabel={tr("docker.delete.confirm")}
         onConfirm={confirmDeleteScheduledTask}
         onOpenChange={(open) => {
           if (!open) {
@@ -2966,7 +2972,7 @@ function DockerImageRunDialog({
             </div>
             <footer className="docker-dialog-actions">
               <button className="secondary-button" type="button" disabled={running} onClick={onClose}>
-                取消
+                {tr("docker.cancel")}
               </button>
               <button className="primary-button" type="submit" disabled={running}>
                 {running ? (
@@ -3550,7 +3556,7 @@ function ScheduledTasksView({
       <div className="scheduled-tasks">
         <ToolboxEmptyState
           icon={Timer}
-          title="暂无 SSH 会话"
+          title={tr("docker.empty.sshTitle")}
           description="打开或切换到一个 SSH 会话后，可以维护远端当前用户的定时任务。"
         />
       </div>
@@ -3658,7 +3664,7 @@ function ScheduledTasksView({
                 disabled={saving}
                 onClick={onCancelEdit}
               >
-                取消
+                {tr("docker.cancel")}
               </button>
               <button className="toolbox-mini-button primary" type="submit" disabled={saving}>
                 {saving ? (
@@ -3877,7 +3883,7 @@ function NetworkDiagnosticsView({
   running: boolean;
   target: string;
 }) {
-  const selectedOption = networkDiagnosticOptions.find((option) => option.value === kind);
+  const selectedOption = networkDiagnosticOptions().find((option) => option.value === kind);
   const SelectedIcon = selectedOption?.icon || Network;
 
   if (!connection) {
@@ -3885,7 +3891,7 @@ function NetworkDiagnosticsView({
       <div className="network-diagnostics">
         <ToolboxEmptyState
           icon={Network}
-          title="暂无 SSH 会话"
+          title={tr("docker.empty.sshTitle")}
           description="打开或切换到一个 SSH 会话后，可以从远端主机视角执行网络诊断。"
         />
       </div>
@@ -3904,7 +3910,7 @@ function NetworkDiagnosticsView({
 
       <form className="network-diagnostic-form" onSubmit={onRun}>
         <div className="network-diagnostic-kind-grid" aria-label="诊断类型">
-          {networkDiagnosticOptions.map((option) => {
+          {networkDiagnosticOptions().map((option) => {
             const Icon = option.icon;
             return (
               <button
@@ -4181,7 +4187,7 @@ function preferredDockerRunNetwork(networks: DockerNetworkSummary[]) {
 }
 
 function networkDiagnosticLabel(kind: NetworkDiagnosticKind) {
-  return networkDiagnosticOptions.find((option) => option.value === kind)?.label || kind;
+  return networkDiagnosticOptions().find((option) => option.value === kind)?.label || kind;
 }
 
 function networkDiagnosticPlaceholder(kind: NetworkDiagnosticKind) {
