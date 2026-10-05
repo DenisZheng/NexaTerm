@@ -5,6 +5,7 @@ const rust = readFileSync(new URL("../src-tauri/src/brand_migration.rs", import.
 const legacySettings = readFileSync(new URL("../src-tauri/src/legacy_webview_settings.rs", import.meta.url), "utf8");
 const lib = readFileSync(new URL("../src-tauri/src/lib.rs", import.meta.url), "utf8");
 const app = readFileSync(new URL("../src/App.tsx", import.meta.url), "utf8");
+const main = readFileSync(new URL("../src/main.tsx", import.meta.url), "utf8");
 const gate = readFileSync(new URL("../src/features/migration/LegacyAppDataMigrationGate.tsx", import.meta.url), "utf8");
 const probeWindow = readFileSync(new URL("../src/features/migration/LegacySettingsProbeWindow.tsx", import.meta.url), "utf8");
 const commands = readFileSync(new URL("../src/shared/tauri/commands.ts", import.meta.url), "utf8");
@@ -68,6 +69,12 @@ requireAll(app, [
   "<LegacyAppDataMigrationGate>",
   "<WorkspaceShell />",
 ], "startup routing");
+
+requireAll(main, [
+  "__NEXATERM_LEGACY_SETTINGS_PROBE_TOKEN__",
+  'const { default: App } = await import("./App")',
+  "return;",
+], "probe bootstrap isolation");
 
 requireAll(probeWindow, [
   "window.localStorage.getItem(settingsStorageKey)",
