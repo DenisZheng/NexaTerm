@@ -161,6 +161,13 @@ export interface AppRuntimeInfo {
   isTauri: boolean;
 }
 
+export interface PerformanceInteractiveSample {
+  enabled: boolean;
+  recorded: boolean;
+  elapsedMs: number;
+  pid: number;
+}
+
 export interface LegacyAppDataMigrationPreview {
   available: boolean;
   blocked: boolean;
@@ -197,6 +204,18 @@ export interface LegacyWebviewSettingsProbeStart {
 export interface LegacyWebviewSettingsProbeResult {
   complete: boolean;
   value: string | null;
+}
+
+export function performanceProbeMarkInteractive() {
+  if (typeof window === "undefined" || !("__TAURI_INTERNALS__" in window)) {
+    return Promise.resolve<PerformanceInteractiveSample>({
+      enabled: false,
+      recorded: false,
+      elapsedMs: 0,
+      pid: 0,
+    });
+  }
+  return invoke<PerformanceInteractiveSample>("performance_probe_mark_interactive");
 }
 
 export function legacyAppDataMigrationPreview() {
