@@ -119,18 +119,33 @@ export function transferFileTypeLabel(item: RemoteFileTransferItem) {
 }
 
 export function transferItemSizeText(item: RemoteFileTransferItem) {
+  const detail = item.progressDetail || "";
+  const legacyArchivePrefix = "压缩包 ";
+  const normalizedDetail = detail.startsWith(legacyArchivePrefix)
+    ? t("files.transfer.archiveSize", { size: detail.slice(legacyArchivePrefix.length) })
+    : detail;
   if (item.kind === "directory") {
-    return item.progressDetail?.includes(" / ") || item.progressDetail?.startsWith("压缩包 ")
-      ? item.progressDetail
+    return normalizedDetail.includes(" / ") || normalizedDetail
+      ? normalizedDetail || t("files.transfer.kind.directory")
       : t("files.transfer.kind.directory");
   }
-  if (item.progressDetail?.includes(" / ")) {
-    return item.progressDetail;
-  }
-  if (item.progressDetail?.startsWith("压缩包 ")) {
-    return item.progressDetail;
+  if (normalizedDetail.includes(" / ") || normalizedDetail) {
+    return normalizedDetail;
   }
   return t("files.transfer.kind.file");
+}
+
+export function transferStageLabel(stage: string) {
+  const value = stage.trim();
+  if (!value) return value;
+  const labels: Record<string, string> = {
+    "已取消": t("files.transfer.status.canceled"),
+    "等待远端确认": t("files.transfer.stage.waitingRemote"),
+    "压缩中": t("files.transfer.stage.compressing"),
+    "上传中": t("files.transfer.stage.uploading"),
+    "下载中": t("files.transfer.stage.downloading"),
+  };
+  return labels[value] || value;
 }
 
 export function transferDirectionLabel(direction: TransferDirection) {
@@ -198,25 +213,25 @@ export function transferDisplayStatusLabel(item: RemoteFileTransferItem) {
   if (!stage) {
     return transferStatusLabel(item.status);
   }
-  if (stage.includes("等待")) {
+  if (stage.includes("等待") || /wait/i.test(stage)) {
     return t("files.transfer.stage.waiting");
   }
-  if (stage.includes("压缩") || stage.includes("打包") || stage.includes("tar.gz")) {
+  if (stage.includes("压缩") || stage.includes("打包") || /compress|pack|tar\.gz/i.test(stage)) {
     return t("files.transfer.stage.compressing");
   }
-  if (stage.includes("扫描")) {
+  if (stage.includes("扫描") || /scan/i.test(stage)) {
     return t("files.transfer.stage.scanning");
   }
-  if (stage.includes("检查") || stage.includes("准备")) {
+  if (stage.includes("检查") || stage.includes("准备") || /check|prepare/i.test(stage)) {
     return t("files.transfer.stage.preparing");
   }
-  if (stage.includes("下载")) {
+  if (stage.includes("下载") || /download/i.test(stage)) {
     return t("files.transfer.stage.downloading");
   }
-  if (stage.includes("上传")) {
+  if (stage.includes("上传") || /upload/i.test(stage)) {
     return t("files.transfer.stage.uploading");
   }
-  if (stage.includes("解压")) {
+  if (stage.includes("解压") || /extract/i.test(stage)) {
     return t("files.transfer.stage.extracting");
   }
   return transferStatusLabel(item.status);
