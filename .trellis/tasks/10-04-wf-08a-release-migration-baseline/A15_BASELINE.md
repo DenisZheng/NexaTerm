@@ -23,11 +23,11 @@ A15 是“迁移、安装与完整 v1”的最终验收。本表只记录当前�
 | Security Critical/High | security CI/report exists | FINAL RELEASE AUDIT PENDING |
 | Startup / idle / 10-session performance | WF-08D provides opt-in startup interactive probe, cross-platform process-tree CPU/RSS sampler and fixed 10 SSH/resource-release workload; CI #364 passed | **MEASUREMENT HARNESS COMPLETE / REAL BENCHMARK PENDING WF-08E** |
 | Real installer launch/upgrade/rollback on all 3 platforms | no final A15 evidence yet | **PENDING** |
-| A09/A10 MultiExec real Tauri | separate predecessor acceptance | **PENDING; blocks final A15 sign-off** |
+| A09/A10 MultiExec real Tauri | maintainer real-Tauri acceptance on 2026-10-05; fixed-target Live/Send and disconnect/reconnect behavior confirmed | **PASS** |
 
 ## Completion rule
 
-WF-08 development can continue while A09/A10 are pending. A15 is not PASS until the v1 mandatory scope, A09/A10 predecessor acceptance, three-platform release/install evidence, update/rollback, migration, locale, security/license and performance/stability evidence are all reconciled.
+A09/A10 predecessor acceptance is now PASS. A15 is not PASS until the remaining three-platform release/install evidence, update/rollback, migration, locale/theme, security/license and performance/stability evidence are all reconciled.
 
 
 ## CI evidence
@@ -95,3 +95,14 @@ WF-08 development can continue while A09/A10 are pending. A15 is not PASS until 
 - Test fixtures / Security / License: PASS
 - Automated framework now enforces zero-blocker A15 signoff.
 - Boundary: A15 itself is **not PASS**. A09/A10 and real three-platform install/sign/upgrade/rollback/migration/performance/updater evidence remain pending.
+
+
+## A09/A10 real-Tauri evidence
+
+- Date: 2026-10-05
+- Tested branch: `feat/wf08e-a15-release-acceptance`
+- Tested code: `332f752a5ecee73db69437764a281c27920ec936`
+- A09: PASS — fixed A/B target set, Live and Send exactly-once per selected instance, focus does not mutate targets.
+- A10: PASS — disconnect state visible, reopened B2 does not silently rejoin, no replay/automatic retry.
+- Source of truth: `.trellis/tasks/10-03-wf-04c-unified-multiexec/validation/a09-a10.md`
+- Boundary: this clears the predecessor blocker only; A15 still requires real release/migration/performance/updater evidence.
