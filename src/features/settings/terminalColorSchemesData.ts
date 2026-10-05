@@ -6,8 +6,8 @@ import type { TerminalColorScheme } from "./terminalColorSchemes";
 export const terminalColorSchemesData: TerminalColorScheme[] = [
   {
     id: "mxterm-default",
-    name: "MXterm Default",
-    source: "MXterm",
+    name: "NexaTerm Default",
+    source: "NexaTerm",
     theme: {
       background: "#111827",
       foreground: "#D1D5DB",
