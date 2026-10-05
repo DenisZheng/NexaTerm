@@ -33,7 +33,7 @@ test("macOS debug sidecar plan keeps executable extensionless", () => {
     debug: true,
   });
   assert.equal(sidecarExtension(plan.targetTriple), "");
-  assert.match(plan.source, /target\/aarch64-apple-darwin\/debug\/mxterm-mcp$/);
-  assert.match(plan.destination, /binaries\/nexaterm-mcp-aarch64-apple-darwin$/);
+  assert.match(plan.source.replaceAll("\\", "/"), /target\/aarch64-apple-darwin\/debug\/mxterm-mcp$/);
+  assert.match(plan.destination.replaceAll("\\", "/"), /binaries\/nexaterm-mcp-aarch64-apple-darwin$/);
   assert.ok(!plan.cargoArgs.includes("--release"));
 });
