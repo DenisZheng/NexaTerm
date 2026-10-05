@@ -20,7 +20,7 @@ A15 是“迁移、安装与完整 v1”的最终验收。本表只记录当前�
 | mXterm app-data → NexaTerm app-data | WF-08B implements safe core App Data migration plus `mxterm.settings.v1` bridging on Windows/Linux and read-only WebKit SQLite extraction on macOS; CI #343 passed all three Rust platforms and frontend gates | **CODE COMPLETE / REAL UPGRADE PENDING WF-08E** |
 | English / zh-CN full-product completeness | WF-08C full-catalog audit locks exact en/zh-CN key + placeholder parity (170/170 at audit) | **AUTOMATED AUDIT PASS / REAL UI SWITCH PENDING WF-08E** |
 | Light/Dark | existing product/acceptance evidence | FINAL REGRESSION PENDING |
-| Security Critical/High | security CI/report exists | FINAL RELEASE AUDIT PENDING |
+| Security Critical/High | main CI #383 Security evidence PASS on release-candidate baseline | **PASS FOR RC BASELINE** |
 | Startup / idle / 10-session performance | WF-08D provides opt-in startup interactive probe, cross-platform process-tree CPU/RSS sampler and fixed 10 SSH/resource-release workload; CI #364 passed | **MEASUREMENT HARNESS COMPLETE / REAL BENCHMARK PENDING WF-08E** |
 | Real installer launch/upgrade/rollback on all 3 platforms | no final A15 evidence yet | **PENDING** |
 | A09/A10 MultiExec real Tauri | maintainer real-Tauri acceptance on 2026-10-05; fixed-target Live/Send and disconnect/reconnect behavior confirmed | **PASS** |
@@ -106,3 +106,14 @@ A09/A10 predecessor acceptance is now PASS. A15 is not PASS until the remaining 
 - A10: PASS — disconnect state visible, reopened B2 does not silently rejoin, no replay/automatic retry.
 - Source of truth: `.trellis/tasks/10-03-wf-04c-unified-multiexec/validation/a09-a10.md`
 - Boundary: this clears the predecessor blocker only; A15 still requires real release/migration/performance/updater evidence.
+
+
+## Main release-candidate baseline
+
+- Main merge: `4bd88f9060fe089ee6e52a042a5e589c1bb739bd`
+- Integration PR: #40
+- Main CI: #383 / run `37279498617` — PASS
+- Frontend / Rust windows-x64 / Rust linux-x64 / Rust macos-arm64 / Test fixtures / Security / License: PASS
+- A09/A10 real-Tauri predecessor: PASS
+- This commit is the sole baseline for the remaining A15 real release/install/migration/performance/updater evidence.
+- Still pending: platform package/install/signing/notarization, upgrade/rollback, real mXterm migration, packaged performance/10-SSH/resource-release, updater signed metadata + recovery.

@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "candidate": {
     "version": "0.1.17",
-    "commit": "332f752a5ecee73db69437764a281c27920ec936",
+    "commit": "4bd88f9060fe089ee6e52a042a5e589c1bb739bd",
     "tag": "pending-real-release",
     "timestamp": "2026-10-05"
   },
@@ -11,9 +11,9 @@
     "A10": "pass"
   },
   "automated": {
-    "finalCi": "pending",
-    "securityCriticalHigh": "pending",
-    "license": "pending"
+    "finalCi": "pass",
+    "securityCriticalHigh": "pass",
+    "license": "pass"
   },
   "platforms": {
     "windows-x64": {
@@ -76,6 +76,6 @@
   "signoff": {
     "status": "pending",
     "maintainer": "",
-    "notes": "A09/A10 real-Tauri PASS confirmed by maintainer on 2026-10-05. Remaining real release, migration, performance and updater evidence is still pending."
+    "notes": "Release-candidate baseline is main @ 4bd88f9060fe089ee6e52a042a5e589c1bb739bd. Main CI #383 passed Frontend, Rust Windows/Linux/macOS, fixtures, Security and License. A09/A10 are PASS. Real platform release/install/signing, migration, performance and updater evidence remains pending."
   }
 }
