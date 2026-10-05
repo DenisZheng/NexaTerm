@@ -4,9 +4,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { settingsStorageKey } from "../settings/startupSettings";
 import { legacyWebviewSettingsProbeCapture } from "../../shared/tauri/commands";
 
-export function LegacySettingsProbeWindow() {
-  const token = new URLSearchParams(window.location.search).get("token");
-
+export function LegacySettingsProbeWindow({ token }: { token: string }) {
   useEffect(() => {
     let value: string | null = null;
     try {
@@ -16,12 +14,10 @@ export function LegacySettingsProbeWindow() {
     }
 
     const finish = async () => {
-      if (token) {
-        try {
-          await legacyWebviewSettingsProbeCapture(token, value);
-        } catch {
-          // The main window treats a missing capture as a probe failure/timeout.
-        }
+      try {
+        await legacyWebviewSettingsProbeCapture(token, value);
+      } catch {
+        // The main window treats a missing capture as a probe failure/timeout.
       }
       try {
         await getCurrentWindow().close();
