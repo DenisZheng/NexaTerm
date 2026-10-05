@@ -1,5 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { getLocale, setLocalePreference, type Locale } from "../../shared/i18n";
 import { buildTerminalSplitSyncPaneOptions } from "./terminalSplitSyncOptions";
+
+let previousLocale: Locale;
+beforeEach(() => { previousLocale = getLocale(); setLocalePreference("zh-CN"); });
+afterEach(() => { setLocalePreference(previousLocale); });
 
 describe("分屏同步菜单目标投影", () => {
   it("保留 pane 顺序、空 pane 序号和离线状态，焦点只标记主输入", () => {
