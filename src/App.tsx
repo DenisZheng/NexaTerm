@@ -24,11 +24,14 @@ function StartupFallback({ label }: { label: string }) {
 }
 
 export default function App() {
-  const view = new URLSearchParams(window.location.search).get("view");
-  if (view === "legacy-settings-probe") {
-    return <LegacySettingsProbeWindow />;
+  const legacyProbeToken = (window as Window & {
+    __NEXATERM_LEGACY_SETTINGS_PROBE_TOKEN__?: string;
+  }).__NEXATERM_LEGACY_SETTINGS_PROBE_TOKEN__;
+  if (legacyProbeToken) {
+    return <LegacySettingsProbeWindow token={legacyProbeToken} />;
   }
 
+  const view = new URLSearchParams(window.location.search).get("view");
   const isVncRunner = view === "vnc-runner";
   if (isVncRunner) {
     return (
