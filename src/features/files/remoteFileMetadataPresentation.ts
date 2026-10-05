@@ -1,3 +1,4 @@
+import { t } from "../../shared/i18n";
 import type { RemoteFileKind } from "./remoteFileTypes";
 
 export function formatRemoteFileIdentity(
@@ -9,7 +10,7 @@ export function formatRemoteFileIdentity(
   if (normalizedName && normalizedName.toLowerCase() !== "unknown") {
     return normalizedName;
   }
-  return id !== null && Number.isFinite(id) ? `${idLabel} ${id.toString()}` : "未知";
+  return id !== null && Number.isFinite(id) ? `${idLabel} ${id.toString()}` : t("files.info.unknown");
 }
 
 export function formatRemoteFileTimestamp(timestamp: number | null, unavailableLabel: string) {
@@ -23,10 +24,10 @@ export function formatRemoteFileTimestamp(timestamp: number | null, unavailableL
 
 export function remoteFileKindLabel(kind: RemoteFileKind) {
   const labels: Record<RemoteFileKind, string> = {
-    directory: "目录",
-    file: "文件",
-    other: "其他",
-    symlink: "符号链接",
+    directory: t("files.kind.directory"),
+    file: t("files.kind.file"),
+    other: t("files.kind.other"),
+    symlink: t("files.kind.symlink"),
   };
   return labels[kind];
 }
