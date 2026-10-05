@@ -1,3 +1,4 @@
+import { t } from "../../shared/i18n";
 import type {
   RemoteFileTransferItem,
   TransferDirection,
@@ -129,20 +130,20 @@ export function transferItemSizeText(item: RemoteFileTransferItem) {
   if (item.progressDetail?.startsWith("压缩包 ")) {
     return item.progressDetail;
   }
-  return "文件";
+  return t("files.transfer.kind.file");
 }
 
 export function transferDirectionLabel(direction: TransferDirection) {
-  return direction === "upload" ? "上传" : "下载";
+  return direction === "upload" ? t("files.transfer.direction.upload") : t("files.transfer.direction.download");
 }
 
 export function transferKindLabel(kind: TransferKind) {
-  return kind === "directory" ? "目录" : "文件";
+  return kind === "directory" ? t("files.transfer.kind.directory") : t("files.transfer.kind.file");
 }
 
 export function transferSourcePath(item: RemoteFileTransferItem) {
   if (item.direction === "upload") {
-    return item.localPath || "本地选择的文件";
+    return item.localPath || t("files.transfer.localSelected");
   }
   return item.remotePath;
 }
@@ -151,7 +152,7 @@ export function transferTargetPath(item: RemoteFileTransferItem) {
   if (item.direction === "upload") {
     return item.remotePath;
   }
-  return item.localPath || "本地下载目录";
+  return item.localPath || t("files.transfer.localDownloadDir");
 }
 
 export function formatTransferDetailTime(timestamp: number) {
@@ -170,12 +171,12 @@ export function formatTransferDetailTime(timestamp: number) {
 
 export function transferStatusLabel(status: TransferStatus) {
   const labels: Record<TransferStatus, string> = {
-    canceled: "已取消",
-    error: "失败",
-    queued: "等待",
-    running: "进行中",
-    skipped: "已跳过",
-    success: "完成",
+    canceled: t("files.transfer.status.canceled"),
+    error: t("files.transfer.status.error"),
+    queued: t("files.transfer.status.queued"),
+    running: t("files.transfer.status.running"),
+    skipped: t("files.transfer.status.skipped"),
+    success: t("files.transfer.status.success"),
   };
   return labels[status];
 }
@@ -198,25 +199,25 @@ export function transferDisplayStatusLabel(item: RemoteFileTransferItem) {
     return transferStatusLabel(item.status);
   }
   if (stage.includes("等待")) {
-    return "等待";
+    return t("files.transfer.stage.waiting");
   }
   if (stage.includes("压缩") || stage.includes("打包") || stage.includes("tar.gz")) {
-    return "压缩中";
+    return t("files.transfer.stage.compressing");
   }
   if (stage.includes("扫描")) {
-    return "扫描中";
+    return t("files.transfer.stage.scanning");
   }
   if (stage.includes("检查") || stage.includes("准备")) {
-    return "准备中";
+    return t("files.transfer.stage.preparing");
   }
   if (stage.includes("下载")) {
-    return "下载中";
+    return t("files.transfer.stage.downloading");
   }
   if (stage.includes("上传")) {
-    return "上传中";
+    return t("files.transfer.stage.uploading");
   }
   if (stage.includes("解压")) {
-    return "解压中";
+    return t("files.transfer.stage.extracting");
   }
   return transferStatusLabel(item.status);
 }
