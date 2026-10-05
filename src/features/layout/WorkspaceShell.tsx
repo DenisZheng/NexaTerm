@@ -5245,7 +5245,7 @@ export function WorkspaceShell() {
           <button
             className="subtab-close"
             type="button"
-            aria-label={`关闭 ${tab.title}`}
+            aria-label={tr("workspace.closeNamed", { name: tab.title })}
             onClick={() => runTerminalInstanceAction("terminal.closeTab", "ssh", tab.id)}
           >
             <X className="ui-icon" aria-hidden="true" />
@@ -5320,7 +5320,7 @@ export function WorkspaceShell() {
           <button
             className="subtab-close"
             type="button"
-            aria-label={`关闭 ${tab.title}`}
+            aria-label={tr("workspace.closeNamed", { name: tab.title })}
             onClick={() => runTerminalInstanceAction("terminal.closeTab", "local", tab.id)}
           >
             <X className="ui-icon" aria-hidden="true" />
@@ -5470,7 +5470,7 @@ export function WorkspaceShell() {
           <button
             className="subtab-close"
             type="button"
-            aria-label={`关闭 ${tab.name}`}
+            aria-label={tr("workspace.closeNamed", { name: tab.name })}
             onClick={() => closeRemoteFileTab(tab.id)}
           >
             <X className="ui-icon" aria-hidden="true" />
@@ -5810,7 +5810,7 @@ export function WorkspaceShell() {
     const originalGroup = normalizeCommandSnippetGroupValue(commandSnippetGroupDialog.originalName);
     if (!nextGroup) {
       setCommandSnippetGroupDialog((state) =>
-        state ? { ...state, error: "请填写分组名称。" } : state,
+        state ? { ...state, error: tr("workspace.command.groupNameRequired") } : state,
       );
       return;
     }
@@ -5820,7 +5820,7 @@ export function WorkspaceShell() {
       )
     ) {
       setCommandSnippetGroupDialog((state) =>
-        state ? { ...state, error: "分组名称已存在。" } : state,
+        state ? { ...state, error: tr("workspace.command.groupExists") } : state,
       );
       return;
     }
@@ -7542,7 +7542,7 @@ export function WorkspaceShell() {
               item.id === tab.id
                 ? {
                     ...item,
-                    error: `命令发送失败：${formatError(error)}`,
+                    error: tr("workspace.command.sendFailed", { message: formatError(error) }),
                   }
                 : item,
             );
@@ -10652,7 +10652,7 @@ function LocalTerminalStatusPanel({
       className={`terminal-direct-status local-terminal-status ${failed ? "is-error" : "is-loading"} ${
         visible ? "" : "is-hidden"
       } ${className || ""}`}
-      aria-label={`${title} ${tr("workspace.rdp.state")}`}
+      aria-label={`${title} ${tr("workspace.local.state")}`}
       aria-hidden={!visible}
       style={style}
       onPointerDown={onPaneFocus}
@@ -10672,7 +10672,7 @@ function LocalTerminalStatusPanel({
               <RefreshCw className="ui-icon" aria-hidden="true" />
               {tr("workspace.rdp.retry")}
             </button>
-            {source === "local" ? <button type="button" onClick={onOpenSettings}>打开设置</button> : null}
+            {source === "local" ? <button type="button" onClick={onOpenSettings}>{tr("workspace.local.openSettings")}</button> : null}
           </div>
         ) : null}
       </div>
@@ -10787,7 +10787,7 @@ function DirectTerminalStatusPanel({
       className={`terminal-direct-status ${failed ? "is-error" : "is-loading"} ${
         visible ? "" : "is-hidden"
       } ${className || ""}`}
-      aria-label={`${title} ${tr("workspace.rdp.state")}`}
+      aria-label={`${title} ${tr("workspace.local.state")}`}
       aria-hidden={!visible}
       style={style}
       onPointerDown={onPaneFocus}
@@ -10809,6 +10809,15 @@ function DirectTerminalStatusPanel({
       </div>
     </section>
   );
+}
+
+function localTerminalStatusLabel(status: string) {
+  if (status === "正在打开") return tr("workspace.local.status.opening");
+  if (status === "预览") return tr("workspace.local.status.preview");
+  if (status === "已连接") return tr("workspace.local.status.connected");
+  if (status === "正在连接") return tr("workspace.local.status.connecting");
+  if (status === "连接失败") return tr("workspace.connection.failed");
+  return status;
 }
 
 function ConnectionStepPanel({
@@ -13064,14 +13073,14 @@ function buildCommandHistoryScopeOptions({
       (profile) => profile.id === activeLocalTerminalTab.profileId,
     );
     addOption({
-      badge: "本地",
-      label: `当前终端（${activeProfile?.name || activeLocalTerminalTab.title}）`,
+      badge: tr("workspace.command.target.local"),
+      label: tr("workspace.command.target.currentTerminal", { name: activeProfile?.name || activeLocalTerminalTab.title }),
       value: defaultScopeKey,
     });
   } else if (activeWorkspaceMode === "ssh" && isSshConnection(activeConnection)) {
     addOption({
       badge: "SSH",
-      label: `当前连接（${activeConnection.name}）`,
+      label: tr("workspace.command.target.currentConnection", { name: activeConnection.name }),
       value: defaultScopeKey,
     });
   }
@@ -13091,7 +13100,7 @@ function buildCommandHistoryScopeOptions({
     .filter((profile) => !profile.hidden || profile.id === activeLocalTerminalTab?.profileId)
     .forEach((profile) => {
       addOption({
-        badge: "本地",
+        badge: tr("workspace.command.target.local"),
         label: profile.name,
         value: commandHistoryKeyForScope({
           scope_kind: "local_profile",
@@ -13101,7 +13110,7 @@ function buildCommandHistoryScopeOptions({
     });
 
   addOption({
-    label: "全部历史",
+    label: tr("workspace.command.target.allHistory"),
     value: commandHistoryAllScopeKey,
   });
 
@@ -13175,15 +13184,15 @@ function buildCommandSenderTargets({
 
 function commandSenderDeliveryLabel(status: CommandSenderDeliveryStatus) {
   if (status === "written") {
-    return "已写入";
+    return tr("workspace.command.delivery.written");
   }
   if (status === "failed") {
-    return "发送失败";
+    return tr("workspace.command.delivery.failed");
   }
   if (status === "disconnected") {
-    return "已断线";
+    return tr("workspace.command.delivery.disconnected");
   }
-  return "未发送";
+  return tr("workspace.command.delivery.notSent");
 }
 
 function buildAiContextBlock({
@@ -13298,13 +13307,13 @@ function uniqueRemoteParentPaths(entries: RemoteFileEntry[]) {
 function remoteFileDeleteDescription(entries: RemoteFileEntry[], affectedTabs: number, dirtyTabs: number) {
   const base =
     entries.length === 1
-      ? `确认删除“${entries[0].path}”吗？这个操作无法撤销。`
-      : `确认删除选中的 ${entries.length.toString()} 个远程条目吗？这个操作无法撤销。`;
+      ? tr("workspace.file.deleteOne", { path: entries[0].path })
+      : tr("workspace.file.deleteMany", { count: entries.length });
   if (dirtyTabs > 0) {
-    return `${base} 将同时关闭 ${affectedTabs.toString()} 个已打开文件，其中 ${dirtyTabs.toString()} 个有未保存修改。`;
+    return tr("workspace.file.deleteWithDirty", { base, open: affectedTabs, dirty: dirtyTabs });
   }
   if (affectedTabs > 0) {
-    return `${base} 将同时关闭 ${affectedTabs.toString()} 个已打开文件。`;
+    return tr("workspace.file.deleteWithOpen", { base, open: affectedTabs });
   }
   return base;
 }
@@ -13388,20 +13397,20 @@ function previewRemoteFileContent(path: string, connectionName = "preview") {
   if (name.endsWith(".conf")) {
     return "server {\n  listen 80;\n  server_name example.local;\n}\n";
   }
-  return `# ${name}\n# ${connectionName}:${path}\n\n编辑这里的内容后可看到 dirty 状态和保存入口。\n`;
+  return tr("workspace.file.previewBody", { name, connection: connectionName, path });
 }
 
 function remoteFileActionTitle(action: RemoteFileTextAction) {
-  if (action.action === "create-file") return "新建文件";
-  if (action.action === "create-directory") return "新建文件夹";
-  return "重命名";
+  if (action.action === "create-file") return tr("workspace.file.action.createFile");
+  if (action.action === "create-directory") return tr("workspace.file.action.createDirectory");
+  return tr("workspace.file.action.rename");
 }
 
 function remoteFileActionDescription(action: RemoteFileTextAction) {
   if (action.action === "rename") {
-    return `父目录：${remotePathParent(action.entry.path)}`;
+    return tr("workspace.file.parent", { path: remotePathParent(action.entry.path) });
   }
-  return `父目录：${action.parentPath}`;
+  return tr("workspace.file.parent", { path: action.parentPath });
 }
 
 function toRemoteFileConflictPolicy(
@@ -13426,15 +13435,15 @@ function isValidRemoteBaseName(name: string) {
 function remoteFileNameValidationMessage(name: string) {
   const trimmed = name.trim();
   if (!trimmed) {
-    return "请输入名称。";
+    return tr("workspace.file.validation.required");
   }
   if (trimmed === "." || trimmed === "..") {
-    return "名称不能是 . 或 ..。";
+    return tr("workspace.file.validation.dot");
   }
   if (/[\\/]/.test(trimmed)) {
-    return "这里只能填写名称，不能包含路径。";
+    return tr("workspace.file.validation.path");
   }
-  return "请输入有效名称。";
+  return tr("workspace.file.validation.invalid");
 }
 
 function getFileRelativePath(file: File) {
