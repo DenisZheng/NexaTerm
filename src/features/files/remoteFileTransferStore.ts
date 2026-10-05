@@ -1,3 +1,4 @@
+import { t } from "../../shared/i18n";
 import { useStore } from "zustand";
 import { createStore } from "zustand/vanilla";
 import { normalizeRemotePath } from "./remoteFilePaths";
@@ -203,7 +204,7 @@ export function markTransferCanceled(transferId: string) {
     progressIndeterminate: false,
     speedText: null,
     status: "canceled",
-    stage: "已取消",
+    stage: t("files.transfer.status.canceled"),
   });
 }
 
@@ -267,15 +268,15 @@ function applyRemoteTransferProgressEvents(events: RemoteFileTransferProgressEve
         event.direction === "upload" && progress >= 100 ? 99 : progress;
       const stage =
         event.direction === "upload" && progress >= 100
-          ? "等待远端确认"
+          ? t("files.transfer.stage.waitingRemote")
           : item.kind === "directory" && event.direction === "download" && !hasKnownTotal
-            ? "压缩中"
+            ? t("files.transfer.stage.compressing")
             : event.direction === "upload"
-              ? "上传中"
-              : "下载中";
+              ? t("files.transfer.stage.uploading")
+              : t("files.transfer.stage.downloading");
       const progressDetail =
         item.kind === "directory" && event.direction === "download" && !hasKnownTotal
-          ? `压缩包 ${formatFileSize(event.loaded_bytes)}`
+          ? t("files.transfer.archiveSize", { size: formatFileSize(event.loaded_bytes) })
           : formatTransferProgressBytes(event.loaded_bytes, totalBytes);
       const nextProgress = clampTransferProgress(displayProgress);
       const nextSpeedText = formatTransferSpeed(
