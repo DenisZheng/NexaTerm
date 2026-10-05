@@ -1,3 +1,4 @@
+import { t } from "../../shared/i18n";
 import { useCallback, useEffect, useRef } from "react";
 import { remoteFileCancelTransfer } from "../../shared/tauri/commands";
 import { listenRemoteFileTransferProgress } from "../../shared/tauri/events";
@@ -123,7 +124,7 @@ export function useRemoteFileTransferController({
       progressDetail: null,
       progressIndeterminate: false,
       speedText: null,
-      stage: "已取消",
+      stage: t("files.transfer.status.canceled"),
       status: "canceled",
     });
   }, [dropQueuedTransfer]);
