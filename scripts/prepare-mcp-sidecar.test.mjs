@@ -22,7 +22,7 @@ test("Windows sidecar plan uses target-triple suffixed exe", () => {
   assert.equal(sidecarExtension(plan.targetTriple), ".exe");
   assert.match(plan.source.replaceAll("\\", "/"), /src-tauri\/target\/x86_64-pc-windows-msvc\/release\/mxterm-mcp\.exe$/);
   assert.match(plan.destination.replaceAll("\\", "/"), /src-tauri\/binaries\/nexaterm-mcp-x86_64-pc-windows-msvc\.exe$/);
-  assert.deepEqual(plan.cargoArgs.slice(-3), ["x86_64-pc-windows-msvc", "--release"].slice(-3));
+  assert.deepEqual(plan.cargoArgs.slice(-3), ["--target", "x86_64-pc-windows-msvc", "--release"]);
   assert.ok(plan.cargoArgs.includes("mxterm-mcp"));
 });
 
