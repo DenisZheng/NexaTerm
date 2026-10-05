@@ -12,6 +12,7 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
+import { useI18n } from "../i18n";
 
 export interface AppComboboxOption<T extends string> {
   disabled?: boolean;
@@ -49,14 +50,17 @@ export function AppCombobox<T extends string>({
   ariaLabel,
   className,
   disabled = false,
-  emptyText = "没有匹配项",
+  emptyText,
   menuMinWidth,
   options,
-  placeholder = "请输入或选择",
+  placeholder,
   spellCheck = false,
   value,
   onChange,
 }: AppComboboxProps<T>) {
+  const { t } = useI18n();
+  const resolvedEmptyText = emptyText ?? t("common.noMatches");
+  const resolvedPlaceholder = placeholder ?? t("common.enterOrSelect");
   const rootRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -185,7 +189,7 @@ export function AppCombobox<T extends string>({
           aria-expanded={open}
           aria-label={ariaLabel}
           disabled={disabled}
-          placeholder={placeholder}
+          placeholder={resolvedPlaceholder}
           spellCheck={spellCheck}
           value={value}
           onFocus={() => {
@@ -236,7 +240,7 @@ export function AppCombobox<T extends string>({
         <button
           className="app-combobox-toggle"
           type="button"
-          aria-label={open ? "收起候选项" : "展开候选项"}
+          aria-label={open ? t("common.collapseOptions") : t("common.expandOptions")}
           aria-expanded={open}
           disabled={disabled || options.length === 0}
           onClick={() => {
@@ -304,7 +308,7 @@ export function AppCombobox<T extends string>({
                 ) : (
                   <div className="app-combobox-empty select-menu-item" aria-disabled="true">
                     <span aria-hidden="true" />
-                    <span>{emptyText}</span>
+                    <span>{resolvedEmptyText}</span>
                   </div>
                 )}
               </div>
