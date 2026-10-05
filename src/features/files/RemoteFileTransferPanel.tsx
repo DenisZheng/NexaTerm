@@ -28,6 +28,7 @@ import {
   transferInlineErrorText,
   transferItemSizeText,
   transferKindLabel,
+  transferStageLabel,
   transferSourcePath,
   transferTargetPath,
 } from "./remoteFileTransferUtils";
@@ -138,7 +139,7 @@ const RemoteFileTransferRow = memo(function RemoteFileTransferRow({
   const fileTypeClass = transferFileTypeClass(item);
   const detailText = [
     t("files.transfer.detail.status", { value: statusText }),
-    t("files.transfer.detail.stage", { value: item.stage }),
+    t("files.transfer.detail.stage", { value: transferStageLabel(item.stage) }),
     t("files.transfer.detail.direction", { value: transferDirectionLabel(item.direction) }),
     t("files.transfer.detail.type", { value: transferKindLabel(item.kind) }),
     t("files.transfer.detail.progress", { value: progressLabel }),
@@ -249,7 +250,7 @@ const RemoteFileTransferRow = memo(function RemoteFileTransferRow({
         <div
           className={`transfer-progress ${item.progressIndeterminate ? "indeterminate" : ""}`}
           role="progressbar"
-          aria-label={`${item.name} ${item.stage}`}
+          aria-label={`${item.name} ${transferStageLabel(item.stage)}`}
           aria-valuemax={100}
           aria-valuemin={0}
           aria-valuenow={Math.round(progressValue)}
