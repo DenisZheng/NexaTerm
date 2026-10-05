@@ -9617,7 +9617,7 @@ export function WorkspaceShell() {
       </Dialog.Root>
 
       <ConfirmDialog
-        confirmLabel="删除"
+        confirmLabel={t("connectionHome.deleteConfirm")}
         description={
           pendingCommandSnippetDelete
             ? `删除“${pendingCommandSnippetDelete.title}”后，命令操作台将不再展示这个片段。`
@@ -9834,7 +9834,7 @@ export function WorkspaceShell() {
               </header>
               <div className="dialog-body">
                 <label className="remote-file-name-field">
-                  <span>名称</span>
+                  <span>{t("connectionHome.column.name")}</span>
                   <input
                     autoFocus
                     spellCheck={false}
@@ -11367,6 +11367,7 @@ function ConnectionHome({
   onPreloadCreateConnection?: () => void;
   onRefresh: () => void | Promise<void>;
 }) {
+  const { t } = useI18n();
   const [filter, setFilter] = useState<ConnectionFilter>("recent");
   const [query, setQuery] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<ConnectionProfile | null>(null);
@@ -11464,17 +11465,17 @@ function ConnectionHome({
   }, [hidden, latencyByConnectionId, loading, probeLatencies, rows]);
 
   return (
-    <section className={`connection-home ${hidden ? "is-hidden" : ""}`} aria-label="连接首页" aria-hidden={hidden}>
+    <section className={`connection-home ${hidden ? "is-hidden" : ""}`} aria-label={t("connectionHome.aria")} aria-hidden={hidden}>
       <header className="repository-toolbar">
         <div className="toolbar-left">
-          <div className="filter-tabs" aria-label="连接筛选">
+          <div className="filter-tabs" aria-label={t("connectionHome.filterAria")}>
             <button
               className={`filter-tab ${filter === "recent" ? "active" : ""}`}
               type="button"
               onClick={() => setFilter("recent")}
             >
               <Clock3 className="ui-icon" aria-hidden="true" />
-              <span>最近</span>
+              <span>{t("connectionHome.filter.recent")}</span>
             </button>
             <button
               className={`filter-tab ${filter === "all" ? "active" : ""}`}
@@ -11482,7 +11483,7 @@ function ConnectionHome({
               onClick={() => setFilter("all")}
             >
               <List className="ui-icon" aria-hidden="true" />
-              <span>全部</span>
+              <span>{t("connectionHome.filter.all")}</span>
             </button>
             <button
               className={`filter-tab ${filter === "favorites" ? "active" : ""}`}
@@ -11490,14 +11491,14 @@ function ConnectionHome({
               onClick={() => setFilter("favorites")}
             >
               <Star className="ui-icon" aria-hidden="true" />
-              <span>收藏</span>
+              <span>{t("connectionHome.filter.favorites")}</span>
             </button>
           </div>
           <label className="repository-search">
             <Search className="ui-icon" aria-hidden="true" />
             <input
-              aria-label="搜索连接"
-              placeholder="搜索名称、地址、备注"
+              aria-label={t("connectionHome.searchAria")}
+              placeholder={t("connectionHome.searchPlaceholder")}
               value={query}
               onChange={(event) => setQuery(event.target.value)}
             />
@@ -11505,11 +11506,11 @@ function ConnectionHome({
         </div>
 
         <div className="toolbar-right">
-          <Tooltip label="刷新连接并探测延迟">
+          <Tooltip label={t("connectionHome.refresh")}>
             <button
               className="repository-icon-button"
               type="button"
-              aria-label="刷新连接并探测延迟"
+              aria-label={t("connectionHome.refresh")}
               disabled={loading}
               onClick={() => void refreshConnectionsAndLatency()}
             >
@@ -11525,26 +11526,26 @@ function ConnectionHome({
             onPointerEnter={onPreloadCreateConnection}
           >
             <Plus className="ui-icon" aria-hidden="true" />
-            <span>新建连接</span>
+            <span>{t("connectionHome.newConnection")}</span>
           </button>
         </div>
       </header>
 
       <div className="connection-home-body">
-        <section className="connection-board" aria-label="连接表格">
+        <section className="connection-board" aria-label={t("connectionHome.tableAria")}>
           <div className="connection-head" role="row">
-            <span>系统</span>
-            <span>最后连接</span>
-            <span>延迟</span>
+            <span>{t("connectionHome.column.system")}</span>
+            <span>{t("connectionHome.column.last")}</span>
+            <span>{t("connectionHome.column.latency")}</span>
             <span>名称</span>
-            <span>备注</span>
-            <span className="action-head">操作</span>
+            <span>{t("connectionHome.column.notes")}</span>
+            <span className="action-head">{t("connectionHome.column.actions")}</span>
           </div>
           <div className="connection-board-body">
-            {loading ? <p className="connection-board-note">加载连接中...</p> : null}
+            {loading ? <p className="connection-board-note">{t("connectionHome.loading")}</p> : null}
             {error ? <p className="connection-board-error">{error}</p> : null}
             {!loading && rows.length === 0 ? (
-              <p className="connection-board-note">暂无匹配连接</p>
+              <p className="connection-board-note">{t("connectionHome.empty")}</p>
             ) : null}
 
             {rows.map((connection) => {
@@ -11558,13 +11559,13 @@ function ConnectionHome({
                     <ConnectionSystemLogo connection={connection} />
                   </span>
                   <span className="last-cell">
-                    <strong>{hasLastConnectedAt ? formatRelativeTime(lastConnectedAt) : "未连接"}</strong>
+                    <strong>{hasLastConnectedAt ? formatRelativeTime(lastConnectedAt) : t("connectionHome.neverConnected")}</strong>
                     <span>
                       {lastConnectedAt === "demo"
-                        ? "最近使用"
+                        ? t("connectionHome.recentUse")
                         : hasLastConnectedAt
-                          ? "最近连接"
-                          : "等待首次连接"}
+                          ? t("connectionHome.recentConnection")
+                          : t("connectionHome.awaitingFirst")}
                     </span>
                   </span>
                   <span className="latency-cell">
@@ -11574,8 +11575,8 @@ function ConnectionHome({
                     <button
                       className="connection-name-link"
                       type="button"
-                      aria-label={`打开连接 ${connection.name}`}
-                      title={`打开连接 ${connection.name}`}
+                      aria-label={t("connectionHome.open", { name: connection.name })}
+                      title={t("connectionHome.open", { name: connection.name })}
                       onClick={() => onConnect(connection)}
                     >
                       <span className="connection-name">{connection.name}</span>
@@ -11589,8 +11590,8 @@ function ConnectionHome({
                     <button
                       className="connection-action-icon connect"
                       type="button"
-                      aria-label={`连接 ${connection.name}`}
-                      title="连接"
+                      aria-label={t("connectionHome.connect", { name: connection.name })}
+                      title={t("connectionHome.connectTitle")}
                       onClick={() => onConnect(connection)}
                     >
                       <Play className="ui-icon" aria-hidden="true" />
@@ -11598,8 +11599,8 @@ function ConnectionHome({
                     <button
                       className="connection-action-icon"
                       type="button"
-                      aria-label={`编辑 ${connection.name}`}
-                      title="编辑"
+                      aria-label={t("connectionHome.edit", { name: connection.name })}
+                      title={t("connectionHome.editTitle")}
                       onClick={() => onEdit(connection)}
                     >
                       <Pencil className="ui-icon" aria-hidden="true" />
@@ -11607,8 +11608,8 @@ function ConnectionHome({
                     <button
                       className="connection-action-icon"
                       type="button"
-                      aria-label={`删除 ${connection.name}`}
-                      title="删除"
+                      aria-label={t("connectionHome.delete", { name: connection.name })}
+                      title={t("connectionHome.deleteTitle")}
                       onClick={() => setDeleteTarget(connection)}
                     >
                       <Trash2 className="ui-icon" aria-hidden="true" />
@@ -11620,51 +11621,51 @@ function ConnectionHome({
           </div>
         </section>
 
-        <aside className="side-summary" aria-label="连接概览和仓库维护">
+        <aside className="side-summary" aria-label={t("connectionHome.summaryAria")}>
           <section className="summary-block">
-            <p className="summary-title">仓库概览</p>
+            <p className="summary-title">{t("connectionHome.overview")}</p>
             <div className="summary-grid">
               <div className="summary-item">
                 <strong>{connections.length.toString()}</strong>
-                <span>连接</span>
+                <span>{t("connectionHome.connections")}</span>
               </div>
               <div className="summary-item">
                 <strong>{groups.groups.length.toString()}</strong>
-                <span>分组</span>
+                <span>{t("connectionHome.groups")}</span>
               </div>
               <div className="summary-item">
                 <strong>{favoriteCount.toString()}</strong>
-                <span>收藏</span>
+                <span>{t("connectionHome.favorites")}</span>
               </div>
               <div className="summary-item">
                 <strong>{weekCount.toString()}</strong>
-                <span>本周连接</span>
+                <span>{t("connectionHome.week")}</span>
               </div>
             </div>
           </section>
 
           <section className="summary-block">
-            <p className="summary-title">仓库维护</p>
+            <p className="summary-title">{t("connectionHome.maintenance")}</p>
             <div className="quick-links">
               <button className="quick-link" type="button" onClick={onImportConnections}>
                 <Upload className="ui-icon" aria-hidden="true" />
                 <span>
-                  <strong>导入连接</strong>
-                  <small>批量迁移时使用</small>
+                  <strong>{t("connectionHome.import")}</strong>
+                  <small>{t("connectionHome.importHint")}</small>
                 </span>
               </button>
               <button className="quick-link" type="button" onClick={onExportConnections}>
                 <Download className="ui-icon" aria-hidden="true" />
                 <span>
-                  <strong>导出连接</strong>
-                  <small>加密迁移全部连接</small>
+                  <strong>{t("connectionHome.export")}</strong>
+                  <small>{t("connectionHome.exportHint")}</small>
                 </span>
               </button>
             </div>
           </section>
 
           <section className="summary-block">
-            <p className="summary-title">最近活动</p>
+            <p className="summary-title">{t("connectionHome.recentActivity")}</p>
             <div className="activity-list">
               {activityConnections.length > 0 ? (
                 activityConnections.map((connection) => (
@@ -11682,7 +11683,7 @@ function ConnectionHome({
                   </button>
                 ))
               ) : (
-                <p className="connection-board-note">暂无最近活动</p>
+                <p className="connection-board-note">{t("connectionHome.noRecent")}</p>
               )}
             </div>
           </section>
@@ -11691,10 +11692,10 @@ function ConnectionHome({
       <ConfirmDialog
         confirmLabel="删除"
         description={
-          deleteTarget ? `确认删除连接“${deleteTarget.name}”吗？这个操作无法撤销。` : ""
+          deleteTarget ? t("connectionHome.deleteDescription", { name: deleteTarget.name }) : ""
         }
         open={Boolean(deleteTarget)}
-        title="删除连接"
+        title={t("connectionHome.deleteDialogTitle")}
         onConfirm={async () => {
           if (deleteTarget) {
             await onDelete(deleteTarget);
