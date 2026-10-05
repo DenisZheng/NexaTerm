@@ -30,6 +30,7 @@ import {
   type ReactNode,
 } from "react";
 
+import { getLocale, t as tr, useI18n } from "../../shared/i18n";
 import type { ConnectionProfile } from "../connections/connectionTypes";
 import { ConfirmDialog } from "../../shared/ui/ConfirmDialog";
 import { Tooltip } from "../../shared/ui/Tooltip";
@@ -73,13 +74,14 @@ const monitorViews: Array<{
   label: string;
   value: MonitorPanelView;
 }> = [
-  { icon: Activity, label: "状态", value: "status" },
-  { icon: Server, label: "硬件", value: "hardware" },
-  { icon: Network, label: "网络", value: "network" },
-  { icon: List, label: "进程", value: "processes" },
+  { icon: Activity, label: "", value: "status" },
+  { icon: Server, label: "", value: "hardware" },
+  { icon: Network, label: "", value: "network" },
+  { icon: List, label: "", value: "processes" },
 ];
 
 export function MonitorPanel({ active, connection }: MonitorPanelProps) {
+  useI18n();
   const [view, setView] = useState<MonitorPanelView>("status");
   const [diskExpanded, setDiskExpanded] = useState(false);
   const [processQuery, setProcessQuery] = useState("");
@@ -101,34 +103,34 @@ export function MonitorPanel({ active, connection }: MonitorPanelProps) {
     connectionId: connection?.id || null,
     view,
   });
-  const hostName = snapshot?.host.hostname || connection?.name || "监控";
+  const hostName = snapshot?.host.hostname || connection?.name || tr("monitor.host.fallback");
   const hostMeta = hostMetaText(snapshot);
   const selectedProcess = selectedProcessPid
     ? snapshot?.processes.items.find((item) => item.pid === selectedProcessPid) || null
     : null;
 
   return (
-    <section className="monitor-shell" aria-label="远程监控">
+    <section className="monitor-shell" aria-label={tr("monitor.aria")}>
       <header className="monitor-host">
         <div className="monitor-host-main">
           <div className="monitor-host-title-row">
             <strong className="monitor-host-name">{hostName}</strong>
             <span className="monitor-status-pill">
               <span className="monitor-status-dot" />
-              {connection ? "采集中" : "待连接"}
+              {connection ? tr("monitor.collecting") : tr("monitor.waitingConnection")}
             </span>
           </div>
           <div className="monitor-host-meta-row">
             <span>{hostMeta}</span>
-            <span>{snapshot ? formatUptime(snapshot.host.uptime_seconds) : "等待快照"}</span>
+            <span>{snapshot ? formatUptime(snapshot.host.uptime_seconds) : tr("monitor.waitingSnapshot")}</span>
           </div>
         </div>
         <div className="monitor-host-actions">
-          <Tooltip label="刷新监控">
+          <Tooltip label={tr("monitor.refresh")}>
             <button
               className="monitor-icon-action"
               type="button"
-              aria-label="刷新监控"
+              aria-label={tr("monitor.refresh")}
               disabled={!connection || refreshing}
               onClick={() => void refresh()}
             >
@@ -138,7 +140,7 @@ export function MonitorPanel({ active, connection }: MonitorPanelProps) {
         </div>
       </header>
 
-      <nav className="monitor-view-switcher" aria-label="监控视图">
+      <nav className="monitor-view-switcher" aria-label={tr("monitor.viewsAria")}>
         {monitorViews.map((item) => {
           const Icon = item.icon;
           return (
@@ -150,7 +152,7 @@ export function MonitorPanel({ active, connection }: MonitorPanelProps) {
               onClick={() => setView(item.value)}
             >
               <Icon className="ui-icon" aria-hidden="true" />
-              {item.label}
+              {monitorViewLabel(item.value)}
             </button>
           );
         })}
@@ -158,13 +160,13 @@ export function MonitorPanel({ active, connection }: MonitorPanelProps) {
 
       <div className="monitor-scroll">
         {!connection ? (
-          <MonitorEmptyState title="打开一个 SSH 会话后显示监控数据。" />
+          <MonitorEmptyState title={tr("monitor.empty.connection")} />
         ) : error ? (
           <MonitorInlineAlert message={error} onRetry={() => void refresh()} />
         ) : null}
 
         {connection && !snapshot && !error ? (
-          <MonitorEmptyState title={loading ? "正在读取监控快照..." : "等待下一次监控快照。"} />
+          <MonitorEmptyState title={loading ? tr("monitor.empty.loading") : tr("monitor.empty.waiting")} />
         ) : null}
 
         {snapshot ? (
@@ -209,7 +211,7 @@ export function MonitorPanel({ active, connection }: MonitorPanelProps) {
         confirmLabel={processConfirmLabel(pendingProcessAction?.signal)}
         description={processConfirmDescription(pendingProcessAction)}
         open={Boolean(pendingProcessAction)}
-        title="确认进程操作"
+        title={tr("monitor.process.confirmTitle")}
         onOpenChange={(open) => {
           if (!open) {
             setPendingProcessAction(null);
@@ -266,23 +268,23 @@ function MonitorStatusView({
       <MonitorCard
         badge={formatTime(snapshot.collected_at_ms)}
         icon={<Activity className="ui-icon" aria-hidden="true" />}
-        title="采集状态"
+        title={tr("monitor.activity.title")}
       >
         <div className="monitor-activity-list">
           <MonitorActivityRow
             icon={<Server className="ui-icon" aria-hidden="true" />}
-            title="主机快照"
-            detail={`${snapshot.host.hostname || "远程主机"} · ${formatUptime(snapshot.host.uptime_seconds)}`}
+            title={tr("monitor.activity.host")}
+            detail={`${snapshot.host.hostname || tr("monitor.remoteHost")} · ${formatUptime(snapshot.host.uptime_seconds)}`}
           />
           <MonitorActivityRow
             icon={<Gauge className="ui-icon" aria-hidden="true" />}
-            title="负载"
+            title={tr("monitor.activity.load")}
             detail={formatLoadAvg(snapshot.cpu.load_avg)}
           />
           <MonitorActivityRow
             icon={<AlertTriangle className="ui-icon" aria-hidden="true" />}
-            title="采集警告"
-            detail={sourceErrorCount(snapshot) > 0 ? `${sourceErrorCount(snapshot).toString()} 项` : "无"}
+            title={tr("monitor.activity.warnings")}
+            detail={sourceErrorCount(snapshot) > 0 ? tr("monitor.items", { count: sourceErrorCount(snapshot) }) : tr("monitor.none")}
             tone={sourceErrorCount(snapshot) > 0 ? "warn" : undefined}
           />
         </div>
@@ -301,34 +303,34 @@ function CpuCard({ cpu }: { cpu: RemoteCpuSummary }) {
       icon={<Cpu className="ui-icon" aria-hidden="true" />}
       title="CPU"
     >
-      <p className="monitor-component-model">{cpu.model || "CPU 型号未识别"}</p>
+      <p className="monitor-component-model">{cpu.model || tr("monitor.cpu.unknown")}</p>
       <div className="monitor-metric-grid">
         <MetricTile
           icon={<Gauge className="ui-icon" aria-hidden="true" />}
-          label="占用"
+          label={tr("monitor.cpu.usage")}
           status={pendingStatus(cpu.usage_percent)}
           value={formatPercent(cpu.usage_percent, 1)}
           sub={formatLoadAvg(cpu.load_avg)}
         />
         <MetricTile
           icon={<Zap className="ui-icon" aria-hidden="true" />}
-          label="当前频率"
-          status={pendingPositiveStatus(cpu.current_frequency_mhz, "未获取")}
+          label={tr("monitor.cpu.frequency")}
+          status={pendingPositiveStatus(cpu.current_frequency_mhz, tr("monitor.notAvailable"))}
           value={formatFrequency(cpu.current_frequency_mhz)}
-          sub={`基准 ${formatFrequency(cpu.base_frequency_mhz)} · 最大 ${formatFrequency(cpu.max_frequency_mhz)}`}
+          sub={tr("monitor.cpu.frequencyMeta", { base: formatFrequency(cpu.base_frequency_mhz), max: formatFrequency(cpu.max_frequency_mhz) })}
         />
         {cpu.temperature_celsius != null ? (
           <MetricTile
             icon={<Thermometer className="ui-icon" aria-hidden="true" />}
-            label="温度"
+            label={tr("monitor.cpu.temperature")}
             value={`${cpu.temperature_celsius.toFixed(1)}°C`}
-            sub="传感器可读"
+            sub={tr("monitor.cpu.sensor")}
           />
         ) : null}
       </div>
       <div className="monitor-core-list-head">
-        <span>逻辑线程</span>
-        <span>{logicalCount ? `${formatLogicalCpuCount(cpu)} 实时占用` : "实时占用"}</span>
+        <span>{tr("monitor.cpu.logicalThreads")}</span>
+        <span>{logicalCount ? tr("monitor.cpu.liveUsage", { count: formatLogicalCpuCount(cpu) }) : tr("monitor.cpu.live")}</span>
       </div>
       <div className="monitor-core-list-scroll">
         <div className="monitor-core-list">
@@ -353,7 +355,7 @@ function CpuCard({ cpu }: { cpu: RemoteCpuSummary }) {
 function GpuCard({ gpus }: { gpus: RemoteGpuDevice[] }) {
   return (
     <MonitorCard
-      badge={gpus.length === 1 ? "1 张卡" : `${gpus.length.toString()} 张卡`}
+      badge={tr("monitor.gpu.count", { count: gpus.length })}
       icon={<Gpu className="ui-icon" aria-hidden="true" />}
       title="GPU"
     >
@@ -369,7 +371,7 @@ function GpuCard({ gpus }: { gpus: RemoteGpuDevice[] }) {
               <p>{gpu.name}</p>
               <ProgressBar value={gpu.usage_percent} />
               <div className="monitor-device-meta">
-                <span>显存 {formatBytePair(gpu.memory_used_bytes, gpu.memory_total_bytes)}</span>
+                <span>{tr("monitor.gpu.memory", { value: formatBytePair(gpu.memory_used_bytes, gpu.memory_total_bytes) })}</span>
                 {memoryPercent != null ? <span>{memoryPercent.toFixed(0)}%</span> : null}
                 {gpu.temperature_celsius != null ? (
                   <span>{gpu.temperature_celsius.toFixed(0)}°C</span>
@@ -392,18 +394,18 @@ function MemoryCard({ memory }: { memory: RemoteMemorySummary }) {
     <MonitorCard
       errors={memory.errors}
       icon={<MemoryStick className="ui-icon" aria-hidden="true" />}
-      title="内存"
+      title={tr("monitor.memory.title")}
     >
       <div className="monitor-donut-wrap monitor-memory-usage">
         <Donut percent={usedPercent} label={`${usedPercent.toFixed(0)}%`} />
         <div className="monitor-legend">
-          <LegendRow label="已占用" value={formatBytes(memory.used_bytes)} color="var(--mx-primary)" />
-          <LegendRow label="可用" value={formatBytes(memory.available_bytes)} color="#16a34a" />
-          <LegendRow label="缓存/缓冲" value={formatBytes(memory.cached_bytes)} color="#d97706" />
+          <LegendRow label={tr("monitor.memory.used")} value={formatBytes(memory.used_bytes)} color="var(--mx-primary)" />
+          <LegendRow label={tr("monitor.memory.available")} value={formatBytes(memory.available_bytes)} color="#16a34a" />
+          <LegendRow label={tr("monitor.memory.cache")} value={formatBytes(memory.cached_bytes)} color="#d97706" />
         </div>
       </div>
       <div className="monitor-memory-facts">
-        <MemoryFactRow label="总内存" value={formatBytes(memory.total_bytes)} />
+        <MemoryFactRow label={tr("monitor.memory.total")} value={formatBytes(memory.total_bytes)} />
         <MemoryFactRow
           label="Swap"
           value={formatBytePair(memory.swap_used_bytes, memory.swap_total_bytes)}
@@ -428,28 +430,28 @@ function DiskCard({
 
   return (
     <MonitorCard
-      badge={`${disks.mounts.length.toString()} 挂载点`}
+      badge={tr("monitor.disk.mounts", { count: disks.mounts.length })}
       errors={disks.errors}
       icon={<Database className="ui-icon" aria-hidden="true" />}
-      title="磁盘"
+      title={tr("monitor.disk.title")}
     >
       <div className="monitor-disk-summary">
         <div className="monitor-disk-total">
           <strong>{formatBytePair(summary.used, summary.total)}</strong>
-          <span>{formatPercent(percentOf(summary.used, summary.total), 0)} 已使用</span>
+          <span>{tr("monitor.disk.used", { value: formatPercent(percentOf(summary.used, summary.total), 0) })}</span>
         </div>
-        <span className="monitor-disk-count">{disks.devices.length.toString()} 个存储设备</span>
+        <span className="monitor-disk-count">{tr("monitor.disk.devices", { count: disks.devices.length })}</span>
       </div>
       <div className="monitor-io-grid">
         <MetricTile
           icon={<HardDriveDownload className="ui-icon" aria-hidden="true" />}
-          label="读取"
+          label={tr("monitor.disk.read")}
           status={pendingStatus(summary.read)}
           value={formatByteRate(summary.read)}
         />
         <MetricTile
           icon={<HardDriveUpload className="ui-icon" aria-hidden="true" />}
-          label="写入"
+          label={tr("monitor.disk.write")}
           status={pendingStatus(summary.write)}
           value={formatByteRate(summary.write)}
         />
@@ -479,7 +481,7 @@ function DiskCard({
           aria-expanded={diskExpanded}
           onClick={() => onDiskExpandedChange(!diskExpanded)}
         >
-          {diskExpanded ? "收起更多磁盘" : `展开 ${hiddenCount.toString()} 个更多磁盘`}
+          {diskExpanded ? tr("monitor.disk.collapse") : tr("monitor.disk.expand", { count: hiddenCount })}
         </button>
       ) : null}
     </MonitorCard>
@@ -500,20 +502,20 @@ function NetworkCard({
     <MonitorCard
       errors={network.errors}
       icon={<Network className="ui-icon" aria-hidden="true" />}
-      title="网络"
+      title={tr("monitor.network.title")}
     >
       <NetworkIdentity network={network} />
       <div className="monitor-io-grid">
         <MetricTile
           icon={<Download className="ui-icon" aria-hidden="true" />}
-          label="下行"
+          label={tr("monitor.network.download")}
           status={pendingStatus(traffic?.rx_bytes_per_sec)}
           value={formatByteRate(traffic?.rx_bytes_per_sec)}
           sub={traffic?.rx_total_bytes != null ? `Total ${formatBytes(traffic.rx_total_bytes)}` : undefined}
         />
         <MetricTile
           icon={<Upload className="ui-icon" aria-hidden="true" />}
-          label="上行"
+          label={tr("monitor.network.upload")}
           status={pendingStatus(traffic?.tx_bytes_per_sec)}
           value={formatByteRate(traffic?.tx_bytes_per_sec)}
           sub={traffic?.tx_total_bytes != null ? `Total ${formatBytes(traffic.tx_total_bytes)}` : undefined}
@@ -538,17 +540,17 @@ function MonitorHardwareView({ snapshot }: { snapshot: RemoteMonitorSnapshot }) 
           <Server className="ui-icon" aria-hidden="true" />
         </div>
         <div className="monitor-hardware-title">
-          <strong>{snapshot.host.hostname || "远程主机"}</strong>
+          <strong>{snapshot.host.hostname || tr("monitor.remoteHost")}</strong>
           <span>{[os?.name, os?.version].filter(Boolean).join(" ") || "Linux"}</span>
         </div>
       </section>
 
-      <MonitorCard icon={<Server className="ui-icon" aria-hidden="true" />} title="系统信息">
+      <MonitorCard icon={<Server className="ui-icon" aria-hidden="true" />} title={tr("monitor.hardware.system")}>
         <div className="monitor-hardware-kv-list">
-          <HardwareKv label="操作系统" value={[os?.name, os?.version].filter(Boolean).join(" ") || "未识别"} />
-          <HardwareKv label="内核" value={os?.kernel || "未识别"} />
-          <HardwareKv label="架构" value={os?.arch || "未识别"} />
-          <HardwareKv label="运行时间" value={formatUptime(snapshot.host.uptime_seconds)} />
+          <HardwareKv label={tr("monitor.hardware.os")} value={[os?.name, os?.version].filter(Boolean).join(" ") || tr("monitor.unknown")} />
+          <HardwareKv label={tr("monitor.hardware.kernel")} value={os?.kernel || tr("monitor.unknown")} />
+          <HardwareKv label={tr("monitor.hardware.arch")} value={os?.arch || tr("monitor.unknown")} />
+          <HardwareKv label={tr("monitor.hardware.uptime")} value={formatUptime(snapshot.host.uptime_seconds)} />
         </div>
       </MonitorCard>
 
@@ -556,23 +558,23 @@ function MonitorHardwareView({ snapshot }: { snapshot: RemoteMonitorSnapshot }) 
         badge={formatLogicalCpuCount(snapshot.cpu)}
         errors={snapshot.cpu.errors}
         icon={<Cpu className="ui-icon" aria-hidden="true" />}
-        title="处理器"
+        title={tr("monitor.hardware.processor")}
       >
         <div className="monitor-hardware-part-list">
           <HardwarePart
             icon={<Cpu className="ui-icon" aria-hidden="true" />}
-            title={snapshot.cpu.model || "CPU 型号未识别"}
-            detail={`${formatCoreShape(snapshot.cpu)} · 当前 ${formatFrequency(snapshot.cpu.current_frequency_mhz)}`}
-            badge={`最大 ${formatFrequency(snapshot.cpu.max_frequency_mhz)}`}
+            title={snapshot.cpu.model || tr("monitor.cpu.unknown")}
+            detail={`${formatCoreShape(snapshot.cpu)} · ${tr("monitor.hardware.current", { value: formatFrequency(snapshot.cpu.current_frequency_mhz) })}`}
+            badge={tr("monitor.hardware.max", { value: formatFrequency(snapshot.cpu.max_frequency_mhz) })}
           />
         </div>
       </MonitorCard>
 
       {snapshot.gpus.length > 0 ? (
         <MonitorCard
-          badge={`${snapshot.gpus.length.toString()} 张卡`}
+          badge={tr("monitor.gpu.count", { count: snapshot.gpus.length })}
           icon={<Gpu className="ui-icon" aria-hidden="true" />}
-          title="加速卡"
+          title={tr("monitor.hardware.accelerators")}
         >
           <div className="monitor-hardware-part-list">
             {snapshot.gpus.map((gpu) => (
@@ -596,13 +598,13 @@ function MonitorHardwareView({ snapshot }: { snapshot: RemoteMonitorSnapshot }) 
       <MonitorCard
         badge={formatBytes(totalDiskSize)}
         icon={<Database className="ui-icon" aria-hidden="true" />}
-        title="存储与网络"
+        title={tr("monitor.hardware.storageNetwork")}
       >
         <div className="monitor-hardware-part-list">
           {snapshot.disks.devices.map((device) => (
             <HardwarePart
               badge={device.transport || device.type}
-              detail={(device.mount_points || []).join(", ") || "未挂载"}
+              detail={(device.mount_points || []).join(", ") || tr("monitor.hardware.unmounted")}
               icon={<Database className="ui-icon" aria-hidden="true" />}
               key={device.name}
               title={`${device.name} · ${device.model || "Storage Device"}`}
@@ -611,7 +613,7 @@ function MonitorHardwareView({ snapshot }: { snapshot: RemoteMonitorSnapshot }) 
           {snapshot.network.primary ? (
             <HardwarePart
               badge={snapshot.network.primary.state || "unknown"}
-              detail={`${snapshot.network.primary.ipv4 || "无 IPv4"} · ${formatNetworkSpeed(snapshot.network.primary.speed_mbps)}`}
+              detail={`${snapshot.network.primary.ipv4 || tr("monitor.network.noIpv4")} · ${formatNetworkSpeed(snapshot.network.primary.speed_mbps)}`}
               icon={<Network className="ui-icon" aria-hidden="true" />}
               title={snapshot.network.primary.display_name || snapshot.network.primary.name}
             />
@@ -634,22 +636,22 @@ function MonitorNetworkView({
   return (
     <>
       <NetworkCard history={history} network={network} />
-      <MonitorCard badge={`${interfaces.length.toString()} 个接口`} title="接口列表">
+      <MonitorCard badge={tr("monitor.network.interfaces", { count: interfaces.length })} title="接口列表">
         <div className="monitor-interface-list">
           {interfaces.length ? (
             interfaces.map((item) => (
               <div className="monitor-interface-row" key={item.name}>
                 <span>
                   <strong>{item.display_name || item.name}</strong>
-                  <small>{item.name} · {item.ipv4 || item.ipv6 || "无 IP"}</small>
+                  <small>{item.name} · {item.ipv4 || item.ipv6 || tr("monitor.network.noIp")}</small>
                 </span>
                 <em className={item.is_virtual ? "virtual" : undefined}>
-                  {item.is_virtual ? "虚拟" : item.state || "unknown"}
+                  {item.is_virtual ? tr("monitor.network.virtual") : item.state || "unknown"}
                 </em>
               </div>
             ))
           ) : (
-            <p className="monitor-muted-copy">未采集到可展示网卡。</p>
+            <p className="monitor-muted-copy">{tr("monitor.network.none")}</p>
           )}
         </div>
       </MonitorCard>
@@ -699,30 +701,30 @@ function MonitorProcessView({
     });
 
   return (
-    <MonitorCard badge={busyOnly ? "热点进程" : "全部进程"} errors={snapshot.processes.errors} title="进程管理">
+    <MonitorCard badge={busyOnly ? tr("monitor.process.hot") : tr("monitor.process.all")} errors={snapshot.processes.errors} title="进程管理">
       <div className="monitor-process-tools">
         <label className="monitor-search-field">
           <Search className="ui-icon" aria-hidden="true" />
           <input
-            aria-label="搜索进程"
-            placeholder="搜索进程..."
+            aria-label={tr("monitor.process.searchAria")}
+            placeholder={tr("monitor.process.searchPlaceholder")}
             value={query}
             onChange={(event) => onProcessQueryChange(event.target.value)}
           />
         </label>
-        <Tooltip label={busyOnly ? "显示全部进程" : "只看热点进程"}>
+        <Tooltip label={busyOnly ? tr("monitor.process.showAll") : tr("monitor.process.hotOnly")}>
           <button
             className={`monitor-icon-action ${busyOnly ? "active" : ""}`}
             type="button"
-            aria-label={busyOnly ? "显示全部进程" : "只看热点进程"}
+            aria-label={busyOnly ? tr("monitor.process.showAll") : tr("monitor.process.hotOnly")}
             aria-pressed={busyOnly}
             onClick={() => onBusyOnlyChange(!busyOnly)}
           >
             <Filter className="ui-icon" aria-hidden="true" />
           </button>
         </Tooltip>
-        <Tooltip label="刷新进程">
-          <button className="monitor-icon-action" type="button" aria-label="刷新进程" onClick={onRefresh}>
+        <Tooltip label={tr("monitor.process.refresh")}>
+          <button className="monitor-icon-action" type="button" aria-label={tr("monitor.process.refresh")} onClick={onRefresh}>
             <RefreshCw className="ui-icon" aria-hidden="true" />
           </button>
         </Tooltip>
@@ -735,7 +737,7 @@ function MonitorProcessView({
             <strong>{selectedProcess.command}</strong>
             {selectedProcess.args || `PID ${selectedProcess.pid.toString()}`}
           </span>
-          <button type="button" onClick={() => onProcessSelect(null)}>关闭</button>
+          <button type="button" onClick={() => onProcessSelect(null)}>{tr("monitor.process.close")}</button>
         </div>
       ) : null}
 
@@ -772,32 +774,32 @@ function MonitorProcessView({
                   {formatPercent(process.memory_percent, 1)}
                 </span>
                 <span className="monitor-process-actions">
-                  <Tooltip label="查看详情">
+                  <Tooltip label={tr("monitor.process.details")}>
                     <button
                       className="monitor-process-action-button"
                       type="button"
-                      aria-label={`查看 ${process.command} 详情`}
+                      aria-label={tr("monitor.process.detailsAria", { name: process.command })}
                       onClick={() => onProcessSelect(process.pid)}
                     >
                       <Info className="ui-icon" aria-hidden="true" />
                     </button>
                   </Tooltip>
-                  <Tooltip label="结束进程">
+                  <Tooltip label={tr("monitor.process.terminate")}>
                     <button
                       className="monitor-process-action-button danger"
                       type="button"
-                      aria-label={`结束 ${process.command}`}
+                      aria-label={tr("monitor.process.terminateAria", { name: process.command })}
                       disabled={!snapshot.processes.can_signal || process.pid <= 1}
                       onClick={() => onProcessSignal(process, "term")}
                     >
                       <CircleStop className="ui-icon" aria-hidden="true" />
                     </button>
                   </Tooltip>
-                  <Tooltip label="强制结束">
+                  <Tooltip label={tr("monitor.process.kill")}>
                     <button
                       className="monitor-process-action-button danger"
                       type="button"
-                      aria-label={`强制结束 ${process.command}`}
+                      aria-label={tr("monitor.process.killAria", { name: process.command })}
                       disabled={!snapshot.processes.can_signal || process.pid <= 1}
                       onClick={() => onProcessSignal(process, "kill")}
                     >
@@ -813,7 +815,7 @@ function MonitorProcessView({
           })
         ) : (
           <p className="monitor-muted-copy">
-            {busyOnly ? "没有匹配的热点进程，可关闭筛选查看全部。" : "没有匹配的进程。"}
+            {busyOnly ? tr("monitor.process.emptyHot") : tr("monitor.process.empty")}
           </p>
         )}
       </div>
@@ -907,7 +909,7 @@ function Donut({ label, percent }: { label: string; percent: number }) {
       </svg>
       <span className="monitor-donut-label">
         <strong>{label}</strong>
-        <small>占用</small>
+        <small>{tr("monitor.usage")}</small>
       </span>
     </div>
   );
@@ -936,7 +938,7 @@ function NetworkIdentity({ network }: { network: RemoteNetworkSummary }) {
   const primary = network.primary;
 
   if (!primary) {
-    return <p className="monitor-muted-copy">未识别到物理主网卡。</p>;
+    return <p className="monitor-muted-copy">{tr("monitor.network.noPhysical")}</p>;
   }
 
   return (
@@ -946,10 +948,10 @@ function NetworkIdentity({ network }: { network: RemoteNetworkSummary }) {
       </span>
       <span className="monitor-network-main">
         <strong>{primary.display_name || primary.name}</strong>
-        <span>{primary.name} · {primary.ipv4 || primary.ipv6 || "无 IP"}</span>
+        <span>{primary.name} · {primary.ipv4 || primary.ipv6 || tr("monitor.network.noIp")}</span>
       </span>
       <span className={`monitor-small-pill ${primary.is_virtual ? "warn" : ""}`}>
-        {primary.is_virtual ? "虚拟" : formatNetworkSpeed(primary.speed_mbps)}
+        {primary.is_virtual ? tr("monitor.network.virtual") : formatNetworkSpeed(primary.speed_mbps)}
       </span>
     </div>
   );
@@ -1017,7 +1019,7 @@ function HardwarePart({
       <span className="monitor-hardware-part-icon">{icon}</span>
       <span className="monitor-hardware-part-main">
         <strong>{title}</strong>
-        <span>{detail || "暂无详细信息"}</span>
+        <span>{detail || tr("monitor.hardware.noDetails")}</span>
       </span>
       {badge ? <span className="monitor-hardware-badge">{badge}</span> : null}
     </article>
@@ -1051,7 +1053,7 @@ function MonitorInlineAlert({ message, onRetry }: { message: string; onRetry: ()
     <section className="monitor-inline-alert">
       <AlertTriangle className="ui-icon" aria-hidden="true" />
       <span>{message}</span>
-      <button type="button" onClick={onRetry}>重试</button>
+      <button type="button" onClick={onRetry}>{tr("monitor.retry")}</button>
     </section>
   );
 }
@@ -1072,7 +1074,7 @@ function SourceErrors({ errors }: { errors?: MonitorSourceError[] | null }) {
 
   return (
     <p className="monitor-card-warning">
-      {errors.slice(0, 2).map((error) => error.message).join("；")}
+      {errors.slice(0, 2).map((error) => error.message).join(getLocale() === "zh-CN" ? "；" : "; ")}
     </p>
   );
 }
@@ -1116,27 +1118,27 @@ function hostMetaText(snapshot: RemoteMonitorSnapshot | null) {
 
 function processConfirmLabel(signal?: RemoteProcessSignal) {
   if (signal === "kill") {
-    return "强制结束";
+    return tr("monitor.process.confirm.kill");
   }
   if (signal === "hup") {
-    return "重新加载";
+    return tr("monitor.process.confirm.hup");
   }
-  return "结束进程";
+  return tr("monitor.process.confirm.term");
 }
 
 function processConfirmDescription(target: ProcessActionTarget | null) {
   if (!target) {
-    return "确认要操作该进程吗？";
+    return tr("monitor.process.confirm.fallback");
   }
   const signalLabel = target.signal === "kill" ? "SIGKILL" : target.signal === "hup" ? "SIGHUP" : "SIGTERM";
-  return `将向 ${target.command} · PID ${target.pid.toString()} 发送 ${signalLabel}。失败时进程行会保留并显示错误。`;
+  return tr("monitor.process.confirm.description", { command: target.command, pid: target.pid, signal: signalLabel });
 }
 
 function formatProcessMeta(process: RemoteProcessSummary) {
   return [
     `PID ${process.pid.toString()}`,
     process.user || "unknown",
-    process.state ? `状态 ${process.state}` : null,
+    process.state ? tr("monitor.process.state", { value: process.state }) : null,
   ].filter(Boolean).join(" · ");
 }
 
@@ -1211,46 +1213,46 @@ function formatBytePair(used?: number | null, total?: number | null) {
   return `${formatBytes(used || 0)} / ${formatBytes(total)}`;
 }
 
-function pendingStatus(value?: number | null, label = "采样中") {
+function pendingStatus(value?: number | null, label = tr("monitor.pending")) {
   return value == null || !Number.isFinite(value) ? label : undefined;
 }
 
-function pendingPositiveStatus(value?: number | null, label = "采样中") {
+function pendingPositiveStatus(value?: number | null, label = tr("monitor.pending")) {
   return value == null || !Number.isFinite(value) || value <= 0 ? label : undefined;
 }
 
 function formatNetworkSpeed(value?: number | null) {
   if (value == null || !Number.isFinite(value) || value <= 0) {
-    return "未知速率";
+    return tr("monitor.network.unknownSpeed");
   }
   return value >= 1000 ? `${(value / 1000).toFixed(1)}GbE` : `${value.toFixed(0)}Mbps`;
 }
 
 function formatUptime(seconds?: number | null) {
   if (seconds == null || !Number.isFinite(seconds)) {
-    return "运行时间未知";
+    return tr("monitor.uptime.unknown");
   }
   const days = Math.floor(seconds / 86400);
   const hours = Math.floor((seconds % 86400) / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
   if (days > 0) {
-    return `${days.toString()} 天 ${hours.toString()} 小时`;
+    return tr("monitor.uptime.days", { days, hours });
   }
   if (hours > 0) {
-    return `${hours.toString()} 小时 ${minutes.toString()} 分`;
+    return tr("monitor.uptime.hours", { hours, minutes });
   }
-  return `${minutes.toString()} 分钟`;
+  return tr("monitor.uptime.minutes", { minutes });
 }
 
 function formatLoadAvg(loadAvg?: [number, number, number] | null) {
   if (!loadAvg) {
-    return "负载采样中";
+    return tr("monitor.load.pending");
   }
   return `Load ${loadAvg.map((item) => item.toFixed(2)).join(" / ")}`;
 }
 
 function formatTime(value: number) {
-  return new Date(value).toLocaleTimeString("zh-CN", {
+  return new Date(value).toLocaleTimeString(getLocale() === "zh-CN" ? "zh-CN" : "en-US", {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
@@ -1292,4 +1294,11 @@ function formatError(error: unknown) {
     return String((error as { message: unknown }).message);
   }
   return String(error);
+}
+
+function monitorViewLabel(view: MonitorPanelView) {
+  if (view === "hardware") return tr("monitor.view.hardware");
+  if (view === "network") return tr("monitor.view.network");
+  if (view === "processes") return tr("monitor.view.processes");
+  return tr("monitor.view.status");
 }
