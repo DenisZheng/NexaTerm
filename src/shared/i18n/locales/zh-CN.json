@@ -167,6 +167,6 @@
   "brandMigration.settingsTitle": "迁移旧 mXterm 设置",
   "brandMigration.settingsDescription": "NexaTerm 检测到旧 mXterm WebView 配置。迁移后可恢复外观、快捷键、启动偏好以及自定义 Local/WSL 配置；旧 mXterm 配置不会被修改。",
   "brandMigration.settingsApply": "迁移设置并重启",
-  "brandMigration.settingsUnsupportedTitle": "mXterm 核心数据已迁移，部分设置需确认",
-  "brandMigration.settingsUnsupportedDescription": "在 macOS 上，NexaTerm 无法通过 Tauri 受支持的数据目录接口安全访问旧 mXterm 的默认 WKWebView 数据存储。核心 App Data 与加密凭据已迁移，但外观、快捷键、启动偏好以及自定义 Local/WSL 配置可能需要重新设置；原 mXterm 数据仍保持不变。"
+  "brandMigration.settingsUnsupportedTitle": "部分 mXterm 设置需要确认",
+  "brandMigration.settingsUnsupportedDescription": "NexaTerm 无法安全自动读取旧 mXterm 的 WebView 设置。核心 App Data 与加密凭据仍可安全迁移，原 mXterm 数据也会保持不变；外观、快捷键、启动偏好以及自定义 Local/WSL 配置可能需要重新设置，或从旧配置中人工恢复。"
 }
