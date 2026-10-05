@@ -4,9 +4,9 @@
 - [x] Add A15 evidence template.
 - [x] Add final evidence validator.
 - [x] Add validator unit tests for A09/A10, platform signing and performance blockers.
-- [ ] Add WF-08E source gate.
-- [ ] Wire CI step.
-- [ ] First green CI evidence.
+- [x] Add WF-08E source gate.
+- [x] Wire CI step.
+- [x] First green CI evidence: CI #369 / run `37268756990` PASS on `0a7509a6be8746e6222d52a1640a4b4d33947ca8`.
 
 ## Real predecessor gate
 - [ ] A09 maintainer-confirmed real Tauri PASS.
