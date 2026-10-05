@@ -2583,5 +2583,7 @@
   "settings.stepper.decrease": "Decrease",
   "settings.stepper.increase": "Increase",
   "files.transfer.stage.awaitingRemote": "Waiting for remote confirmation",
-  "files.transfer.archiveSize": "Archive {size}"
+  "files.transfer.archiveSize": "Archive {size}",
+  "settings.controls.decrease": "Decrease",
+  "settings.controls.increase": "Increase"
 }
