@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { t as tr, useI18n } from "../../shared/i18n";
+
 import {
   credentialDelete,
   credentialList,
@@ -8,31 +10,34 @@ import {
 import { hasTauriRuntime } from "../../shared/tauri/runtime";
 import type { CredentialProfile, CredentialProfileInput } from "./connectionTypes";
 
-const demoCredentials: CredentialProfile[] = [
+function demoCredentials(): CredentialProfile[] {
+  return [
   {
     id: "demo-credential-root-password",
-    name: "root 密码账号",
+    name: tr("demo.credential.passwordName"),
     username: "root",
     kind: "password",
     password: "",
-    notes: "预览账号",
+    notes: tr("demo.credential.notes"),
     created_at: "demo",
     updated_at: "demo",
   },
   {
     id: "demo-credential-cloud-key",
-    name: "云主机私钥账号",
+    name: tr("demo.credential.privateKeyName"),
     username: "deploy",
     kind: "private_key",
     private_key_path: "~/.ssh/cloud.pem",
     private_key_passphrase: "",
-    notes: "预览账号",
+    notes: tr("demo.credential.notes"),
     created_at: "demo",
     updated_at: "demo",
   },
 ];
+}
 
 export function useCredentials(options: { enabled?: boolean } = {}) {
+  const { locale } = useI18n();
   const [credentials, setCredentials] = useState<CredentialProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -50,7 +55,7 @@ export function useCredentials(options: { enabled?: boolean } = {}) {
     }
 
     if (!isTauri) {
-      setCredentials(demoCredentials);
+      setCredentials(demoCredentials());
       setLoading(false);
       return;
     }
@@ -62,7 +67,7 @@ export function useCredentials(options: { enabled?: boolean } = {}) {
     } finally {
       setLoading(false);
     }
-  }, [enabled, isTauri]);
+  }, [enabled, isTauri, locale]);
 
   useEffect(() => {
     void reload();
@@ -143,7 +148,7 @@ function normalizeCredentialInput(input: CredentialProfileInput): CredentialProf
 }
 
 function defaultCredentialName(input: CredentialProfileInput) {
-  return input.kind === "private_key" ? "SSH 私钥账号" : "SSH 密码账号";
+  return input.kind === "private_key" ? tr("demo.credential.defaultPrivateKey") : tr("demo.credential.defaultPassword");
 }
 
 function upsertLocal(items: CredentialProfile[], profile: CredentialProfile) {
