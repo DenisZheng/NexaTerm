@@ -14,12 +14,40 @@ services:
     volumes:
       - ./keys:/keys:ro
 
-  # Deliberately no published ports: reachable only through ssh-jump,
-  # which is what makes it a real double-hop chain.
+  # Deliberately no published ports: reachable only through ssh-jump.
+  # This legacy one-jump target stays unchanged for WF-03 / WF-06A checks.
   ssh-target:
     build: ./sshd
     volumes:
       - ./keys:/keys:ro
+
+  # WF-06B true two-level Jump chain:
+  # host -> ssh-jump-outer -> ssh-jump-inner -> ssh-multihop-target.
+  # The outer and target services share no Docker network, so the target cannot
+  # be reached by skipping ssh-jump-inner.
+  ssh-jump-outer:
+    build: ./sshd
+    ports:
+      - "2224:22"
+    volumes:
+      - ./keys:/keys:ro
+    networks:
+      - wf06b-edge
+
+  ssh-jump-inner:
+    build: ./sshd
+    volumes:
+      - ./keys:/keys:ro
+    networks:
+      - wf06b-edge
+      - wf06b-target
+
+  ssh-multihop-target:
+    build: ./sshd
+    volumes:
+      - ./keys:/keys:ro
+    networks:
+      - wf06b-target
 
   ssh-x11:
     build: ./sshd
@@ -39,3 +67,7 @@ services:
     build: ./vnc
     ports:
       - "5901:5901"
+
+networks:
+  wf06b-edge:
+  wf06b-target:

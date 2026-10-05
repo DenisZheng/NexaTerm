@@ -108,6 +108,7 @@ import type {
   LocalTerminalOpenRequest,
   LocalTerminalProfile,
   WindowsPtyInfo,
+  WslProviderCapability,
 } from "../../features/terminal/localTerminalTypes";
 import type {
   RemoteMonitorProcessSignalInput,
@@ -158,6 +159,87 @@ export interface AppRuntimeInfo {
   repositoryUrl: string;
   distributionMode: AppDistributionMode;
   isTauri: boolean;
+}
+
+export interface PerformanceInteractiveSample {
+  enabled: boolean;
+  recorded: boolean;
+  elapsedMs: number;
+  pid: number;
+}
+
+export interface LegacyAppDataMigrationPreview {
+  available: boolean;
+  blocked: boolean;
+  currentRoot: string;
+  legacyRoot: string | null;
+  legacyIdentifier: string;
+  currentIdentifier: string;
+  files: string[];
+  reason: string | null;
+  targetHasUserData: boolean;
+}
+
+export interface LegacyAppDataMigrationResult {
+  migratedFiles: string[];
+  backupRoot: string | null;
+  legacyRoot: string;
+  currentRoot: string;
+  restartRequired: boolean;
+}
+
+export interface LegacyAppDataRollbackResult {
+  restoredBackup: boolean;
+  preservedMigratedRoot: string;
+  restartRequired: boolean;
+}
+
+export interface LegacyWebviewSettingsProbeStart {
+  supported: boolean;
+  started: boolean;
+  token: string | null;
+  reason: string | null;
+}
+
+export interface LegacyWebviewSettingsProbeResult {
+  complete: boolean;
+  value: string | null;
+}
+
+export function performanceProbeMarkInteractive() {
+  if (typeof window === "undefined" || !("__TAURI_INTERNALS__" in window)) {
+    return Promise.resolve<PerformanceInteractiveSample>({
+      enabled: false,
+      recorded: false,
+      elapsedMs: 0,
+      pid: 0,
+    });
+  }
+  return invoke<PerformanceInteractiveSample>("performance_probe_mark_interactive");
+}
+
+export function legacyAppDataMigrationPreview() {
+  return invoke<LegacyAppDataMigrationPreview>("legacy_app_data_migration_preview");
+}
+
+export function legacyAppDataMigrationApply() {
+  return invoke<LegacyAppDataMigrationResult>("legacy_app_data_migration_apply");
+}
+
+export function legacyAppDataMigrationRollback() {
+  return invoke<LegacyAppDataRollbackResult>("legacy_app_data_migration_rollback");
+}
+
+export function legacyWebviewSettingsProbeStart() {
+  return invoke<LegacyWebviewSettingsProbeStart>("legacy_webview_settings_probe_start");
+}
+
+export function legacyWebviewSettingsProbeCapture(token: string, value: string | null) {
+  return invoke<void>("legacy_webview_settings_probe_capture", { token, value });
+}
+
+export function legacyWebviewSettingsProbeTake(token: string) {
+  return invoke<LegacyWebviewSettingsProbeResult>("legacy_webview_settings_probe_take", { token });
 }
 
 export function secretVaultStatus() {
@@ -607,6 +689,10 @@ export function localTerminalListProfiles(input?: {
       platform: input?.platform,
     },
   });
+}
+
+export function localTerminalWslCapability() {
+  return invoke<WslProviderCapability>("local_terminal_wsl_capability");
 }
 
 export function localTerminalOpen(request: LocalTerminalOpenRequest) {
@@ -1233,6 +1319,14 @@ export function tunnelStop(ruleId: string) {
   });
 }
 
+export function tunnelStopConnection(connectionId: string) {
+  return invoke<TunnelRuleWithState[]>("tunnel_stop_connection", {
+    request: {
+      connection_id: connectionId,
+    },
+  });
+}
+
 export function tunnelAutostart() {
   return invoke<TunnelRuleWithState[]>("tunnel_autostart");
 }
@@ -1321,3 +1415,21 @@ export function connectionGroupDelete(id: string) { return invoke<void>("connect
 export function connectionGroupAssign(connectionId: string, groupId: string | null) { return invoke<void>("connection_group_assign", { connectionId, groupId }); }
 
 export function connectionGroupMigrateLegacy(raw: string | null, resolutions?: LegacyGroupResolution[]) { return invoke<LegacyGroupReport>("connection_group_migrate_legacy", { raw, resolutions }); }
+
+
+export interface WorkspaceSnapshotEnvelope {
+  backup: unknown | null;
+  current: unknown | null;
+}
+
+export function workspaceSnapshotLoad() {
+  return invoke<WorkspaceSnapshotEnvelope>("workspace_snapshot_load");
+}
+
+export function workspaceSnapshotSave(snapshot: unknown) {
+  return invoke<void>("workspace_snapshot_save", { snapshot });
+}
+
+export function workspaceSnapshotClear() {
+  return invoke<void>("workspace_snapshot_clear");
+}

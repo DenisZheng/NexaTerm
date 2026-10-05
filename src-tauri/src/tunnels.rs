@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::async_runtime::JoinHandle;
-use tauri::AppHandle;
+use tauri::{AppHandle, State};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::{Mutex, RwLock};
@@ -81,6 +81,11 @@ pub struct TunnelRuleIdRequest {
     pub rule_id: String,
 }
 
+#[derive(Clone, Debug, Deserialize)]
+pub struct TunnelConnectionRequest {
+    pub connection_id: String,
+}
+
 #[derive(Clone, Debug, Serialize)]
 pub struct TunnelRuntimeState {
     pub rule_id: String,
@@ -134,6 +139,13 @@ struct RemoteForwardBinding {
 pub(crate) struct Socks5ConnectTarget {
     host: String,
     port: u16,
+}
+
+fn rules_for_connection(rules: Vec<TunnelRule>, connection_id: &str) -> Vec<TunnelRule> {
+    rules
+        .into_iter()
+        .filter(|rule| rule.connection_id == connection_id)
+        .collect()
 }
 
 fn tunnel_store_error_labels() -> JsonStoreErrorLabels {
@@ -236,6 +248,15 @@ impl TunnelStore {
     }
 }
 
+#[tauri::command]
+pub async fn tunnel_stop_connection(
+    app: AppHandle,
+    manager: State<'_, TunnelManager>,
+    request: TunnelConnectionRequest,
+) -> Result<Vec<TunnelRuleWithState>, AppError> {
+    manager.stop_connection(&app, &request.connection_id).await
+}
+
 impl TunnelManager {
     pub async fn list(&self, app: &AppHandle) -> Result<Vec<TunnelRuleWithState>, AppError> {
         let _guard = self.store_lock.lock().await;
@@ -302,6 +323,34 @@ impl TunnelManager {
         let rule = resolve_stopped_rule(self.load_rule(app, &rule_id).await, stopped_running_rule)?;
         self.set_state(stopped_state(&rule_id)).await;
         self.attach_state(rule).await
+    }
+
+    pub async fn stop_connection(
+        &self,
+        app: &AppHandle,
+        connection_id: &str,
+    ) -> Result<Vec<TunnelRuleWithState>, AppError> {
+        let connection_id = connection_id.trim();
+        if connection_id.is_empty() {
+            return Err(AppError::new(
+                "tunnel_connection_missing",
+                "隧道关联连接不能为空。",
+                "connection_id is empty",
+                false,
+            ));
+        }
+        let rules = {
+            let _guard = self.store_lock.lock().await;
+            rules_for_connection(
+                StorageRepository::open_app(app)?.tunnel_list()?,
+                connection_id,
+            )
+        };
+        for rule in &rules {
+            let _ = self.stop_running(&rule.id).await;
+            self.set_state(stopped_state(&rule.id)).await;
+        }
+        Ok(self.attach_states(rules).await)
     }
 
     pub async fn autostart(&self, app: &AppHandle) -> Result<Vec<TunnelRuleWithState>, AppError> {
@@ -1170,6 +1219,23 @@ mod tests {
     }
 
     #[test]
+    fn rules_for_connection_keeps_only_requested_connection() {
+        let mut a1 = sample_rule("a-1");
+        a1.connection_id = "conn-a".to_string();
+        let mut b1 = sample_rule("b-1");
+        b1.connection_id = "conn-b".to_string();
+        let mut a2 = sample_rule("a-2");
+        a2.connection_id = "conn-a".to_string();
+
+        let ids = rules_for_connection(vec![a1, b1, a2], "conn-a")
+            .into_iter()
+            .map(|rule| rule.id)
+            .collect::<Vec<_>>();
+
+        assert_eq!(ids, vec!["a-1".to_string(), "a-2".to_string()]);
+    }
+
+    #[test]
     fn tunnel_rule_validation_trims_addresses_and_names() {
         let validated = validate_tunnel_rule_input(valid_input()).unwrap();
 
@@ -1380,6 +1446,64 @@ mod tests {
     }
 
     #[test]
+    fn failed_state_keeps_rule_and_port_conflict_error_context() {
+        let rule = sample_rule("rule-bind-conflict");
+        let error = AppError::new(
+            "tunnel_local_bind_failed",
+            "本地监听端口绑定失败。",
+            "127.0.0.1:15432: address already in use",
+            true,
+        );
+
+        let state = failed_state(&rule, &error);
+
+        assert_eq!(state.rule_id, "rule-bind-conflict");
+        assert_eq!(state.status, TunnelStatus::Failed);
+        assert_eq!(state.last_error.as_deref(), Some("本地监听端口绑定失败。"));
+        assert_eq!(
+            state.last_error_code.as_deref(),
+            Some("tunnel_local_bind_failed")
+        );
+    }
+
+    #[test]
+    fn credential_required_state_keeps_rule_and_prompt_error_context() {
+        let rule = sample_rule("rule-prompt");
+        let error = AppError::new(
+            "credential_prompt_required",
+            "连接需要交互式凭据。",
+            "connection_id=conn-001",
+            true,
+        );
+
+        let state = credential_required_state(&rule, &error);
+
+        assert_eq!(state.rule_id, "rule-prompt");
+        assert_eq!(state.status, TunnelStatus::CredentialRequired);
+        assert_eq!(
+            state.last_error_code.as_deref(),
+            Some("credential_prompt_required")
+        );
+    }
+
+    #[test]
+    fn host_key_failure_stays_failed_with_rule_context_until_user_retries() {
+        let rule = sample_rule("rule-host-key");
+        let error = AppError::new(
+            "host_key_unknown",
+            "主机密钥尚未信任。",
+            "connection_id=conn-001",
+            true,
+        );
+
+        let state = failed_state(&rule, &error);
+
+        assert_eq!(state.rule_id, "rule-host-key");
+        assert_eq!(state.status, TunnelStatus::Failed);
+        assert_eq!(state.last_error_code.as_deref(), Some("host_key_unknown"));
+    }
+
+    #[test]
     fn failed_or_stopped_runtime_can_be_replaced() {
         assert!(should_replace_existing_runtime(Some(&TunnelStatus::Failed)));
         assert!(should_replace_existing_runtime(Some(
@@ -1443,3 +1567,7 @@ mod tests {
         }
     }
 }
+
+
+#[cfg(all(test, target_os = "linux"))]
+mod fixture_tests;

@@ -20,10 +20,11 @@ Some bullets in `component-guidelines.md` and `tauri-command-contracts.md` descr
 | [Component Guidelines](./component-guidelines.md) | Component patterns, props, composition | Active (placement bullets scoped 2026-09-23) |
 | [Hook Guidelines](./hook-guidelines.md) | Custom hooks, data fetching patterns | To fill |
 | [State Management](./state-management.md) | Local state, global state, server state | Partial (reducer conventions filled) |
+| [Workspace Restore](./workspace-restore.md) | WF-07 lifecycle、保存时序、SSH 输出隔离与 Files 导航契约 | Active |
 | [Quality Guidelines](./quality-guidelines.md) | Code standards, forbidden patterns | Partial (testing requirements filled) |
 | [Type Safety](./type-safety.md) | Type patterns, validation | To fill |
 | [Tauri Command Contracts](./tauri-command-contracts.md) | Typed invoke wrappers and frontend/backend payload sync | Active (placement bullets scoped 2026-09-23) |
-| [Workflow Spec (product rules)](../../../docs/WORKFLOW_SPEC.md) | Target interaction rules `WS-xx`, status, owning WF package, superseded-rule table | v0.4 (2026-10-02) |
+| [Workflow Spec (product rules)](../../../docs/WORKFLOW_SPEC.md) | Target interaction rules `WS-xx`, status, owning WF package, superseded-rule table | v0.6 (2026-10-03) |
 
 ---
 

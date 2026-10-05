@@ -62,6 +62,8 @@ export interface ConnectionAdvancedConfig {
   auth_timeout_ms: number;
   keepalive_interval_ms: number;
   terminal_encoding: ConnectionTerminalEncoding;
+  x11_forwarding: boolean;
+  x11_display?: string | null;
 }
 
 export interface RdpDisplayConfig {
@@ -344,12 +346,16 @@ export interface RevealedCredentialSecret {
   private_key_passphrase?: string | null;
 }
 
-export interface ConnectionRuntimeCredentialRequest {
-  connection_id: string;
+export interface RuntimeCredentialInput {
   auth_kind?: ConnectionAuthKind;
   password?: string;
   private_key_path?: string;
   private_key_passphrase?: string;
+}
+
+export interface ConnectionRuntimeCredentialRequest extends RuntimeCredentialInput {
+  connection_id: string;
+  runtime_credentials?: Record<string, RuntimeCredentialInput>;
 }
 
 export interface HostKeyInfo {
@@ -520,6 +526,8 @@ export const defaultAdvancedConfig: ConnectionAdvancedConfig = {
   connect_timeout_ms: 30000,
   keepalive_interval_ms: 20000,
   terminal_encoding: "utf-8",
+  x11_forwarding: false,
+  x11_display: "",
 };
 
 export const defaultRdpConfig: RdpConnectionConfig = {

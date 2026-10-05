@@ -1,0 +1,4 @@
+{"file":"NEXATERM_REQUIREMENTS.md","reason":"verify A15 claims remain within v1 acceptance scope"}
+{"file":"scripts/check-wf08a-release-migration-source.mjs","reason":"WF-08A source-contract gate"}
+{"file":".github/workflows/ci.yml","reason":"verify independent WF-08A CI step is wired"}
+{"file":".trellis/tasks/10-04-wf-08a-release-migration-baseline/A15_BASELINE.md","reason":"ensure automated, real-platform-pending and missing boundaries remain explicit"}

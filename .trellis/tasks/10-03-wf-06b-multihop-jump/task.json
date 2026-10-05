@@ -1,0 +1,31 @@
+{
+  "id": "wf-06b-multihop-jump",
+  "name": "wf-06b-multihop-jump",
+  "title": "WF-06B 多级 Jump",
+  "description": "沿 9-23 workflow mainline 将现有单跳 SSH Jump 扩展为显式两级链路，统一 Terminal / Files(SFTP) / Tunnel 路由、每跳认证与 Host Key、失败定位和中间资源清理。",
+  "status": "in_progress",
+  "priority": "P1",
+  "creator": "openai",
+  "assignee": "openai",
+  "createdAt": "2026-10-03",
+  "completedAt": null,
+  "branch": "feat/wf06b-multihop-jump",
+  "base_branch": "feat/wf06a-tunnel-management",
+  "commit": null,
+  "pr_url": "https://github.com/DenisZheng/NexaTerm/pull/33",
+  "subtasks": [],
+  "children": [],
+  "parent": "09-23-nexaterm-workflow-mainline",
+  "relatedFiles": [
+    "NEXATERM_WORKFLOW_DELIVERY_PLAN.md",
+    "docs/WORKFLOW_SPEC.md",
+    "src/features/connections/ConnectionDialog.tsx",
+    "src-tauri/src/terminal/session.rs",
+    "src-tauri/src/terminal/manager.rs",
+    "src-tauri/src/storage_repository.rs",
+    "tests/fixtures/docker-compose.yml",
+    "tests/fixtures/fixtures.mjs"
+  ],
+  "notes": "Stacked on WF-06A head e7bf637b9. WF-06A PR #32 remains Draft/unmerged. WF-06B-1 two-hop plan/owner is implemented. CI #264 exposed one Rust type inference error plus session.rs line-budget overflow; both were fixed by moving jump-chain logic/tests to terminal/session/jump_chain.rs and typing Vec<SshHandle>. Per-hop auth/Host Key UX is 06B-2 and real two-hop Docker evidence is 06B-3. Do not modify PR #12 or line-budget.json.",
+  "meta": {}
+}

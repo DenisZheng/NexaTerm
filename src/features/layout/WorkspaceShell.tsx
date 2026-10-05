@@ -54,7 +54,6 @@ import {
   Upload,
   X,
 } from "lucide-react";
-
 import { ConnectionPane } from "../connections/ConnectionPane";
 import { useBatchConnectController } from "../connections/useBatchConnectController";
 import { batchWorkspaceClosePlan, batchWorkspaceItemId, collectBatchOpenConnectionIds, waitForBatchWorkspaceHandle, type BatchWorkspaceHandle } from "../connections/batchConnectWorkspaceRuntime";
@@ -68,6 +67,7 @@ import { resolveWorkspaceSidebarFileContext } from "./workspaceSidebarContext";
 import { ConnectionSystemLogo } from "../connections/ConnectionSystemLogo";
 import type {
   ConnectionAuthKind,
+  ConnectionProtocol,
   ConnectionProfile,
   ConnectionProfileInput,
   ConnectionRuntimeCredentialRequest,
@@ -78,10 +78,12 @@ import type {
   RdpCertificatePolicy,
   RdpLaunchPreview,
   RdpRunnerKind,
+  RdpRunnerProbeResult,
   VncLaunchPreview,
   VncLaunchResult,
   VncRunnerWindowPayload,
   VncRunnerKind,
+  VncRunnerProbeResult,
 } from "../connections/connectionTypes";
 import type { ConnectionTransferMode } from "../connections/connectionTransferTypes";
 import type { ConnectionSaveIntent } from "../connections/connectionDialogSubmit";
@@ -95,7 +97,13 @@ import { connectionTimestampOf, sortConnectionsByRecent } from "../connections/c
 import { isQuickConnectCredentialError, type QuickConnectTarget } from "../connections/quickConnect";
 import { connectTemporaryQuickTerminal, createTemporaryQuickConnectProfile, prepareTemporaryQuickConnectCredentials, releaseTemporaryQuickConnectRefs, saveTemporaryQuickConnectProfile } from "../connections/quickConnectRuntime";
 import { finalTemporaryContextRefs, rebindConnectionItems, rebindTemporaryTerminalTab } from "../connections/quickConnectSession";
+import { buildRuntimeCredentialRequest, credentialPromptTargetFromConnection, parseCredentialPromptTarget, parseSshNodeFailure, upsertRuntimeCredential, type CredentialPromptTarget } from "../connections/jumpRuntime";
 import { connectionInfoFromVncProfile } from "../connections/vncConnectionInfo";
+import {
+  projectRemoteDesktopEntryCapabilities,
+  unknownRemoteDesktopEntryCapabilities,
+  type RemoteDesktopEntryCapabilities,
+} from "./newSessionRemoteDesktopEntries";
 import { createMiddleClickCloseHandler } from "../../shared/ui/tabEvents";
 // RemoteFileEditor 内部静态 import 了 monaco-editor（主体约 4MB）及其 5 个 worker
 // （合计约 10MB）。用 React.lazy 延迟到真正打开远程文件编辑标签时才加载，
@@ -113,22 +121,18 @@ const loadCommandLibraryPanel = () => import("../commands/CommandLibraryPanel");
 const loadAiAssistantPanel = () => import("../ai/AiAssistantPanel");
 const loadVncViewerSurface = () => import("./VncViewerSurface");
 const loadTerminalPanel = () => import("../terminal/TerminalPanel");
-
 type ConnectionDialogModule = typeof import("../connections/ConnectionDialog");
 type LoadedConnectionDialogComponent = ConnectionDialogModule["ConnectionDialog"];
 type SettingsViewModule = typeof import("../settings/SettingsView");
 type LoadedSettingsViewComponent = SettingsViewModule["SettingsView"];
-
 let connectionDialogModulePromise: Promise<ConnectionDialogModule> | null = null;
 let loadedConnectionDialogComponent: LoadedConnectionDialogComponent | null = null;
 let settingsViewModulePromise: Promise<SettingsViewModule> | null = null;
 let loadedSettingsViewComponent: LoadedSettingsViewComponent | null = null;
-
 function preloadConnectionDialogModule() {
   connectionDialogModulePromise ??= loadConnectionDialog();
   return connectionDialogModulePromise;
 }
-
 async function preloadConnectionDialogComponent() {
   if (loadedConnectionDialogComponent) {
     return loadedConnectionDialogComponent;
@@ -137,12 +141,10 @@ async function preloadConnectionDialogComponent() {
   loadedConnectionDialogComponent = module.ConnectionDialog;
   return loadedConnectionDialogComponent;
 }
-
 function preloadSettingsViewModule() {
   settingsViewModulePromise ??= loadSettingsView();
   return settingsViewModulePromise;
 }
-
 async function preloadSettingsViewComponent() {
   if (loadedSettingsViewComponent) {
     return loadedSettingsViewComponent;
@@ -151,7 +153,6 @@ async function preloadSettingsViewComponent() {
   loadedSettingsViewComponent = module.SettingsView;
   return loadedSettingsViewComponent;
 }
-
 const RemoteFileEditor = lazy(async () => {
   const module = await loadRemoteFileEditor();
   return { default: module.RemoteFileEditor };
@@ -205,9 +206,7 @@ const TerminalPanel = lazy(async () => {
   const module = await loadTerminalPanel();
   return { default: module.TerminalPanel };
 });
-
 type LazyModuleLoader = () => Promise<unknown>;
-
 const WORKSPACE_IDLE_PREWARM_BATCHES: Array<{
   timeoutMs: number;
   loaders: LazyModuleLoader[];
@@ -351,6 +350,7 @@ import {
   connectionProbeLatency,
   localTerminalListProfiles,
   localTerminalOpen,
+  localTerminalWslCapability,
   remoteFileCheckPath,
   localPathMetadata,
   remoteFileCheckDownloadTarget,
@@ -373,15 +373,18 @@ import {
   rdpPreviewLaunch,
   rdpRevealSession,
   rdpResizeEmbeddedSession,
+  rdpTestRunner,
   vncCloseSession,
   vncLaunchConnection,
   vncPreviewLaunch,
+  vncTestRunner,
   terminalClose,
   terminalConnect,
   terminalWrite,
   serialTerminalOpen,
   telnetTerminalOpen,
   tunnelAutostart,
+  tunnelStopConnection,
 } from "../../shared/tauri/commands";
 import { selectLocalUploadDirectories, selectLocalUploadFiles } from "../../shared/tauri/dialog";
 import {
@@ -428,8 +431,9 @@ import {
 import {
   TerminalSplitMenu,
   TerminalSplitSyncMenu,
-  type TerminalSplitSyncPaneOption,
 } from "../terminal/TerminalSplitMenu";
+import { MultiExecBar } from "./MultiExecBar";
+import { buildTerminalSplitSyncPaneOptions } from "./terminalSplitSyncOptions";
 import {
   closeTerminalSplitPane as closeTerminalSplitLayoutPane,
   collectTerminalSplitPanes,
@@ -450,6 +454,15 @@ import {
   type TerminalSplitHost,
 } from "../workspace/split/useTerminalSplitController";
 import { splitGroupInsertionIndex } from "../workspace/split/anchor";
+import {
+  buildMultiExecTargets,
+  type MultiExecTarget,
+} from "../workspace/multiExec/targets";
+import { writeMultiExecLiveInput } from "../workspace/multiExec/live";
+import {
+  writeMultiExecCommand,
+  type MultiExecSendDeliveryStatus,
+} from "../workspace/multiExec/send";
 import {
   displayOrdinal,
   HOME_ITEM_ID,
@@ -486,13 +499,19 @@ import type {
 } from "../workspace/sessionTabs/types";
 import { useSessionTabsController } from "../workspace/sessionTabs/useSessionTabsController";
 import type { CloseSnapshot, SessionRef } from "../workspace/sessionTabs/closeDecision";
+import { applyWorkspaceRestorePlanToHydration, buildWorkspaceShellHydration } from "../workspace/restore/shellHydration";
+import { buildWorkspaceRestorePlan } from "../workspace/restore/restorePlan";
+import { seedWorkspaceRemoteFileDirectories, workspaceRemoteFileDirectories } from "../workspace/restore/remoteFileSnapshotBridge";
+import { snapshotTargetRefs, toSnapshot, type WorkspaceSnapshotV1 } from "../workspace/restore/snapshotTypes";
+import { useWorkspaceSnapshotLifecycle } from "../workspace/restore/useWorkspaceSnapshotLifecycle";
+import { workspaceSnapshotRuntime } from "./workspaceSnapshotRuntime";
 import type {
   LocalTerminalProfile,
   LocalTerminalProfileInput,
   LocalTerminalTab,
   WindowsPtyInfo,
+  WslProviderStatus,
 } from "../terminal/localTerminalTypes";
-
 type RdpConnectionProfile = ConnectionProfile & { protocol: "rdp" };
 type VncConnectionProfile = ConnectionProfile & { protocol: "vnc" };
 type TelnetConnectionProfile = ConnectionProfile & { protocol: "telnet" };
@@ -500,15 +519,11 @@ type SerialConnectionProfile = ConnectionProfile & { protocol: "serial" };
 type SshConnectionProfile = ConnectionProfile & {
   protocol?: "ssh" | null | undefined;
 };
-
 const VNC_RUNNER_HOST_WINDOW_LABEL = "vnc-runner-host";
-
 type WorkbenchTabDropZone = WorkbenchTabKind | "split-file" | "split-terminal";
-
 interface WorkbenchTabDragPayload extends UnifiedWorkbenchTab {
   connectionId: string;
 }
-
 interface WorkbenchTabMouseDrag {
   active: boolean;
   currentX: number;
@@ -520,23 +535,13 @@ interface WorkbenchTabMouseDrag {
   startX: number;
   startY: number;
 }
-
 interface TerminalClearRequest {
   id: number;
   tabId: string;
 }
-
-type CommandSenderDeliveryStatus = "idle" | "sent" | "failed";
+type CommandSenderDeliveryStatus = "idle" | MultiExecSendDeliveryStatus;
 type CommandSenderTargetKind = "ssh" | "local";
-
-interface CommandSenderTargetTabOption {
-  label: string;
-  sessionId: string;
-  tabId: string;
-}
-
 interface CommandSenderTarget {
-  connectionId: string;
   deliveryMessage?: string;
   deliveryStatus: CommandSenderDeliveryStatus;
   description: string;
@@ -546,10 +551,8 @@ interface CommandSenderTarget {
   historyScope: CommandHistoryScope | null;
   sessionId: string;
   tabId: string;
-  tabs: CommandSenderTargetTabOption[];
   tabTitle: string;
 }
-
 interface CommandSnippetDraft {
   command: string;
   description: string;
@@ -559,7 +562,6 @@ interface CommandSnippetDraft {
   tagsText: string;
   title: string;
 }
-
 interface CommandSnippetGroupDialogState {
   error?: string | null;
   mode: "create" | "rename";
@@ -567,42 +569,32 @@ interface CommandSnippetGroupDialogState {
   selectAfterSave?: boolean;
   value: string;
 }
-
 interface TerminalSearchState {
   caseSensitive: boolean;
   open: boolean;
   query: string;
 }
-
-type ConnectedTerminalTab = TerminalTab & { sessionId: string; type: "terminal" };
-
 type ConnectionStepMode = "test" | "terminal";
 type ConnectionStepStatus = "idle" | "running" | "waiting_host_key" | "prompt" | "success" | "error";
-
 type TerminalTab = SessionTerminalTab<ConnectionStepState>;
-
 interface ConnectionStepState {
   activeStepIndex?: number | null;
   authKind: ConnectionAuthKind;
   connection: ConnectionProfile;
-  errorDetail?: ConnectionStepErrorDetail | null;
-  error?: string | null;
+  errorDetail?: ConnectionStepErrorDetail | null; error?: string | null;
   hostKey?: HostKeyInfo | null;
-  hostKeyDecision?: HostKeyDecision | null;
-  oldHostKeyFingerprint?: string | null;
+  hostKeyDecision?: HostKeyDecision | null; oldHostKeyFingerprint?: string | null;
   id: number;
   logs: string[];
   mode: ConnectionStepMode;
   password: string;
   privateKeyPassphrase: string;
   privateKeyPath: string;
-  temporary?: boolean;
-  temporaryContextRef?: string | null;
+  promptTarget?: CredentialPromptTarget | null; runtimeCredentials: NonNullable<ConnectionRuntimeCredentialRequest["runtime_credentials"]>;
+  temporary?: boolean; temporaryContextRef?: string | null;
   temporaryCredentialsReady?: boolean;
-  sessionId?: string | null;
-  status: ConnectionStepStatus;
+  sessionId?: string | null; status: ConnectionStepStatus;
 }
-
 interface ConnectionStepErrorDetail {
   code: string;
   message: string;
@@ -611,87 +603,72 @@ interface ConnectionStepErrorDetail {
   stage: string;
   suggestion: string;
 }
-
 interface ConnectionGroupInfo {
   color: string;
   id: string;
   name: string;
   parentId?: string | null;
 }
-
 interface ConnectionGroupCatalog {
   assignments: Record<string, string>;
   groups: ConnectionGroupInfo[];
 }
-
 interface RemoteFileRefreshRequest {
   connectionId: string;
   id: number;
   path: string;
 }
-
 interface RemoteFileLocateRequest {
   connectionId: string;
   id: number;
   path: string;
 }
-
 type RemoteFileTextAction =
   | { action: "create-directory"; connectionId: string; parentPath: string }
   | { action: "create-file"; connectionId: string; parentPath: string }
   | { action: "rename"; connectionId: string; entry: RemoteFileEntry };
-
 interface RemoteFileDeleteTarget {
   connectionId: string;
   entries: RemoteFileEntry[];
 }
-
 type ConnectionFilter = "recent" | "all" | "favorites";
-
 type LatencyProbeState =
   | { status: "checking" }
   | { latencyMs: number; status: "ok" }
   | { status: "failed" };
 type ResizablePaneSide = "left" | "right";
 type ResizingPane = ResizablePaneSide | "editor-terminal";
-
 interface RemoteFilePropertiesState {
   entry: RemoteFileEntry;
   error?: string | null;
   loading: boolean;
   metadata?: RemoteFileEntryMetadata | null;
 }
-
 interface TransferConflictPromptState {
   description: string;
   id: string;
   name: string;
   resolve: (policy: RemoteFileTransferConflictPolicy | null) => void;
 }
-
 interface ArchiveBuildProgress {
   archiveBytes: number;
   loadedBytes: number;
   phase: "read" | "compress";
   totalBytes: number;
 }
-
 interface TransferRunOptions {
   connection?: ConnectionProfile;
   conflictPolicy?: RemoteFileTransferConflictPolicy;
   transferId?: string;
 }
-
 interface DirectoryTransferRunOptions extends TransferRunOptions {
   compress?: boolean;
   keepArchive?: boolean;
 }
-
 interface DownloadTransferRunOptions {
   input?: Omit<RemoteFileDownloadToLocalInput, "transferId">;
   transferId?: string;
 }
-
 const defaultLeftPaneWidth = 336;
 const minLeftPaneWidth = 248;
 const maxLeftPaneWidth = 520;
@@ -704,7 +681,6 @@ const defaultEditorTerminalSplitPercent = 44;
 const commandSnippetRootGroup = "";
 const commandSnippetRootGroupLabel = "根目录";
 const legacyCommandSnippetGroup = "未分组";
-const localCommandSenderTargetId = "__local_terminal__";
 const commandHistoryAllScopeKey = "all";
 const commandHistorySshScopePrefix = "ssh:";
 const commandHistoryLocalScopePrefix = "local:";
@@ -723,19 +699,16 @@ const uploadTempAppendChunkBytes = fileReadChunkBytes;
 const remoteFileDropTargetAttribute = "data-remote-file-drop-target";
 const tabScrollTolerancePx = 1;
 const tabScrollStateRefreshMs = 180;
-
 interface WorkbenchTabScrollState {
   canScrollLeft: boolean;
   canScrollRight: boolean;
   hasOverflow: boolean;
 }
-
 const defaultWorkbenchTabScrollState: WorkbenchTabScrollState = {
   canScrollLeft: false,
   canScrollRight: false,
   hasOverflow: false,
 };
-
 function useWorkbenchTabScroller({
   activeKey,
   enabled,
@@ -749,7 +722,6 @@ function useWorkbenchTabScroller({
   const [scrollState, setScrollState] = useState<WorkbenchTabScrollState>(
     defaultWorkbenchTabScrollState,
   );
-
   const updateScrollState = useCallback(() => {
     const scroller = scrollerRef.current;
     if (!scroller || !enabled) {
@@ -760,14 +732,12 @@ function useWorkbenchTabScroller({
       );
       return;
     }
-
     const maxScrollLeft = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
     const nextState = {
       canScrollLeft: scroller.scrollLeft > tabScrollTolerancePx,
       canScrollRight: scroller.scrollLeft < maxScrollLeft - tabScrollTolerancePx,
       hasOverflow: maxScrollLeft > tabScrollTolerancePx,
     };
-
     setScrollState((current) =>
       current.canScrollLeft === nextState.canScrollLeft &&
       current.canScrollRight === nextState.canScrollRight &&
@@ -776,14 +746,12 @@ function useWorkbenchTabScroller({
         : nextState,
     );
   }, [enabled]);
-
   useLayoutEffect(() => {
     const scroller = scrollerRef.current;
     if (!scroller || !enabled) {
       updateScrollState();
       return;
     }
-
     let animationFrame = window.requestAnimationFrame(updateScrollState);
     const scheduleScrollStateUpdate = () => {
       window.cancelAnimationFrame(animationFrame);
@@ -793,11 +761,9 @@ function useWorkbenchTabScroller({
       typeof ResizeObserver === "undefined"
         ? null
         : new ResizeObserver(scheduleScrollStateUpdate);
-
     resizeObserver?.observe(scroller);
     scroller.addEventListener("scroll", scheduleScrollStateUpdate, { passive: true });
     window.addEventListener("resize", scheduleScrollStateUpdate);
-
     return () => {
       window.cancelAnimationFrame(animationFrame);
       resizeObserver?.disconnect();
@@ -805,14 +771,12 @@ function useWorkbenchTabScroller({
       window.removeEventListener("resize", scheduleScrollStateUpdate);
     };
   }, [enabled, itemCount, updateScrollState]);
-
   useLayoutEffect(() => {
     const scroller = scrollerRef.current;
     if (!scroller || !enabled || itemCount === 0) {
       updateScrollState();
       return;
     }
-
     const activeTab = scroller.querySelector<HTMLElement>(
       '[data-workbench-tab-active="true"]',
     );
@@ -820,7 +784,6 @@ function useWorkbenchTabScroller({
     const animationFrame = window.requestAnimationFrame(updateScrollState);
     return () => window.cancelAnimationFrame(animationFrame);
   }, [activeKey, enabled, itemCount, updateScrollState]);
-
   const scrollTabs = useCallback(
     (direction: "left" | "right") => {
       const scroller = scrollerRef.current;
@@ -836,7 +799,6 @@ function useWorkbenchTabScroller({
     },
     [updateScrollState],
   );
-
   return {
     canScrollLeft: scrollState.canScrollLeft,
     canScrollRight: scrollState.canScrollRight,
@@ -846,9 +808,7 @@ function useWorkbenchTabScroller({
     scrollRight: () => scrollTabs("right"),
   };
 }
-
 type WorkbenchTabScrollController = ReturnType<typeof useWorkbenchTabScroller>;
-
 type NativeFileDropPosition = Extract<DragDropEvent, { type: "enter" | "over" | "drop" }>["position"];
 
 export function WorkspaceShell() {
@@ -967,6 +927,8 @@ export function WorkspaceShell() {
     useState<SettingsSectionId | undefined>();
   const [settingsSectionRequestKey, setSettingsSectionRequestKey] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [pendingConnectionProtocol, setPendingConnectionProtocol] =
+    useState<ConnectionProtocol | null>(null);
   const [connectionTransferMode, setConnectionTransferMode] =
     useState<ConnectionTransferMode | null>(null);
   const [LoadedConnectionDialog, setLoadedConnectionDialog] =
@@ -978,6 +940,7 @@ export function WorkspaceShell() {
   const [duplicatingConnection, setDuplicatingConnection] = useState(false);
   const [selectedConnectionId, setSelectedConnectionId] = useState<string | null>(null);
   const terminalTabsRef = useRef<TerminalTab[]>([]);
+  const workspaceRestoreTargetRefsRef = useRef(snapshotTargetRefs({ activeItemId: null, files: { directories: {}, followActivePane: true }, instances: [], order: [], panes: null, sidebar: { collapsed: false, view: "sessions" }, version: 1 }));
   const rdpSessionsRef = useRef<RdpSessionTab[]>([]);
   const vncSessionsRef = useRef<VncSessionTab[]>([]);
   const pendingVncRunnerWindowPayloadsRef = useRef(new Map<string, VncRunnerWindowPayload>());
@@ -1024,6 +987,7 @@ export function WorkspaceShell() {
   }, [activeRdpSessionId, measureRdpEmbeddedBounds, syncRdpEmbeddedBounds]);
   const terminalWarmupCaptureStopsRef = useRef(new Map<string, () => void>());
   const [commandSenderOpen, setCommandSenderOpen] = useState(false);
+  const [multiExecBarOpen, setMultiExecBarOpen] = useState(false);
   const [commandSenderInput, setCommandSenderInput] = useState("");
   const [commandSnippets, setCommandSnippets] = useState<CommandSnippet[]>([]);
   const [commandHistoryEntries, setCommandHistoryEntries] = useState<CommandHistoryEntry[]>([]);
@@ -1052,9 +1016,6 @@ export function WorkspaceShell() {
   const [commandHistoryClearOpen, setCommandHistoryClearOpen] = useState(false);
   const [commandSenderLastSentLabel, setCommandSenderLastSentLabel] =
     useState("上次发送：尚未发送");
-  const [selectedCommandTargetKeys, setSelectedCommandTargetKeys] = useState<string[]>([]);
-  const [commandSenderTargetTabByConnectionId, setCommandSenderTargetTabByConnectionId] =
-    useState<Record<string, string>>({});
   const [commandSenderDeliveryByKey, setCommandSenderDeliveryByKey] =
     useState<Record<string, { message?: string; status: CommandSenderDeliveryStatus }>>({});
   const [terminalSearchByTabId, setTerminalSearchByTabId] =
@@ -1070,6 +1031,9 @@ export function WorkspaceShell() {
   const localTerminalProfilesRef = useRef<LocalTerminalProfile[]>([]);
   const [localTerminalProfilesLoading, setLocalTerminalProfilesLoading] = useState(false);
   const [localTerminalProfilesError, setLocalTerminalProfilesError] = useState<string | null>(null);
+  const [wslProviderStatus, setWslProviderStatus] = useState<WslProviderStatus | null>(null);
+  const [remoteDesktopEntryCapabilities, setRemoteDesktopEntryCapabilities] =
+    useState<RemoteDesktopEntryCapabilities>(unknownRemoteDesktopEntryCapabilities);
   const [terminalClearRequest, setTerminalClearRequest] = useState<TerminalClearRequest | null>(null);
   const terminalClearRequestRef = useRef(0);
   const [terminalDirectories, setTerminalDirectories] = useState<Record<string, string>>({});
@@ -1257,6 +1221,42 @@ export function WorkspaceShell() {
   useEffect(() => scheduleWorkspaceModulePrewarm(), []);
 
   useEffect(() => {
+    let disposed = false;
+    if (!hasTauriRuntime()) {
+      setRemoteDesktopEntryCapabilities(unknownRemoteDesktopEntryCapabilities);
+      return () => {
+        disposed = true;
+      };
+    }
+
+    setRemoteDesktopEntryCapabilities(
+      projectRemoteDesktopEntryCapabilities({
+        rdp: { state: "probing" },
+        vnc: { state: "probing" },
+      }),
+    );
+    void Promise.allSettled([rdpTestRunner(), vncTestRunner()]).then(([rdpProbe, vncProbe]) => {
+      if (disposed) return;
+      setRemoteDesktopEntryCapabilities(
+        projectRemoteDesktopEntryCapabilities({
+          rdp:
+            rdpProbe.status === "fulfilled"
+              ? { state: "ready", result: rdpProbe.value as RdpRunnerProbeResult }
+              : { state: "failed" },
+          vnc:
+            vncProbe.status === "fulfilled"
+              ? { state: "ready", result: vncProbe.value as VncRunnerProbeResult }
+              : { state: "failed" },
+        }),
+      );
+    });
+
+    return () => {
+      disposed = true;
+    };
+  }, [desktopPlatform]);
+
+  useEffect(() => {
     if (!hasTauriRuntime() || !storageReady) {
       return;
     }
@@ -1281,6 +1281,7 @@ export function WorkspaceShell() {
     async function loadProfiles() {
       setLocalTerminalProfilesLoading(true);
       setLocalTerminalProfilesError(null);
+      setWslProviderStatus(null);
       try {
         const detected = hasTauriRuntime()
           ? await localTerminalListProfiles({
@@ -1291,16 +1292,33 @@ export function WorkspaceShell() {
         if (disposed) {
           return;
         }
-        setLocalTerminalProfiles(
-          mergeLocalTerminalProfiles(
-            detected,
-            settings.localTerminal.customProfiles,
-            settings.localTerminal.hiddenProfileIds,
-          ),
+        const merged = mergeLocalTerminalProfiles(
+          detected,
+          settings.localTerminal.customProfiles,
+          settings.localTerminal.hiddenProfileIds,
         );
+        setLocalTerminalProfiles(merged);
+
+        if (desktopPlatform === "windows") {
+          if (merged.some((profile) => profile.kind === "wsl")) {
+            setWslProviderStatus("available");
+          } else if (hasTauriRuntime()) {
+            try {
+              const capability = await localTerminalWslCapability();
+              if (!disposed) {
+                setWslProviderStatus(capability.status);
+              }
+            } catch {
+              if (!disposed) {
+                setWslProviderStatus("probe_failed");
+              }
+            }
+          }
+        }
       } catch (error) {
         if (!disposed) {
           setLocalTerminalProfilesError(formatError(error));
+          setWslProviderStatus(null);
           setLocalTerminalProfiles(
             mergeLocalTerminalProfiles(
               previewLocalTerminalProfiles(desktopPlatform),
@@ -1385,16 +1403,18 @@ export function WorkspaceShell() {
     focusedTerminalPaneId,
     focusedTerminalSplitBinding,
     focusedTerminalSplitPane,
+    multiExecMode,
+    multiExecTargets,
     nextTerminalSplitId,
     setFocusedTerminalPaneId,
+    setMultiExecMode,
+    setMultiExecTargets,
     setTerminalSplitAutoCreateSameSession,
     setTerminalSplitHost,
     setTerminalSplitLayout,
     setTerminalSplitLayoutRevision,
     setTerminalSplitPickerOpenRequest,
-    setTerminalSplitSyncEnabled,
     setTerminalSplitSyncError,
-    setTerminalSplitSyncParticipantKeys,
     setTerminalSplitTabActive,
     terminalSessionIdForBinding,
     terminalSplitActive,
@@ -1471,33 +1491,32 @@ export function WorkspaceShell() {
     ],
     [commandSnippetGroups],
   );
+  const multiExecRuntimeTargets = useMemo(
+    () =>
+      buildMultiExecTargets({
+        localTabs: localTerminalTabs,
+        sshTabs: terminalTabs,
+      }),
+    [localTerminalTabs, terminalTabs],
+  );
   const commandSenderTargets = useMemo(
     () =>
       buildCommandSenderTargets({
-        activeTabByConnectionId,
-        activeLocalTerminalTabId,
         connectionById,
         deliveryByKey: commandSenderDeliveryByKey,
+        instanceTargets: multiExecRuntimeTargets,
         localTerminalProfiles,
         localTerminalTabs,
-        selectedTabByConnectionId: commandSenderTargetTabByConnectionId,
-        terminalTabs,
       }),
     [
-      activeTabByConnectionId,
-      activeLocalTerminalTabId,
       commandSenderDeliveryByKey,
-      commandSenderTargetTabByConnectionId,
       connectionById,
       localTerminalProfiles,
       localTerminalTabs,
-      terminalTabs,
+      multiExecRuntimeTargets,
     ],
   );
-  const selectedCommandTargetKeySet = useMemo(
-    () => new Set(selectedCommandTargetKeys),
-    [selectedCommandTargetKeys],
-  );
+  const selectedCommandTargetKeySet = multiExecTargets;
   const selectedCommandTargets = commandSenderTargets.filter((target) =>
     selectedCommandTargetKeySet.has(target.key),
   );
@@ -1515,12 +1534,6 @@ export function WorkspaceShell() {
   );
   useEffect(() => {
     const availableKeys = new Set(commandSenderTargets.map((target) => target.key));
-
-    setSelectedCommandTargetKeys((keys) => {
-      const nextKeys = keys.filter((key) => availableKeys.has(key));
-      return nextKeys.length === keys.length ? keys : nextKeys;
-    });
-
     setCommandSenderDeliveryByKey((deliveryByKey) => {
       const entries = Object.entries(deliveryByKey).filter(([key]) => availableKeys.has(key));
       return entries.length === Object.keys(deliveryByKey).length
@@ -1672,13 +1685,17 @@ export function WorkspaceShell() {
     ? terminalSearchByTabId[activeTerminalToolbarTabId] || null
     : null;
   const showTerminalScopedActions = Boolean(activeTerminalToolbarTabId);
+  const showMultiExecBar = multiExecBarOpen || multiExecMode === "live";
   const showTerminalCommandSenderPanel =
     commandSenderOpen && (terminalSplitActive || showTerminalScopedActions);
   useEffect(() => {
     if (isUnifiedFileTabActive && commandSenderOpen) {
       setCommandSenderOpen(false);
+      if (multiExecMode === "send") {
+        setMultiExecMode("off");
+      }
     }
-  }, [commandSenderOpen, isUnifiedFileTabActive]);
+  }, [commandSenderOpen, isUnifiedFileTabActive, multiExecMode, setMultiExecMode]);
   const activeWorkbenchSurface =
     isUnifiedFileTabActive
       ? "panel"
@@ -1737,6 +1754,11 @@ export function WorkspaceShell() {
     },
     workspaceItems,
   );
+  const workspaceSnapshot = toSnapshot(
+    { activeItemId: activeWorkspaceItemId, files: { directories: workspaceRemoteFileDirectories(terminalTabs.map((tab) => tab.id)), followActivePane: settings.basic.filePanelFollowsActiveConnection }, order: workspaceItemOrder, sidebar: { collapsed: leftPaneCollapsed, view: workspaceSidebarView }, splitLayout: terminalSplitLayout },
+    { localTerminalTabs, rdpSessions, terminalTabs, vncSessions, targetRefs: { ...workspaceRestoreTargetRefsRef.current, connections: { ...workspaceRestoreTargetRefsRef.current.connections, ...Object.fromEntries(temporaryConnections.map((connection) => [connection.id, { kind: "temporary" as const, targetId: connection.id }])) } } },
+  );
+  useWorkspaceSnapshotLifecycle({ enabled: storageReady && !loading && !localTerminalProfilesLoading, onRestore: restoreWorkspaceShell, restoreOnLaunch: settings.basic.restoreWorkspaceOnLaunch, snapshot: workspaceSnapshot, runtime: hasTauriRuntime() ? workspaceSnapshotRuntime : null });
   const actionExecutor = useWorkspaceActionRuntime({
     workspaceVisible: activeView !== "settings", activeItemId: activeWorkspaceItemId,
     activePaneId: activeWorkspaceItemId === SPLIT_ITEM_ID ? focusedTerminalPaneId : null,
@@ -1753,6 +1775,7 @@ export function WorkspaceShell() {
     toggleSidebar: () => setLeftPaneCollapsed((collapsed) => !collapsed),
     toggleTools: () => setRightPaneCollapsed((collapsed) => !collapsed),
     toggleCommandSender: openCommandSender,
+    toggleMultiExec: toggleMultiExecBar,
     openTunnels: () => {
       setRightPaneCollapsed(false);
       setRightTool("tunnels");
@@ -1786,8 +1809,13 @@ export function WorkspaceShell() {
   useWorkspaceActionShortcuts({ bindings: settings.shortcuts.bindings, executor: actionExecutor });
   const closeShortcutBinding = resolveShortcutBindingById(settings.shortcuts.bindings, "terminal.closeTab");
   const newSessionEntry = {
-    localProfiles: localTerminalProfiles, localProfilesLoading: localTerminalProfilesLoading,
-    onCreateConnection: () => createConnection(),
+    desktopPlatform,
+    localProfiles: localTerminalProfiles,
+    localProfilesError: localTerminalProfilesError,
+    localProfilesLoading: localTerminalProfilesLoading,
+    remoteDesktopEntryCapabilities,
+    wslProviderStatus,
+    onCreateConnection: (protocol?: ConnectionProtocol) => createConnection(undefined, protocol),
     onOpenLocalProfile: (profile: LocalTerminalProfile) => void openLocalTerminalByProfile(profile),
     onQuickOpen: () => setConnectionSearchOpen(true),
   };
@@ -1973,10 +2001,21 @@ export function WorkspaceShell() {
       }),
       ...localTerminalTabs.map((tab) => {
         const source =
-          tab.source === "telnet" ? "Telnet" : tab.source === "serial" ? "串口" : "本地";
+          tab.profileKind === "wsl"
+            ? "WSL"
+            : tab.source === "telnet"
+              ? "Telnet"
+              : tab.source === "serial"
+                ? "串口"
+                : "本地";
         return {
           binding: { kind: "local" as const, tabId: tab.id },
-          group: tab.source === "local" || !tab.source ? "本地终端" : "Telnet / 串口",
+          group:
+            tab.profileKind === "wsl"
+              ? "WSL"
+              : tab.source === "local" || !tab.source
+                ? "本地终端"
+                : "Telnet / 串口",
           icon: <LocalTerminalIcon className="ui-icon" kind={tab.profileKind} title={tab.title} />,
           label: `${source} · ${tab.title}`,
           searchText: `${source} ${tab.title}`,
@@ -2041,33 +2080,13 @@ export function WorkspaceShell() {
       terminalTabs,
     ],
   );
-  const terminalSplitSyncPaneOptions = useMemo<TerminalSplitSyncPaneOption[]>(() => {
-    const optionByKey = new Map(
-      terminalSplitSessionOptions
-        .filter((option) => option.binding)
-        .map((option) => [option.value, option]),
-    );
-    return terminalSplitPanes.flatMap((pane, index) => {
-      if (!pane.binding) {
-        return [];
-      }
-      const key = terminalPaneBindingKey(pane.binding);
-      const option = optionByKey.get(key);
-      const focusedKey = focusedTerminalSplitBinding
-        ? terminalPaneBindingKey(focusedTerminalSplitBinding)
-        : null;
-      return [
-        {
-          disabled: !terminalSessionIdForBinding(pane.binding),
-          key,
-          label: `${option?.label || `终端 ${(index + 1).toString()}`}${
-            terminalSplitSyncEnabled && key === focusedKey ? " · 主输入" : ""
-          }`,
-          locked: terminalSplitSyncEnabled && key === focusedKey,
-        },
-      ];
-    });
-  }, [
+  const terminalSplitSyncPaneOptions = useMemo(() => buildTerminalSplitSyncPaneOptions({
+    focusedBinding: focusedTerminalSplitBinding,
+    panes: terminalSplitPanes,
+    sessionOptions: terminalSplitSessionOptions,
+    sessionIdForBinding: terminalSessionIdForBinding,
+    syncEnabled: terminalSplitSyncEnabled,
+  }), [
     focusedTerminalSplitBinding,
     localTerminalTabs,
     terminalSplitPanes,
@@ -4083,9 +4102,13 @@ export function WorkspaceShell() {
     setTemporaryConnections((items) => [...items, connection]); startConnectionStep(connection, "terminal");
   }
 
-  async function createConnection(groupName?: string) {
+  async function createConnection(
+    groupName?: string,
+    initialProtocol?: ConnectionProtocol,
+  ) {
     setLeftPaneCollapsed(false);
     setPendingConnectionGroupId(groupName || null);
+    setPendingConnectionProtocol(initialProtocol || null);
     setEditingConnection(null);
     setDuplicatingConnection(false);
     await ensureConnectionDialogLoaded();
@@ -4094,6 +4117,7 @@ export function WorkspaceShell() {
 
   async function editConnection(connection: ConnectionProfile) {
     setPendingConnectionGroupId(null);
+    setPendingConnectionProtocol(null);
     setEditingConnection(connection);
     setDuplicatingConnection(false);
     await ensureConnectionDialogLoaded();
@@ -4102,6 +4126,7 @@ export function WorkspaceShell() {
 
   async function duplicateConnection(connection: ConnectionProfile) {
     setPendingConnectionGroupId(null);
+    setPendingConnectionProtocol(null);
     setEditingConnection(connection);
     setDuplicatingConnection(true);
     await ensureConnectionDialogLoaded();
@@ -4116,6 +4141,9 @@ export function WorkspaceShell() {
   }
 
   async function deleteConnection(connection: ConnectionProfile) {
+    if (hasTauriRuntime() && isSshConnection(connection)) {
+      await tunnelStopConnection(connection.id);
+    }
     await remove(connection.id);
     const remainingRemoteFileTabs = clearRemoteFileSessionStateForConnections(new Set([connection.id]));
     closeRdpSessions(
@@ -4345,18 +4373,6 @@ export function WorkspaceShell() {
     return terminalTabsRef.current.some((tab) => tab.id === tabId);
   }
 
-  function syncCommandSenderTargetTab(connectionId: string, tabId: string) {
-    setCommandSenderTargetTabByConnectionId((tabs) =>
-      tabs[connectionId] === tabId ? tabs : { ...tabs, [connectionId]: tabId },
-    );
-    setSelectedCommandTargetKeys((keys) =>
-      keys.map((key) => {
-        const [keyConnectionId] = key.split(":", 2);
-        return keyConnectionId === connectionId ? commandSenderTargetKey(connectionId, tabId) : key;
-      }),
-    );
-  }
-
   function setConnectionTerminalFileLayout(connectionId: string, mode: RemoteFileOpenMode) {
     setTerminalFileLayoutByConnectionId((layouts) =>
       layouts[connectionId] === mode ? layouts : { ...layouts, [connectionId]: mode },
@@ -4435,6 +4451,54 @@ export function WorkspaceShell() {
     return tab ? { kind: "local", tabId: tab.id } : null;
   }
 
+  function restoreWorkspaceShell(snapshot: WorkspaceSnapshotV1) {
+    workspaceRestoreTargetRefsRef.current = snapshotTargetRefs(snapshot);
+    const restorePlan = buildWorkspaceRestorePlan(snapshot, { autoReconnect: settings.basic.reopenLastTerminal, profileIds: new Set([...connections.map((item) => item.id), ...localTerminalProfiles.map((item) => item.id)]) });
+    const hydration = applyWorkspaceRestorePlanToHydration(buildWorkspaceShellHydration(snapshot, { connectionName: (id) => connectionById.get(id)?.name || null, localProfile: (id) => { const profile = localTerminalProfiles.find((item) => item.id === id); return profile ? { kind: profile.kind, name: profile.name } : null; } }), restorePlan);
+    const restoredTerminalTabs = hydration.terminalTabs as TerminalTab[];
+    terminalTabsRef.current = restoredTerminalTabs; setTerminalTabs(restoredTerminalTabs); localTerminalTabsRef.current = hydration.localTerminalTabs; setLocalTerminalTabs(hydration.localTerminalTabs);
+    rdpSessionsRef.current = hydration.rdpSessions; setRdpSessions(hydration.rdpSessions); vncSessionsRef.current = hydration.vncSessions; setVncSessions(hydration.vncSessions);
+    snapshot.order.forEach((itemId) => dispatchTabs({ type: "tabs/itemOpened", itemId })); setTerminalSplitLayout(hydration.splitLayout); setTerminalSplitHost(hydration.splitHost); setFocusedTerminalPaneId(hydration.focusedPaneId);
+    setTerminalSplitTabActive(snapshot.activeItemId === SPLIT_ITEM_ID && Boolean(hydration.splitLayout)); setMultiExecMode("off"); setMultiExecTargets(new Set()); setTerminalSplitSyncError(null);
+    setLeftPaneCollapsed(snapshot.sidebar.collapsed); setWorkspaceSidebarView(snapshot.sidebar.view); seedWorkspaceRemoteFileDirectories(snapshot.files.directories);
+    if (settings.basic.filePanelFollowsActiveConnection !== snapshot.files.followActivePane) updateBasic({ filePanelFollowsActiveConnection: snapshot.files.followActivePane });
+    switch (hydration.active.kind) {
+      case "ssh": dispatchTabs({ type: "tabs/activateTerminal", connectionId: hydration.active.connectionId, tabId: hydration.active.tabId, rememberUnified: false }); break;
+      case "local": dispatchTabs({ type: "tabs/activateLocal", tabId: hydration.active.tabId }); break;
+      case "rdp": dispatchTabs({ type: "tabs/activateRdp", connectionId: hydration.active.connectionId, sessionId: hydration.active.sessionId }); break;
+      case "vnc": dispatchTabs({ type: "tabs/activateVnc", connectionId: hydration.active.connectionId, sessionId: hydration.active.sessionId }); break;
+      case "split": { const host = hydration.active.host; const tab = host.kind === "ssh" ? restoredTerminalTabs.find((item) => item.id === host.tabId) : null; dispatchTabs({ type: "tabs/activateSplitHost", host: tab ? { kind: "ssh", connectionId: tab.connectionId } : { kind: "local" } }); dispatchTabs({ type: "tabs/focusPaneBinding", binding: host }); break; }
+      default: dispatchTabs({ type: "tabs/goHome" });
+    }
+    window.requestAnimationFrame(() => restorePlan.items.filter((item) => item.autoReconnect).forEach((item) => reconnectRestoredWorkspaceItem(item.instance.id)));
+  }
+
+  function reconnectRestoredWorkspaceItem(instanceId: string) {
+    if (instanceId.startsWith("ssh:")) retryRestoredSshTab(instanceId.slice(4));
+    else if (instanceId.startsWith("local:")) retryRestoredLocalTab(instanceId.slice(6));
+  }
+
+  function retryRestoredSshTab(tabId: string) {
+    const tab = terminalTabsRef.current.find((item) => item.id === tabId); const connection = tab ? connectionById.get(tab.connectionId) : null;
+    if (tab && isSshConnection(connection)) { startConnectionStep(connection, "terminal", false, tab.id); return; }
+    if (tab) { const next = terminalTabsRef.current.map((item) => item.id === tabId ? { ...item, error: "保存的 SSH 连接已不存在。", status: "连接失败" } : item); terminalTabsRef.current = next; setTerminalTabs(next); }
+  }
+
+  function retryRestoredLocalTab(tabId: string) {
+    const tab = localTerminalTabsRef.current.find((item) => item.id === tabId); if (!tab) return;
+    const requestId = `restore-${tab.id}-${Date.now().toString()}`;
+    if (tab.source === "telnet" || tab.source === "serial") {
+      const connection = connectionById.get(tab.profileId);
+      if ((tab.source === "telnet" && isTelnetConnection(connection)) || (tab.source === "serial" && isSerialConnection(connection))) {
+        const next = { ...tab, error: undefined, requestId, sessionId: undefined, status: "正在连接", warmupOutput: [] }; const tabs = localTerminalTabsRef.current.map((item) => item.id === tab.id ? next : item); localTerminalTabsRef.current = tabs; setLocalTerminalTabs(tabs); void runCharacterConnectionSession(next, connection); return;
+      }
+    } else {
+      const profile = localTerminalProfilesRef.current.find((item) => item.id === tab.profileId) || null;
+      if (profile) { const next = { ...tab, error: undefined, profileKind: profile.kind, requestId, sessionId: undefined, source: "local" as const, status: "正在连接", title: localTerminalTitle(profile, displayOrdinal(tab.ordinal)), warmupOutput: [] }; const tabs = localTerminalTabsRef.current.map((item) => item.id === tab.id ? next : item); localTerminalTabsRef.current = tabs; setLocalTerminalTabs(tabs); void openRuntimeLocalTerminalSession(next, "local-preview", () => localTerminalOpen({ cols: 80, cwd: profile.cwd || undefined, profile: toLocalTerminalProfileInput(profile), request_id: requestId, rows: 24 })).catch(() => undefined); return; }
+    }
+    const next = localTerminalTabsRef.current.map((item) => item.id === tab.id ? { ...item, error: "保存的本地终端或连接配置已不存在。", status: "连接失败" } : item); localTerminalTabsRef.current = next; setLocalTerminalTabs(next);
+  }
+
   function openHome() {
     setSettingsSectionRequest(undefined);
     dispatchTabs({ type: "tabs/goHome" });
@@ -4493,14 +4557,12 @@ export function WorkspaceShell() {
       const tab = terminalTabs.find((item) => item.id === pane.binding?.tabId);
       if (tab) {
         dispatchTabs({ type: "tabs/focusPaneBinding", binding: { kind: "ssh", tabId: tab.id } });
-        syncCommandSenderTargetTab(tab.connectionId, tab.id);
       }
       return;
     }
     const tab = localTerminalTabs.find((item) => item.id === pane.binding?.tabId);
     if (tab) {
       dispatchTabs({ type: "tabs/focusPaneBinding", binding: { kind: "local", tabId: tab.id } });
-      syncCommandSenderTargetTab(localCommandSenderTargetId, tab.id);
     }
   }
 
@@ -4712,72 +4774,66 @@ export function WorkspaceShell() {
   function setTerminalSplitSyncState(enabled: boolean) {
     setTerminalSplitSyncError(null);
     if (!enabled) {
-      setTerminalSplitSyncEnabled(false);
+      setMultiExecMode("off");
       return;
     }
-    const connectedKeys = new Set(
-      terminalSplitPanes.flatMap((pane) =>
-        pane.binding && terminalSessionIdForBinding(pane.binding)
-          ? [terminalPaneBindingKey(pane.binding)]
-          : [],
-      ),
-    );
-    if (connectedKeys.size < 2) {
-      setTerminalSplitSyncEnabled(false);
-      setTerminalSplitSyncError("至少需要两个已连接终端才能同步输入。");
+    if (multiExecTargets.size === 0) {
+      setMultiExecMode("off");
+      setTerminalSplitSyncError("请先明确选择至少一个同步目标。");
       return;
     }
-    setTerminalSplitSyncParticipantKeys(connectedKeys);
-    setTerminalSplitSyncEnabled(true);
+    setMultiExecMode("live");
+  }
+
+  function toggleMultiExecBar() {
+    setMultiExecBarOpen(!showMultiExecBar);
+    if (showMultiExecBar && multiExecMode === "live") setTerminalSplitSyncState(false);
   }
 
   function setTerminalSplitSyncParticipant(key: string, participant: boolean) {
-    setTerminalSplitSyncParticipantKeys((current) => {
+    setMultiExecTargets((current) => {
       const next = new Set(current);
-      if (participant) {
-        next.add(key);
-      } else {
-        next.delete(key);
-      }
-      if (terminalSplitSyncEnabled && next.size < 2) {
-        setTerminalSplitSyncEnabled(false);
-      }
+      if (participant) next.add(key);
+      else next.delete(key);
       return next;
     });
     setTerminalSplitSyncError(null);
   }
 
-  function handleTerminalSplitUserInput(tabId: string, data: string) {
-    if (!terminalSplitActive || !terminalSplitSyncEnabled || !focusedTerminalSplitBinding) {
+  function handleMultiExecUserInput(tabId: string, data: string) {
+    if (multiExecMode !== "live" || activeTerminalToolbarTabId !== tabId) {
       return;
     }
-    const sourceKey = terminalPaneBindingKey(focusedTerminalSplitBinding);
-    if (focusedTerminalSplitBinding.tabId !== tabId || !terminalSplitSyncParticipantKeys.has(sourceKey)) {
+    const source = multiExecRuntimeTargets.find((target) => target.tabId === tabId) || null;
+    if (!source) {
       return;
     }
-    const targetSessionIds = terminalSplitPanes.flatMap((pane) => {
-      if (!pane.binding) {
-        return [];
+
+    void writeMultiExecLiveInput({
+      data,
+      selectedKeys: multiExecTargets,
+      sourceKey: source.key,
+      targets: multiExecRuntimeTargets,
+      write: terminalWrite,
+    }).then((deliveries) => {
+      const failedKeys = new Set(
+        deliveries
+          .filter((delivery) => delivery.status === "failed")
+          .map((delivery) => delivery.key),
+      );
+      if (failedKeys.size === 0) {
+        return;
       }
-      const key = terminalPaneBindingKey(pane.binding);
-      if (key === sourceKey || !terminalSplitSyncParticipantKeys.has(key)) {
-        return [];
-      }
-      const sessionId = terminalSessionIdForBinding(pane.binding);
-      return sessionId ? [sessionId] : [];
+      setMultiExecTargets((current) => {
+        const next = new Set(
+          Array.from(current).filter((key) => !failedKeys.has(key)),
+        );
+        return next;
+      });
+      setTerminalSplitSyncError(
+        `同步输入有 ${failedKeys.size.toString()} 个目标写入失败，已从本次目标移除。`,
+      );
     });
-    if (targetSessionIds.length === 0) {
-      setTerminalSplitSyncState(false);
-      return;
-    }
-    void Promise.allSettled(targetSessionIds.map((sessionId) => terminalWrite(sessionId, data))).then(
-      (results) => {
-        if (results.some((result) => result.status === "rejected")) {
-          setTerminalSplitSyncEnabled(false);
-          setTerminalSplitSyncError("同步输入失败，已自动关闭。");
-        }
-      },
-    );
   }
 
   function requestCloseTerminalSplitGroup() {
@@ -4796,8 +4852,7 @@ export function WorkspaceShell() {
     setFocusedTerminalPaneId(null);
     setTerminalSplitPickerOpenRequest(null);
     terminalSplitPickerPendingPaneRef.current = null;
-    setTerminalSplitSyncEnabled(false);
-    setTerminalSplitSyncParticipantKeys(new Set());
+    setMultiExecMode("off");
     setTerminalSplitSyncError(null);
   }
 
@@ -4823,7 +4878,6 @@ export function WorkspaceShell() {
 
   function activateStandaloneTerminalTab(tab: TerminalTab) {
     setTerminalSplitTabActive(false);
-    setTerminalSplitSyncEnabled(false);
     setSettingsSectionRequest(undefined);
     dispatchTabs({
       type: "tabs/activateTerminal",
@@ -4831,7 +4885,6 @@ export function WorkspaceShell() {
       tabId: tab.id,
       rememberUnified: isConnectionTerminalFileUnified(tab.connectionId),
     });
-    syncCommandSenderTargetTab(tab.connectionId, tab.id);
   }
 
   function activateTerminalTab(tab: TerminalTab) {
@@ -5503,19 +5556,9 @@ export function WorkspaceShell() {
   }
 
   function prepareCommandSenderTargets() {
+    setMultiExecMode("send");
     void loadCommandLibrary();
-    const availableKeys = commandSenderTargets.map((target) => target.key);
-    const availableKeySet = new Set(availableKeys);
-    const retainedKeys = selectedCommandTargetKeys.filter((key) => availableKeySet.has(key));
-    const nextKeys = retainedKeys.length > 0 ? retainedKeys : availableKeys;
-    const nextKeySet = new Set(nextKeys);
-
-    setSelectedCommandTargetKeys((keys) => {
-      const retainedKeys = keys.filter((key) => availableKeySet.has(key));
-      return retainedKeys.length > 0 ? retainedKeys : availableKeys;
-    });
-
-    return commandSenderTargets.filter((target) => nextKeySet.has(target.key));
+    return selectedCommandTargets;
   }
 
   function openCommandSenderAndPrepareTargets() {
@@ -5573,6 +5616,7 @@ export function WorkspaceShell() {
     setSelectedCommandHistoryId(null);
     await sendCommandTextToTargets(command, true, null, [target], {
       clearInput: false,
+      setSendMode: false,
     });
   }
 
@@ -5583,25 +5627,17 @@ export function WorkspaceShell() {
       }
       const profile = localTerminalProfiles.find((item) => item.id === activeLocalTerminalTab.profileId);
       return {
-        connectionId: localCommandSenderTargetId,
         deliveryStatus: "idle",
         description: profile?.name || activeLocalTerminalTab.title,
         historyScope: {
           scope_kind: "local_profile",
           scope_id: activeLocalTerminalTab.profileId,
         },
-        key: commandSenderTargetKey(localCommandSenderTargetId, activeLocalTerminalTab.id),
+        key: terminalPaneBindingKey({ kind: "local", tabId: activeLocalTerminalTab.id }),
         kind: "local",
         label: "当前激活终端",
         sessionId: activeLocalTerminalTab.sessionId,
         tabId: activeLocalTerminalTab.id,
-        tabs: [
-          {
-            label: activeLocalTerminalTab.title,
-            sessionId: activeLocalTerminalTab.sessionId,
-            tabId: activeLocalTerminalTab.id,
-          },
-        ],
         tabTitle: activeLocalTerminalTab.title,
       };
     }
@@ -5615,7 +5651,6 @@ export function WorkspaceShell() {
         return null;
       }
       return {
-        connectionId: activeConnectedTerminalTab.connectionId,
         deliveryStatus: "idle",
         description: connection
           ? formatConnectionAddress(connection)
@@ -5624,18 +5659,11 @@ export function WorkspaceShell() {
           scope_kind: "ssh_connection",
           scope_id: activeConnectedTerminalTab.connectionId,
         },
-        key: commandSenderTargetKey(activeConnectedTerminalTab.connectionId, activeConnectedTerminalTab.id),
+        key: terminalPaneBindingKey({ kind: "ssh", tabId: activeConnectedTerminalTab.id }),
         kind: "ssh",
         label: connection?.name || "当前激活终端",
         sessionId: activeConnectedTerminalTab.sessionId,
         tabId: activeConnectedTerminalTab.id,
-        tabs: [
-          {
-            label: activeConnectedTerminalTab.title,
-            sessionId: activeConnectedTerminalTab.sessionId,
-            tabId: activeConnectedTerminalTab.id,
-          },
-        ],
         tabTitle: activeConnectedTerminalTab.title,
       };
     }
@@ -6004,47 +6032,39 @@ export function WorkspaceShell() {
     setCommandLibraryError(formatError(error));
   }
 
+  function closeCommandSender() {
+    setCommandSenderOpen(false);
+    if (multiExecMode === "send") {
+      setMultiExecMode("off");
+    }
+  }
+
   function openCommandSender() {
-    setCommandSenderOpen((open) => {
-      const nextOpen = !open;
-      if (nextOpen) {
-        prepareCommandSenderTargets();
-      }
-      return nextOpen;
-    });
+    if (commandSenderOpen) {
+      closeCommandSender();
+      return;
+    }
+    setCommandSenderOpen(true);
+    prepareCommandSenderTargets();
   }
 
   function toggleCommandSenderAllTargets() {
-    setSelectedCommandTargetKeys(
-      commandSenderAllSelected ? [] : commandSenderTargets.map((target) => target.key),
+    setMultiExecTargets(
+      commandSenderAllSelected
+        ? new Set()
+        : new Set(commandSenderTargets.map((target) => target.key)),
     );
   }
 
   function toggleCommandSenderTarget(target: CommandSenderTarget) {
-    setSelectedCommandTargetKeys((keys) =>
-      keys.includes(target.key)
-        ? keys.filter((key) => key !== target.key)
-        : [...keys, target.key],
-    );
+    setMultiExecTargets((keys) => {
+      const next = new Set(keys);
+      if (next.has(target.key)) next.delete(target.key);
+      else next.add(target.key);
+      return next;
+    });
   }
 
-  function selectCommandSenderTargetTab(target: CommandSenderTarget, tabId: string) {
-    const nextTab = target.tabs.find((tab) => tab.tabId === tabId);
-    if (!nextTab) {
-      return;
-    }
-
-    const nextKey = commandSenderTargetKey(target.connectionId, tabId);
-    setCommandSenderTargetTabByConnectionId((tabs) => ({
-      ...tabs,
-      [target.connectionId]: tabId,
-    }));
-    setSelectedCommandTargetKeys((keys) =>
-      keys.includes(target.key)
-        ? keys.map((key) => (key === target.key ? nextKey : key))
-        : keys,
-    );
-  }
 
   function activateCommandSenderTarget(target: CommandSenderTarget) {
     if (target.kind === "local") {
@@ -6061,12 +6081,21 @@ export function WorkspaceShell() {
     }
   }
 
+  function resolveCurrentMultiExecTarget(key: string) {
+    return (
+      buildMultiExecTargets({
+        localTabs: localTerminalTabsRef.current,
+        sshTabs: terminalTabsRef.current,
+      }).find((target) => target.key === key) || null
+    );
+  }
+
   async function sendCommandTextToTargets(
     command: string,
     appendEnter: boolean,
     snippetId: string | null,
     targetsOverride?: CommandSenderTarget[],
-    options: { clearInput?: boolean } = {},
+    options: { clearInput?: boolean; setSendMode?: boolean } = {},
   ) {
     const historyCommand = command.trim();
     const targets = targetsOverride ?? selectedCommandTargets;
@@ -6074,7 +6103,11 @@ export function WorkspaceShell() {
       return;
     }
 
+    if (options.setSendMode ?? true) {
+      setMultiExecMode("send");
+    }
     const payload = appendEnter ? `${command}\r` : command;
+    const targetByKey = new Map(targets.map((target) => [target.key, target]));
 
     setCommandSenderDeliveryByKey((deliveryByKey) => {
       const nextDeliveryByKey = { ...deliveryByKey };
@@ -6084,30 +6117,54 @@ export function WorkspaceShell() {
       return nextDeliveryByKey;
     });
 
-    const successfulTargets: CommandSenderTarget[] = [];
-    for (const target of targets) {
-      try {
+    const deliveries = await writeMultiExecCommand({
+      data: payload,
+      resolveTarget: resolveCurrentMultiExecTarget,
+      targetKeys: targets.map((target) => target.key),
+      write: async (sessionId, data) => {
         if (!hasTauriRuntime()) {
           throw new Error("当前环境无法写入终端输入流。");
         }
-        await terminalWrite(target.sessionId, payload);
-        setCommandSenderDeliveryByKey((deliveryByKey) => ({
-          ...deliveryByKey,
-          [target.key]: { status: "sent" },
-        }));
-        successfulTargets.push(target);
-      } catch (error) {
-        setCommandSenderDeliveryByKey((deliveryByKey) => ({
-          ...deliveryByKey,
-          [target.key]: { message: formatError(error), status: "failed" },
-        }));
-      }
-    }
+        await terminalWrite(sessionId, data);
+      },
+    });
+
+    setCommandSenderDeliveryByKey((deliveryByKey) => {
+      const nextDeliveryByKey = { ...deliveryByKey };
+      deliveries.forEach((delivery) => {
+        nextDeliveryByKey[delivery.key] =
+          delivery.status === "failed"
+            ? { message: formatError(delivery.error), status: "failed" }
+            : delivery.status === "disconnected"
+              ? { message: "目标在发送前已断线或关闭。", status: "disconnected" }
+              : { status: "written" };
+      });
+      return nextDeliveryByKey;
+    });
+
+    const successfulTargets = deliveries.flatMap((delivery) => {
+      if (delivery.status !== "written") return [];
+      const target = targetByKey.get(delivery.key);
+      return target ? [target] : [];
+    });
     const successCount = successfulTargets.length;
-    const failedCount = targets.length - successCount;
+    const failedCount = deliveries.filter((delivery) => delivery.status === "failed").length;
+    const disconnectedKeys = new Set(
+      deliveries
+        .filter((delivery) => delivery.status === "disconnected")
+        .map((delivery) => delivery.key),
+    );
+    const disconnectedCount = disconnectedKeys.size;
+
+    if (disconnectedCount > 0) {
+      setMultiExecTargets(
+        (current) => new Set(Array.from(current).filter((key) => !disconnectedKeys.has(key))),
+      );
+    }
+
     setCommandSenderLastSentLabel(
-      failedCount > 0
-        ? `上次发送：写入 ${successCount.toString()}，失败 ${failedCount.toString()}`
+      failedCount > 0 || disconnectedCount > 0
+        ? `上次发送：写入 ${successCount.toString()}，失败 ${failedCount.toString()}，断线 ${disconnectedCount.toString()}`
         : `上次发送：已写入 ${successCount.toString()} 个目标`,
     );
     if (options.clearInput ?? true) {
@@ -6174,10 +6231,8 @@ export function WorkspaceShell() {
 
   function activateStandaloneLocalTerminalTab(tab: LocalTerminalTab) {
     setTerminalSplitTabActive(false);
-    setTerminalSplitSyncEnabled(false);
     setSettingsSectionRequest(undefined);
     dispatchTabs({ type: "tabs/activateLocal", tabId: tab.id });
-    syncCommandSenderTargetTab(localCommandSenderTargetId, tab.id);
   }
 
   function resolveDefaultLocalTerminalProfile() {
@@ -7277,6 +7332,9 @@ export function WorkspaceShell() {
     const remainingRemoteFileTabs = clearRemoteFileSessionStateForConnections(closingConnectionIds);
     connectionIds.forEach((connectionId) => {
       invalidateDockerExecConnection(connectionId);
+      if (hasTauriRuntime()) {
+        void tunnelStopConnection(connectionId).catch(() => undefined);
+      }
     });
     closeRdpSessions(
       rdpSessionsRef.current
@@ -7558,6 +7616,7 @@ export function WorkspaceShell() {
     connection: ConnectionProfile,
     mode: ConnectionStepMode,
     activate = true,
+    reuseTabId?: string,
   ) {
     if (isRdpConnection(connection)) {
       openRdpConnectionSession(connection);
@@ -7583,6 +7642,7 @@ export function WorkspaceShell() {
       password: "",
       privateKeyPassphrase: "",
       privateKeyPath: "",
+      promptTarget: connection.credential_mode === "prompt" ? credentialPromptTargetFromConnection(connection) : null, runtimeCredentials: {},
       temporary: connection.created_at === "temporary",
       temporaryContextRef: connection.created_at === "temporary" ? connection.id : null,
       temporaryCredentialsReady: false,
@@ -7590,9 +7650,11 @@ export function WorkspaceShell() {
       sessionId: null,
       status: connection.credential_mode === "prompt" ? "prompt" : "idle",
     };
-    const tab = buildConnectingTab(terminalTabsRef.current, connection, step);
+    const existingTab = reuseTabId ? terminalTabsRef.current.find((item) => item.id === reuseTabId) || null : null;
+    const builtTab = buildConnectingTab(terminalTabsRef.current, connection, step);
+    const tab = existingTab ? { ...builtTab, id: existingTab.id, ordinal: existingTab.ordinal } : builtTab;
     setTerminalTabs((tabs) => {
-      const nextTabs = [...tabs, tab];
+      const nextTabs = existingTab ? tabs.map((item) => item.id === existingTab.id ? tab : item) : [...tabs, tab];
       terminalTabsRef.current = nextTabs;
       return nextTabs;
     });
@@ -7640,7 +7702,7 @@ export function WorkspaceShell() {
       return;
     }
 
-    const prepareRequestId = `prepare-${step.id.toString()}`;
+    const prepareRequestId = `prepare-${crypto.randomUUID()}`;
     const warmupOutput: number[] = [];
     let stopWarmupCapture: (() => void) | null = null;
     let handoffComplete = false;
@@ -7668,12 +7730,13 @@ export function WorkspaceShell() {
         });
       }
 
+      const runtimeCredential = buildRuntimeCredentialRequest(step.connection.id, step.runtimeCredentials);
       if (step.mode === "test") {
-        await connectionTest(runtimeCredentialRequest(step));
+        await connectionTest(runtimeCredential);
         if (!connectingTabExists(tabId)) {
           return;
         }
-        void probeSystem(runtimeCredentialRequest(step)).catch(() => null);
+        void probeSystem(runtimeCredential).catch(() => null);
         updateConnectingTabStep(tabId, {
           ...runningStep,
           logs: [...runningStep.logs, "认证通过", "连接测试通过"],
@@ -7686,15 +7749,16 @@ export function WorkspaceShell() {
         step.temporary && step.temporaryContextRef
           ? await connectTemporaryQuickTerminal(step.temporaryContextRef, prepareRequestId)
           : await terminalConnect({
-              auth_kind: step.connection.credential_mode === "prompt" ? step.authKind : undefined,
+              auth_kind: runtimeCredential.auth_kind,
               cols: 80,
               connection_id: step.connection.id,
               host: step.connection.host,
-              password: step.password || undefined,
+              password: runtimeCredential.password,
               port: step.connection.port,
-              private_key_path: step.privateKeyPath || undefined,
-              private_key_passphrase: step.privateKeyPassphrase || undefined,
+              private_key_path: runtimeCredential.private_key_path,
+              private_key_passphrase: runtimeCredential.private_key_passphrase,
               request_id: prepareRequestId,
+              runtime_credentials: runtimeCredential.runtime_credentials,
               rows: 24,
               username: step.connection.username,
             });
@@ -7703,7 +7767,7 @@ export function WorkspaceShell() {
         await terminalClose(sessionId).catch(() => {});
         return;
       }
-      if (!step.temporary) void refreshConnectedProfile(step.connection.id, runtimeCredentialRequest(step));
+      if (!step.temporary) void refreshConnectedProfile(step.connection.id, runtimeCredential);
       handoffComplete = true;
       replaceConnectingTabWithTerminal(tabId, sessionId, [...warmupOutput], prepareRequestId);
       window.setTimeout(() => {
@@ -7729,14 +7793,28 @@ export function WorkspaceShell() {
         });
         return;
       }
-
+      const requestedPrompt = parseCredentialPromptTarget(nextError);
+      if (requestedPrompt) {
+        const promptTarget = { ...requestedPrompt, name: connectionById.get(requestedPrompt.connectionId)?.name };
+        updateConnectingTabStep(tabId, { ...runningStep, authKind: promptTarget.authKind, error: errorDetail.message, errorDetail, promptTarget, password: "", privateKeyPassphrase: "", privateKeyPath: "", logs: [...runningStep.logs, `等待 ${promptTarget.name || promptTarget.connectionId} 凭据`], status: "prompt" });
+        return;
+      }
+      const nodeFailure = parseSshNodeFailure(nextError);
+      const retryProfile = nodeFailure?.stage === "auth" ? connectionById.get(nodeFailure.connectionId) : step.connection.credential_mode === "prompt" && connectionStepErrorIndex(errorDetail.code) === 3 ? step.connection : null;
+      if (retryProfile?.credential_mode === "prompt") {
+        const promptTarget = credentialPromptTargetFromConnection(retryProfile);
+        updateConnectingTabStep(tabId, { ...runningStep, authKind: promptTarget.authKind, error: errorDetail.message, errorDetail, promptTarget, password: "", privateKeyPassphrase: "", privateKeyPath: "", logs: [...runningStep.logs, `${promptTarget.name} 认证未通过，等待重新输入`], status: "prompt" });
+        return;
+      }
+      const nodeLabel = nodeFailure ? connectionById.get(nodeFailure.connectionId)?.name || nodeFailure.connectionId : "";
+      const contextualErrorDetail = nodeLabel ? { ...errorDetail, message: `${nodeLabel}：${errorDetail.message}` } : errorDetail;
       updateConnectingTabStep(tabId, {
         ...runningStep,
-        error: errorDetail.message,
-        errorDetail,
+        error: contextualErrorDetail.message,
+        errorDetail: contextualErrorDetail,
         logs: appendUniqueLogs(runningStep.logs, [
-          errorDetail.message,
-          errorDetail.rawMessage,
+          contextualErrorDetail.message,
+          contextualErrorDetail.rawMessage,
         ]),
         status: "error",
       });
@@ -7793,10 +7871,8 @@ export function WorkspaceShell() {
     event: FormEvent<HTMLFormElement>,
   ) {
     event.preventDefault();
-    void runConnectionStep(tabId, {
-      ...step,
-      logs: [...step.logs, "已输入本次凭据"],
-    });
+    const runtimeCredentials = upsertRuntimeCredential(step.runtimeCredentials, step.promptTarget?.connectionId || step.connection.id, step.authKind, step.password, step.privateKeyPath, step.privateKeyPassphrase);
+    void runConnectionStep(tabId, { ...step, runtimeCredentials, logs: [...step.logs, "已输入本次凭据"] });
   }
 
   function handlePaneResizeStart(
@@ -8058,7 +8134,7 @@ export function WorkspaceShell() {
                 className="command-console-toggle command-sender-close"
                 type="button"
                 aria-label="关闭命令操作台"
-                onClick={() => setCommandSenderOpen(false)}
+                onClick={closeCommandSender}
               >
                 <X className="ui-icon" aria-hidden="true" />
                 <span className="command-close-text">关闭</span>
@@ -8108,10 +8184,12 @@ export function WorkspaceShell() {
                         className={`command-target command-sender-target ${
                           selected ? "selected" : ""
                         } ${hasDelivery ? "has-delivery" : ""} ${
-                          target.deliveryStatus === "failed" ? "has-failed-delivery" : ""
+                          target.deliveryStatus === "failed" || target.deliveryStatus === "disconnected"
+                            ? "has-failed-delivery"
+                            : ""
                         }`}
                         data-delivery={target.deliveryStatus}
-                        key={target.connectionId}
+                        key={target.key}
                       >
                         <label className="command-target-select">
                           <input
@@ -8128,19 +8206,11 @@ export function WorkspaceShell() {
                         <span className="command-target-meta">
                           <span className="command-target-terminal-shell">
                             <SquareTerminal className="ui-icon" aria-hidden="true" />
-                            <AppSelect
-                              ariaLabel={`${target.label} 子 tab`}
-                              className="command-target-terminal-select"
-                              menuMinWidth={176}
-                              value={target.tabId}
-                              options={target.tabs.map((tab) => ({
-                                label: tab.label,
-                                value: tab.tabId,
-                              }))}
-                              onChange={(tabId) => selectCommandSenderTargetTab(target, tabId)}
-                            />
+                            <span className="command-target-terminal-instance">{target.tabTitle}</span>
                           </span>
-                          <span className="command-target-state">在线</span>
+                          <span className="command-target-state">
+                            {target.deliveryStatus === "disconnected" ? "断开" : "在线"}
+                          </span>
                           <button
                             className={`command-target-delivery command-sender-status ${target.deliveryStatus}`}
                             type="button"
@@ -8348,7 +8418,7 @@ export function WorkspaceShell() {
           />
         ) : null}
 
-        <section className="main-workbench" aria-label="工作区">
+        <section className={`main-workbench ${showMultiExecBar ? "multi-exec-open" : ""}`} aria-label="工作区">
           <ConnectionHome
             connections={connections}
             error={error}
@@ -8724,7 +8794,7 @@ export function WorkspaceShell() {
                               ? (tabId, command) => void recordTerminalInputHistoryCommand(tabId, command)
                               : undefined
                           }
-                          onUserInput={handleTerminalSplitUserInput}
+                          onUserInput={handleMultiExecUserInput}
                           onWarmupCaptureReady={stopTerminalWarmupCapture}
                           searchCaseSensitive={Boolean(terminalSearchByTabId[tab.id]?.caseSensitive)}
                           searchNavigationRequest={terminalSearchNavigationRequest}
@@ -8741,6 +8811,7 @@ export function WorkspaceShell() {
                         {...terminalSplitStatusProps({ kind: "ssh", tabId: tab.id })}
                         connection={connectionById.get(tab.connectionId) || null}
                         error={tab.error || null}
+                        onRetry={() => retryRestoredSshTab(tab.id)}
                         status={tab.status}
                         title={tab.title}
                       />
@@ -8807,7 +8878,7 @@ export function WorkspaceShell() {
                                       void recordTerminalInputHistoryCommand(tabId, command)
                                   : undefined
                               }
-                              onUserInput={handleTerminalSplitUserInput}
+                              onUserInput={handleMultiExecUserInput}
                               onWarmupCaptureReady={stopTerminalWarmupCapture}
                               searchCaseSensitive={Boolean(terminalSearchByTabId[tab.id]?.caseSensitive)}
                               searchNavigationRequest={terminalSearchNavigationRequest}
@@ -8834,14 +8905,7 @@ export function WorkspaceShell() {
                             title={tab.title}
                             key={tab.id}
                             onOpenSettings={openLocalTerminalSettings}
-                            onRetry={
-                              tab.source === "local" || !tab.source
-                                ? () =>
-                                    void openLocalTerminalByProfile(
-                                      localTerminalProfiles.find((profile) => profile.id === tab.profileId) || null,
-                                    )
-                                : undefined
-                            }
+                            onRetry={() => retryRestoredLocalTab(tab.id)}
                           />
                         ),
                       )}
@@ -9098,6 +9162,19 @@ export function WorkspaceShell() {
 
             </section>
           ) : null}
+          {showMultiExecBar ? (
+            <MultiExecBar error={terminalSplitSyncError} mode={multiExecMode}
+              selectedKeys={multiExecTargets} targets={multiExecRuntimeTargets}
+              onClose={toggleMultiExecBar} onStop={() => setTerminalSplitSyncState(false)}
+              onStartLive={() => setTerminalSplitSyncState(true)} onToggleTarget={setTerminalSplitSyncParticipant}
+              onOpenCommandSender={() => {
+                if (!showTerminalWorkbench || isUnifiedFileTabActive) {
+                  const target = selectedCommandTargets[0] || commandSenderTargets[0];
+                  if (target) activateCommandSenderTarget(target);
+                }
+                openCommandSenderAndPrepareTargets();
+              }} />
+          ) : null}
         </section>
 
         {showWorkspaceToolPane && !rightPaneCollapsed ? (
@@ -9248,6 +9325,7 @@ export function WorkspaceShell() {
             defaultGroup={pendingConnectionGroupId}
             duplicate={duplicatingConnection}
             groups={connectionGroupCatalog.groups}
+            initialProtocol={pendingConnectionProtocol}
             onClose={closeConnectionDialog}
             onDelete={deleteConnection}
             onManageCredentials={openCredentialSettings}
@@ -9266,6 +9344,7 @@ export function WorkspaceShell() {
               defaultGroup={pendingConnectionGroupId}
               duplicate={duplicatingConnection}
               groups={connectionGroupCatalog.groups}
+              initialProtocol={pendingConnectionProtocol}
               onClose={closeConnectionDialog}
               onDelete={deleteConnection}
               onManageCredentials={openCredentialSettings}
@@ -9927,6 +10006,7 @@ export function WorkspaceShell() {
   function closeConnectionDialog() {
     setDialogOpen(false);
     setPendingConnectionGroupId(null);
+    setPendingConnectionProtocol(null);
     setDuplicatingConnection(false);
   }
 }
@@ -10584,15 +10664,13 @@ function LocalTerminalStatusPanel({
         <strong>{failed ? `${subject}打开失败` : status}</strong>
         <span>{description}</span>
         {error ? <small>{error}</small> : null}
-        {failed && source === "local" && onRetry ? (
+        {failed && onRetry ? (
           <div className="local-terminal-status-actions">
             <button className="primary-button" type="button" onClick={onRetry}>
               <RefreshCw className="ui-icon" aria-hidden="true" />
               重试
             </button>
-            <button type="button" onClick={onOpenSettings}>
-              打开设置
-            </button>
+            {source === "local" ? <button type="button" onClick={onOpenSettings}>打开设置</button> : null}
           </div>
         ) : null}
       </div>
@@ -10683,6 +10761,7 @@ function DirectTerminalStatusPanel({
   connection,
   error,
   onPaneFocus,
+  onRetry,
   status,
   style,
   title,
@@ -10693,6 +10772,7 @@ function DirectTerminalStatusPanel({
   connection: ConnectionProfile | null;
   error: string | null;
   onPaneFocus?: () => void;
+  onRetry?: () => void;
   status: string;
   style?: CSSProperties;
   title: string;
@@ -10723,6 +10803,7 @@ function DirectTerminalStatusPanel({
             : "当前连接"}
         </span>
         {error ? <small>{error}</small> : null}
+        {failed && onRetry ? <button className="primary-button" type="button" onClick={onRetry}><RefreshCw className="ui-icon" aria-hidden="true" />重试</button> : null}
       </div>
     </section>
   );
@@ -10897,8 +10978,8 @@ function ConnectionStepPanel({
                   <header>
                     <KeyRound className="ui-icon" aria-hidden="true" />
                     <span>
-                      <strong>输入本次凭据</strong>
-                      <small>这部分不会保存到连接配置。</small>
+                      <strong>{step.promptTarget?.connectionId !== step.connection.id ? "输入跳板机凭据" : "输入本次凭据"}</strong>
+                      <small>{step.promptTarget ? `${step.promptTarget.name || step.promptTarget.connectionId} · ${step.promptTarget.username}@${step.promptTarget.host}:${step.promptTarget.port.toString()}` : "这部分不会保存到连接配置。"}</small>
                     </span>
                   </header>
                   {step.temporary ? (
@@ -12088,17 +12169,6 @@ function connectionErrorSummary(code: string, fallback: string) {
   return fallback;
 }
 
-function runtimeCredentialRequest(step: ConnectionStepState): ConnectionRuntimeCredentialRequest {
-  return {
-    auth_kind: step.connection.credential_mode === "prompt" ? step.authKind : undefined,
-    connection_id: step.connection.id,
-    password: step.authKind === "password" ? step.password || undefined : undefined,
-    private_key_passphrase:
-      step.authKind === "private_key" ? step.privateKeyPassphrase || undefined : undefined,
-    private_key_path: step.authKind === "private_key" ? step.privateKeyPath || undefined : undefined,
-  };
-}
-
 function toWindowsPtyOption(
   info: WindowsPtyInfo | null,
   platform: string,
@@ -13044,132 +13114,71 @@ function uniqueCommandHistoryScopes(scopes: CommandHistoryScope[]) {
 }
 
 function buildCommandSenderTargets({
-  activeTabByConnectionId,
-  activeLocalTerminalTabId,
   connectionById,
   deliveryByKey,
+  instanceTargets,
   localTerminalProfiles,
   localTerminalTabs,
-  selectedTabByConnectionId,
-  terminalTabs,
 }: {
-  activeTabByConnectionId: Record<string, string>;
-  activeLocalTerminalTabId: string | null;
   connectionById: Map<string, ConnectionProfile>;
   deliveryByKey: Record<string, { message?: string; status: CommandSenderDeliveryStatus }>;
+  instanceTargets: readonly MultiExecTarget[];
   localTerminalProfiles: LocalTerminalProfile[];
   localTerminalTabs: LocalTerminalTab[];
-  selectedTabByConnectionId: Record<string, string>;
-  terminalTabs: TerminalTab[];
 }): CommandSenderTarget[] {
-  const tabsByConnection = new Map<string, ConnectedTerminalTab[]>();
-
-  terminalTabs.forEach((tab) => {
-    if (tab.type !== "terminal" || !tab.sessionId) {
-      return;
+  const localById = new Map(localTerminalTabs.map((tab) => [tab.id, tab]));
+  return instanceTargets.map((target): CommandSenderTarget => {
+    const delivery = deliveryByKey[target.key];
+    if (target.kind === "ssh") {
+      const connection = connectionById.get(target.ownerId) || null;
+      return {
+        deliveryMessage: delivery?.message,
+        deliveryStatus: delivery?.status || "idle",
+        description: connection ? formatConnectionAddress(connection) : target.title,
+        historyScope: {
+          scope_kind: "ssh_connection",
+          scope_id: target.ownerId,
+        },
+        key: target.key,
+        kind: "ssh",
+        label: connection?.name || target.title,
+        sessionId: target.sessionId,
+        tabId: target.tabId,
+        tabTitle: target.title,
+      };
     }
 
-    const connectedTab = tab as ConnectedTerminalTab;
-    const tabs = tabsByConnection.get(tab.connectionId) || [];
-    tabs.push(connectedTab);
-    tabsByConnection.set(tab.connectionId, tabs);
-  });
-
-  const targets = Array.from(tabsByConnection.entries()).flatMap(([connectionId, tabs]) => {
-    const selectedTabId =
-      selectedTabByConnectionId[connectionId] || activeTabByConnectionId[connectionId];
-    const selectedTab = tabs.find((tab) => tab.id === selectedTabId) || tabs[0];
-    const connection = connectionById.get(connectionId) || null;
-    if (connection && !isSshConnection(connection)) {
-      return [];
-    }
-    const key = commandSenderTargetKey(connectionId, selectedTab.id);
-    const delivery = deliveryByKey[key];
-    const tabCountText = tabs.length > 1 ? `${tabs.length.toString()} 个子 tab` : "1 个子 tab";
-
-    return [{
-      connectionId,
+    const localTab = localById.get(target.tabId) || null;
+    const profile = localTerminalProfiles.find((item) => item.id === target.ownerId) || null;
+    const kindLabel =
+      target.kind === "telnet" ? "Telnet" : target.kind === "serial" ? "Serial" : "Local";
+    return {
       deliveryMessage: delivery?.message,
       deliveryStatus: delivery?.status || "idle",
-      description: connection
-        ? `${formatConnectionAddress(connection)} · ${tabCountText}`
-        : `当前连接 · ${tabCountText}`,
-      key,
-      kind: "ssh" as const,
-      label: connection?.name || selectedTab.title,
+      description: `${kindLabel} · ${profile?.name || localTab?.title || target.title}`,
       historyScope: {
-        scope_kind: "ssh_connection" as const,
-        scope_id: connectionId,
+        scope_kind: "local_profile",
+        scope_id: target.ownerId,
       },
-      sessionId: selectedTab.sessionId,
-      tabId: selectedTab.id,
-      tabs: tabs.map((tab) => ({
-        label: tab.title,
-        sessionId: tab.sessionId,
-        tabId: tab.id,
-      })),
-      tabTitle: selectedTab.title,
-    }];
+      key: target.key,
+      kind: "local",
+      label: localTab?.title || target.title,
+      sessionId: target.sessionId,
+      tabId: target.tabId,
+      tabTitle: target.title,
+    };
   });
-
-  const connectedLocalTabs = localTerminalTabs.filter(
-    (tab): tab is LocalTerminalTab & { sessionId: string } => Boolean(tab.sessionId),
-  );
-  if (connectedLocalTabs.length === 0) {
-    return targets;
-  }
-
-  const selectedLocalTabId =
-    selectedTabByConnectionId[localCommandSenderTargetId] || activeLocalTerminalTabId;
-  const selectedLocalTab =
-    connectedLocalTabs.find((tab) => tab.id === selectedLocalTabId) || connectedLocalTabs[0];
-  const profile = localTerminalProfiles.find((item) => item.id === selectedLocalTab.profileId) || null;
-  const localTargetLabel = connectedLocalTabs.some((tab) => tab.source && tab.source !== "local")
-    ? "字符终端"
-    : "本地终端";
-  const key = commandSenderTargetKey(localCommandSenderTargetId, selectedLocalTab.id);
-  const delivery = deliveryByKey[key];
-  const tabCountText =
-    connectedLocalTabs.length > 1
-      ? `${connectedLocalTabs.length.toString()} 个本地 tab`
-      : "1 个本地 tab";
-
-  return [
-    ...targets,
-    {
-      connectionId: localCommandSenderTargetId,
-      deliveryMessage: delivery?.message,
-      deliveryStatus: delivery?.status || "idle",
-      description: `${profile?.name || selectedLocalTab.title} · ${tabCountText}`,
-      key,
-      kind: "local" as const,
-      label: localTargetLabel,
-      historyScope: {
-        scope_kind: "local_profile" as const,
-        scope_id: selectedLocalTab.profileId,
-      },
-      sessionId: selectedLocalTab.sessionId,
-      tabId: selectedLocalTab.id,
-      tabs: connectedLocalTabs.map((tab) => ({
-        label: tab.title,
-        sessionId: tab.sessionId,
-        tabId: tab.id,
-      })),
-      tabTitle: selectedLocalTab.title,
-    },
-  ];
-}
-
-function commandSenderTargetKey(connectionId: string, tabId: string) {
-  return `${connectionId}:${tabId}`;
 }
 
 function commandSenderDeliveryLabel(status: CommandSenderDeliveryStatus) {
-  if (status === "sent") {
+  if (status === "written") {
     return "已写入";
   }
   if (status === "failed") {
     return "发送失败";
+  }
+  if (status === "disconnected") {
+    return "已断线";
   }
   return "未发送";
 }

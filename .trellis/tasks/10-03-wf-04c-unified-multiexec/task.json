@@ -1,0 +1,27 @@
+{
+  "id": "wf-04c-unified-multiexec",
+  "name": "wf-04c-unified-multiexec",
+  "title": "WF-04C 统一 MultiExec",
+  "description": "将现有 Split Sync Input 与 Command Sender 合并为实例级 off/live/send MultiExec，固定显式目标集合并覆盖 A09/A10。",
+  "status": "in_progress",
+  "priority": "P2",
+  "creator": "openai",
+  "assignee": "openai",
+  "createdAt": "2026-10-03",
+  "completedAt": null,
+  "branch": "feat/wf04c-unified-multiexec",
+  "base_branch": "main",
+  "commit": null,
+  "pr_url": "https://github.com/DenisZheng/NexaTerm/pull/28",
+  "subtasks": [],
+  "children": [],
+  "parent": "09-23-nexaterm-workflow-mainline",
+  "relatedFiles": [
+    "docs/WORKFLOW_SPEC.md",
+    "src/features/workspace/multiExec/",
+    "src/features/layout/WorkspaceShell.tsx",
+    "src/features/terminal/TerminalSplitSurface.tsx"
+  ],
+  "notes": "A09/A10 only. WS-X04 confirmed in WORKFLOW_SPEC v0.6. Do not expand to WF-05 or modify line-budget.json.",
+  "meta": {}
+}

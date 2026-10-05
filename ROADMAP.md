@@ -1,19 +1,23 @@
 # NexaTerm 当前路线图
 
-> 更新：2026-10-02
+> 更新：2026-10-05
 > WF-04A 交付：PR #26（基于 GitHub `main` @ `a0fcc0d`）
 > 本文件是当前项目级执行顺序的唯一入口。需求范围仍以 `NEXATERM_REQUIREMENTS.md` 为准；交互规则仍以 `docs/WORKFLOW_SPEC.md` 为准。旧阶段计划、差距分析和工作流交付计划保留用于追溯，不再覆盖本文件的当前优先级。
 
-## 当前工作流进展（2026-10-02）
+## 当前工作流进展（2026-10-04）
 
-WF-02B / WF-03 与图标更新已在 main。唯一主线继续使用 `09-23-nexaterm-workflow-mainline`。WF-04A 四个切片实现与 A07 macOS 验收已完成，由 [PR #26](https://github.com/DenisZheng/NexaTerm/pull/26) 交付；真实 GUI / 导入 / 重启数据对照、legacy 冲突显式映射与三主题补验均 PASS（[归档证据](.trellis/tasks/archive/2026-10/10-02-wf-04a-session-tree-consistency/validation/a07.md)）。维护者已授权最终 CI 通过后合并。Windows/Linux 仅 CI 自动化证据。WF-04B/04C 未启动，WS-X09/WS-X04 仍待确认。
+唯一产品主线继续使用 `09-23-nexaterm-workflow-mainline`。WF-02B / WF-03 与图标更新已在 main；WF-04A 由 [PR #26](https://github.com/DenisZheng/NexaTerm/pull/26) 交付，A07 macOS 的真实 GUI / 导入 / 重启、legacy 冲突映射和三主题均 PASS（[归档证据](.trellis/tasks/archive/2026-10/10-02-wf-04a-session-tree-consistency/validation/a07.md)），Windows/Linux 仍仅 CI 自动化证据。
+
+WF-04B/04C/05/06/07 已进入集中验收分支，验收基线为 `feat/wf07-workspace-restore` @ `3ff0c8e`（CI #304 SUCCESS）；此处不据此宣称全部已合入 main。维护者在 Windows 真实 Tauri 已确认 A01/A02/A04/A11/A12/A13，通过项及平台边界见 [A01–A15 报告](.trellis/tasks/09-23-nexaterm-workflow-mainline/validation/acceptance-report-2026-10-04.md)；A08、A14 另有既有验收记录。WS-X09 / WS-X04 已在 WORKFLOW_SPEC v0.5 / v0.6 确认。
+
+当前执行顺序（2026-10-04 维护者确认并行）：`10-04-wf04c-multiexec-entry` 已提交并进入 WF-08 堆叠；A09/A10 已于 2026-10-05 在最终 WF-08E 分支完成真实 Tauri 验收并 PASS，已不再是 A15 / v1 sign-off blocker。WF-08A 从“发布与迁移基线门禁”开始，证据见 `10-04-wf-08a-release-migration-baseline/A15_BASELINE.md`。 WF-08B 实现已完成并由 CI #343 验证三平台编译/测试，真实旧版本升级留到 WF-08E/A15；WF-08C 已完成代码收口并由 CI #357 验证品牌、English/zh-CN parity、canonical MCP sidecar 与三平台编译/测试。WF-08D 已完成测量工具并由 CI #364 验证三平台编译/测试、sampler 单测与性能/稳定性门禁；WF-08E 自动化证据框架已由 CI #369 全绿验证。A09/A10 已于 2026-10-05 由维护者在真实 Tauri 验收中确认 PASS；A15 仍进行中，剩余三平台真实安装/签名/升级回滚、迁移、性能、updater 任一未通过都阻止最终签字。
 
 ## 当前评审整改状态
 
 | 项目 | 状态 | 边界 |
 | --- | --- | --- |
 | 发布签名 / 更新信任链 | 代码与 workflow 门禁已完成 | 真正的 Windows Authenticode、macOS Developer ID + notarization/staple、updater 签名仍需一次带真实凭据的 tagged release 留下发布实证 |
-| X11 feasibility | 技术路径 GO | 已证明当前 russh 路径可继续推进；跨平台 X server 依赖、产品入口和真实 GUI 验收属于后续产品化，不等于已达到正式跨平台发布承诺 |
+| X11 feasibility / 产品化 | 技术路径 GO，Windows A13 通过 | WF-06C 核心与 Windows 真 GUI 已有维护者验收证据；macOS/Linux X server 环境与真实 GUI 仍需分别验收，不等于正式跨平台发布承诺 |
 | MCP 暴露面 | 已收口 | Remote MCP 采用 loopback-only；远程访问走认证隧道，不支持直接 LAN/public HTTP 绑定 |
 | 许可证 / third-party notices | 已收口 | 依赖清单、bundled notices 与 CI/release license gate 已进入 main |
 | Linux IME 原生自动化验收（P2-3） | **暂缓** | draft PR #12 未合并。当前 IBus/Fcitx5 CI harness 未完成可靠验收；失败不能当作产品输入法必然故障，也不能当作已通过 |

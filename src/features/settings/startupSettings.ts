@@ -10,7 +10,7 @@ import {
   resolveDesktopPlatform,
 } from "../../shared/tauri/windowMaterial";
 
-const settingsStorageKey = "mxterm.settings.v1";
+export const settingsStorageKey = "mxterm.settings.v1";
 
 export function readStartupSettings(): MxtermSettings {
   if (typeof window === "undefined") {

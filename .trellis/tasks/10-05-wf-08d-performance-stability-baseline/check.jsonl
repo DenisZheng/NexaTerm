@@ -1,0 +1,3 @@
+{"file":"scripts/check-wf08d-performance-stability-source.mjs","reason":"locks §49/§50 measurement contract and avoids invented CPU hard threshold"}
+{"file":"scripts/perf-runtime-sampler.test.mjs","reason":"process parsing, recursive tree, CPU interval and 1.25 review-rule unit tests"}
+{"file":".github/workflows/ci.yml","reason":"WF-08D source gate in stable frontend job"}

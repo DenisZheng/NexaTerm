@@ -43,7 +43,7 @@ export type ActionTarget =
 export type ActionDisabledReason =
   | "workspace-inactive" | "no-active-session" | "target-missing" | "wrong-target-kind"
   | "empty-pane" | "terminal-required" | "terminal-unavailable" | "search-query-empty"
-  | "unknown-action" | "local-only" | "deferred-wf04c" | "no-command-targets"
+  | "unknown-action" | "local-only" | "no-command-targets" | "no-multi-exec-targets"
   | "shortcut-unbound" | "input-focus" | "handler-unavailable" | "action-pending"
   | "capability-unavailable" | "split-unavailable" | "tunnel-unavailable";
 export type ActionTargetResolution =

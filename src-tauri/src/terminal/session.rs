@@ -19,19 +19,26 @@ use uuid::Uuid;
 use crate::app_error::AppError;
 use crate::commands::TerminalConnectRequest;
 use crate::connections::{
-    normalize_terminal_encoding, ConnectionAdvancedConfig, ConnectionJumpConfig,
-    ConnectionJumpKind, ConnectionProxyConfig, ConnectionProxyKind,
+    normalize_terminal_encoding, ConnectionAdvancedConfig, ConnectionProxyConfig,
+    ConnectionProxyKind,
 };
 use crate::known_hosts::{host_key_info, KnownHostCheck};
 use crate::ssh_config::{
     app_error_for_host_key_changed, app_error_for_host_key_unknown, ResolvedSshConfig,
+    RuntimeCredentialMap,
 };
 use crate::storage_repository::StorageRepository;
 use crate::storage_vault::{SecretStore, VaultState};
-use crate::x11_forward::X11ForwardState;
+use crate::x11_forward::{prepare_x11_forwarding, X11ForwardState};
 
 pub use super::forwarding::{RemoteForwardEvent, RemoteForwardEventHandler};
 use super::forwarding::RemoteForwardState;
+mod jump_chain;
+#[cfg(all(test, target_os = "linux"))]
+pub(crate) mod fixture_support;
+#[cfg(all(test, target_os = "linux"))]
+mod fixture_tests;
+use jump_chain::{connect_target_client, disconnect_jump_clients};
 
 const REMOTE_EXEC_TRANSFER_CHUNK_BYTES: usize = 256 * 1024;
 const TERMINAL_OUTPUT_BATCH_MAX_BYTES: usize = 32 * 1024;
@@ -182,6 +189,7 @@ fn ssh_app_data_dir(app: &AppHandle) -> Result<std::path::PathBuf, AppError> {
 pub struct SshConnectionContext {
     app_data_dir: std::path::PathBuf,
     secret_store: Arc<dyn SecretStore>,
+    runtime_credentials: RuntimeCredentialMap,
 }
 
 impl SshConnectionContext {
@@ -189,6 +197,7 @@ impl SshConnectionContext {
         Ok(Self {
             app_data_dir: ssh_app_data_dir(app)?,
             secret_store: vault_secret_store(app)?,
+            runtime_credentials: RuntimeCredentialMap::new(),
         })
     }
 
@@ -199,7 +208,13 @@ impl SshConnectionContext {
         Self {
             app_data_dir: app_data_dir.into(),
             secret_store,
+            runtime_credentials: RuntimeCredentialMap::new(),
         }
+    }
+
+    pub fn with_runtime_credentials(mut self, runtime_credentials: RuntimeCredentialMap) -> Self {
+        self.runtime_credentials = runtime_credentials;
+        self
     }
 }
 pub(super) enum AuthMethod {
@@ -235,7 +250,8 @@ pub struct TerminalSession {
     pub username: String,
     terminal_encoding: String,
     client: SshHandle,
-    jump_client: Option<SshHandle>,
+    jump_clients: Vec<SshHandle>,
+    x11_forward: X11ForwardState,
     writer: Mutex<ChannelWriter>,
 }
 
@@ -255,18 +271,18 @@ enum ExecStdin<'a> {
 
 pub struct ReusableExecSession {
     client: SshHandle,
-    jump_client: Option<SshHandle>,
+    jump_clients: Vec<SshHandle>,
 }
 
 pub struct ReusableSftpSession {
     client: SshHandle,
-    jump_client: Option<SshHandle>,
+    jump_clients: Vec<SshHandle>,
     sftp: SftpSession,
 }
 
 pub struct ReusableForwardSession {
     client: SshHandle,
-    jump_client: Option<SshHandle>,
+    jump_clients: Vec<SshHandle>,
     remote_forward: RemoteForwardState,
 }
 
@@ -281,6 +297,16 @@ impl TerminalSession {
         request: TerminalConnectRequest,
         progress: Option<OpenProgress>,
     ) -> Result<(Self, ChannelReadHalf), AppError> {
+        let context = SshConnectionContext::from_app(&app)?
+            .with_runtime_credentials(request.runtime_credentials.clone());
+        Self::open_with_context(context, request, progress).await
+    }
+
+    pub(crate) async fn open_with_context(
+        context: SshConnectionContext,
+        request: TerminalConnectRequest,
+        progress: Option<OpenProgress>,
+    ) -> Result<(Self, ChannelReadHalf), AppError> {
         let config = resolved_config_from_request(&request);
         let host = config.host.clone();
         let port = config.port;
@@ -289,24 +315,52 @@ impl TerminalSession {
         let auth_method = auth_method(&config)?;
         terminal_encoding_for_label(&terminal_encoding)?;
 
+        let x11_forward = X11ForwardState::default();
+        let prepared_x11 = if config.advanced.x11_forwarding {
+            emit_progress(&progress, "x11_preparing", "正在准备本地 X11 转发...");
+            let prepared = prepare_x11_forwarding(config.advanced.x11_display.as_deref())
+                .await
+                .map_err(|error| {
+                    AppError::new(
+                        "terminal_x11_prepare_failed",
+                        "X11 转发准备失败。",
+                        error.to_string(),
+                        true,
+                    )
+                })?;
+            x11_forward
+                .configure(prepared.config.clone())
+                .await
+                .map_err(|error| {
+                    AppError::new(
+                        "terminal_x11_prepare_failed",
+                        "X11 转发准备失败。",
+                        error.to_string(),
+                        true,
+                    )
+                })?;
+            Some(prepared)
+        } else {
+            None
+        };
+
         let ssh_config = Arc::new(client::Config {
             keepalive_interval: Some(duration_from_ms(config.advanced.keepalive_interval_ms)),
             keepalive_max: 3,
             nodelay: true,
             ..<_>::default()
         });
-        let context = SshConnectionContext::from_app(&app)?;
         let host_key_handler = KnownHostClient {
             host: host.clone(),
             port,
             app_data_dir: context.app_data_dir.clone(),
             secret_store: Arc::clone(&context.secret_store),
             remote_forward: RemoteForwardState::default(),
-            x11_forward: X11ForwardState::default(),
+            x11_forward: x11_forward.clone(),
         };
 
         emit_progress(&progress, "tcp_connecting", "正在建立 SSH TCP 连接...");
-        let (mut client, jump_client) = run_with_timeout(
+        let (mut client, jump_clients) = run_with_timeout(
             "terminal_connect_timeout",
             "SSH 连接超时。",
             duration_from_ms(config.advanced.connect_timeout_ms),
@@ -367,6 +421,39 @@ impl TerminalSession {
         })?;
         emit_progress(&progress, "pty_ready", "远程 PTY 已就绪。");
 
+        if let Some(prepared) = prepared_x11.as_ref() {
+            emit_progress(&progress, "x11_requesting", "正在启用 SSH X11 转发...");
+            let request_result = run_with_timeout(
+                "terminal_x11_request_timeout",
+                "SSH X11 转发请求超时。",
+                Duration::from_secs(20),
+                channel.request_x11(
+                    true,
+                    false,
+                    "MIT-MAGIC-COOKIE-1",
+                    prepared.fake_cookie_hex.clone(),
+                    prepared.config.display.screen_number,
+                ),
+            )
+            .await;
+            match request_result {
+                Ok(Ok(())) => emit_progress(&progress, "x11_ready", "SSH X11 转发已启用。"),
+                Ok(Err(error)) => {
+                    cleanup_x11_open_failure(&x11_forward, &client, &jump_clients).await;
+                    return Err(AppError::new(
+                        "terminal_x11_request_failed",
+                        "SSH 服务器拒绝 X11 转发请求。",
+                        error,
+                        true,
+                    ));
+                }
+                Err(error) => {
+                    cleanup_x11_open_failure(&x11_forward, &client, &jump_clients).await;
+                    return Err(error);
+                }
+            }
+        }
+
         emit_progress(&progress, "shell_starting", "正在启动远程 Shell...");
         let shell_result = run_with_timeout(
             "terminal_shell_timeout",
@@ -395,7 +482,8 @@ impl TerminalSession {
                 username,
                 terminal_encoding,
                 client,
-                jump_client,
+                jump_clients,
+                x11_forward,
                 writer: Mutex::new(writer),
             },
             reader,
@@ -427,17 +515,14 @@ impl TerminalSession {
     pub async fn close(&self) -> Result<(), AppError> {
         let writer = self.writer.lock().await;
         let _ = writer.close().await;
+        self.x11_forward.clear().await;
         self.client
             .disconnect(Disconnect::ByApplication, "", "English")
             .await
             .map_err(|error| {
                 AppError::new("terminal_close_failed", "终端连接关闭失败。", error, true)
             })?;
-        if let Some(jump_client) = self.jump_client.as_ref() {
-            let _ = jump_client
-                .disconnect(Disconnect::ByApplication, "", "English")
-                .await;
-        }
+        disconnect_jump_clients(&self.jump_clients).await;
         Ok(())
     }
 }
@@ -467,6 +552,16 @@ impl ReusableExecSession {
         Self::connect_resolved_with_context(&context, config).await
     }
 
+    pub async fn connect_resolved_with_credentials(
+        app: &AppHandle,
+        config: &ResolvedSshConfig,
+        runtime_credentials: RuntimeCredentialMap,
+    ) -> Result<Self, AppError> {
+        let context =
+            SshConnectionContext::from_app(app)?.with_runtime_credentials(runtime_credentials);
+        Self::connect_resolved_with_context(&context, config).await
+    }
+
     pub async fn connect_resolved_with_context(
         context: &SshConnectionContext,
         config: &ResolvedSshConfig,
@@ -488,7 +583,7 @@ impl ReusableExecSession {
             x11_forward: X11ForwardState::default(),
         };
 
-        let (mut client, jump_client) = run_with_timeout(
+        let (mut client, jump_clients) = run_with_timeout(
             "remote_exec_connect_timeout",
             "SSH 命令连接超时。",
             duration_from_ms(config.advanced.connect_timeout_ms),
@@ -509,7 +604,7 @@ impl ReusableExecSession {
 
         Ok(Self {
             client,
-            jump_client,
+            jump_clients,
         })
     }
 
@@ -797,11 +892,7 @@ impl ReusableExecSession {
             .client
             .disconnect(Disconnect::ByApplication, "", "English")
             .await;
-        if let Some(jump_client) = self.jump_client.as_ref() {
-            let _ = jump_client
-                .disconnect(Disconnect::ByApplication, "", "English")
-                .await;
-        }
+        disconnect_jump_clients(&self.jump_clients).await;
     }
 }
 
@@ -811,6 +902,13 @@ impl ReusableForwardSession {
         config: &ResolvedSshConfig,
     ) -> Result<Self, AppError> {
         let context = SshConnectionContext::from_app(app)?;
+        Self::connect_resolved_with_context(&context, config).await
+    }
+
+    pub async fn connect_resolved_with_context(
+        context: &SshConnectionContext,
+        config: &ResolvedSshConfig,
+    ) -> Result<Self, AppError> {
         let username = config.username.clone();
         let auth_method = auth_method(config).map_err(map_tunnel_auth_error)?;
         let ssh_config = Arc::new(client::Config {
@@ -829,11 +927,11 @@ impl ReusableForwardSession {
             x11_forward: X11ForwardState::default(),
         };
 
-        let (mut client, jump_client) = run_with_timeout(
+        let (mut client, jump_clients) = run_with_timeout(
             "tunnel_ssh_connect_timeout",
             "SSH 隧道连接超时。",
             duration_from_ms(config.advanced.connect_timeout_ms),
-            connect_target_client(&context, ssh_config, config, host_key_handler),
+            connect_target_client(context, ssh_config, config, host_key_handler),
         )
         .await?
         .map_err(|error| {
@@ -851,7 +949,7 @@ impl ReusableForwardSession {
 
         Ok(Self {
             client,
-            jump_client,
+            jump_clients,
             remote_forward,
         })
     }
@@ -995,12 +1093,93 @@ impl ReusableForwardSession {
             .client
             .disconnect(Disconnect::ByApplication, "", "English")
             .await;
-        if let Some(jump_client) = self.jump_client.as_ref() {
-            let _ = jump_client
-                .disconnect(Disconnect::ByApplication, "", "English")
-                .await;
+        disconnect_jump_clients(&self.jump_clients).await;
+    }
+
+    #[cfg(test)]
+    pub(crate) async fn connect_fixture(
+        host: &str,
+        port: u16,
+        username: &str,
+        key_path: String,
+        host_key_text: &str,
+        root: std::path::PathBuf,
+    ) -> Self {
+        let secrets: Arc<dyn SecretStore> =
+            Arc::new(crate::storage_vault::InMemorySecretStore::default());
+        let repository = StorageRepository::open_root(root.clone(), Arc::clone(&secrets))
+            .expect("open tunnel fixture store");
+        let public_key = russh::keys::ssh_key::PublicKey::from_openssh(host_key_text)
+            .expect("fixture host public key should parse");
+        repository
+            .known_host_trust(
+                host_key_info(host, port, &public_key),
+                "2026-10-03T00:00:00Z",
+            )
+            .expect("pre-trust tunnel fixture host key");
+
+        let remote_forward = RemoteForwardState::default();
+        let handler = KnownHostClient {
+            host: host.to_string(),
+            port,
+            app_data_dir: root,
+            secret_store: secrets,
+            remote_forward: remote_forward.clone(),
+            x11_forward: X11ForwardState::default(),
+        };
+        let config = Arc::new(client::Config {
+            inactivity_timeout: Some(Duration::from_secs(30)),
+            nodelay: true,
+            ..<_>::default()
+        });
+        let mut client = client::connect(config, (host, port), handler)
+            .await
+            .expect("russh connects to tunnel fixture");
+        authenticate(
+            &mut client,
+            username,
+            AuthMethod::PrivateKey {
+                path: key_path,
+                passphrase: None,
+            },
+        )
+        .await
+        .expect("tunnel fixture public-key authentication succeeds");
+
+        Self {
+            client,
+            jump_clients: Vec::new(),
+            remote_forward,
         }
     }
+
+    #[cfg(test)]
+    pub(crate) async fn exec_fixture_command(&self, command: &str) -> (Vec<u8>, Option<u32>) {
+        let mut channel = self
+            .client
+            .channel_open_session()
+            .await
+            .expect("open tunnel fixture command channel");
+        channel
+            .exec(true, command)
+            .await
+            .expect("start tunnel fixture command");
+        let mut output = Vec::new();
+        let mut exit_status = None;
+        while let Some(message) = channel.wait().await {
+            match message {
+                ChannelMsg::Data { data } | ChannelMsg::ExtendedData { data, .. } => {
+                    output.extend_from_slice(&data)
+                }
+                ChannelMsg::ExitStatus { exit_status: code } => exit_status = Some(code),
+                ChannelMsg::Close => break,
+                _ => {}
+            }
+        }
+        let _ = channel.close().await;
+        (output, exit_status)
+    }
+
 }
 
 impl ReusableSftpSession {
@@ -1033,7 +1212,7 @@ impl ReusableSftpSession {
             x11_forward: X11ForwardState::default(),
         };
 
-        let (mut client, jump_client) = run_with_timeout(
+        let (mut client, jump_clients) = run_with_timeout(
             "remote_sftp_connect_timeout",
             "SFTP 连接超时。",
             duration_from_ms(config.advanced.connect_timeout_ms),
@@ -1103,7 +1282,7 @@ impl ReusableSftpSession {
 
         Ok(Self {
             client,
-            jump_client,
+            jump_clients,
             sftp,
         })
     }
@@ -1118,11 +1297,7 @@ impl ReusableSftpSession {
             .client
             .disconnect(Disconnect::ByApplication, "", "English")
             .await;
-        if let Some(jump_client) = self.jump_client.as_ref() {
-            let _ = jump_client
-                .disconnect(Disconnect::ByApplication, "", "English")
-                .await;
-        }
+        disconnect_jump_clients(&self.jump_clients).await;
     }
 }
 
@@ -1138,6 +1313,18 @@ async fn send_stdin_chunk(
             true,
         )
     })
+}
+
+async fn cleanup_x11_open_failure(
+    x11_forward: &X11ForwardState,
+    client: &SshHandle,
+    jump_clients: &[SshHandle],
+) {
+    x11_forward.clear().await;
+    let _ = client
+        .disconnect(Disconnect::ByApplication, "", "English")
+        .await;
+    disconnect_jump_clients(jump_clients).await;
 }
 
 fn emit_progress(progress: &Option<OpenProgress>, stage: &str, message: &str) {
@@ -1227,172 +1414,6 @@ async fn connect_ssh_client(
         _ => {
             let stream = open_proxy_stream(request).await.map_err(to_russh_error)?;
             client::connect_stream(config, stream, handler).await
-        }
-    }
-}
-
-async fn connect_target_client(
-    context: &SshConnectionContext,
-    config: Arc<client::Config>,
-    request: &ResolvedSshConfig,
-    handler: KnownHostClient,
-) -> Result<(SshHandle, Option<SshHandle>), russh::Error> {
-    match request.jump.kind {
-        ConnectionJumpKind::None => connect_ssh_client(config, request, handler)
-            .await
-            .map(|client| (client, None)),
-        ConnectionJumpKind::SshJump => {
-            let jump = resolve_jump_config(context, request).map_err(to_russh_error)?;
-            let jump_auth_method = auth_method(&jump).map_err(to_russh_error)?;
-            let jump_ssh_config = Arc::new(client::Config {
-                keepalive_interval: Some(duration_from_ms(jump.advanced.keepalive_interval_ms)),
-                keepalive_max: 1,
-                nodelay: true,
-                ..<_>::default()
-            });
-            let jump_host_key_handler = KnownHostClient {
-                host: jump.host.clone(),
-                port: jump.port,
-                app_data_dir: context.app_data_dir.clone(),
-                secret_store: Arc::clone(&context.secret_store),
-                remote_forward: RemoteForwardState::default(),
-            x11_forward: X11ForwardState::default(),
-            };
-
-            let mut jump_client = run_with_timeout(
-                "jump_connect_timeout",
-                "跳板机连接超时。",
-                duration_from_ms(jump.advanced.connect_timeout_ms),
-                connect_ssh_client(jump_ssh_config, &jump, jump_host_key_handler),
-            )
-            .await
-            .map_err(to_russh_error)?
-            .map_err(|error| {
-                to_russh_error(app_error_from_russh(
-                    error,
-                    "jump_connect_failed",
-                    "跳板机连接失败。",
-                ))
-            })?;
-
-            run_with_timeout(
-                "jump_auth_timeout",
-                "跳板机认证超时。",
-                duration_from_ms(jump.advanced.auth_timeout_ms),
-                authenticate(&mut jump_client, &jump.username, jump_auth_method),
-            )
-            .await
-            .map_err(to_russh_error)?
-            .map_err(|error| to_russh_error(map_jump_auth_error(error)))?;
-
-            let channel = run_with_timeout(
-                "jump_direct_tcpip_timeout",
-                "跳板机通道打开超时。",
-                duration_from_ms(request.advanced.connect_timeout_ms),
-                jump_client.channel_open_direct_tcpip(
-                    request.host.clone(),
-                    u32::from(request.port),
-                    "127.0.0.1",
-                    0,
-                ),
-            )
-            .await
-            .map_err(to_russh_error)?
-            .map_err(|error| {
-                to_russh_error(AppError::new(
-                    "jump_direct_tcpip_failed",
-                    "跳板机通道打开失败。",
-                    error,
-                    true,
-                ))
-            })?;
-
-            let client = client::connect_stream(config, channel.into_stream(), handler).await?;
-            Ok((client, Some(jump_client)))
-        }
-    }
-}
-
-fn resolve_jump_config(
-    context: &SshConnectionContext,
-    request: &ResolvedSshConfig,
-) -> Result<ResolvedSshConfig, AppError> {
-    let jump_connection_id = request
-        .jump
-        .jump_connection_id
-        .as_ref()
-        .map(|value| value.trim())
-        .filter(|value| !value.is_empty())
-        .ok_or_else(|| {
-            AppError::new(
-                "connection_jump_missing",
-                "请选择 SSH 跳板机连接。",
-                "jump_connection_id is empty",
-                true,
-            )
-        })?;
-
-    if jump_connection_id == request.connection_id {
-        return Err(AppError::new(
-            "connection_jump_self_reference",
-            "跳板机不能引用自身连接。",
-            format!("connection_id={jump_connection_id}"),
-            true,
-        ));
-    }
-
-    let repository = StorageRepository::open_root(
-        context.app_data_dir.clone(),
-        Arc::clone(&context.secret_store),
-    )?;
-    let jump = repository.resolve_saved_connection(jump_connection_id, None)?;
-    validate_jump_runtime(&request.connection_id, &request.jump, Some(&jump.jump))?;
-    Ok(jump)
-}
-
-fn validate_jump_runtime(
-    target_connection_id: &str,
-    jump: &ConnectionJumpConfig,
-    jump_target_jump: Option<&ConnectionJumpConfig>,
-) -> Result<(), AppError> {
-    match jump.kind {
-        ConnectionJumpKind::None => Ok(()),
-        ConnectionJumpKind::SshJump => {
-            let jump_connection_id = jump
-                .jump_connection_id
-                .as_ref()
-                .map(|value| value.trim())
-                .filter(|value| !value.is_empty())
-                .ok_or_else(|| {
-                    AppError::new(
-                        "connection_jump_missing",
-                        "请选择 SSH 跳板机连接。",
-                        "jump_connection_id is empty",
-                        true,
-                    )
-                })?;
-
-            if jump_connection_id == target_connection_id {
-                return Err(AppError::new(
-                    "connection_jump_self_reference",
-                    "跳板机不能引用自身连接。",
-                    format!("connection_id={jump_connection_id}"),
-                    true,
-                ));
-            }
-
-            if jump_target_jump
-                .is_some_and(|target_jump| target_jump.kind == ConnectionJumpKind::SshJump)
-            {
-                return Err(AppError::new(
-                    "connection_jump_nested_unsupported",
-                    "跳板机暂不支持多级链路。",
-                    format!("jump_connection_id={jump_connection_id}"),
-                    true,
-                ));
-            }
-
-            Ok(())
         }
     }
 }
@@ -1934,8 +1955,7 @@ mod tests {
     use std::time::Duration;
 
     use crate::connections::{
-        ConnectionAdvancedConfig, ConnectionAuthKind, ConnectionCredentialMode,
-        ConnectionJumpConfig, ConnectionJumpKind, ConnectionProfile, ConnectionProtocol,
+        ConnectionAdvancedConfig, ConnectionAuthKind, ConnectionJumpConfig, ConnectionJumpKind,
         ConnectionProxyConfig,
     };
 
@@ -1978,92 +1998,6 @@ mod tests {
         );
         assert_eq!(batcher.flush().as_deref(), Some(b"first-second".as_slice()));
         assert_eq!(batcher.deadline(), None);
-    }
-
-    fn jump_profile(jump: ConnectionJumpConfig) -> ConnectionProfile {
-        ConnectionProfile {
-            id: "jump-001".to_string(),
-            name: "jump".to_string(),
-            protocol: ConnectionProtocol::Ssh,
-            group: None,
-            group_id: None,
-            host: "jump.example.com".to_string(),
-            port: 22,
-            username: "root".to_string(),
-            credential_mode: ConnectionCredentialMode::Inline,
-            credential_id: None,
-            inline_auth_kind: Some(ConnectionAuthKind::Password),
-            inline_password: Some("secret".to_string()),
-            inline_private_key_path: None,
-            inline_private_key_passphrase: None,
-            prompt_auth_kind: None,
-            proxy: ConnectionProxyConfig::default(),
-            jump,
-            advanced: ConnectionAdvancedConfig::default(),
-            rdp: None,
-            vnc: None,
-            telnet: None,
-            serial: None,
-            notes: None,
-            is_favorite: false,
-            last_connected_at: None,
-            remote_os_id: None,
-            remote_os_name: None,
-            remote_os_version: None,
-            created_at: "2026-06-18T00:00:00+08:00".to_string(),
-            updated_at: "2026-06-18T00:00:00+08:00".to_string(),
-            auth_kind: None,
-            password: None,
-            private_key_path: None,
-            private_key_passphrase: None,
-        }
-    }
-
-    #[test]
-    fn jump_runtime_rejects_self_reference() {
-        let jump = ConnectionJumpConfig {
-            kind: ConnectionJumpKind::SshJump,
-            jump_connection_id: Some("target-001".to_string()),
-        };
-
-        let error = validate_jump_runtime("target-001", &jump, None).unwrap_err();
-
-        assert_eq!(error.code, "connection_jump_self_reference");
-    }
-
-    #[test]
-    fn jump_runtime_rejects_nested_jump() {
-        let jump = ConnectionJumpConfig {
-            kind: ConnectionJumpKind::SshJump,
-            jump_connection_id: Some("jump-001".to_string()),
-        };
-
-        let error = validate_jump_runtime(
-            "target-001",
-            &jump,
-            Some(
-                &jump_profile(ConnectionJumpConfig {
-                    kind: ConnectionJumpKind::SshJump,
-                    jump_connection_id: Some("jump-002".to_string()),
-                })
-                .jump,
-            ),
-        )
-        .unwrap_err();
-
-        assert_eq!(error.code, "connection_jump_nested_unsupported");
-    }
-
-    #[test]
-    fn jump_runtime_rejects_missing_jump_connection() {
-        let jump = ConnectionJumpConfig {
-            kind: ConnectionJumpKind::SshJump,
-            jump_connection_id: None,
-        };
-
-        let error = validate_jump_runtime("target-001", &jump, None).unwrap_err();
-
-        assert_eq!(error.code, "connection_jump_missing");
     }
 
     #[test]

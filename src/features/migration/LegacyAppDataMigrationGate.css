@@ -1,0 +1,108 @@
+.brand-migration-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: grid;
+  place-items: center;
+  padding: 32px;
+  background: var(--mx-bg);
+  color: var(--mx-text);
+}
+
+.brand-migration-card {
+  width: min(620px, 100%);
+  max-height: min(760px, calc(100vh - 64px));
+  overflow: auto;
+  padding: 28px;
+  border: 1px solid var(--mx-line);
+  border-radius: 12px;
+  background: var(--mx-panel);
+  box-shadow: 0 20px 60px rgb(0 0 0 / 20%);
+}
+
+.brand-migration-card h1 {
+  margin: 12px 0 10px;
+  font-size: 20px;
+}
+
+.brand-migration-card p {
+  margin: 8px 0;
+  color: var(--mx-muted);
+  line-height: 1.55;
+}
+
+.brand-migration-badge {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border-radius: 9px;
+  background: var(--mx-primary);
+  color: var(--mx-primary-contrast, white);
+  font-weight: 700;
+}
+
+.brand-migration-summary {
+  display: grid;
+  gap: 8px;
+  margin: 18px 0;
+  padding: 14px;
+  border: 1px solid var(--mx-line);
+  border-radius: 8px;
+  background: var(--mx-surface, var(--mx-bg));
+}
+
+.brand-migration-summary ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin: 0;
+  padding-left: 18px;
+  color: var(--mx-muted);
+}
+
+.brand-migration-path {
+  overflow-wrap: anywhere;
+  color: var(--mx-text);
+  font-size: 11px;
+}
+
+.brand-migration-error {
+  color: var(--mx-danger) !important;
+}
+
+.brand-migration-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 22px;
+}
+
+.brand-migration-primary,
+.brand-migration-secondary {
+  min-height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--mx-line);
+  border-radius: 7px;
+  color: var(--mx-text);
+  background: transparent;
+  cursor: pointer;
+}
+
+.brand-migration-primary {
+  border-color: var(--mx-primary);
+  color: white;
+  background: var(--mx-primary);
+}
+
+.brand-migration-primary:disabled,
+.brand-migration-secondary:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.brand-migration-primary:focus-visible,
+.brand-migration-secondary:focus-visible {
+  outline: 2px solid var(--mx-primary);
+  outline-offset: 2px;
+}

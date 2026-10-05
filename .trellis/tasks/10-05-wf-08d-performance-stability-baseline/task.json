@@ -1,0 +1,22 @@
+{
+  "id": "wf08d-performance-stability-baseline",
+  "name": "wf08d-performance-stability-baseline",
+  "title": "WF-08D 性能、长稳与资源释放基线",
+  "description": "建立可重复的启动、空闲 CPU/内存、10 SSH 多会话、资源释放和故障隔离 workload；把 §49/§50 的 review 规则做成可执行工具，不伪造未跑过的真实平台性能结论",
+  "status": "completed",
+  "priority": "P1",
+  "creator": "codex",
+  "assignee": "codex",
+  "createdAt": "2026-10-05",
+  "completedAt": "2026-10-05",
+  "branch": "feat/wf08d-performance-stability-baseline",
+  "base_branch": "feat/wf08c-release-surface-audit",
+  "commit": "c0002d706c39f3c8508694803c3bf3524a12e2c0",
+  "pr_url": "https://github.com/DenisZheng/NexaTerm/pull/39",
+  "subtasks": [],
+  "children": [],
+  "parent": "09-23-nexaterm-workflow-mainline",
+  "relatedFiles": [],
+  "notes": "2026-10-05: WF-08D measurement harness code complete in Draft PR #39. CI #364 / run 37266312459 passed Frontend + WF-08D gate, Rust Windows/Linux/macOS, fixtures, security and license. Real packaged startup/idle/mXterm comparison/10-SSH/long-run values remain WF-08E/A15 real-platform evidence. A09/A10 still block final sign-off.",
+  "meta": {}
+}

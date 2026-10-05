@@ -31,6 +31,7 @@ import {
   resolveDesktopPlatform,
 } from "../../shared/tauri/platformCapabilities";
 import { hasTauriRuntime } from "../../shared/tauri/runtime";
+import { useI18n } from "../../shared/i18n";
 import { selectLocalPrivateKeyFile } from "../../shared/tauri/dialog";
 import type {
   ConnectionAuthKind,
@@ -82,6 +83,8 @@ import {
   errorDiagnosticId,
 } from "./connectionErrorCodes";
 import { connectionDialogSubmitPolicy, validateConnectionNetworkPath, type ConnectionSaveIntent } from "./connectionDialogSubmit";
+import { serialPortAvailability } from "./serialPortAvailability";
+import { buildJumpPlanPreview, jumpCandidateWouldCycle, validateJumpPlanSelection } from "./jumpPlanPreview";
 import type {
   CharacterBackspaceMode,
   SerialDataBits,
@@ -99,6 +102,7 @@ interface ConnectionDialogProps {
   defaultGroup?: string | null;
   duplicate?: boolean;
   groups: ConnectionDialogGroup[];
+  initialProtocol?: ConnectionProtocol | null;
   allowPasswordReveal: boolean;
   open: boolean;
   onClose: () => void;
@@ -317,6 +321,7 @@ export function ConnectionDialog({
   defaultGroup,
   duplicate = false,
   groups,
+  initialProtocol,
   allowPasswordReveal,
   open,
   onClose,
@@ -352,6 +357,7 @@ export function ConnectionDialog({
     () => buildGroupOptions(groups, form.group_id || ""),
     [form.group_id, groups],
   );
+  const { t } = useI18n();
   const desktopPlatform = useMemo(() => resolveDesktopPlatform(), []);
   const platformCapabilities = useMemo(
     () => getPlatformCapabilities(desktopPlatform),
@@ -386,6 +392,7 @@ export function ConnectionDialog({
   const isSerial = protocol === "serial";
   const isCharacterProtocol = isTelnet || isSerial;
   const submitPolicy = connectionDialogSubmitPolicy(Boolean(connection && !duplicate));
+  const currentConnectionId = connection && !duplicate ? connection.id : form.id || "";
   const dialogTabs: Array<[ConnectionDialogTab, string]> = isRdp
     ? [
         ["basic", "基本"],
@@ -429,9 +436,14 @@ export function ConnectionDialog({
         ? duplicate
           ? duplicateFormFromConnection(connection, connections, groups)
           : formFromConnection(connection, groups)
-        : { ...emptyForm, group_id: defaultGroup || "" },
+        : {
+            ...emptyForm,
+            group_id: defaultGroup || "",
+            port: protocolDefaultPorts[initialProtocol || "ssh"],
+            protocol: initialProtocol || "ssh",
+          },
     );
-  }, [connection, connections, defaultGroup, duplicate, groups, open]);
+  }, [connection, connections, defaultGroup, duplicate, groups, initialProtocol, open]);
 
   useEffect(() => {
     if (!open || protocol !== "serial") {
@@ -450,7 +462,7 @@ export function ConnectionDialog({
   }
 
   async function submitWithIntent(intent: ConnectionSaveIntent) {
-    const validation = isRdp || isVnc || isCharacterProtocol ? null : validateConnectionNetworkPath(form);
+    const validation = isRdp || isVnc || isCharacterProtocol ? null : validateConnectionNetworkPath(form) || validateJumpPlanSelection(form, connections, currentConnectionId);
     if (validation) {
       setActiveTab("proxy");
       setTestState("error");
@@ -492,7 +504,7 @@ export function ConnectionDialog({
       return;
     }
 
-    const validation = validateConnectionNetworkPath(form);
+    const validation = validateConnectionNetworkPath(form) || validateJumpPlanSelection(form, connections, currentConnectionId);
     if (validation) {
       setActiveTab("proxy");
       setTestState("error");
@@ -1064,6 +1076,19 @@ export function ConnectionDialog({
 
     if (isSerial) {
       const serial = withDefaultSerialConfig(form.serial);
+      const serialAvailability = serialPortAvailability({
+        error: serialPortsError,
+        loading: serialPortsLoading,
+        ports: serialPorts,
+      });
+      const serialAvailabilityMessage =
+        serialAvailability.status === "loading"
+          ? "正在读取串口设备…"
+          : serialAvailability.status === "list_failed"
+            ? `串口列表读取失败：${serialAvailability.error || "未知错误"}`
+            : serialAvailability.status === "no_ports"
+              ? "未检测到可用串口设备。连接设备后可点击刷新重试。"
+              : `已检测到 ${serialAvailability.count.toString()} 个串口设备。`;
       const serialPortOptions =
         serialPorts.length > 0
           ? serialPorts.map((port) => ({
@@ -1073,7 +1098,12 @@ export function ConnectionDialog({
           : [
               {
                 disabled: true,
-                label: serialPortsLoading ? "正在读取串口" : "暂无可用串口",
+                label:
+                  serialAvailability.status === "loading"
+                    ? "正在读取串口"
+                    : serialAvailability.status === "list_failed"
+                      ? "串口读取失败"
+                      : "暂无可用串口",
                 value: "",
               },
             ];
@@ -1111,7 +1141,7 @@ export function ConnectionDialog({
               <span>串口</span>
               <AppSelect
                 ariaLabel="串口"
-                disabled={serialPortsLoading || serialPorts.length === 0}
+                disabled={serialAvailability.status !== "available"}
                 value={serial.port_name}
                 options={serialPortOptions}
                 menuMinWidth={220}
@@ -1215,9 +1245,12 @@ export function ConnectionDialog({
               />
             </label>
           </div>
-          {serialPortsError ? (
-            <p className="connection-dialog-note">{serialPortsError}</p>
-          ) : null}
+          <p
+            className="connection-dialog-note"
+            data-serial-availability={serialAvailability.status}
+          >
+            {serialAvailabilityMessage}
+          </p>
           <label>
             <span>说明</span>
             <textarea
@@ -1747,7 +1780,8 @@ export function ConnectionDialog({
     const jump = form.jump || defaultJumpConfig;
     const networkPathMode: ConnectionNetworkPathMode =
       jump.kind === "ssh_jump" ? "ssh_jump" : proxy.kind === "none" ? "direct" : "proxy";
-    const jumpCandidates = connections.filter((item) => item.id !== connection?.id);
+    const jumpCandidates = connections.filter((item) => item.id !== currentConnectionId && !jumpCandidateWouldCycle(item.id, currentConnectionId, connections));
+    const jumpPlan = buildJumpPlanPreview(form, connections, currentConnectionId);
 
     return (
       <section className="dialog-section dialog-section-last">
@@ -1908,8 +1942,8 @@ export function ConnectionDialog({
                 }
               />
             </label>
-            <p className="connection-dialog-note">
-              当前连接会先登录跳板机，再通过 SSH 通道访问目标主机。
+            <p className={`connection-dialog-note ${jumpPlan.issue ? "form-error" : ""}`}>
+              {jumpPlan.issue ? jumpPlan.issue.detail : `实际连接路径：${jumpPlan.labels.join(" → ")}`}
             </p>
           </>
         ) : null}
@@ -2619,6 +2653,35 @@ export function ConnectionDialog({
             />
           </label>
         </div>
+        <div className="connection-dialog-checks">
+          <label>
+            <input
+              type="checkbox"
+              checked={advanced.x11_forwarding}
+              onChange={(event) =>
+                setForm({ ...form, advanced: { ...advanced, x11_forwarding: event.target.checked } })
+              }
+            />
+            <span>{t("connection.x11.enable")}</span>
+          </label>
+        </div>
+        {advanced.x11_forwarding ? (
+          <>
+            <label>
+              <span>{t("connection.x11.display")}</span>
+              <input
+                value={advanced.x11_display || ""}
+                onChange={(event) =>
+                  setForm({ ...form, advanced: { ...advanced, x11_display: event.target.value } })
+                }
+                placeholder={t("connection.x11.displayPlaceholder")}
+              />
+            </label>
+            <p className="connection-dialog-note">
+              {t(desktopPlatform === "windows" ? "connection.x11.windows" : desktopPlatform === "macos" ? "connection.x11.macos" : desktopPlatform === "linux" ? "connection.x11.linux" : "connection.x11.unknown")}
+            </p>
+          </>
+        ) : null}
       </section>
     );
   }
@@ -3113,6 +3176,8 @@ function normalizeForSubmit(
         Number(form.advanced.keepalive_interval_ms) ||
         defaultAdvancedConfig.keepalive_interval_ms,
       terminal_encoding: normalizeTerminalEncoding(form.advanced.terminal_encoding),
+      x11_forwarding: Boolean(form.advanced.x11_forwarding),
+      x11_display: form.advanced.x11_display?.trim() || undefined,
     },
     rdp: undefined,
     vnc: undefined,
@@ -3216,7 +3281,7 @@ function tabForError(error: unknown): ConnectionDialogTab {
     typeof error === "object" && error !== null && "code" in error
       ? String((error as { code: unknown }).code)
       : "";
-  if (code.startsWith("connection_proxy_")) {
+  if (code.startsWith("connection_proxy_") || code.startsWith("connection_jump_")) {
     return "proxy";
   }
   if (code.startsWith("rdp_raw_") || code.startsWith("rdp_runner_")) {

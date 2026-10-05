@@ -1,4 +1,5 @@
 mod ai_assistant;
+mod brand_migration;
 pub mod app_error;
 mod command_library;
 mod commands;
@@ -14,9 +15,11 @@ mod credentials;
 mod docker_tools;
 mod events;
 mod known_hosts;
+mod legacy_webview_settings;
 mod mobaxterm_import;
 pub mod mcp;
 mod network_tools;
+mod performance_probe;
 mod rdp;
 mod remote_exec_pool;
 mod remote_files;
@@ -33,6 +36,7 @@ pub mod storage_vault;
 pub mod sync_snapshot;
 mod sync_import_transaction;
 mod terminal;
+mod workspace_snapshot;
 mod temporary_connections;
 mod tunnels;
 mod vnc;
@@ -54,6 +58,7 @@ pub fn run() {
         .manage(docker_tools::DockerExecSessionManager::default())
         .manage(docker_tools::DockerLogStreamManager::default())
         .manage(network_tools::NetworkDiagnosticSessionManager::default())
+        .manage(performance_probe::PerformanceProbeState::default())
         .manage(remote_files::RemoteFileManager::default())
         .manage(terminal::manager::TerminalManager::default())
         .manage(temporary_connections::TemporaryConnectionManager::default())
@@ -63,6 +68,7 @@ pub fn run() {
         .manage(webdav_sync::WebDavSyncManager::default())
         .manage(mcp::McpRemoteServiceManager::default())
         .manage(VaultState::default())
+        .manage(legacy_webview_settings::LegacyWebviewSettingsProbeState::default())
         .setup(|app| {
             #[cfg(windows)]
             {
@@ -83,6 +89,16 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            performance_probe::performance_probe_mark_interactive,
+            brand_migration::legacy_app_data_migration_preview,
+            brand_migration::legacy_app_data_migration_apply,
+            brand_migration::legacy_app_data_migration_rollback,
+            legacy_webview_settings::legacy_webview_settings_probe_start,
+            legacy_webview_settings::legacy_webview_settings_probe_capture,
+            legacy_webview_settings::legacy_webview_settings_probe_take,
+            workspace_snapshot::workspace_snapshot_load,
+            workspace_snapshot::workspace_snapshot_save,
+            workspace_snapshot::workspace_snapshot_clear,
             commands::secret_vault_status,
             commands::secret_vault_unlock,
             commands::secret_vault_unlock_local,
@@ -125,6 +141,7 @@ pub fn run() {
             commands::credential_reveal_secret,
             commands::known_host_trust,
             commands::local_terminal_list_profiles,
+            commands::local_terminal_wsl_capability,
             commands::local_terminal_open,
             commands::telnet_terminal_open,
             commands::serial_list_ports,
@@ -208,6 +225,7 @@ pub fn run() {
             commands::tunnel_delete,
             commands::tunnel_start,
             commands::tunnel_stop,
+            tunnels::tunnel_stop_connection,
             commands::tunnel_autostart,
             commands::command_snippet_list,
             commands::command_snippet_upsert,

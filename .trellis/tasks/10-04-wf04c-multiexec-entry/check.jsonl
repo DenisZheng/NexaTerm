@@ -1,0 +1,4 @@
+{"file":"docs/WORKFLOW_SPEC.md","reason":"与实现同版 v0.6，核对 WS-X03–X08 / WS-R02"}
+{"file":".trellis/spec/frontend/index.md","reason":"前端测试、启动边界和主题门禁"}
+{"file":".trellis/spec/frontend/state-management.md","reason":"检查原子移除最后目标与 updater 无副作用"}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"检查组件复用、token、键盘焦点和禁用提示"}

@@ -1,0 +1,22 @@
+{
+  "id": "wf08c-release-surface-audit",
+  "name": "wf08c-release-surface-audit",
+  "title": "WF-08C 品牌、i18n 与发布表面收口",
+  "description": "把 NexaTerm 品牌、更新通道、English/zh-CN 完整性和安装/发布表面做成 v1 硬门禁；旧 mXterm 标识仅在迁移与显式兼容别名中允许存在",
+  "status": "completed",
+  "priority": "P1",
+  "creator": "codex",
+  "assignee": "codex",
+  "createdAt": "2026-10-05",
+  "completedAt": "2026-10-05",
+  "branch": "feat/wf08c-release-surface-audit",
+  "base_branch": "feat/wf08b-cross-brand-migration",
+  "commit": "40cdc07b94bb4f285dd39519a9f0793f15aa848a",
+  "pr_url": "https://github.com/DenisZheng/NexaTerm/pull/38",
+  "subtasks": [],
+  "children": [],
+  "parent": "09-23-nexaterm-workflow-mainline",
+  "relatedFiles": [],
+  "notes": "2026-10-05: WF-08C-1/08C-2 code complete in Draft PR #38. CI #357 / run 37262522837 passed Frontend + WF-08C gate, Rust Windows/Linux/macOS, fixtures, security and license. Real installed package names/About/language switching/updater behavior remain WF-08E/A15 evidence; A09/A10 still block final sign-off.",
+  "meta": {}
+}

@@ -63,6 +63,10 @@ import {
   shouldResetRemoteFileNavigation,
   type RemoteFileDirectoryRequestToken,
 } from "./remoteFileInstanceState";
+import {
+  getWorkspaceRemoteFileNavigation,
+  publishWorkspaceRemoteFileNavigation,
+} from "../workspace/restore/remoteFileSnapshotBridge";
 
 export type RemoteFileTool = "files" | "monitor" | "commands" | "tools" | "ai" | "tunnels";
 
@@ -232,11 +236,27 @@ function RemoteFilePanelComponent({
 }: RemoteFilePanelProps) {
   const connectionId = connection?.id || null;
   const terminalDirectory = terminalPath ? normalizeRemotePath(terminalPath) : null;
+  const restoredNavigation = stateKey && !remoteFilePanelStateCache.has(stateKey)
+    ? getWorkspaceRemoteFileNavigation(stateKey) : null;
+  const restoredDirectoryRef = useRef(restoredNavigation?.path || null);
   const initialStateRef = useRef<RemoteFilePanelStateSnapshot | null>(
-    stateKey ? remoteFilePanelStateCache.get(stateKey) || null : null,
+    stateKey
+      ? remoteFilePanelStateCache.get(stateKey) ||
+          (restoredNavigation
+            ? {
+                activeDirectoryPath: restoredNavigation.path,
+                currentPath: defaultRemotePath,
+                directoryEntries: {},
+                expandedDirectories: {},
+                followTerminalDirectory: currentRemoteFileFollowPolicy.defaultEnabled,
+                locatedDirectoryPath: null,
+                showHidden: false,
+              }
+            : null)
+      : null,
   );
   const initialState = initialStateRef.current;
-  const [currentPath, setCurrentPath] = useState(defaultRemotePath);
+  const [currentPath, setCurrentPath] = useState(initialState?.currentPath || defaultRemotePath);
   const [activeDirectoryPath, setActiveDirectoryPath] = useState(
     initialState?.activeDirectoryPath || defaultRemotePath,
   );
@@ -355,6 +375,7 @@ function RemoteFilePanelComponent({
       showHidden,
       followTerminalDirectory,
     });
+    publishWorkspaceRemoteFileNavigation(stateKey, activeDirectoryPath);
   }, [
     activeDirectoryPath,
     currentPath,
@@ -414,7 +435,13 @@ function RemoteFilePanelComponent({
 
   useEffect(() => {
     // 隐藏的常驻面板不发起远程请求；切回后复用已缓存的路径和展开状态。
-    if (!active) {
+    if (!active || !connectionId) {
+      return;
+    }
+    const restoredDirectory = restoredDirectoryRef.current;
+    if (restoredDirectory) {
+      restoredDirectoryRef.current = null;
+      revealDirectoryPath(restoredDirectory, false);
       return;
     }
     void loadDirectory(currentPath);

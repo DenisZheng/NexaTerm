@@ -53,7 +53,7 @@ export const actionReasonKeys: Readonly<Record<ActionDisabledReason, ActionMessa
   "search-query-empty": "actionBar.reason.noQuery",
   "unknown-action": "actionBar.reason.unknown",
   "local-only": "actionBar.reason.localOnly",
-  "deferred-wf04c": "actionBar.reason.multiExec",
+  "no-multi-exec-targets": "actionBar.reason.noMultiExecTargets",
   "no-command-targets": "actionBar.reason.noCommandTargets",
   "shortcut-unbound": "actionBar.reason.unbound",
   "input-focus": "actionBar.reason.inputFocus",

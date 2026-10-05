@@ -574,7 +574,7 @@ fn normalize_connection_ids(ids: Vec<String>) -> Vec<String> {
 }
 
 pub fn status(settings: &McpSettings) -> McpStatus {
-    let mut tools = vec!["get_mxterm_mcp_status"];
+    let mut tools = vec!["get_nexaterm_mcp_status", "get_mxterm_mcp_status"];
     if settings.enabled && settings.expose_connections {
         tools.extend(["list_connections", "search_connections", "get_connection"]);
     }
@@ -749,10 +749,14 @@ pub fn exposed_connections(
 }
 
 pub fn default_app_data_dir() -> Result<PathBuf, AppError> {
-    if let Ok(value) = env::var("MXTERM_DATA_DIR") {
-        let trimmed = value.trim();
-        if !trimmed.is_empty() {
-            return Ok(PathBuf::from(trimmed));
+    // NEXATERM_DATA_DIR is the canonical override after the brand transition.
+    // Keep MXTERM_DATA_DIR as a compatibility alias for existing scripts.
+    for variable in ["NEXATERM_DATA_DIR", "MXTERM_DATA_DIR"] {
+        if let Ok(value) = env::var(variable) {
+            let trimmed = value.trim();
+            if !trimmed.is_empty() {
+                return Ok(PathBuf::from(trimmed));
+            }
         }
     }
     #[cfg(windows)]
@@ -760,19 +764,19 @@ pub fn default_app_data_dir() -> Result<PathBuf, AppError> {
         let appdata = env::var_os("APPDATA").ok_or_else(|| {
             AppError::new(
                 "mcp_data_dir_missing",
-                "无法定位 MXterm 数据目录。",
+                "无法定位 NexaTerm 数据目录。",
                 "APPDATA missing",
                 true,
             )
         })?;
-        return Ok(PathBuf::from(appdata).join("com.mxterm.app"));
+        return Ok(PathBuf::from(appdata).join("com.nexaterm.app"));
     }
     #[cfg(target_os = "macos")]
     {
         let home = env::var_os("HOME").ok_or_else(|| {
             AppError::new(
                 "mcp_data_dir_missing",
-                "无法定位 MXterm 数据目录。",
+                "无法定位 NexaTerm 数据目录。",
                 "HOME missing",
                 true,
             )
@@ -780,7 +784,7 @@ pub fn default_app_data_dir() -> Result<PathBuf, AppError> {
         return Ok(PathBuf::from(home)
             .join("Library")
             .join("Application Support")
-            .join("com.mxterm.app"));
+            .join("com.nexaterm.app"));
     }
     #[cfg(all(not(windows), not(target_os = "macos")))]
     {
@@ -790,12 +794,12 @@ pub fn default_app_data_dir() -> Result<PathBuf, AppError> {
             .ok_or_else(|| {
                 AppError::new(
                     "mcp_data_dir_missing",
-                    "无法定位 MXterm 数据目录。",
+                    "无法定位 NexaTerm 数据目录。",
                     "HOME missing",
                     true,
                 )
             })?;
-        Ok(base.join("com.mxterm.app"))
+        Ok(base.join("com.nexaterm.app"))
     }
 }
 
@@ -822,7 +826,7 @@ pub fn ensure_enabled(settings: &McpSettings) -> Result<(), AppError> {
     } else {
         Err(AppError::new(
             "mcp_disabled",
-            "MXterm MCP 尚未启用。",
+            "NexaTerm MCP 尚未启用。",
             "mcp.enabled=false",
             true,
         ))
@@ -889,7 +893,7 @@ pub fn reject_plaintext_credential_args(args: &Value) -> Result<(), AppError> {
         if object.contains_key(forbidden) {
             return Err(AppError::new(
                 "mcp_plaintext_credentials_rejected",
-                "MCP 工具只允许使用 MXterm 已保存的 connection_id。",
+                "MCP 工具只允许使用 NexaTerm 已保存的 connection_id。",
                 format!("forbidden argument: {forbidden}"),
                 true,
             ));
@@ -1224,7 +1228,7 @@ pub async fn execute_script(
         .and_then(|value| value.to_str())
         .unwrap_or("script.sh")
         .replace(['/', '\\', ' ', '\'', '"'], "_");
-    let remote_path = format!("/tmp/mxterm-mcp-{}-{name}", now_millis());
+    let remote_path = format!("/tmp/nexaterm-mcp-{}-{name}", now_millis());
     let command = build_execute_script_command(&remote_path, interpreter, args)?;
     upload_file(root, connection_id, script_path, &remote_path, settings).await?;
     execute_command(
@@ -1623,7 +1627,7 @@ pub fn sidecar_executable_path() -> Result<PathBuf, AppError> {
     let current_exe = env::current_exe().map_err(|error| {
         AppError::new(
             "mcp_executable_path_failed",
-            "无法定位 MXterm MCP 可执行文件路径。",
+            "无法定位 NexaTerm MCP 可执行文件路径。",
             error,
             true,
         )
@@ -1631,15 +1635,36 @@ pub fn sidecar_executable_path() -> Result<PathBuf, AppError> {
     let parent = current_exe.parent().ok_or_else(|| {
         AppError::new(
             "mcp_executable_path_failed",
-            "无法定位 MXterm MCP 可执行文件路径。",
+            "无法定位 NexaTerm MCP 可执行文件路径。",
             current_exe.display(),
             true,
         )
     })?;
-    Ok(parent.join(sidecar_executable_name()))
+
+    let canonical = parent.join(sidecar_executable_name());
+    if canonical.is_file() {
+        return Ok(canonical);
+    }
+
+    // Development and upgrades from older builds may still have only the
+    // historical sidecar filename. New installers bundle the canonical name.
+    let legacy = parent.join(legacy_sidecar_executable_name());
+    if legacy.is_file() {
+        return Ok(legacy);
+    }
+
+    Ok(canonical)
 }
 
 fn sidecar_executable_name() -> &'static str {
+    if cfg!(windows) {
+        "nexaterm-mcp.exe"
+    } else {
+        "nexaterm-mcp"
+    }
+}
+
+fn legacy_sidecar_executable_name() -> &'static str {
     if cfg!(windows) {
         "mxterm-mcp.exe"
     } else {
@@ -1648,11 +1673,12 @@ fn sidecar_executable_name() -> &'static str {
 }
 
 #[cfg(windows)]
+const MCP_SIDECAR_PROCESS_NAMES: [&str; 2] = ["nexaterm-mcp.exe", "mxterm-mcp.exe"];
+
+#[cfg(windows)]
 fn running_mcp_process_count() -> Result<u32, AppError> {
     let mut command = Command::new("tasklist");
-    command
-        .args(["/FI", "IMAGENAME eq mxterm-mcp.exe", "/FO", "CSV", "/NH"])
-        .creation_flags(CREATE_NO_WINDOW);
+    command.args(["/FO", "CSV", "/NH"]).creation_flags(CREATE_NO_WINDOW);
     let output = command.output().map_err(|error| {
         AppError::new(
             "mcp_update_process_check_failed",
@@ -1678,9 +1704,10 @@ fn parse_tasklist_mcp_process_count(output: &str) -> u32 {
     output
         .lines()
         .filter(|line| {
-            line.trim_start()
-                .to_ascii_lowercase()
-                .starts_with("\"mxterm-mcp.exe\",")
+            let normalized = line.trim_start().to_ascii_lowercase();
+            MCP_SIDECAR_PROCESS_NAMES
+                .iter()
+                .any(|name| normalized.starts_with(&format!("\"{name}\",")))
         })
         .count() as u32
 }
@@ -1695,25 +1722,36 @@ fn terminate_external_mcp_processes() -> Result<(), AppError> {
     if running_mcp_process_count()? == 0 {
         return Ok(());
     }
-    let mut command = Command::new("taskkill");
-    command
-        .args(["/IM", "mxterm-mcp.exe", "/F", "/T"])
-        .creation_flags(CREATE_NO_WINDOW);
-    let output = command.output().map_err(|error| {
-        AppError::new(
-            "mcp_update_process_stop_failed",
-            "无法关闭阻止更新的 MCP 进程。",
-            error,
-            true,
-        )
-    })?;
-    if output.status.success() || running_mcp_process_count()? == 0 {
+
+    let mut failures = Vec::new();
+    for image in MCP_SIDECAR_PROCESS_NAMES {
+        let mut command = Command::new("taskkill");
+        command
+            .args(["/IM", image, "/F", "/T"])
+            .creation_flags(CREATE_NO_WINDOW);
+        let output = command.output().map_err(|error| {
+            AppError::new(
+                "mcp_update_process_stop_failed",
+                "无法关闭阻止更新的 MCP 进程。",
+                error,
+                true,
+            )
+        })?;
+        if !output.status.success() {
+            failures.push(format!(
+                "{image}: {}",
+                String::from_utf8_lossy(&output.stderr).trim()
+            ));
+        }
+    }
+
+    if running_mcp_process_count()? == 0 {
         return Ok(());
     }
     Err(AppError::new(
         "mcp_update_process_stop_failed",
         "无法关闭阻止更新的 MCP 进程。",
-        String::from_utf8_lossy(&output.stderr),
+        failures.join("; "),
         true,
     ))
 }
@@ -2241,7 +2279,7 @@ fn app_data_dir(app: &AppHandle) -> Result<PathBuf, AppError> {
     app.path().app_data_dir().map_err(|error| {
         AppError::new(
             "mcp_data_dir_missing",
-            "无法定位 MXterm 数据目录。",
+            "无法定位 NexaTerm 数据目录。",
             error,
             true,
         )
@@ -2440,18 +2478,23 @@ pub fn mcp_remote_token_rotate(
 pub fn tool_schemas() -> Vec<Value> {
     vec![
         tool(
+            "get_nexaterm_mcp_status",
+            "Get NexaTerm MCP status.",
+            json!({ "type": "object", "properties": {} }),
+        ),
+        tool(
             "get_mxterm_mcp_status",
-            "Get MXterm MCP status.",
+            "Legacy alias for get_nexaterm_mcp_status.",
             json!({ "type": "object", "properties": {} }),
         ),
         tool(
             "list_connections",
-            "List redacted saved MXterm connections.",
+            "List redacted saved NexaTerm connections.",
             json!({ "type": "object", "properties": {} }),
         ),
         tool(
             "search_connections",
-            "Search redacted saved MXterm connections.",
+            "Search redacted saved NexaTerm connections.",
             json!({ "type": "object", "properties": { "query": { "type": "string" } }, "required": ["query"] }),
         ),
         tool(
@@ -2587,7 +2630,7 @@ mod tests {
         let settings = McpSettings::default();
 
         assert!(!settings.enabled);
-        assert_eq!(status(&settings).tools, vec!["get_mxterm_mcp_status"]);
+        assert_eq!(status(&settings).tools, vec!["get_nexaterm_mcp_status", "get_mxterm_mcp_status"]);
         let tool_names = tool_schemas_for_settings(&settings)
             .into_iter()
             .filter_map(|tool| {
@@ -2596,7 +2639,7 @@ mod tests {
                     .map(ToOwned::to_owned)
             })
             .collect::<Vec<_>>();
-        assert_eq!(tool_names, vec!["get_mxterm_mcp_status"]);
+        assert_eq!(tool_names, vec!["get_nexaterm_mcp_status", "get_mxterm_mcp_status"]);
     }
 
     #[test]
@@ -2755,10 +2798,10 @@ mod tests {
 
     #[cfg(windows)]
     #[test]
-    fn tasklist_parser_counts_only_mcp_sidecars() {
-        let output = "\"mxterm-mcp.exe\",\"123\",\"Console\",\"1\",\"10,000 K\"\r\n\
+    fn tasklist_parser_counts_canonical_and_legacy_mcp_sidecars() {
+        let output = "\"nexaterm-mcp.exe\",\"123\",\"Console\",\"1\",\"10,000 K\"\r\n\
                       \"MXTERM-MCP.EXE\",\"456\",\"Console\",\"1\",\"11,000 K\"\r\n\
-                      \"m-xterm.exe\",\"789\",\"Console\",\"1\",\"90,000 K\"\r\n";
+                      \"nexaterm.exe\",\"789\",\"Console\",\"1\",\"90,000 K\"\r\n";
         assert_eq!(parse_tasklist_mcp_process_count(output), 2);
         assert_eq!(
             parse_tasklist_mcp_process_count("INFO: No tasks are running"),

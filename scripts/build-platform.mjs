@@ -40,7 +40,8 @@ const SUPPORTED_TARGETS = new Map([
   ],
 ]);
 
-const createUpdaterArtifactsEnv = "MXTERM_CREATE_UPDATER_ARTIFACTS";
+const createUpdaterArtifactsEnv = "NEXATERM_CREATE_UPDATER_ARTIFACTS";
+const legacyCreateUpdaterArtifactsEnv = "MXTERM_CREATE_UPDATER_ARTIFACTS";
 const createUpdaterArtifactsConfig = JSON.stringify({
   bundle: {
     createUpdaterArtifacts: true,
@@ -75,7 +76,10 @@ export function getBuildPlan(target) {
 
 export function updaterArtifactsArgs(runtime = process, target) {
   const bundle = {};
-  if (runtime.env?.[createUpdaterArtifactsEnv] === "1") {
+  if (
+    runtime.env?.[createUpdaterArtifactsEnv] === "1" ||
+    runtime.env?.[legacyCreateUpdaterArtifactsEnv] === "1"
+  ) {
     bundle.createUpdaterArtifacts = true;
   }
 

@@ -319,6 +319,7 @@ pub async fn temporary_connection_terminal_connect(
                 password: config.password.clone(),
                 private_key_path: config.private_key_path.clone(),
                 private_key_passphrase: config.private_key_passphrase.clone(),
+                runtime_credentials: Default::default(),
                 cols: request.cols,
                 rows: request.rows,
                 runtime_config: Some(config),

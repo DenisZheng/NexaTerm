@@ -36,12 +36,12 @@ const profile: LocalTerminalProfile = {
   id: "fixture-profile", name: "Fixture shell", kind: "bash", platform: "linux", source: "custom",
   command: "fixture-shell", args: [], env: {}, icon: "terminal", hidden: false, detected: true,
 };
-function setup(overrides: Record<string, WorkspaceActionHandler> = {}, bindings: Record<string, string | null> = {}) {
+function setup(overrides: Record<string, WorkspaceActionHandler> = {}, bindings: Record<string, string | null> = {}, targetCount = 1) {
   let context: WorkspaceActionContext = {
     workspaceVisible: true, activeItemId: "ssh:test", activePaneId: null,
     items: [{ id: "ssh:test", kind: "ssh" }],
     instances: [{ id: "ssh:test", kind: "ssh", canSearch: true, canSplit: true, canCreateTerminal: true, searchQuery: "fixture" }],
-    panes: [], commandSenderTargetCount: 1,
+    panes: [], commandSenderTargetCount: targetCount,
   };
   const handlers: Record<string, WorkspaceActionHandler> = Object.fromEntries(Object.keys(actionPresentation).map((id) => [id, vi.fn()]));
   Object.assign(handlers, overrides);
@@ -93,11 +93,25 @@ describe("WF-01 4C: real Radix entry interactions", () => {
     setup({}, { "terminal.closeTab": null }); await open("Terminal");
     expect(screen.getByRole("menuitem", { name: "Close current instance" }).textContent).toBe("Close current instance");
   });
-  it("shows the deferred reason and never invokes MultiExec", async () => {
+  it("dispatches MultiExec from the terminal menu once", async () => {
     const { handlers } = setup(); await open("Terminal");
-    const item = screen.getByRole("menuitem", { name: /MultiExec.*WF-04C/ });
+    const item = screen.getByRole("menuitem", { name: "MultiExec" });
+    expect(item.getAttribute("aria-disabled")).not.toBe("true");
+    fireEvent.click(item);
+    await waitFor(() => expect(handlers["terminal.multiExec"]).toHaveBeenCalledExactlyOnceWith({ kind: "application" }));
+  });
+  it("explains why MultiExec is unavailable when no terminal targets remain", async () => {
+    const state = setup({}, {}, 0);
+    await open("Terminal");
+    const item = screen.getByRole("menuitem", { name: /MultiExec.*No terminal targets/ });
     expect(item.getAttribute("aria-disabled")).toBe("true");
-    fireEvent.click(item); expect(handlers["terminal.multiExec"]).not.toHaveBeenCalled();
+    fireEvent.click(item);
+    expect(state.handlers["terminal.multiExec"]).not.toHaveBeenCalled();
+  });
+  it("dispatches MultiExec from the compact toolbar overflow", async () => {
+    const { handlers } = setup(); resize(80); await open("More tools", "button");
+    fireEvent.click(screen.getByRole("menuitem", { name: "MultiExec" }));
+    await waitFor(() => expect(handlers["terminal.multiExec"]).toHaveBeenCalledExactlyOnceWith({ kind: "application" }));
   });
   it("keeps Command Sender available independently in overflow", async () => {
     const { handlers } = setup(); resize(80); await open("More tools", "button");

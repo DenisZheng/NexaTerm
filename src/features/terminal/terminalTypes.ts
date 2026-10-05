@@ -1,4 +1,4 @@
-import type { ConnectionAuthKind } from "../connections/connectionTypes";
+import type { ConnectionAuthKind, RuntimeCredentialInput } from "../connections/connectionTypes";
 export type { LocalTerminalOpenRequest } from "./localTerminalTypes";
 
 export interface TerminalConnectRequest {
@@ -11,6 +11,7 @@ export interface TerminalConnectRequest {
   password?: string;
   private_key_path?: string;
   private_key_passphrase?: string;
+  runtime_credentials?: Record<string, RuntimeCredentialInput>;
   cols: number;
   rows: number;
 }

@@ -1,0 +1,7 @@
+{"file":"NEXATERM_REQUIREMENTS.md","reason":"requirements §53 brand transformation and §60 v1 release gates"}
+{"file":"src-tauri/tauri.conf.json","reason":"product name, bundle identifier and updater endpoint"}
+{"file":".github/workflows/release.yml","reason":"release repository, signing and artifact surface"}
+{"file":"src/shared/i18n/locales/en.json","reason":"English catalog"}
+{"file":"src/shared/i18n/locales/zh-CN.json","reason":"zh-CN catalog"}
+{"file":"src-tauri/src/bin/mxterm_mcp.rs","reason":"MCP protocol-visible brand and compatibility aliases"}
+{"file":"src-tauri/src/mcp.rs","reason":"managed MCP runtime brand and executable compatibility"}

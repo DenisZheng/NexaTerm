@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 1,
+  "candidate": {
+    "version": "0.1.17",
+    "commit": "332f752a5ecee73db69437764a281c27920ec936",
+    "tag": "pending-real-release",
+    "timestamp": "2026-10-05"
+  },
+  "predecessor": {
+    "A09": "pass",
+    "A10": "pass"
+  },
+  "automated": {
+    "finalCi": "pending",
+    "securityCriticalHigh": "pending",
+    "license": "pending"
+  },
+  "platforms": {
+    "windows-x64": {
+      "build": "pending",
+      "install": "pending",
+      "launch": "pending",
+      "brand": "pending",
+      "locale": "pending",
+      "theme": "pending",
+      "upgrade": "pending",
+      "rollback": "pending",
+      "artifactHash": "pending",
+      "authenticode": "pending"
+    },
+    "macos-arm64": {
+      "build": "pending",
+      "install": "pending",
+      "launch": "pending",
+      "brand": "pending",
+      "locale": "pending",
+      "theme": "pending",
+      "upgrade": "pending",
+      "rollback": "pending",
+      "artifactHash": "pending",
+      "developerId": "pending",
+      "notarization": "pending"
+    },
+    "linux-x64": {
+      "build": "pending",
+      "install": "pending",
+      "launch": "pending",
+      "brand": "pending",
+      "locale": "pending",
+      "theme": "pending",
+      "upgrade": "pending",
+      "rollback": "pending",
+      "artifactHash": "pending"
+    }
+  },
+  "migration": {
+    "coreAppData": "pending",
+    "webviewSettings": "pending",
+    "noSilentOverwrite": "pending",
+    "vault": "pending",
+    "rollback": "pending"
+  },
+  "performance": {
+    "startup": "pending",
+    "idleCpu": "pending",
+    "memoryVsMxterm": "pending",
+    "tenSshWorkload": "pending",
+    "resourceRelease": "pending",
+    "failureIsolation": "pending"
+  },
+  "updater": {
+    "signedMetadata": "pending",
+    "upgrade": "pending",
+    "rollbackRecovery": "pending"
+  },
+  "signoff": {
+    "status": "pending",
+    "maintainer": "",
+    "notes": "A09/A10 real-Tauri PASS confirmed by maintainer on 2026-10-05. Remaining real release, migration, performance and updater evidence is still pending."
+  }
+}

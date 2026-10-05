@@ -6,7 +6,7 @@ use tauri::{AppHandle, Manager};
 
 use crate::app_error::AppError;
 
-pub const SQLITE_SCHEMA_VERSION: i64 = 3;
+pub const SQLITE_SCHEMA_VERSION: i64 = 4;
 
 /// 并发打开仓库时（每个 Tauri command 都会重新 open），等待写锁释放而不是立即报
 /// SQLITE_BUSY。此前 journal_mode=delete 且无 busy_timeout，一次用户操作并发触发多个
@@ -30,6 +30,13 @@ CREATE TABLE IF NOT EXISTS app_meta (
 CREATE TABLE IF NOT EXISTS app_settings (
     key TEXT PRIMARY KEY,
     value_json TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS workspace_snapshots (
+    slot INTEGER PRIMARY KEY CHECK(slot = 1),
+    current_json TEXT,
+    backup_json TEXT,
     updated_at TEXT NOT NULL
 );
 
@@ -521,10 +528,11 @@ mod tests {
 
     use super::{normalize_known_host_host, SqliteStore, SQLITE_SCHEMA_VERSION};
 
-    const CORE_TABLES: [&str; 11] = [
+    const CORE_TABLES: [&str; 12] = [
         "schema_migrations",
         "app_meta",
         "app_settings",
+        "workspace_snapshots",
         "connection_groups",
         "connections",
         "credentials",

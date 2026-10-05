@@ -1,0 +1,10 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "legacy-settings-probe",
+  "description": "Minimal capability for the hidden WF-08B legacy settings probe window.",
+  "windows": ["legacy-settings-probe"],
+  "permissions": [
+    "core:default",
+    "core:window:allow-close"
+  ]
+}

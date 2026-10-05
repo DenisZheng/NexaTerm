@@ -1,6 +1,6 @@
 # Test fixtures (docker-compose)
 
-Real servers for acceptance items **A12** (jump-host SSH + Files + the three
+Real servers for acceptance items **A12** (two-level Jump SSH + Files + the three
 tunnel types) and **A13** (SSH X11 launching a remote GUI program), plus RDP
 and VNC targets for the WF-06 remote-desktop work.
 
@@ -8,8 +8,11 @@ and VNC targets for the WF-06 remote-desktop work.
 
 | Service      | Host port | Purpose                                              |
 | ------------ | --------- | ---------------------------------------------------- |
-| `ssh-jump`   | 2222      | Jump host. SSH in here first.                        |
-| `ssh-target` | —         | **No published ports** — reachable only via `ssh-jump`, so it is a genuine double-hop chain. |
+| `ssh-jump`   | 2222      | Legacy one-jump host used by WF-03 / WF-06A.         |
+| `ssh-target` | —         | Legacy target reachable through `ssh-jump`.        |
+| `ssh-jump-outer` | 2224  | WF-06B Jump-2; the only host-published entry to the true two-level chain. |
+| `ssh-jump-inner` | —     | WF-06B Jump-1; bridges the edge and target-only Docker networks. |
+| `ssh-multihop-target` | — | WF-06B Target; shares no network with Jump-2, so Jump-1 cannot be skipped. |
 | `ssh-x11`    | 2223      | sshd with `X11Forwarding yes` for A13.               |
 | `xrdp`       | 3389      | RDP server (xrdp + Xorg + xfce4).                    |
 | `vnc`        | 5901      | TigerVNC server (`:1`, minimal xterm session).       |
@@ -168,3 +171,406 @@ When finished:
 ```sh
 node tests/fixtures/fixtures.mjs down
 ```
+
+
+## WF-04C A09 / A10 GUI acceptance
+
+Use the direct SSH fixture on `127.0.0.1:2222`. Start it first:
+
+```sh
+node tests/fixtures/fixtures.mjs up
+```
+
+Create or reuse one saved SSH profile with host `127.0.0.1`, port `2222`, user
+`testuser`, and the generated `tests/fixtures/keys/test_key` private key. Open four
+terminal instances from that profile (or use three SSH instances plus one Local terminal)
+and place them into a 4-pane Split. Name them by visible instance order as A, B, C, D for
+the acceptance run.
+
+### A09 fixed targets + live/send
+
+1. Open MultiExec and explicitly select only A and B. Leave C and D unselected.
+2. Enable live input with focus on A. Type a unique command such as
+   `echo A09-LIVE-A` and press Enter.
+3. Confirm A receives the normal focused input once, B receives the fan-out once, and
+   C/D do not receive that command.
+4. Change focus to B without touching target checkboxes. Confirm A/B remain the selected
+   target set. Type `echo A09-LIVE-B`; B receives normal input once, A receives fan-out
+   once, C/D remain untouched.
+5. Switch to Command Sender / send mode without changing targets. Send
+   `echo A09-SEND` with Enter.
+6. Confirm A and B each receive the command once and C/D receive nothing. Switching pane
+   focus before another send must not replace either selected target.
+
+A09 passes only if target identity is by terminal instance, each selected target receives
+at most one delivery per action, unselected panes are not fan-out destinations, and focus
+changes do not silently mutate the selected set.
+
+### A10 disconnect + reconnect
+
+1. Keep A and B explicitly selected. Send `echo A10-BEFORE` once and confirm both receive it.
+2. Close/disconnect B while MultiExec remains available. Confirm the UI updates B as
+   unavailable/removed rather than silently substituting another instance.
+3. Reopen the same saved SSH profile, producing a new terminal instance B2. Focus B2.
+4. Confirm B2 is not automatically selected. A remains selected if it stayed connected.
+5. Send `echo A10-AFTER`. Confirm only the still-selected target(s) receive it; B2 must
+   not receive the command until explicitly selected.
+6. Confirm no earlier command is automatically replayed into B2 after reconnect. If a
+   send attempt reports a disconnected/failed target, leave it as an explicit result;
+   there must be no automatic retry.
+
+A10 passes only if disconnect state is visible, reconnect creates a new instance identity,
+the replacement does not silently rejoin targets, and no uncertain/failed command is
+automatically resent.
+
+When finished:
+
+```sh
+node tests/fixtures/fixtures.mjs down
+```
+
+
+## WF-05 A11 combined GUI acceptance
+
+A11 is intentionally executed only after WF-05A/05B/05C are all implemented. This
+section starts the combined checklist with the Local/WSL phase. **A11 remains PENDING**
+until the later Serial/Telnet/RDP/VNC phases are appended and the maintainer runs the
+whole matrix.
+
+### Phase 1: Local / WSL
+
+Windows real-Tauri requirements:
+
+1. Open **New session** and confirm native Local shells and **WSL** are separate sections.
+2. Confirm each installed WSL distribution appears by its real distribution name. Open one
+   distribution twice and verify two independent top-level instances are created.
+3. Run `echo $$` in both WSL terminals and keep the two Linux shell PIDs for the close check.
+4. Put one WSL instance and one native Local terminal into a 2-pane Split. In the pane picker,
+   the WSL instance must be labeled as **WSL**, not merely as Local.
+5. Select both instances as MultiExec targets. Run one harmless send command such as
+   `echo A11-WF05A`; both explicitly selected terminal instances receive it once.
+6. Close only the first WSL instance. The sibling WSL instance and native Local instance stay
+   open; the closed instance disappears from Split/MultiExec targets and is not substituted by
+   its same-distribution sibling.
+7. From the surviving WSL instance, run `ps -p <closed-shell-pid>`. The closed shell PID must
+   no longer exist. Do not require the whole WSL VM/distribution to stop because other WSL
+   processes may legitimately keep it running.
+8. Close the remaining WSL and Local tabs normally. No stale terminal pane or MultiExec target
+   may remain.
+
+Capability-negative checks on Windows:
+
+- On a machine without `wsl.exe`, the WSL section states that WSL is unavailable.
+- With WSL installed but no distribution, the UI states that no distribution is available.
+- Probe timeout/failure is shown as such and must not hide otherwise usable PowerShell/cmd/Git
+  Bash profiles.
+
+macOS/Linux Local smoke for the combined matrix:
+
+1. Open an available detected Local shell from New session.
+2. Put it into Split with another terminal instance and verify instance identity remains stable.
+3. Close it and confirm the pane/target is removed and the sibling survives.
+
+Automated evidence already covers provider status classification, stable distro profile identity,
+shared PTY close/master release, Local/WSL Split binding, MultiExec instance targeting, and
+target shrink on close. These checks do not replace the real Windows WSL run above.
+
+Later WF-05B/05C work must append the Serial/Telnet/RDP/VNC phases here before A11 can be
+recorded PASS.
+
+
+### Phase 2: Serial / Telnet
+
+This phase is appended by WF-05B. **A11 remains PENDING** until WF-05C adds and passes
+the RDP/VNC phase.
+
+#### Telnet
+
+Start the deterministic local TCP echo fixture in a separate terminal:
+
+```sh
+node tests/fixtures/telnet-loopback.mjs
+```
+
+The default endpoint is `127.0.0.1:2323`. You may override it with
+`NEXATERM_TELNET_FIXTURE_HOST` / `NEXATERM_TELNET_FIXTURE_PORT`.
+
+1. In **New session**, choose **Telnet…** and confirm ConnectionDialog opens already set to Telnet.
+2. Create/save a profile for `127.0.0.1:2323`. Keep the configured enter/backspace modes visible
+   in the acceptance notes.
+3. Open the profile and confirm the terminal receives `NexaTerm Telnet fixture ready`.
+4. Type a unique line such as `A11-TELNET-ONE` and confirm the fixture echoes it back.
+5. Explicitly open a **new instance** of the same Telnet profile. Confirm a sibling tab with a
+   different instance ordinal is created rather than focus jumping to the first tab.
+6. Put one Telnet instance and one other terminal instance into Split. The picker must label the
+   Character instance as **Telnet**.
+7. Select the Telnet instance as a MultiExec target and send a harmless line. It must receive one
+   delivery and remain identified by that exact instance.
+8. Close only the first Telnet instance. Its pane/target disappears; the same-profile sibling stays
+   connected and is not silently substituted into the selected target set.
+9. Stop the Node fixture with Ctrl+C after all Telnet tabs are closed.
+
+#### Serial
+
+Real Serial interoperability must use either a physical serial device or an explicitly documented
+simulated serial-port pair. Record the platform, port name(s), device/simulator, baud rate, data
+bits, parity, stop bits, and flow control used. Do **not** substitute SSH/Telnet or a pure mocked
+provider for this acceptance.
+
+1. In **New session**, choose **Serial…** and confirm ConnectionDialog opens already set to Serial.
+2. Observe port enumeration:
+   - while refreshing: loading state is visible;
+   - successful empty enumeration: no-device state is visible;
+   - enumeration failure: failure state is distinguishable from no-device;
+   - with the acceptance device attached: available state lists the real/simulated port.
+3. Configure the documented framing and open the Serial connection. Confirm real bidirectional
+   bytes with the device/simulated peer.
+4. Explicitly open a second instance of the same Serial profile if the device/simulator supports
+   multiple opens; otherwise document the single-open limitation and use a second Serial profile/
+   endpoint for the Split check.
+5. Put Serial and Telnet (or another terminal instance) into Split. The picker must label the
+   Character instance as **串口 / Serial**.
+6. Select Serial as a MultiExec target and send only a harmless payload expected by the device.
+   Confirm exactly one delivery to the explicitly selected instance.
+7. Close the Serial instance. Confirm its pane/target disappears, no stale writable instance remains,
+   and the port/handle can be reopened according to the device/simulator's documented behavior.
+
+Automated evidence covers Telnet real loopback lifecycle, Serial availability classification,
+Serial reader close signaling, Character Split/MultiExec instance identity, sibling separation,
+and target shrink on close. It does not replace real Serial hardware/simulator behavior.
+
+
+### Phase 3: RDP / VNC
+
+WF-05C adds the final A11 protocol phase. **A11 remains PENDING** until the maintainer
+executes Phase 1, Phase 2 and Phase 3 on the documented real platforms/targets.
+
+RDP/VNC are top-level workspace instances. They are **not terminal Split panes or MultiExec
+targets**. Do not expect them in the MultiExec target picker.
+
+#### Windows embedded RDP
+
+Use a reachable Windows RDP target for which interactive testing is authorized. Record the target
+environment, Windows version, NexaTerm runner capability text, and whether the session actually
+uses `mstsc_activex` or falls back to external `mstsc`.
+
+1. In **New session**, inspect the RDP capability text before opening the dialog. On a machine with
+   ActiveX support it must say embedded RDP is available and, when detected, that an external
+   fallback also exists.
+2. Choose **RDP…** and confirm ConnectionDialog opens already set to RDP. Save/connect to the
+   authorized test target.
+3. For an actual embedded/native session, confirm the NexaTerm RDP host opens and the workspace
+   tab represents that exact session instance.
+4. Explicitly open a **new instance** of the same RDP profile. Confirm a second top-level RDP
+   instance is created instead of merely focusing the first.
+5. Close only the first RDP instance. The sibling stays open. The native host must remove only the
+   closed session; if it was the last embedded session, the host may close normally.
+6. Exercise an external fallback once (for example by selecting/forcing a supported external mode
+   in the test profile). Close the NexaTerm RDP tab and verify the directly owned external runner
+   process exits and any generated temporary `.rdp` file is removed.
+7. Confirm RDP never appears in the terminal MultiExec target list.
+
+#### macOS / Linux external RDP
+
+Use a reachable authorized RDP target and a runner actually detected by NexaTerm:
+Windows App/Microsoft Remote Desktop/default `.rdp` handler on macOS, or FreeRDP on Linux.
+
+1. In **New session**, confirm RDP capability reports an **external** runner rather than embedded.
+   If no compatible runner exists, confirm the UI says unavailable and still allows configuration;
+   record that limitation instead of claiming RDP worked.
+2. Open one RDP profile, then explicitly open a second instance of the same profile.
+3. Confirm two top-level NexaTerm workspace instances exist independently.
+4. Close one NexaTerm instance and confirm the sibling remains.
+5. Verify the directly owned runner/helper process and generated temporary file are cleaned up as
+   far as the platform permits. On macOS, if the system `open` helper launches a separate GUI app,
+   explicitly record whether that GUI app remains; do not count helper termination as proof that the
+   GUI client was closed.
+6. Confirm RDP is absent from terminal MultiExec targets.
+
+#### VNC / noVNC bridge
+
+Use a reachable VNC test server for which interactive testing is authorized. Record server type,
+host, port, authentication mode and platform.
+
+1. In **New session**, inspect VNC capability. The built-in noVNC bridge should be reported when
+   available; any RealVNC/TigerVNC/custom viewer is shown only as an external viewer/fallback.
+2. Choose **VNC…**, save/connect, and verify real remote pixels/input through the built-in noVNC
+   path or the explicitly selected external viewer.
+3. Explicitly open a second instance of the same VNC profile and confirm two independent top-level
+   workspace instances exist.
+4. For noVNC/windowed mode, close only the first instance. Confirm the local WebSocket bridge and
+   any runner-host payload for that instance disappear while the sibling remains usable.
+5. For an external viewer mode, close the NexaTerm VNC instance and verify the directly owned
+   viewer child exits. Close one sibling without closing the other.
+6. Confirm VNC never appears in terminal MultiExec targets.
+
+#### Phase 3 result recording
+
+Record separate results for:
+- Windows embedded/native RDP;
+- Windows external fallback RDP if exercised;
+- macOS external RDP;
+- Linux external RDP;
+- built-in noVNC bridge;
+- any external VNC viewer exercised.
+
+A missing Experimental runner is acceptable as a documented capability limitation, but a platform
+must not be marked supported without a corresponding real run. Automated tests cover instance
+identity and owner cleanup seams; they do not replace this real platform evidence.
+
+
+## WF-06 A12 Tunnel Phase
+
+WF-06A prepares the tunnel half of A12. **A12 remains PENDING** until WF-06B adds the
+two-hop Jump phase and the maintainer runs the combined real-Tauri acceptance.
+
+Start the existing fixtures:
+
+```sh
+node tests/fixtures/fixtures.mjs up
+```
+
+Create or reuse one saved SSH profile:
+
+- host: `127.0.0.1`
+- port: `2222`
+- user: `testuser`
+- private key: `tests/fixtures/keys/test_key`
+
+Open **Tools → Tunnels / 隧道** from the top-level action and verify Local, Dynamic SOCKS and
+Remote are available from the same panel.
+
+### Local forwarding
+
+Create and start:
+
+- kind: Local
+- SSH connection: the `127.0.0.1:2222` fixture profile
+- local listener: `127.0.0.1:15422`
+- remote target: `ssh-target:22`
+
+Probe it:
+
+```sh
+node tests/fixtures/tunnel-probe.mjs local 15422
+```
+
+Pass: the helper prints an `SSH-2.0-` banner from the real `ssh-target` container. Stop the
+rule and run the same command again; it must fail because the local listener is gone. Starting the
+rule again must be able to bind `15422` without restarting NexaTerm.
+
+### Dynamic SOCKS
+
+Create and start:
+
+- kind: Dynamic
+- SSH connection: the same fixture profile
+- SOCKS listener: `127.0.0.1:11080`
+
+Probe it:
+
+```sh
+node tests/fixtures/tunnel-probe.mjs socks 11080 ssh-target 22
+```
+
+Pass: the helper completes a real SOCKS5 no-auth handshake, CONNECTs to `ssh-target:22` through
+NexaTerm and prints an `SSH-2.0-` banner. Stop the rule; the same probe must fail and `11080`
+must be reusable.
+
+### Remote forwarding
+
+In a separate terminal, start the local echo target:
+
+```sh
+node tests/fixtures/tunnel-probe.mjs echo 18081
+```
+
+Create and start:
+
+- kind: Remote
+- SSH connection: the same fixture profile
+- local target: `127.0.0.1:18081`
+- remote listener: `127.0.0.1:19080`
+
+From another terminal, connect to the server-side listener through the fixture SSH host:
+
+```sh
+ssh -i tests/fixtures/keys/test_key \
+  -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+  -p 2222 testuser@127.0.0.1 \
+  "bash -lc 'exec 3<>/dev/tcp/127.0.0.1/19080; printf A12-REMOTE >&3; head -c 10 <&3'"
+```
+
+Pass: output is exactly `A12-REMOTE`. Stop the Remote rule and repeat the command; it must fail,
+showing that `cancel_remote_forward` removed the server-side listener. The local echo helper can
+then be stopped with Ctrl+C.
+
+### Lifecycle / error checks
+
+During the same run:
+
+1. Start a rule on an already occupied local port and confirm the rule becomes **failed** with the
+   port-bind error attached to that rule.
+2. Use a prompt-credential SSH profile and confirm the rule becomes **credential required**, then
+   resumes the same rule after entering credentials.
+3. Exercise an unknown/changed Host Key only on a disposable fixture identity. The trust dialog
+   must name the same tunnel rule; explicit trust retries that rule rather than creating another.
+4. Close all sessions for the fixture SSH connection. All running rules bound to that connection
+   must stop; rules belonging to another SSH connection must remain untouched.
+5. Delete the fixture SSH connection only after stopping/closing its tunnel resources. Any orphan
+   saved rule must show **连接不存在** and its Start action must be disabled.
+
+Automated CI already runs the real Local/Dynamic/Remote SSH data paths and verifies listener /
+remote-forward cleanup. The GUI checks above validate the actual TunnelPanel, saved-connection
+binding and user-visible lifecycle. Keep A12 PENDING until the WF-06B Jump phase is added.
+
+
+## WF-06B A12 two-level Jump phase
+
+The automated fixture now uses an isolated topology:
+
+```text
+NexaTerm / host
+  -> Jump-2  127.0.0.1:2224
+  -> Jump-1  ssh-jump-inner:22
+  -> Target  ssh-multihop-target:22
+```
+
+`ssh-jump-outer` and `ssh-multihop-target` are deliberately on different Docker
+networks. Only `ssh-jump-inner` joins both networks, so the CI path cannot silently
+collapse to one jump.
+
+For the later combined real-Tauri A12 acceptance, create three SSH profiles with the generated
+`tests/fixtures/keys/test_key`:
+
+| Profile | Endpoint | Jump setting |
+| --- | --- | --- |
+| `A12-Jump-2` | `testuser@127.0.0.1:2224` | none |
+| `A12-Jump-1` | `testuser@ssh-jump-inner:22` | `A12-Jump-2` |
+| `A12-Target` | `testuser@ssh-multihop-target:22` | `A12-Jump-1` |
+
+Open `A12-Target` and confirm the dialog shows the actual route
+`A12-Jump-2 → A12-Jump-1 → A12-Target`. On first use, Host Key confirmation may appear
+once for each real node; each prompt must name the host/port of that node.
+
+Deferred combined GUI acceptance:
+
+1. Open an `A12-Target` terminal, run `printf 'A12-TERMINAL\n'`, and browse
+   `/home/testuser` in Files. Terminal and Files must both work without changing the route.
+2. Temporarily change only `A12-Jump-1` to an invalid username. Opening `A12-Target` must
+   identify Jump-1 as the failed authentication node. Restore `testuser` afterward.
+3. Put Jump-1 in **ask every time** credential mode and retry Target. The credential prompt must
+   identify Jump-1; previously supplied Jump-2 credentials must not be requested again in the same
+   attempt.
+4. Run Local, Dynamic SOCKS and Remote tunnel rules with **SSH connection = A12-Target**. For
+   Local/Dynamic, use `127.0.0.1:22` as the remote target so the banner comes from the final
+   Target SSH server. For Remote, use the existing local echo helper and probe the remote listener
+   from the A12-Target terminal.
+5. Stop/close the rules and A12 sessions. Listeners must be reusable and no stale rule/session may
+   remain.
+
+CI runs the same NexaTerm russh two-hop route against Terminal PTY, SFTP, and all three tunnel
+modes. It also injects an intermediate Jump-1 authentication failure and, while the Rust test
+process is still alive, checks the three Docker sshd containers until all child SSH sessions have
+drained. This is automated evidence; the combined GUI run is intentionally deferred until the
+later consolidated manual acceptance requested for the workflow mainline.

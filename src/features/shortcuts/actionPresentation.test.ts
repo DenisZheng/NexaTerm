@@ -42,9 +42,9 @@ describe("WF-01 4C: entry presentation", () => {
     expect(resolveWorkspaceAction(request, context, { "terminal.closeTab": "Meta+W" }).binding).toBe("Meta+W");
     expect(resolveWorkspaceAction(request, context, { "terminal.closeTab": null }).binding).toBe(null);
   });
-  it("keeps Command Sender separate from deferred MultiExec and unverified X11", () => {
+  it("enables both terminal broadcast entries while X11 still requires its capability", () => {
     expect(resolveWorkspaceAction({ actionId: "commandSender.toggle" }, context, {}).enabled).toBe(true);
-    expect(resolveWorkspaceAction({ actionId: "terminal.multiExec" }, context, {}).reason).toBe("deferred-wf04c");
+    expect(resolveWorkspaceAction({ actionId: "terminal.multiExec" }, context, {}).enabled).toBe(true);
     expect(resolveWorkspaceAction({ actionId: "tools.x11" }, context, {}).reason).toBe("capability-unavailable");
   });
   it("requires explicit split capability even for a live terminal", () => {

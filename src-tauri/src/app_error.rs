@@ -20,6 +20,21 @@ pub enum AppErrorDetails {
         host_key: HostKeyInfo,
         old_fingerprint_sha256: String,
     },
+    /// 某个保存连接采用“每次询问”，调用方需要为该节点补充本次运行时凭据。
+    CredentialPromptRequired {
+        connection_id: String,
+        auth_kind: String,
+        host: String,
+        port: u16,
+        username: String,
+    },
+    /// SSH 链路中的具体节点失败；stage 用于区分 connect/auth/direct_tcpip。
+    SshNodeFailure {
+        connection_id: String,
+        host: String,
+        port: u16,
+        stage: String,
+    },
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]

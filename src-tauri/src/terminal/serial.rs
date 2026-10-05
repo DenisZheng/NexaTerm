@@ -87,10 +87,25 @@ pub struct SerialPortEntry {
     pub description: Option<String>,
 }
 
+#[derive(Clone, Default)]
+pub(crate) struct SerialCloseSignal {
+    closed: Arc<AtomicBool>,
+}
+
+impl SerialCloseSignal {
+    pub(crate) fn close(&self) {
+        self.closed.store(true, Ordering::SeqCst);
+    }
+
+    pub(crate) fn is_closed(&self) -> bool {
+        self.closed.load(Ordering::SeqCst)
+    }
+}
+
 pub struct SerialTerminalSession {
     pub id: String,
     backspace_mode: SerialBackspaceMode,
-    closed: Arc<AtomicBool>,
+    close_signal: SerialCloseSignal,
     writer: Mutex<Box<dyn SerialPort>>,
 }
 
@@ -119,7 +134,7 @@ impl SerialTerminalSession {
         let session = Arc::new(SerialTerminalSession {
             id: Uuid::new_v4().to_string(),
             backspace_mode: config.backspace_mode,
-            closed: Arc::new(AtomicBool::new(false)),
+            close_signal: SerialCloseSignal::default(),
             writer: Mutex::new(port),
         });
 
@@ -149,12 +164,12 @@ impl SerialTerminalSession {
     }
 
     pub async fn close(&self) -> Result<(), AppError> {
-        self.closed.store(true, Ordering::SeqCst);
+        self.close_signal.close();
         Ok(())
     }
 
-    pub fn is_closed(&self) -> bool {
-        self.closed.load(Ordering::SeqCst)
+    pub(crate) fn close_signal(&self) -> SerialCloseSignal {
+        self.close_signal.clone()
     }
 }
 
@@ -319,6 +334,17 @@ mod tests {
         let error = validate_serial_open_request(&request).unwrap_err();
 
         assert_eq!(error.code, "serial_baud_rate_invalid");
+    }
+
+    #[test]
+    fn serial_close_signal_is_shared_and_idempotent() {
+        let signal = SerialCloseSignal::default();
+        let reader_signal = signal.clone();
+
+        assert!(!reader_signal.is_closed());
+        signal.close();
+        signal.close();
+        assert!(reader_signal.is_closed());
     }
 
     #[test]

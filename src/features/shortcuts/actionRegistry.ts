@@ -32,7 +32,7 @@ export interface WorkspaceActionState {
 }
 interface ActionPolicy {
   readonly target: ActionTargetKind;
-  readonly capability?: "create-terminal" | "search" | "search-result" | "command-targets" | "split" | "tunnels";
+  readonly capability?: "create-terminal" | "search" | "search-result" | "command-targets" | "multi-exec" | "split" | "tunnels";
   readonly deferred?: ActionDisabledReason;
 }
 
@@ -62,7 +62,7 @@ const entryPolicies: Readonly<Record<string, ActionPolicy>> = {
   "workspace.closeItem": { target: "item" },
   "terminal.closePane": { target: "pane" },
   "terminal.closeSplitGroup": { target: "split-group" },
-  "terminal.multiExec": { target: "none", deferred: "deferred-wf04c" },
+  "terminal.multiExec": { target: "none", capability: "multi-exec" },
 };
 export const workspaceActionIds: readonly string[] = [
   ...shortcutActions.map(({ id }) => id), ...Object.keys(entryPolicies),
@@ -99,7 +99,9 @@ export function resolveWorkspaceAction(
   const resolved = resolveActionTarget(context, policy.target, request.target);
   if (resolved.reason) return disabled(resolved.reason);
   const { target } = resolved;
+  if (policy.capability === "multi-exec" && !context.workspaceVisible) return disabled("workspace-inactive");
   if (policy.capability === "command-targets" && !(context.commandSenderTargetCount > 0)) return disabled("no-command-targets");
+  if (policy.capability === "multi-exec" && !(context.commandSenderTargetCount > 0)) return disabled("no-multi-exec-targets");
   if (policy.capability === "tunnels" && !context.canOpenTunnels) return disabled("tunnel-unavailable");
   if (target.kind === "instance" && policy.capability) {
     const instance = context.instances.find(({ id }) => id === target.instanceId);

@@ -32,10 +32,10 @@ test("all target expands to the current host platform only", () => {
   assert.deepEqual(expandPlatformSelection("all", { platform: "linux", arch: "x64" }), ["linux-x64"]);
 });
 
-test("updater artifact config is opt-in through MXTERM_CREATE_UPDATER_ARTIFACTS", () => {
+test("updater artifact config prefers NEXATERM_CREATE_UPDATER_ARTIFACTS and keeps the legacy alias", () => {
   assert.deepEqual(updaterArtifactsArgs({ env: {} }, "win-x64"), []);
   assert.deepEqual(
-    updaterArtifactsArgs({ env: { MXTERM_CREATE_UPDATER_ARTIFACTS: "1" } }, "linux-x64"),
+    updaterArtifactsArgs({ env: { NEXATERM_CREATE_UPDATER_ARTIFACTS: "1" } }, "linux-x64"),
     [
       "--config",
       JSON.stringify({ bundle: { createUpdaterArtifacts: true } }),
@@ -48,7 +48,7 @@ test("Windows signing config is injected from the imported certificate thumbprin
     updaterArtifactsArgs(
       {
         env: {
-          MXTERM_CREATE_UPDATER_ARTIFACTS: "1",
+          NEXATERM_CREATE_UPDATER_ARTIFACTS: "1",
           NEXATERM_WINDOWS_CERTIFICATE_THUMBPRINT: "AABBCCDD",
           NEXATERM_WINDOWS_TIMESTAMP_URL: "http://timestamp.example.test",
         },

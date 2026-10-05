@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "requirements": {
+    "startupReviewTargetMs": 2000,
+    "idleMemoryReviewRatio": 1.25,
+    "idleCpuPolicy": "record-near-idle-no-hard-threshold-until-baseline"
+  },
+  "comparison": {
+    "sameMachine": true,
+    "sameBuildMode": true,
+    "sameIdleWindow": true,
+    "mxtermBaselineRequiredForMemoryRatio": true
+  },
+  "startup": {
+    "coldLaunches": 5,
+    "interactiveEvent": "workspace-interactive",
+    "report": ["medianMs", "p95Ms", "individualRuns"],
+    "reviewWhen": "medianMs > requirements.startupReviewTargetMs"
+  },
+  "idle": {
+    "warmupMs": 5000,
+    "durationMs": 30000,
+    "sampleMs": 1000,
+    "measureProcessTree": true,
+    "metrics": ["rssMb", "cpuPercent", "processCount"],
+    "reviewWhen": [
+      "NexaTerm median RSS / mXterm median RSS > requirements.idleMemoryReviewRatio",
+      "CPU is not near idle or shows unexplained periodic polling"
+    ]
+  },
+  "multiSession": {
+    "sshSessions": 10,
+    "requiredSurfaces": ["terminal", "split", "sftp", "transfer", "monitoring"],
+    "steps": [
+      "Open ten independent SSH terminal instances against fixture or isolated test hosts.",
+      "Create at least one split containing two live SSH instances.",
+      "Open SFTP/Remote Files for at least two sessions and list directories.",
+      "Run at least one upload and one download while all ten SSH sessions stay connected.",
+      "Open Monitoring for one SSH session and collect multiple refreshes.",
+      "Type and switch focus across sessions while transfer/monitoring remain active."
+    ],
+    "record": ["startupMs", "rssMb", "cpuPercent", "processCount", "uiObservation", "errors"]
+  },
+  "resourceRelease": {
+    "cycles": 3,
+    "sessionsPerCycle": 10,
+    "settleMs": 10000,
+    "steps": [
+      "Record idle process-tree baseline.",
+      "Open the multi-session workload.",
+      "Close all terminals, SFTP panels, monitoring, transfers and split panes.",
+      "Wait for settleMs and record the same process-tree metrics.",
+      "Repeat for cycles."
+    ],
+    "reviewWhen": [
+      "child processes remain after their owning sessions are closed",
+      "RSS or process count grows monotonically across close/reopen cycles without explanation",
+      "PTY, tunnel, runner, monitor or transfer workers continue after owners are closed"
+    ]
+  },
+  "failureIsolation": {
+    "steps": [
+      "Force-disconnect one SSH session while nine others remain active.",
+      "Reconnect only the disconnected session.",
+      "Fail one transfer and one monitoring refresh.",
+      "Verify unrelated sessions and workspace interactions remain usable."
+    ]
+  },
+  "evidence": {
+    "requiredMetadata": ["os", "arch", "buildMode", "appVersion", "commit", "machineSummary", "timestamp"],
+    "artifacts": ["runtime-sampler-json", "startup-jsonl", "manual-observation"]
+  }
+}

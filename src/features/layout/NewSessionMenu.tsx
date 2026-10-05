@@ -1,16 +1,38 @@
 import "../../styles/actionbar.css";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import * as Menubar from "@radix-ui/react-menubar";
-import { ChevronRight, FolderOpen, Plus, SquarePlus } from "lucide-react";
+import {
+  Cable,
+  ChevronRight,
+  FolderOpen,
+  MonitorPlay,
+  PanelsTopLeft,
+  Plus,
+  SquarePlus,
+  TerminalSquare,
+} from "lucide-react";
 import { useI18n } from "../../shared/i18n";
 import { Tooltip } from "../../shared/ui/Tooltip";
 import { LocalTerminalIcon } from "../terminal/LocalTerminalIcons";
-import type { LocalTerminalProfile } from "../terminal/localTerminalTypes";
+import type { DesktopPlatform } from "../../shared/tauri/platformCapabilities";
+import type { ConnectionProtocol } from "../connections/connectionTypes";
+import type { LocalTerminalProfile, WslProviderStatus } from "../terminal/localTerminalTypes";
+import { newSessionCharacterEntries } from "./newSessionCharacterEntries";
+import { buildNewSessionTerminalSections, type WslEntryReason } from "./newSessionLocalEntries";
+import {
+  remoteDesktopCapabilityLabelKey,
+  unknownRemoteDesktopEntryCapabilities,
+  type RemoteDesktopEntryCapabilities,
+} from "./newSessionRemoteDesktopEntries";
 
 export interface NewSessionMenuProps {
+  desktopPlatform?: DesktopPlatform;
   localProfiles: readonly LocalTerminalProfile[];
+  localProfilesError?: string | null;
   localProfilesLoading: boolean;
-  onCreateConnection: () => void;
+  remoteDesktopEntryCapabilities?: RemoteDesktopEntryCapabilities;
+  wslProviderStatus?: WslProviderStatus | null;
+  onCreateConnection: (protocol?: ConnectionProtocol) => void;
   onOpenLocalProfile: (profile: LocalTerminalProfile) => void;
   onQuickOpen: () => void;
 }
@@ -20,14 +42,33 @@ interface NewSessionItemsProps extends NewSessionMenuProps { variant?: "menubar"
 export function NewSessionMenuItems({ variant = "dropdown", ...props }: NewSessionItemsProps) {
   const { t } = useI18n();
   const Menu = variant === "menubar" ? Menubar : DropdownMenu;
+  const remoteCapabilities =
+    props.remoteDesktopEntryCapabilities || unknownRemoteDesktopEntryCapabilities;
+  const sections = buildNewSessionTerminalSections({
+    platform: props.desktopPlatform || "unknown",
+    profiles: props.localProfiles,
+    profilesFailed: Boolean(props.localProfilesError),
+    profilesLoading: props.localProfilesLoading,
+    wslProviderStatus: props.wslProviderStatus,
+  });
+  const wslReasonKey = (reason: WslEntryReason) => {
+    if (reason === "loading") return "newSession.wslProfilesLoading" as const;
+    if (reason === "detectionFailed") return "newSession.wslDetectionFailed" as const;
+    if (reason === "commandMissing") return "newSession.wslCommandMissing" as const;
+    if (reason === "noDistribution") return "newSession.wslNoDistribution" as const;
+    if (reason === "probeTimeout") return "newSession.wslProbeTimeout" as const;
+    if (reason === "probeFailed") return "newSession.wslProbeFailed" as const;
+    if (reason === "availableHidden") return "newSession.wslAvailableHidden" as const;
+    return "newSession.wslNotDetected" as const;
+  };
   return (
     <>
       <Menu.Label className="title-new-session-menu-heading">{t("newSession.localTerminals")}</Menu.Label>
-      {props.localProfilesLoading || props.localProfiles.length === 0 ? (
+      {props.localProfilesLoading || sections.localProfiles.length === 0 ? (
         <Menu.Item disabled className="dropdown-menu-item">
           {t(props.localProfilesLoading ? "newSession.profilesLoading" : "newSession.noProfiles")}
         </Menu.Item>
-      ) : props.localProfiles.map((profile) => (
+      ) : sections.localProfiles.map((profile) => (
         <Menu.Item key={profile.id} className="local-terminal-profile-menu-item dropdown-menu-item"
           textValue={profile.name} onSelect={() => props.onOpenLocalProfile(profile)}>
           <span className="local-terminal-menu-label">
@@ -36,8 +77,65 @@ export function NewSessionMenuItems({ variant = "dropdown", ...props }: NewSessi
           </span>
         </Menu.Item>
       ))}
+      {sections.showWslSection ? (
+        <>
+          <Menu.Separator className="context-menu-separator" />
+          <Menu.Label className="title-new-session-menu-heading">{t("newSession.wsl")}</Menu.Label>
+          {sections.wslProfiles.length > 0 ? sections.wslProfiles.map((profile) => (
+            <Menu.Item key={profile.id} className="local-terminal-profile-menu-item dropdown-menu-item"
+              textValue={profile.name} onSelect={() => props.onOpenLocalProfile(profile)}>
+              <span className="local-terminal-menu-label">
+                <LocalTerminalIcon className="ui-icon" kind={profile.kind} title={profile.name} />
+                <span>{profile.name}</span>
+              </span>
+            </Menu.Item>
+          )) : (
+            <Menu.Item disabled className="dropdown-menu-item">{t(wslReasonKey(sections.wslReason))}</Menu.Item>
+          )}
+        </>
+      ) : null}
       <Menu.Separator className="context-menu-separator" />
-      <Menu.Item className="dropdown-menu-item" onSelect={props.onCreateConnection}>
+      <Menu.Label className="title-new-session-menu-heading">{t("newSession.characterTerminals")}</Menu.Label>
+      {newSessionCharacterEntries.map((entry) => (
+        <Menu.Item
+          key={entry.protocol}
+          className="dropdown-menu-item"
+          onSelect={() => props.onCreateConnection(entry.protocol)}
+        >
+          {entry.protocol === "telnet" ? (
+            <TerminalSquare className="ui-icon" aria-hidden="true" />
+          ) : (
+            <Cable className="ui-icon" aria-hidden="true" />
+          )}
+          {t(entry.labelKey)}
+        </Menu.Item>
+      ))}
+      <Menu.Separator className="context-menu-separator" />
+      <Menu.Label className="title-new-session-menu-heading">{t("newSession.remoteDesktops")}</Menu.Label>
+      {(["rdp", "vnc"] as const).map((protocol) => {
+        const capability = remoteCapabilities[protocol];
+        return (
+          <Menu.Item
+            key={protocol}
+            className="dropdown-menu-item"
+            onSelect={() => props.onCreateConnection(protocol)}
+          >
+            {protocol === "rdp" ? (
+              <MonitorPlay className="ui-icon" aria-hidden="true" />
+            ) : (
+              <PanelsTopLeft className="ui-icon" aria-hidden="true" />
+            )}
+            <span className="app-entry-copy">
+              <span>{t(protocol === "rdp" ? "newSession.rdp" : "newSession.vnc")}</span>
+              <small className="app-entry-reason">
+                {t(remoteDesktopCapabilityLabelKey(capability))}
+              </small>
+            </span>
+          </Menu.Item>
+        );
+      })}
+      <Menu.Separator className="context-menu-separator" />
+      <Menu.Item className="dropdown-menu-item" onSelect={() => props.onCreateConnection()}>
         <SquarePlus className="ui-icon" aria-hidden="true" />{t("newSession.createConnection")}
       </Menu.Item>
       <Menu.Item className="dropdown-menu-item" onSelect={props.onQuickOpen}>

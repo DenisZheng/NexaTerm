@@ -7,7 +7,7 @@ use rusqlite::{params, Connection, OptionalExtension};
 use serde::{de::DeserializeOwned, Serialize};
 use tauri::{AppHandle, Manager};
 
-use crate::app_error::AppError;
+use crate::app_error::{AppError, AppErrorDetails};
 use crate::command_library::{
     normalize_command_history_limit, normalize_command_snippet_group,
     validate_command_history_record, validate_command_snippet_input, CommandHistoryEntry,
@@ -173,6 +173,36 @@ impl StorageRepository {
                     updated_at = excluded.updated_at",
                 params![key, value_json, now],
             )
+            .map_err(sqlite_repository_error)?;
+        Ok(())
+    }
+
+    pub fn workspace_snapshot_get(&self) -> Result<(Option<serde_json::Value>, Option<serde_json::Value>), AppError> {
+        let row = self.connection.query_row(
+            "SELECT current_json, backup_json FROM workspace_snapshots WHERE slot = 1",
+            [],
+            |row| Ok((row.get::<_, Option<String>>(0)?, row.get::<_, Option<String>>(1)?)),
+        ).optional().map_err(sqlite_repository_error)?;
+        let Some((current, backup)) = row else { return Ok((None, None)); };
+        let parse = |value: Option<String>| -> Result<Option<serde_json::Value>, AppError> {
+            value.map(|json| serde_json::from_str(&json).map_err(sqlite_serialize_error)).transpose()
+        };
+        Ok((parse(current)?, parse(backup)?))
+    }
+
+    pub fn workspace_snapshot_save(&self, snapshot: &serde_json::Value, now: &str) -> Result<(), AppError> {
+        let json = serde_json::to_string(snapshot).map_err(sqlite_serialize_error)?;
+        self.connection.execute(
+            "INSERT INTO workspace_snapshots(slot, current_json, backup_json, updated_at) VALUES (1, ?1, NULL, ?2)
+             ON CONFLICT(slot) DO UPDATE SET backup_json = workspace_snapshots.current_json,
+               current_json = excluded.current_json, updated_at = excluded.updated_at",
+            params![json, now],
+        ).map_err(sqlite_repository_error)?;
+        Ok(())
+    }
+
+    pub fn workspace_snapshot_clear(&self) -> Result<(), AppError> {
+        self.connection.execute("DELETE FROM workspace_snapshots WHERE slot = 1", [])
             .map_err(sqlite_repository_error)?;
         Ok(())
     }
@@ -1615,6 +1645,10 @@ impl StorageRepository {
                     )
                 }
                 ConnectionCredentialMode::Prompt => {
+                    let preferred_auth_kind = profile
+                        .prompt_auth_kind
+                        .clone()
+                        .unwrap_or(ConnectionAuthKind::Password);
                     let prompt = prompt.ok_or_else(|| {
                         AppError::new(
                             "credential_prompt_required",
@@ -1622,11 +1656,19 @@ impl StorageRepository {
                             format!("connection_id={}", profile.id),
                             true,
                         )
+                        .with_details(AppErrorDetails::CredentialPromptRequired {
+                            connection_id: profile.id.clone(),
+                            auth_kind: match &preferred_auth_kind {
+                                ConnectionAuthKind::Password => "password",
+                                ConnectionAuthKind::PrivateKey => "private_key",
+                            }
+                            .to_string(),
+                            host: profile.host.clone(),
+                            port: profile.port,
+                            username: profile.username.clone(),
+                        })
                     })?;
-                    let auth_kind = prompt
-                        .auth_kind
-                        .or(profile.prompt_auth_kind.clone())
-                        .unwrap_or(ConnectionAuthKind::Password);
+                    let auth_kind = prompt.auth_kind.unwrap_or(preferred_auth_kind);
                     (
                         auth_kind,
                         prompt.password,

@@ -2,8 +2,8 @@
 //
 // up    - generate a throwaway ed25519 keypair (if missing) and start the
 //         compose stack. Nothing secret is committed; keys/ is gitignored.
-// smoke - wait for ports, then verify: direct SSH, double-hop SSH via the
-//         jump host, and X11 forwarding. RDP/VNC are port-checked only;
+// smoke - wait for ports, then verify direct/legacy one-jump SSH, the
+//         isolated WF-06B two-jump NexaTerm path, and X11 forwarding. RDP/VNC are port-checked only;
 //         protocol-level acceptance is manual (see README.md).
 // wf03-prepare - seed deterministic SSH/SFTP paths for A05/A06 GUI acceptance.
 // wf03-mutate  - change the A06 remote file out-of-band to trigger conflict handling.
@@ -53,6 +53,19 @@ function requireTool(name, probeArgs) {
     console.error(`error: required tool '${name}' could not be executed: ${r.error.message}`);
     process.exit(2);
   }
+}
+
+function fixtureHostKey(service) {
+  const output = sh(
+    "docker",
+    ["compose", "-f", composeFile, "exec", "-T", service, "cat", "/etc/ssh/ssh_host_ed25519_key.pub"],
+    { quiet: true, stdio: "pipe" },
+  ).trim();
+  const parts = output.split(/\s+/);
+  if (parts.length < 2 || parts[0] !== "ssh-ed25519") {
+    throw new Error(`invalid ed25519 host key from ${service}`);
+  }
+  return parts.slice(0, 2).join(" ");
 }
 
 function cmdUp() {
@@ -196,6 +209,7 @@ async function cmdSmoke() {
   const ports = [
     ["ssh-jump (2222)", 2222],
     ["ssh-x11 (2223)", 2223],
+    ["ssh-jump-outer / WF-06B (2224)", 2224],
     ["xrdp (3389)", 3389],
     ["vnc (5901)", 5901],
   ];
@@ -213,7 +227,7 @@ async function cmdSmoke() {
       expect: "ssh-jump-ok",
     },
     {
-      name: "double-hop ssh via jump to ssh-target",
+      name: "legacy one-jump ssh via ssh-jump to ssh-target",
       args: [
         ...sshBase,
         "-o",
@@ -250,10 +264,6 @@ async function cmdSmoke() {
     const display = process.env.DISPLAY || "";
     if (!display) throw new Error("DISPLAY is missing; run smoke under xvfb-run");
 
-    const xauthOutput = sh("xauth", ["list"], { quiet: true, stdio: "pipe" });
-    const cookieMatch = xauthOutput.match(/MIT-MAGIC-COOKIE-1\s+([0-9a-f]+)/i);
-    if (!cookieMatch) throw new Error("could not read MIT-MAGIC-COOKIE-1 from host XAUTHORITY");
-
     const keyscan = sh(
       "ssh-keyscan",
       ["-t", "ed25519", "-p", "2223", "127.0.0.1"],
@@ -286,15 +296,101 @@ async function cmdSmoke() {
           NEXATERM_FIXTURE_X11_KEY: privateKey,
           NEXATERM_FIXTURE_X11_HOST_KEY: hostKey,
           NEXATERM_FIXTURE_X11_DISPLAY: display,
-          NEXATERM_FIXTURE_X11_COOKIE: cookieMatch[1],
         },
       },
     );
-    results.push(["NexaTerm russh X11 reaches host Xvfb", true]);
+    results.push(["NexaTerm production Terminal X11 reaches host Xvfb", true]);
   } catch (e) {
-    results.push(["NexaTerm russh X11 reaches host Xvfb", false]);
+    results.push(["NexaTerm production Terminal X11 reaches host Xvfb", false]);
     const stderr = typeof e.stderr === "string" ? e.stderr.trim() : "";
     console.error(`NexaTerm russh X11 probe failed: ${stderr || e.message.split("\n")[0]}`);
+  }
+
+
+  try {
+    requireTool("cargo", ["--version"]);
+    const outerHostKey = fixtureHostKey("ssh-jump-outer");
+    const innerHostKey = fixtureHostKey("ssh-jump-inner");
+    const targetHostKey = fixtureHostKey("ssh-multihop-target");
+    sh(
+      "cargo",
+      [
+        "test",
+        "--lib",
+        "--locked",
+        "wf06b_fixture",
+        "--",
+        "--ignored",
+        "--nocapture",
+        "--test-threads=1",
+      ],
+      {
+        cwd: path.join(dir, "..", "..", "src-tauri"),
+        timeout: 10 * 60_000,
+        env: {
+          ...process.env,
+          NEXATERM_FIXTURE_WF06B_COMPOSE: composeFile,
+          NEXATERM_FIXTURE_WF06B_KEY: privateKey,
+          NEXATERM_FIXTURE_WF06B_OUTER_HOST_KEY: outerHostKey,
+          NEXATERM_FIXTURE_WF06B_INNER_HOST_KEY: innerHostKey,
+          NEXATERM_FIXTURE_WF06B_TARGET_HOST_KEY: targetHostKey,
+        },
+      },
+    );
+    results.push(["NexaTerm true two-hop Terminal/SFTP/Tunnel + cleanup", true]);
+  } catch (e) {
+    results.push(["NexaTerm true two-hop Terminal/SFTP/Tunnel + cleanup", false]);
+    const stderr = typeof e.stderr === "string" ? e.stderr.trim() : "";
+    console.error(
+      `NexaTerm WF-06B two-hop probe failed: ${stderr || e.message.split("\n")[0]}`,
+    );
+  }
+
+  try {
+    requireTool("cargo", ["--version"]);
+    requireTool("ssh-keyscan", ["-h"]);
+
+    const keyscan = sh(
+      "ssh-keyscan",
+      ["-t", "ed25519", "-p", "2222", "127.0.0.1"],
+      { quiet: true, stdio: "pipe" },
+    );
+    const keyLine = keyscan
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .find((line) => line && !line.startsWith("#") && line.includes(" ssh-ed25519 "));
+    if (!keyLine) throw new Error("ssh-keyscan did not return the tunnel fixture ed25519 host key");
+    const keyParts = keyLine.split(/\s+/);
+    const hostKey = keyParts.slice(1).join(" ");
+
+    sh(
+      "cargo",
+      [
+        "test",
+        "--lib",
+        "--locked",
+        "tunnel_fixture_local_dynamic_remote_real_ssh",
+        "--",
+        "--ignored",
+        "--nocapture",
+      ],
+      {
+        cwd: path.join(dir, "..", "..", "src-tauri"),
+        timeout: 10 * 60_000,
+        env: {
+          ...process.env,
+          NEXATERM_FIXTURE_TUNNEL_KEY: privateKey,
+          NEXATERM_FIXTURE_TUNNEL_HOST_KEY: hostKey,
+        },
+      },
+    );
+    results.push(["NexaTerm tunnel runtime local/dynamic/remote over real SSH", true]);
+  } catch (e) {
+    results.push(["NexaTerm tunnel runtime local/dynamic/remote over real SSH", false]);
+    const stderr = typeof e.stderr === "string" ? e.stderr.trim() : "";
+    console.error(
+      `NexaTerm tunnel runtime probe failed: ${stderr || e.message.split("\n")[0]}`,
+    );
   }
 
   let failed = 0;

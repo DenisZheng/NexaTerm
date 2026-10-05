@@ -1,0 +1,5 @@
+{"file":"scripts/check-wf08c-release-surface.mjs","reason":"full locale parity and active brand/update/MCP source contract"}
+{"file":"src-tauri/src/bin/mxterm_mcp.rs","reason":"canonical MCP serverInfo, tool alias and token-header compatibility"}
+{"file":"src-tauri/src/mcp.rs","reason":"canonical NexaTerm MCP user-facing identity while preserving explicit legacy aliases"}
+{"file":".github/workflows/release.yml","reason":"canonical updater env, signing and release repository surface"}
+{"file":"src-tauri/tauri.conf.json","reason":"product name, bundle identifier and updater endpoint"}

@@ -95,6 +95,48 @@ jobs:
       - name: WF-04B bounded batch and instance split
         run: pnpm run check:wf04b-batch-split
 
+      - name: WF-04C fixed-target MultiExec
+        run: pnpm run check:wf04c-multiexec
+
+      - name: WF-05A Local and WSL unified entry
+        run: pnpm run check:wf05a-local-wsl
+
+      - name: WF-05B Serial and Telnet unified entry
+        run: pnpm run check:wf05b-serial-telnet
+
+      - name: WF-05C RDP and VNC capability entry
+        run: pnpm run check:wf05c-rdp-vnc
+
+      - name: WF-06A tunnel management lifecycle
+        run: pnpm run check:wf06a-tunnels
+
+      - name: WF-06B two-hop Jump plan and owner
+        run: pnpm run check:wf06b-multihop-jump
+
+      - name: WF-06C X11 production core
+        run: pnpm run check:wf06c-x11
+
+      - name: WF-07 workspace snapshot contract
+        run: pnpm run check:wf07-workspace-restore
+
+      - name: WF-07 A14 restart acceptance
+        run: pnpm exec vitest run src/features/workspace/restore/a14RestartAcceptance.test.ts
+
+      - name: WF-08A release and migration baseline
+        run: pnpm run check:wf08a-release-migration
+
+      - name: WF-08B cross-brand app-data migration
+        run: pnpm run check:wf08b-cross-brand-migration
+
+      - name: WF-08C release surface
+        run: pnpm run check:wf08c-release-surface
+
+      - name: WF-08D performance and stability contract
+        run: pnpm run check:wf08d-performance-stability
+
+      - name: WF-08E final A15 evidence contract
+        run: pnpm run check:wf08e-a15-release
+
   security:
     name: Security evidence
     runs-on: ubuntu-22.04
