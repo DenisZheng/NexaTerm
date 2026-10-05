@@ -128,6 +128,9 @@ jobs:
       - name: WF-08B cross-brand app-data migration
         run: pnpm run check:wf08b-cross-brand-migration
 
+      - name: WF-08C release surface
+        run: pnpm run check:wf08c-release-surface
+
   security:
     name: Security evidence
     runs-on: ubuntu-22.04
