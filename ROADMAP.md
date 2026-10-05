@@ -1,6 +1,6 @@
 # NexaTerm 当前路线图
 
-> 更新：2026-10-04
+> 更新：2026-10-05
 > WF-04A 交付：PR #26（基于 GitHub `main` @ `a0fcc0d`）
 > 本文件是当前项目级执行顺序的唯一入口。需求范围仍以 `NEXATERM_REQUIREMENTS.md` 为准；交互规则仍以 `docs/WORKFLOW_SPEC.md` 为准。旧阶段计划、差距分析和工作流交付计划保留用于追溯，不再覆盖本文件的当前优先级。
 
@@ -10,7 +10,7 @@
 
 WF-04B/04C/05/06/07 已进入集中验收分支，验收基线为 `feat/wf07-workspace-restore` @ `3ff0c8e`（CI #304 SUCCESS）；此处不据此宣称全部已合入 main。维护者在 Windows 真实 Tauri 已确认 A01/A02/A04/A11/A12/A13，通过项及平台边界见 [A01–A15 报告](.trellis/tasks/09-23-nexaterm-workflow-mainline/validation/acceptance-report-2026-10-04.md)；A08、A14 另有既有验收记录。WS-X09 / WS-X04 已在 WORKFLOW_SPEC v0.5 / v0.6 确认。
 
-当前执行顺序（2026-10-04 维护者确认并行）：`10-04-wf04c-multiexec-entry` 已提交并推送 `cc3b8e2`，A09/A10 真实 Tauri 仍待验；与此同时允许从该提交堆叠推进 WF-08 开发。A09/A10 不再阻塞 WF-08A–08D 的实现与自动化，但仍是最终 A15 / v1 sign-off 的前置门禁。WF-08A 从“发布与迁移基线门禁”开始，证据见 `10-04-wf-08a-release-migration-baseline/A15_BASELINE.md`。 WF-08B 实现已完成并由 CI #343 验证三平台编译/测试，真实旧版本升级留到 WF-08E/A15；WF-08C 已完成代码收口并由 CI #357 验证品牌、English/zh-CN parity、canonical MCP sidecar 与三平台编译/测试。WF-08D 已完成测量工具并由 CI #364 验证三平台编译/测试、sampler 单测与性能/稳定性门禁；WF-08E 已启动最终 A15 release-candidate 证据框架，A09/A10、三平台真实安装/签名/升级回滚、迁移、性能、updater 任一未通过都阻止最终签字。
+当前执行顺序（2026-10-04 维护者确认并行）：`10-04-wf04c-multiexec-entry` 已提交并推送 `cc3b8e2`，A09/A10 真实 Tauri 仍待验；与此同时允许从该提交堆叠推进 WF-08 开发。A09/A10 不再阻塞 WF-08A–08D 的实现与自动化，但仍是最终 A15 / v1 sign-off 的前置门禁。WF-08A 从“发布与迁移基线门禁”开始，证据见 `10-04-wf-08a-release-migration-baseline/A15_BASELINE.md`。 WF-08B 实现已完成并由 CI #343 验证三平台编译/测试，真实旧版本升级留到 WF-08E/A15；WF-08C 已完成代码收口并由 CI #357 验证品牌、English/zh-CN parity、canonical MCP sidecar 与三平台编译/测试。WF-08D 已完成测量工具并由 CI #364 验证三平台编译/测试、sampler 单测与性能/稳定性门禁；WF-08E 自动化证据框架已由 CI #369 全绿验证。A15 仍进行中：A09/A10、三平台真实安装/签名/升级回滚、迁移、性能、updater 任一未通过都阻止最终签字。
 
 ## 当前评审整改状态
 
