@@ -2,6 +2,7 @@ import { lazy, Suspense } from "react";
 import "./styles/tokens.css";
 import "./styles/app.css";
 import { LegacyAppDataMigrationGate } from "./features/migration/LegacyAppDataMigrationGate";
+import { LegacySettingsProbeWindow } from "./features/migration/LegacySettingsProbeWindow";
 
 const VncRunnerWindowApp = lazy(async () => {
   const module = await import("./features/layout/VncRunnerWindowApp");
@@ -23,7 +24,12 @@ function StartupFallback({ label }: { label: string }) {
 }
 
 export default function App() {
-  const isVncRunner = new URLSearchParams(window.location.search).get("view") === "vnc-runner";
+  const view = new URLSearchParams(window.location.search).get("view");
+  if (view === "legacy-settings-probe") {
+    return <LegacySettingsProbeWindow />;
+  }
+
+  const isVncRunner = view === "vnc-runner";
   if (isVncRunner) {
     return (
       <Suspense fallback={<StartupFallback label="正在加载 VNC 窗口..." />}>
