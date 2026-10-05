@@ -1,6 +1,7 @@
 import { useMemo, useState, type KeyboardEvent } from "react";
 import { Keyboard, Pencil, RotateCcw, Search, X } from "lucide-react";
 
+import { useI18n, type Translate } from "../../shared/i18n";
 import { Keybinding } from "../../shared/ui/Keybinding";
 import {
   defaultShortcutBindings,
@@ -41,7 +42,9 @@ export function ShortcutSettingsSection({
         }
         const binding = resolveShortcutBinding(currentBindings, action);
         const category = shortcutCategories.find((item) => item.id === action.category);
-        return [action.label, action.description, binding || "", category?.label || ""]
+        const actionCopy = shortcutActionCopy(action.id, t);
+        const categoryLabel = shortcutCategoryLabel(action.category, t);
+        return [actionCopy.label, actionCopy.description, binding || "", categoryLabel]
           .join(" ")
           .toLowerCase()
           .includes(normalizedQuery);
@@ -74,7 +77,7 @@ export function ShortcutSettingsSection({
     const normalized = normalizeShortcutBinding(rawBinding);
     const validation = validateShortcutBinding(normalized);
     if (!validation.valid) {
-      setLocalError(validation.message || "快捷键不可用。");
+      setLocalError(shortcutValidationMessage(validation.code, t));
       return;
     }
 
@@ -91,8 +94,8 @@ export function ShortcutSettingsSection({
       );
       setLocalError(
         conflictAction
-          ? `与“${conflictAction.label}”冲突。`
-          : "与其他快捷键冲突。",
+          ? t("settings.shortcuts.conflictWith", { name: shortcutActionCopy(conflictAction.id, t).label })
+          : t("settings.shortcuts.conflictOther"),
       );
       return;
     }
@@ -128,21 +131,21 @@ export function ShortcutSettingsSection({
     <section className="settings-page-section">
       <header className="settings-section-head settings-section-head-row">
         <div>
-          <h1>快捷键</h1>
-          <p>管理 MXterm 应用内快捷键，不影响系统级热键。</p>
+          <h1>{t("settings.shortcuts.title")}</h1>
+          <p>{t("settings.shortcuts.description")}</p>
         </div>
         <button className="settings-action-button" type="button" onClick={resetAll}>
           <RotateCcw className="ui-icon" aria-hidden="true" />
-          <span>恢复默认</span>
+          <span>{t("settings.shortcuts.reset")}</span>
         </button>
       </header>
 
       <div className="shortcut-toolbar">
-        <label className="shortcut-search" aria-label="搜索快捷键">
+        <label className="shortcut-search" aria-label={t("settings.shortcuts.searchAria")}>
           <Search className="ui-icon" aria-hidden="true" />
           <input
             value={query}
-            placeholder="搜索动作或快捷键"
+            placeholder={t("settings.shortcuts.searchPlaceholder")}
             onChange={(event) => setQuery(event.currentTarget.value)}
           />
         </label>
@@ -158,7 +161,7 @@ export function ShortcutSettingsSection({
           <section className="settings-panel shortcut-group" key={category.id}>
             <div className="shortcut-group-title">
               <Keyboard className="ui-icon" aria-hidden="true" />
-              <span>{category.label}</span>
+              <span>{shortcutCategoryLabel(category.id, t)}</span>
             </div>
             <div className="shortcut-list">
               {actions.map((action) => {
@@ -167,8 +170,8 @@ export function ShortcutSettingsSection({
                 return (
                   <div className="shortcut-row" key={action.id}>
                     <div className="shortcut-row-copy">
-                      <strong>{action.label}</strong>
-                      <small>{action.description}</small>
+                      <strong>{shortcutActionCopy(action.id, t).label}</strong>
+                      <small>{shortcutActionCopy(action.id, t).description}</small>
                     </div>
                     <div className="shortcut-row-control">
                       {editing ? (
@@ -182,7 +185,7 @@ export function ShortcutSettingsSection({
                           }}
                           onKeyDown={(event) => handleCaptureKeyDown(action, event)}
                         >
-                          按下新的快捷键
+                          {t("settings.shortcuts.capture")}
                         </button>
                       ) : (
                         <Keybinding value={binding} />
@@ -190,7 +193,7 @@ export function ShortcutSettingsSection({
                       <button
                         className="settings-action-button shortcut-icon-action"
                         type="button"
-                        aria-label={`编辑${action.label}快捷键`}
+                        aria-label={t("settings.shortcuts.editAria", { name: shortcutActionCopy(action.id, t).label })}
                         onClick={() => {
                           setEditingActionId(action.id);
                           setLocalError(null);
@@ -201,7 +204,7 @@ export function ShortcutSettingsSection({
                       <button
                         className="settings-action-button shortcut-icon-action"
                         type="button"
-                        aria-label={`清空${action.label}快捷键`}
+                        aria-label={t("settings.shortcuts.clearAria", { name: shortcutActionCopy(action.id, t).label })}
                         disabled={!binding}
                         onClick={() => clearBinding(action)}
                       >
@@ -221,13 +224,44 @@ export function ShortcutSettingsSection({
 
       {filteredActions.length === 0 ? (
         <div className="settings-panel shortcut-empty">
-          没有匹配的快捷键。
+          {t("settings.shortcuts.empty")}
         </div>
       ) : null}
 
       <p className="settings-note">
-        当前仅管理应用内快捷键。终端聚焦时，普通 Shell 快捷键会继续交给终端处理。
+        {t("settings.shortcuts.note")}
       </p>
     </section>
   );
+}
+
+function shortcutCategoryLabel(categoryId: string, t: Translate) {
+  if (categoryId === "general") return t("settings.shortcuts.category.general");
+  if (categoryId === "terminal") return t("settings.shortcuts.category.terminal");
+  if (categoryId === "search") return t("settings.shortcuts.category.search");
+  return t("settings.shortcuts.category.tools");
+}
+
+function shortcutActionCopy(actionId: string, t: Translate) {
+  const keyByAction: Record<string, [Parameters<Translate>[0], Parameters<Translate>[0]]> = {
+    "connection.quickOpen": ["settings.shortcuts.action.connection.quickOpen.label", "settings.shortcuts.action.connection.quickOpen.description"],
+    "settings.open": ["settings.shortcuts.action.settings.open.label", "settings.shortcuts.action.settings.open.description"],
+    "terminal.newTab": ["settings.shortcuts.action.terminal.newTab.label", "settings.shortcuts.action.terminal.newTab.description"],
+    "terminal.closeTab": ["settings.shortcuts.action.terminal.closeTab.label", "settings.shortcuts.action.terminal.closeTab.description"],
+    "terminal.search.toggle": ["settings.shortcuts.action.terminal.search.toggle.label", "settings.shortcuts.action.terminal.search.toggle.description"],
+    "terminal.search.next": ["settings.shortcuts.action.terminal.search.next.label", "settings.shortcuts.action.terminal.search.next.description"],
+    "terminal.search.previous": ["settings.shortcuts.action.terminal.search.previous.label", "settings.shortcuts.action.terminal.search.previous.description"],
+    "ai.sendMessage": ["settings.shortcuts.action.ai.sendMessage.label", "settings.shortcuts.action.ai.sendMessage.description"],
+    "commandSender.toggle": ["settings.shortcuts.action.commandSender.toggle.label", "settings.shortcuts.action.commandSender.toggle.description"],
+  };
+  const keys = keyByAction[actionId];
+  if (!keys) return { label: actionId, description: "" };
+  return { label: t(keys[0]), description: t(keys[1]) };
+}
+
+function shortcutValidationMessage(code: string | undefined, t: Translate) {
+  if (code === "invalid") return t("settings.shortcuts.validation.invalid");
+  if (code === "plain-printable") return t("settings.shortcuts.validation.plainPrintable");
+  if (code === "reserved") return t("settings.shortcuts.validation.reserved");
+  return t("settings.shortcuts.validation.unavailable");
 }
