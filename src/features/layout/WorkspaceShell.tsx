@@ -350,7 +350,6 @@ import {
   connectionProbeLatency,
   localTerminalListProfiles,
   localTerminalOpen,
-  performanceProbeMarkInteractive,
   localTerminalWslCapability,
   remoteFileCheckPath,
   localPathMetadata,
@@ -814,10 +813,6 @@ type NativeFileDropPosition = Extract<DragDropEvent, { type: "enter" | "over" | 
 
 export function WorkspaceShell() {
   const { t } = useI18n();
-
-  useEffect(() => {
-    void performanceProbeMarkInteractive().catch(() => undefined);
-  }, []);
   const {
     reset,
     settings,
