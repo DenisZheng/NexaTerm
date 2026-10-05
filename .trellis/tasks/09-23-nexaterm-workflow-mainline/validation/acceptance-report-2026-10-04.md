@@ -23,7 +23,7 @@
 | A12 | 隧道 + 两级 Jump | **通过**（维护者确认 2026-10-04） | 本报告"集中验收"节 |
 | A13 | X11 真 GUI | **通过**（维护者确认 2026-10-04） | 本报告“A13”节；`10-03-wf-06c-x11-core/A13_EVIDENCE.md` |
 | A14 | 工作区恢复 | 通过（既有记录） | `10-04-wf-07/A14_EVIDENCE.md`（两轮 Windows 重启，A14-01～15） |
-| A15 | 迁移/安装/完整 v1 | **未开始** | 属 WF-08，任务未创建 |
+| A15 | 迁移/安装/完整 v1 | **进行中** | WF-08A–08E 自动化框架已建立；A09/A10 与三平台真实发布/升级/回滚/性能证据仍待验 |
 
 ## 2026-10-04 集中验收（A01/A02/A04/A11/A12）
 
@@ -71,7 +71,17 @@
 
 ## A15
 
-WF-08（迁移、安装与完整 v1）尚未创建任务，A15 未开始。
+2026-10-05 更新：WF-08A–08E 的自动化开发与证据框架已建立。WF-08B/08C/08D/08E 分别由 CI #343 / #357 / #364 / #369 验证。A15 **仍未通过**，因为以下真实验收仍待完成：
+
+- A09 / A10 MultiExec 真实 Tauri；
+- Windows x64 / macOS ARM64 / Linux x64 真实安装、启动、语言/主题/品牌检查；
+- Windows Authenticode、macOS Developer ID + notarization/staple；
+- 真实 mXterm → NexaTerm 迁移与回滚；
+- updater 升级 / rollback-recovery；
+- WF-08D 打包版性能、mXterm 内存对比、10 SSH 与资源释放；
+- 最终 Security / License / artifact hash 对账。
+
+WF-08E 的 validator 要求上述全部为 `pass`，否则不得把 A15 / v1 sign-off 标记为通过。
 
 ## 记录边界与后续动作
 
