@@ -48,7 +48,7 @@ import {
   type SVGProps,
 } from "react";
 
-import { t as tr, useI18n } from "../../shared/i18n";
+import { getLocale, t as tr, useI18n } from "../../shared/i18n";
 import type { ConnectionProfile } from "../connections/connectionTypes";
 import {
   dockerContainerAction,
@@ -3100,28 +3100,28 @@ function DockerContainerDetailDialog({
               </span>
               <div>
                 <Dialog.Title>
-                  {target ? `${target.name || shortDockerId(target.id)} 详情` : "容器详情"}
+                  {target ? tr("docker.detail.title", { name: target.name || shortDockerId(target.id) }) : tr("docker.detail.container")}
                 </Dialog.Title>
                 <span>{content?.image || target?.image || "Docker container"}</span>
               </div>
             </div>
             <div className="docker-detail-actions">
-              <Tooltip label="刷新详情">
+              <Tooltip label={tr("docker.detail.refresh")}>
                 <button
                   className="toolbox-icon-button"
                   type="button"
-                  aria-label="刷新详情"
+                  aria-label={tr("docker.detail.refresh")}
                   disabled={loading}
                   onClick={onRefresh}
                 >
                   <RefreshCw className={`ui-icon ${loading ? "spin" : ""}`} aria-hidden="true" />
                 </button>
               </Tooltip>
-              <Tooltip label="复制 Inspect JSON">
+              <Tooltip label={tr("docker.detail.copyInspect")}>
                 <button
                   className="toolbox-icon-button"
                   type="button"
-                  aria-label="复制 Inspect JSON"
+                  aria-label={tr("docker.detail.copyInspect")}
                   disabled={!content?.raw_json}
                   onClick={onCopyJson}
                 >
@@ -3129,7 +3129,7 @@ function DockerContainerDetailDialog({
                 </button>
               </Tooltip>
               <Dialog.Close asChild>
-                <button className="toolbox-icon-button" type="button" aria-label="关闭详情">
+                <button className="toolbox-icon-button" type="button" aria-label={tr("docker.detail.close")}>
                   <X className="ui-icon" aria-hidden="true" />
                 </button>
               </Dialog.Close>
@@ -3140,8 +3140,8 @@ function DockerContainerDetailDialog({
             {loading && !content ? (
               <ToolboxEmptyState
                 icon={LoaderCircle}
-                title="正在读取详情..."
-                description="正在通过 SSH 执行 docker inspect。"
+                title={tr("docker.detail.loading")}
+                description={tr("docker.detail.loadingDescription")}
               />
             ) : content ? (
               <>
@@ -3155,7 +3155,7 @@ function DockerContainerDetailDialog({
                   <DockerPortTable ports={content.ports} />
                 </DockerDetailSection>
                 <DockerDetailSection title="Environment" icon={Settings2}>
-                  <DockerKeyValueTable emptyLabel="没有环境变量。" items={content.env} />
+                  <DockerKeyValueTable emptyLabel={tr("docker.detail.noEnv")} items={content.env} />
                 </DockerDetailSection>
                 <DockerDetailSection title="Volumes" icon={HardDrive}>
                   <DockerMountTable mounts={content.mounts} />
@@ -3164,7 +3164,7 @@ function DockerContainerDetailDialog({
                   <DockerNetworkTable networks={content.networks} />
                 </DockerDetailSection>
                 <DockerDetailSection title="Labels" icon={FileJson}>
-                  <DockerKeyValueTable emptyLabel="没有标签。" items={content.labels} />
+                  <DockerKeyValueTable emptyLabel={tr("docker.detail.noLabels")} items={content.labels} />
                 </DockerDetailSection>
                 <DockerDetailSection title="Settings" icon={Settings2}>
                   <div className="docker-detail-settings">
@@ -3192,7 +3192,7 @@ function DockerContainerDetailDialog({
                         ) : (
                           <Save className="ui-icon" aria-hidden="true" />
                         )}
-                        更新
+                        {tr("docker.detail.update")}
                       </button>
                     </label>
                     <label>
@@ -3204,7 +3204,7 @@ function DockerContainerDetailDialog({
                             className="docker-detail-select"
                             disabled={networkOptions.length === 0}
                             options={networkOptions}
-                            placeholder="没有可加入的网络"
+                            placeholder={tr("docker.detail.noNetwork")}
                             value={effectiveNetworkValue}
                             onChange={onChangeNetwork}
                           />
@@ -3221,7 +3221,7 @@ function DockerContainerDetailDialog({
                         ) : (
                           <Network className="ui-icon" aria-hidden="true" />
                         )}
-                        加入
+                        {tr("docker.detail.join")}
                       </button>
                     </label>
                   </div>
@@ -3230,8 +3230,8 @@ function DockerContainerDetailDialog({
             ) : (
               <ToolboxEmptyState
                 icon={Box}
-                title="未选择容器"
-                description="点击容器名称可以查看详情。"
+                title={tr("docker.detail.noContainer")}
+                description={tr("docker.detail.noContainerDescription")}
               />
             )}
           </div>
@@ -3276,7 +3276,7 @@ function DockerDetailRows({ rows }: { rows: Array<[string, string]> }) {
 
 function DockerPortTable({ ports }: { ports: DockerContainerDetail["ports"] }) {
   if (ports.length === 0) {
-    return <p className="docker-detail-empty">没有端口映射。</p>;
+    return <p className="docker-detail-empty">{tr("docker.detail.noPorts")}</p>;
   }
   return (
     <div className="docker-detail-table">
@@ -3309,7 +3309,7 @@ function DockerKeyValueTable({
       {items.map((item) => (
         <div key={item.key}>
           <code>{item.key}</code>
-          <span title={item.sensitive ? "敏感值已脱敏" : item.value}>{item.value}</span>
+          <span title={item.sensitive ? tr("docker.detail.sensitive") : item.value}>{item.value}</span>
         </div>
       ))}
     </div>
@@ -3318,7 +3318,7 @@ function DockerKeyValueTable({
 
 function DockerMountTable({ mounts }: { mounts: DockerContainerDetail["mounts"] }) {
   if (mounts.length === 0) {
-    return <p className="docker-detail-empty">没有卷挂载。</p>;
+    return <p className="docker-detail-empty">{tr("docker.detail.noVolumes")}</p>;
   }
   return (
     <div className="docker-detail-table docker-detail-table--mounts">
@@ -3344,7 +3344,7 @@ function DockerNetworkTable({
   networks: DockerContainerDetail["networks"];
 }) {
   if (networks.length === 0) {
-    return <p className="docker-detail-empty">没有连接网络。</p>;
+    return <p className="docker-detail-empty">{tr("docker.detail.noNetworks")}</p>;
   }
   return (
     <div className="docker-detail-table docker-detail-table--networks">
@@ -3401,8 +3401,8 @@ function DockerLogsDialog({
   onRefresh: () => void;
   onScroll: () => void;
 }) {
-  const statusLabel = loading ? "连接中" : streaming ? "实时" : paused ? "已暂停" : "已结束";
-  const displayContent = loading && !content ? "正在连接日志流..." : content || "没有日志输出。";
+  const statusLabel = loading ? tr("docker.logs.connecting") : streaming ? tr("docker.logs.live") : paused ? tr("docker.logs.paused") : tr("docker.logs.ended");
+  const displayContent = loading && !content ? tr("docker.logs.connectingStream") : content || tr("docker.logs.empty");
 
   return (
     <Dialog.Root open={Boolean(target)} onOpenChange={(open) => !open && onClose()}>
@@ -3412,7 +3412,7 @@ function DockerLogsDialog({
           <header className="docker-logs-head">
             <div className="docker-logs-title">
               <Dialog.Title>
-                {target ? `${target.name || shortDockerId(target.id)} 日志` : "容器日志"}
+                {target ? tr("docker.logs.title", { name: target.name || shortDockerId(target.id) }) : tr("docker.logs.containerTitle")}
               </Dialog.Title>
               <span
                 className={`docker-log-state ${streaming ? "streaming" : paused ? "paused" : ""}`}
@@ -3421,44 +3421,44 @@ function DockerLogsDialog({
               </span>
             </div>
             <div className="docker-logs-actions">
-              <Tooltip label="重连日志流">
+              <Tooltip label={tr("docker.logs.reconnect")}>
                 <button
                   className="toolbox-icon-button"
                   type="button"
-                  aria-label="重连日志流"
+                  aria-label={tr("docker.logs.reconnect")}
                   disabled={loading}
                   onClick={onRefresh}
                 >
                   <ListRestart className={`ui-icon ${loading ? "spin" : ""}`} aria-hidden="true" />
                 </button>
               </Tooltip>
-              <Tooltip label="复制日志">
+              <Tooltip label={tr("docker.logs.copy")}>
                 <button
                   className="toolbox-icon-button"
                   type="button"
-                  aria-label="复制日志"
+                  aria-label={tr("docker.logs.copy")}
                   disabled={!content.trim()}
                   onClick={onCopy}
                 >
                   <Copy className="ui-icon" aria-hidden="true" />
                 </button>
               </Tooltip>
-              <Tooltip label="下载日志">
+              <Tooltip label={tr("docker.logs.download")}>
                 <button
                   className="toolbox-icon-button"
                   type="button"
-                  aria-label="下载日志"
+                  aria-label={tr("docker.logs.download")}
                   disabled={!content.trim()}
                   onClick={onDownload}
                 >
                   <Download className="ui-icon" aria-hidden="true" />
                 </button>
               </Tooltip>
-              <Tooltip label="清空显示">
+              <Tooltip label={tr("docker.logs.clear")}>
                 <button
                   className="toolbox-icon-button"
                   type="button"
-                  aria-label="清空显示"
+                  aria-label={tr("docker.logs.clear")}
                   disabled={!content && !error}
                   onClick={onClear}
                 >
@@ -3466,7 +3466,7 @@ function DockerLogsDialog({
                 </button>
               </Tooltip>
               <Dialog.Close asChild>
-                <button className="toolbox-icon-button" type="button" aria-label="关闭日志">
+                <button className="toolbox-icon-button" type="button" aria-label={tr("docker.logs.close")}>
                   <X className="ui-icon" aria-hidden="true" />
                 </button>
               </Dialog.Close>
@@ -3487,7 +3487,7 @@ function DockerLogsDialog({
                 ) : (
                   <Play className="ui-icon" aria-hidden="true" />
                 )}
-                {streaming ? "暂停实时" : "启用实时"}
+                {streaming ? tr("docker.logs.pause") : tr("docker.logs.resume")}
               </button>
               <button
                 className={`docker-log-follow ${following ? "active" : "paused"}`}
@@ -3496,7 +3496,7 @@ function DockerLogsDialog({
                 onClick={onFollow}
               >
                 <ArrowDownToLine className="ui-icon" aria-hidden="true" />
-                {following ? "跟随尾部" : "恢复跟随"}
+                {following ? tr("docker.logs.follow") : tr("docker.logs.restoreFollow")}
               </button>
             </div>
           </div>
@@ -3557,7 +3557,7 @@ function ScheduledTasksView({
         <ToolboxEmptyState
           icon={Timer}
           title={tr("docker.empty.sshTitle")}
-          description="打开或切换到一个 SSH 会话后，可以维护远端当前用户的定时任务。"
+          description={tr("docker.schedule.sshDescription")}
         />
       </div>
     );
@@ -3567,19 +3567,19 @@ function ScheduledTasksView({
     <div className="scheduled-tasks">
       <header className="docker-tool-summary scheduled-task-summary">
         <div>
-          <strong>定时任务</strong>
+          <strong>{tr("docker.schedule.title")}</strong>
           <span>
             {tasks.length > 0
-              ? `共 ${tasks.length.toString()} 个 · 启用 ${enabledCount.toString()} 个`
-              : "当前主机暂无 mXterm 定时任务"}
+              ? tr("docker.schedule.summary", { total: tasks.length, enabled: enabledCount })
+              : tr("docker.schedule.emptyHost")}
           </span>
         </div>
         <div className="scheduled-task-summary-actions">
-          <Tooltip label="刷新定时任务">
+          <Tooltip label={tr("docker.schedule.refresh")}>
             <button
               className="toolbox-icon-button"
               type="button"
-              aria-label="刷新定时任务"
+              aria-label={tr("docker.schedule.refresh")}
               disabled={loading}
               onClick={onRefresh}
             >
@@ -3593,7 +3593,7 @@ function ScheduledTasksView({
             onClick={onNew}
           >
             <Plus className="ui-icon" aria-hidden="true" />
-            新增
+            {tr("docker.schedule.new")}
           </button>
         </div>
       </header>
@@ -3604,11 +3604,11 @@ function ScheduledTasksView({
       {draft ? (
         <form className="scheduled-task-form" onSubmit={onSubmit}>
           <header>
-            <strong>{draft.id ? "编辑任务" : "新增任务"}</strong>
+            <strong>{draft.id ? tr("docker.schedule.edit") : tr("docker.schedule.newTask")}</strong>
             <button
               className="toolbox-icon-button"
               type="button"
-              aria-label="取消编辑定时任务"
+              aria-label={tr("docker.schedule.cancelEdit")}
               disabled={saving}
               onClick={onCancelEdit}
             >
@@ -3617,11 +3617,11 @@ function ScheduledTasksView({
           </header>
           <div className="scheduled-task-form-grid">
             <label>
-              <span>名称</span>
+              <span>{tr("docker.schedule.field.name")}</span>
               <input
                 value={draft.name}
                 onChange={(event) => onChangeDraft({ name: event.currentTarget.value })}
-                placeholder="每日巡检"
+                placeholder={tr("docker.schedule.namePlaceholder")}
                 disabled={saving}
               />
             </label>
@@ -3636,7 +3636,7 @@ function ScheduledTasksView({
               />
             </label>
             <label className="scheduled-task-command-field">
-              <span>命令</span>
+              <span>{tr("docker.network.command")}</span>
               <textarea
                 value={draft.command}
                 onChange={(event) => onChangeDraft({ command: event.currentTarget.value })}
@@ -3655,7 +3655,7 @@ function ScheduledTasksView({
                 disabled={saving}
                 onChange={(event) => onChangeDraft({ enabled: event.currentTarget.checked })}
               />
-              <span>启用任务</span>
+              <span>{tr("docker.schedule.enable")}</span>
             </label>
             <div className="scheduled-task-form-actions">
               <button
@@ -3672,7 +3672,7 @@ function ScheduledTasksView({
                 ) : (
                   <Save className="ui-icon" aria-hidden="true" />
                 )}
-                保存
+                {tr("docker.schedule.save")}
               </button>
             </div>
           </footer>
@@ -3683,19 +3683,19 @@ function ScheduledTasksView({
         {loading && tasks.length === 0 ? (
           <ToolboxEmptyState
             icon={LoaderCircle}
-            title="正在读取定时任务"
-            description="正在读取远端当前用户 crontab 中的 mXterm 管理项。"
+            title={tr("docker.schedule.loadingTitle")}
+            description={tr("docker.schedule.loadingDescription")}
           />
         ) : tasks.length === 0 ? (
           <div className="scheduled-task-empty">
             <ToolboxEmptyState
               icon={Timer}
-              title="暂无定时任务"
-              description="创建后会写入远端当前用户 crontab，mXterm 关闭后仍会执行。"
+              title={tr("docker.schedule.emptyTitle")}
+              description={tr("docker.schedule.emptyDescription")}
             />
             <button className="toolbox-mini-button primary" type="button" onClick={onNew}>
               <Plus className="ui-icon" aria-hidden="true" />
-              新增任务
+              {tr("docker.schedule.new")}任务
             </button>
           </div>
         ) : (
@@ -3744,13 +3744,13 @@ function ScheduledTaskRow({
           <span className={`scheduled-task-dot ${task.enabled ? "enabled" : "disabled"}`} />
           <strong title={task.name}>{task.name}</strong>
           <span className={`scheduled-task-state ${task.enabled ? "enabled" : "disabled"}`}>
-            {task.enabled ? "已启用" : "已停用"}
+            {task.enabled ? tr("docker.schedule.enabledState") : tr("docker.schedule.disabledState")}
           </span>
         </div>
         <div className="scheduled-task-meta">
           <code title={task.cron}>{task.cron}</code>
           <span title={formatScheduledTimestamp(task.updated_at)}>
-            更新 {formatScheduledTimestamp(task.updated_at)}
+            {tr("docker.detail.update")} {formatScheduledTimestamp(task.updated_at)}
           </span>
         </div>
         <code className="scheduled-task-command" title={task.command}>
@@ -3764,20 +3764,20 @@ function ScheduledTaskRow({
               </span>
               <span>{formatScheduledTimestamp(lastRun.started_at)}</span>
               <code title={lastRun.output_preview || undefined}>
-                {lastRun.output_preview || "无输出"}
+                {lastRun.output_preview || tr("docker.schedule.noOutput")}
               </code>
             </>
           ) : (
-            <span>暂无执行记录</span>
+            <span>{tr("docker.schedule.noRuns")}</span>
           )}
         </div>
       </div>
       <div className="scheduled-task-actions">
-        <Tooltip label="手动执行">
+        <Tooltip label={tr("docker.schedule.runNow")}>
           <button
             className="toolbox-icon-button"
             type="button"
-            aria-label={`手动执行 ${task.name}`}
+            aria-label={`${tr("docker.schedule.runNow")} ${task.name}`}
             disabled={busy}
             onClick={() => onRunNow(task)}
           >
@@ -3788,11 +3788,11 @@ function ScheduledTaskRow({
             )}
           </button>
         </Tooltip>
-        <Tooltip label={task.enabled ? "停用任务" : "启用任务"}>
+        <Tooltip label={task.enabled ? tr("docker.schedule.disable") : tr("docker.schedule.enableAction")}>
           <button
             className="toolbox-icon-button"
             type="button"
-            aria-label={`${task.enabled ? "停用" : "启用"} ${task.name}`}
+            aria-label={`${task.enabled ? tr("docker.engine.stop") : tr("docker.option.enabled")} ${task.name}`}
             disabled={busy}
             onClick={() => onToggle(task)}
           >
@@ -3805,22 +3805,22 @@ function ScheduledTaskRow({
             )}
           </button>
         </Tooltip>
-        <Tooltip label="编辑任务">
+        <Tooltip label={tr("docker.schedule.editAction")}>
           <button
             className="toolbox-icon-button"
             type="button"
-            aria-label={`编辑 ${task.name}`}
+            aria-label={`${tr("docker.schedule.editAction")} ${task.name}`}
             disabled={busy}
             onClick={() => onEdit(task)}
           >
             <Pencil className="ui-icon" aria-hidden="true" />
           </button>
         </Tooltip>
-        <Tooltip label="删除任务">
+        <Tooltip label={tr("docker.schedule.deleteAction")}>
           <button
             className="toolbox-icon-button danger"
             type="button"
-            aria-label={`删除 ${task.name}`}
+            aria-label={`${tr("docker.schedule.deleteAction")} ${task.name}`}
             disabled={busy}
             onClick={() => onDelete(task)}
           >
@@ -3892,7 +3892,7 @@ function NetworkDiagnosticsView({
         <ToolboxEmptyState
           icon={Network}
           title={tr("docker.empty.sshTitle")}
-          description="打开或切换到一个 SSH 会话后，可以从远端主机视角执行网络诊断。"
+          description={tr("docker.network.sshDescription")}
         />
       </div>
     );
@@ -3902,14 +3902,14 @@ function NetworkDiagnosticsView({
     <div className="network-diagnostics">
       <header className="docker-tool-summary network-diagnostics-summary">
         <div>
-          <strong>网络诊断</strong>
-          <span>{connection.name} · 从当前 SSH 主机执行</span>
+          <strong>{tr("docker.network.title")}</strong>
+          <span>{tr("docker.network.subtitle", { name: connection.name })}</span>
         </div>
         <SelectedIcon className="ui-icon" aria-hidden="true" />
       </header>
 
       <form className="network-diagnostic-form" onSubmit={onRun}>
-        <div className="network-diagnostic-kind-grid" aria-label="诊断类型">
+        <div className="network-diagnostic-kind-grid" aria-label={tr("docker.network.kindAria")}>
           {networkDiagnosticOptions().map((option) => {
             const Icon = option.icon;
             return (
@@ -3927,7 +3927,7 @@ function NetworkDiagnosticsView({
         </div>
 
         <label className="network-diagnostic-field">
-          <span>{kind === "http" ? "URL / 域名" : "目标主机"}</span>
+          <span>{kind === "http" ? tr("docker.network.httpTarget") : tr("docker.network.hostTarget")}</span>
           <input
             value={target}
             onChange={(event) => onChangeTarget(event.target.value)}
@@ -3938,7 +3938,7 @@ function NetworkDiagnosticsView({
 
         {kind === "tcp" ? (
           <label className="network-diagnostic-field">
-            <span>TCP 端口</span>
+            <span>{tr("docker.network.tcpPort")}</span>
             <input
               inputMode="numeric"
               min={1}
@@ -3964,7 +3964,7 @@ function NetworkDiagnosticsView({
             ) : (
               <Play className="ui-icon" aria-hidden="true" />
             )}
-            {running ? "运行中" : "运行诊断"}
+            {running ? tr("docker.network.running") : tr("docker.network.run")}
           </button>
           <button
             className="toolbox-mini-button"
@@ -3973,7 +3973,7 @@ function NetworkDiagnosticsView({
             onClick={onReset}
           >
             <Eraser className="ui-icon" aria-hidden="true" />
-            重置
+            {tr("docker.network.reset")}
           </button>
         </div>
       </form>
@@ -3994,8 +3994,8 @@ function NetworkDiagnosticResultView({
     return (
       <ToolboxEmptyState
         icon={RadioTower}
-        title="等待诊断"
-        description="选择类型并输入目标后运行，结果会显示摘要和原始输出。"
+        title={tr("docker.network.waitTitle")}
+        description={tr("docker.network.waitDescription")}
       />
     );
   }
@@ -4008,14 +4008,14 @@ function NetworkDiagnosticResultView({
       <header className="network-diagnostic-result-head">
         <div>
           <span className={`network-diagnostic-status ${result.ok ? "success" : "failed"}`}>
-            {result.ok ? "成功" : "失败"}
+            {result.ok ? tr("docker.network.success") : tr("docker.network.failed")}
           </span>
           <strong>{networkDiagnosticLabel(result.kind)}</strong>
         </div>
         <button
           className="toolbox-icon-button"
           type="button"
-          aria-label="复制诊断输出"
+          aria-label={tr("docker.network.copy")}
           onClick={onCopyOutput}
         >
           <Copy className="ui-icon" aria-hidden="true" />
@@ -4024,19 +4024,19 @@ function NetworkDiagnosticResultView({
 
       <div className="network-diagnostic-facts">
         <div>
-          <span>目标</span>
+          <span>{tr("docker.network.target")}</span>
           <code>{result.target}</code>
         </div>
         <div>
-          <span>耗时</span>
+          <span>{tr("docker.network.duration")}</span>
           <code>{result.duration_ms.toString()} ms</code>
         </div>
         <div>
-          <span>退出码</span>
+          <span>{tr("docker.network.exitCode")}</span>
           <code>{result.exit_status ?? "-"}</code>
         </div>
         <div>
-          <span>命令</span>
+          <span>{tr("docker.network.command")}</span>
           <code>{result.command_label}</code>
         </div>
       </div>
@@ -4249,7 +4249,7 @@ function createPreviewNetworkDiagnosticResult(request: {
     ok: true,
     exit_status: 0,
     duration_ms: 42,
-    summary: "预览诊断完成。",
+    summary: tr("docker.network.previewComplete"),
     stdout: stdoutByKind[request.kind],
     stderr: "",
   };
@@ -4258,29 +4258,29 @@ function createPreviewNetworkDiagnosticResult(request: {
 function normalizeImageRunDraft(draft: DockerImageRunDraft): DockerImageRunRequest | string {
   const image = draft.image.trim();
   if (!image) {
-    return "请选择镜像。";
+    return tr("docker.validation.chooseImage");
   }
   const ports = normalizeImageRunPairs(
     draft.ports,
     "host_port",
     "container_port",
-    "请补全端口映射。",
+    tr("docker.validation.portMapping"),
   );
   if (typeof ports === "string") {
     return ports;
   }
-  const env = normalizeImageRunPairs(draft.env, "key", "value", "请补全环境变量。");
+  const env = normalizeImageRunPairs(draft.env, "key", "value", tr("docker.validation.environment"));
   if (typeof env === "string") {
     return env;
   }
   if (env.some((item) => item.key.includes("="))) {
-    return "环境变量名不能包含等号。";
+    return tr("docker.validation.envEquals");
   }
   const volumes = normalizeImageRunPairs(
     draft.volumes,
     "host_path",
     "container_path",
-    "请补全数据卷路径。",
+    tr("docker.validation.volume"),
   );
   if (typeof volumes === "string") {
     return volumes;
@@ -4431,9 +4431,9 @@ function formatPortBinding(port: DockerContainerDetail["ports"][number]) {
 
 function formatPullStatus(status: DockerImagePullStatus) {
   const labels: Record<DockerImagePullStatus, string> = {
-    failed: "失败",
-    running: "拉取中",
-    success: "完成",
+    failed: tr("docker.status.failed"),
+    running: tr("docker.status.running"),
+    success: tr("docker.status.complete"),
   };
   return labels[status];
 }
@@ -4482,9 +4482,9 @@ function formatScheduledRunStatus(status: string | null | undefined) {
   const value = normalizeScheduledRunStatus(status);
   const labels: Record<"success" | "failed" | "running" | "unknown", string> = {
     failed: "失败",
-    running: "运行中",
-    success: "成功",
-    unknown: "未知",
+    running: tr("docker.status.running"),
+    success: tr("docker.status.success"),
+    unknown: tr("docker.status.unknown"),
   };
   return labels[value];
 }
@@ -4558,7 +4558,7 @@ function previewScheduledTasks(): ScheduledTaskSummary[] {
   return [
     {
       id: "preview-health-check",
-      name: "每日巡检",
+      name: tr("docker.schedule.namePlaceholder"),
       cron: "0 9 * * *",
       command: "uptime && df -h /",
       enabled: true,
@@ -4572,9 +4572,9 @@ function previewScheduledTasks(): ScheduledTaskSummary[] {
     },
     {
       id: "preview-cleanup",
-      name: "清理临时目录",
+      name: getLocale() === "zh-CN" ? "清理临时目录" : "Clean temporary files",
       cron: "@daily",
-      command: "find /tmp -maxdepth 1 -name 'mxterm-*' -mtime +3 -delete",
+      command: "find /tmp -maxdepth 1 -name 'nexaterm-*' -mtime +3 -delete",
       enabled: false,
       updated_at: previewTimestamp(),
       last_run: null,
@@ -4604,7 +4604,7 @@ function previewSaveScheduledTask(
 function previewRunScheduledTask(task: ScheduledTaskSummary) {
   return {
     ok: true,
-    message: "定时任务已手动执行。",
+    message: tr("docker.schedule.runComplete"),
     output: `preview: ${task.command}`,
   };
 }
@@ -4613,7 +4613,7 @@ function previewDockerContainers(): DockerContainerSummary[] {
   return [
     {
       id: "d9b100f2f6364d21a0a3",
-      name: "mxterm-nginx",
+      name: "nexaterm-nginx",
       image: "nginx:latest",
       command: "nginx -g 'daemon off;'",
       created_at: "2026-06-23 08:30:00 +0800 CST",
@@ -4706,9 +4706,9 @@ function previewDockerEngineConfig(): DockerEngineConfigResult {
 
 function previewDockerEngineAction(action: DockerEngineAction) {
   const messages: Record<DockerEngineAction, string> = {
-    restart: "Docker 服务已重启。",
-    start: "Docker 服务已启动。",
-    stop: "Docker 服务已停止。",
+    restart: tr("docker.engine.action.restart"),
+    start: tr("docker.engine.action.start"),
+    stop: tr("docker.engine.action.stop"),
   };
   return {
     ok: true,
@@ -4719,10 +4719,10 @@ function previewDockerEngineAction(action: DockerEngineAction) {
 
 function previewDockerActionResult(action: DockerContainerAction) {
   const messages: Record<DockerContainerAction, string> = {
-    remove: "容器已删除。",
-    restart: "容器已重启。",
-    start: "容器已启动。",
-    stop: "容器已停止。",
+    remove: tr("docker.container.action.remove"),
+    restart: tr("docker.container.action.restart"),
+    start: tr("docker.container.action.start"),
+    stop: tr("docker.container.action.stop"),
   };
   return {
     ok: true,
@@ -4761,12 +4761,12 @@ async function previewDockerPullTask(
     connection_id: connectionId,
     current_layer: null,
     image,
-    message: "镜像拉取完成。",
+    message: tr("docker.image.pullComplete"),
     percent: 100,
     pull_id: pullId,
     status: "success",
   });
-  return { ok: true, message: "镜像拉取完成。", output: null };
+  return { ok: true, message: tr("docker.image.pullComplete"), output: null };
 }
 
 function delay(ms: number) {
