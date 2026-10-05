@@ -3755,7 +3755,7 @@ function emptyLocalTerminalProfile(): LocalTerminalProfileInput {
   };
 }
 
-function previewSettingsLocalTerminalProfiles(t): LocalTerminalProfile[] {
+function previewSettingsLocalTerminalProfiles(t: Translate): LocalTerminalProfile[] {
   return [
     {
       args: ["-NoLogo", "-NoProfile"],
