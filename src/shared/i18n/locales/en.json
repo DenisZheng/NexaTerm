@@ -2591,5 +2591,8 @@
   "workspace.restore.temporaryCredentials": "Temporary connection credentials are not persisted. Recreate or authenticate the connection.",
   "workspace.restore.restoring": "Restoring",
   "workspace.restore.manualRetry": "Workspace restored; automatic reconnect is disabled. Retry manually.",
-  "workspace.restore.desktopStopped": "Workspace restored; desktop sessions remain stopped. Retry manually."
+  "workspace.restore.desktopStopped": "Workspace restored; desktop sessions remain stopped. Retry manually.",
+  "files.transfer.stage.waitingRemote": "Waiting for remote confirmation",
+  "monitor.error.noSsh": "There is no active SSH connection.",
+  "monitor.preview.signal": "Preview simulated sending {signal}"
 }
