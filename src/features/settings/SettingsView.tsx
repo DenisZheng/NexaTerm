@@ -925,6 +925,7 @@ function isSshConnection(connection: ConnectionProfile) {
 }
 
 function McpSettingsSection({ connections }: { connections: ConnectionProfile[] }) {
+  const { t } = useI18n();
   const [settings, setSettings] = useState<McpSettings>(defaultMcpSettings);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -991,7 +992,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
   const remoteMcpUrl = `http://127.0.0.1:${settings.remote_port.toString()}/mcp`;
   const remoteSseUrl = `http://127.0.0.1:${settings.remote_port.toString()}/sse`;
   const remoteToken = settings.remote_token || settings.generated_remote_token || null;
-  const remoteTokenForSnippet = remoteToken || "<你的 token>";
+  const remoteTokenForSnippet = remoteToken || t("settings.mcp.tokenPlaceholder");
   const configSnippet = useMemo(
     () =>
       JSON.stringify(
@@ -1050,27 +1051,27 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
     {
       id: "stdio" as const,
       label: "stdio client",
-      title: "stdio client 配置",
-      description: "发布包中 sidecar 会随 NexaTerm 一起提供；开发期可替换为本地绝对路径。",
+      title: t("settings.mcp.config.stdio.title"),
+      description: t("settings.mcp.config.stdio.description"),
       snippet: configSnippet,
       copied,
       setCopied,
     },
     {
       id: "remote-http" as const,
-      label: "远程 HTTP client",
-      title: "远程 HTTP client 配置",
+      label: t("settings.mcp.config.remote.label"),
+      title: t("settings.mcp.config.remote.title"),
       description:
-        "主入口使用 Streamable HTTP，但服务只监听 127.0.0.1。跨机器访问必须先建立 SSH 隧道，再让客户端连接隧道本地端口。",
+        t("settings.mcp.config.remote.description"),
       snippet: remoteConfigSnippet,
       copied: remoteConfigCopied,
       setCopied: setRemoteConfigCopied,
     },
     {
       id: "legacy-sse" as const,
-      label: "旧版 SSE 兼容",
-      title: "旧版 SSE 兼容配置",
-      description: "少数旧客户端仍使用 `/sse` 和 `/messages` 双端点。",
+      label: t("settings.mcp.config.sse.label"),
+      title: t("settings.mcp.config.sse.title"),
+      description: t("settings.mcp.config.sse.description"),
       snippet: legacySseConfigSnippet,
       copied: legacySseConfigCopied,
       setCopied: setLegacySseConfigCopied,
@@ -1106,7 +1107,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
         }
       } catch (error) {
         if (!cancelled) {
-          setError(error instanceof Error ? error.message : "MCP 设置读取失败。");
+          setError(error instanceof Error ? error.message : t("settings.mcp.error.load"));
         }
       } finally {
         if (!cancelled) {
@@ -1118,11 +1119,11 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
     return () => {
       cancelled = true;
     };
-  }, [desktopRuntime]);
+  }, [desktopRuntime, t]);
 
   async function saveUpdate(update: Partial<McpSettings>) {
     if (!desktopRuntime) {
-      setError("需要在 NexaTerm 桌面端保存 MCP 设置。");
+      setError(t("settings.mcp.error.desktop"));
       return;
     }
     const previous = settings;
@@ -1142,7 +1143,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
       setSettings(saved);
     } catch (error) {
       setSettings(previous);
-      setError(error instanceof Error ? error.message : "MCP 设置保存失败。");
+      setError(error instanceof Error ? error.message : t("settings.mcp.error.save"));
     } finally {
       setSaving(false);
     }
@@ -1197,14 +1198,14 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
       onCopied(true);
       window.setTimeout(() => onCopied(false), 1600);
     } catch {
-      setError("无法写入剪贴板，可手动复制下方配置。");
+      setError(t("settings.mcp.error.clipboard"));
     }
   }
 
   async function saveRemoteEndpoint() {
     const remote_port = Number(remotePortDraft);
     if (!Number.isInteger(remote_port) || remote_port < 1 || remote_port > 65535) {
-      setError("远程 MCP 端口必须在 1 到 65535 之间。");
+      setError(t("settings.mcp.error.port"));
       return;
     }
     if (remote_port === settings.remote_port) {
@@ -1225,7 +1226,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
       if (settings.remote_token_saved) {
         setRemoteTokenDraft(remoteToken || "");
       } else {
-        setError("请输入远程 MCP token。");
+        setError(t("settings.mcp.error.token"));
       }
       return;
     }
@@ -1250,7 +1251,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
         remote_token_preview: status.token_preview,
       }));
     } catch (error) {
-      setError(error instanceof Error ? error.message : "远程 MCP 服务状态读取失败。");
+      setError(error instanceof Error ? error.message : t("settings.mcp.error.status"));
     } finally {
       setRemoteActionBusy(null);
     }
@@ -1271,7 +1272,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
         remote_token_preview: status.token_preview,
       }));
     } catch (error) {
-      setError(error instanceof Error ? error.message : "远程 MCP 服务重启失败。");
+      setError(error instanceof Error ? error.message : t("settings.mcp.error.restart"));
     } finally {
       setRemoteActionBusy(null);
     }
@@ -1285,7 +1286,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
     try {
       setRemoteLog(await mcpRemoteLogRead());
     } catch (error) {
-      setError(error instanceof Error ? error.message : "远程 MCP 日志读取失败。");
+      setError(error instanceof Error ? error.message : t("settings.mcp.error.logRead"));
     } finally {
       setRemoteActionBusy(null);
     }
@@ -1299,7 +1300,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
     try {
       setRemoteLog(await mcpRemoteLogClear());
     } catch (error) {
-      setError(error instanceof Error ? error.message : "远程 MCP 日志清空失败。");
+      setError(error instanceof Error ? error.message : t("settings.mcp.error.logClear"));
     } finally {
       setRemoteActionBusy(null);
     }
@@ -1316,7 +1317,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
       setSettings(next);
       setTokenCopied(false);
     } catch (error) {
-      setError(error instanceof Error ? error.message : "远程 MCP token 重置失败。");
+      setError(error instanceof Error ? error.message : t("settings.mcp.error.tokenReset"));
     } finally {
       setRemoteActionBusy(null);
     }
@@ -1326,53 +1327,53 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
     <section className="settings-page-section">
       <header className="settings-section-head">
         <h1>MCP</h1>
-        <p>把 NexaTerm 保存的连接提供给 AI Agent；网络模式固定 loopback，跨机器访问需使用 SSH 隧道。</p>
+        <p>{t("settings.mcp.description")}</p>
       </header>
 
       <div className="settings-panel mcp-settings-panel">
         <SettingsRow
           icon={Waypoints}
-          title="启用 NexaTerm MCP"
-          description="默认关闭。关闭时 sidecar 只返回禁用状态，不暴露连接信息。"
+          title={t("settings.mcp.enable.title")}
+          description={t("settings.mcp.enable.description")}
         >
           <SettingsToggle
             checked={settings.enabled}
             disabled={loading || saving || !desktopRuntime}
-            label="启用 NexaTerm MCP"
+            label={t("settings.mcp.enable.label")}
             onChange={(enabled) => void saveUpdate({ enabled })}
           />
         </SettingsRow>
 
         <SettingsRow
           icon={Server}
-          title="暴露连接信息"
-          description="只返回脱敏后的连接元数据，不返回密码、私钥口令或 vault 明文。"
+          title={t("settings.mcp.expose.title")}
+          description={t("settings.mcp.expose.description")}
         >
           <SettingsToggle
             checked={settings.expose_connections}
             disabled={loading || saving || !desktopRuntime || !settings.enabled}
-            label="暴露连接信息"
+            label={t("settings.mcp.expose.label")}
             onChange={(expose_connections) => void saveUpdate({ expose_connections })}
           />
         </SettingsRow>
 
         <SettingsRow
           icon={Terminal}
-          title="启用 SSH 操作"
-          description="允许 Agent 通过已保存 connection_id 测试连接、执行命令和传输文件。"
+          title={t("settings.mcp.ssh.title")}
+          description={t("settings.mcp.ssh.description")}
         >
           <SettingsToggle
             checked={settings.ssh_operations_enabled}
             disabled={loading || saving || !desktopRuntime || !settings.enabled}
-            label="启用 SSH 操作"
+            label={t("settings.mcp.ssh.label")}
             onChange={(ssh_operations_enabled) => void saveUpdate({ ssh_operations_enabled })}
           />
         </SettingsRow>
 
         <SettingsRow
           icon={ShieldCheck}
-          title="允许危险命令确认"
-          description="关闭时拒绝命中启发式规则的命令（子串匹配，可能漏报/误报，不是安全边界）；开启后仍需要 MCP 工具参数显式确认。"
+          title={t("settings.mcp.dangerous.title")}
+          description={t("settings.mcp.dangerous.description")}
         >
           <SettingsToggle
             checked={settings.allow_dangerous_commands}
@@ -1383,7 +1384,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
               !settings.enabled ||
               !settings.ssh_operations_enabled
             }
-            label="允许危险命令确认"
+            label={t("settings.mcp.dangerous.label")}
             onChange={(allow_dangerous_commands) =>
               void saveUpdate({ allow_dangerous_commands })
             }
@@ -1392,13 +1393,13 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
 
         <SettingsRow
           icon={Globe2}
-          title="远程 MCP 服务"
-          description="服务固定监听 127.0.0.1；跨机器访问只允许通过 SSH 隧道转发。"
+          title={t("settings.mcp.remote.title")}
+          description={t("settings.mcp.remote.description")}
         >
           <SettingsToggle
             checked={settings.remote_enabled}
             disabled={loading || saving || !desktopRuntime || !settings.enabled}
-            label="远程 MCP 服务"
+            label={t("settings.mcp.remote.label")}
             onChange={(remote_enabled) => void saveUpdate({ remote_enabled })}
           />
         </SettingsRow>
@@ -1406,7 +1407,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
         <div className="mcp-remote-service-block">
           <div className="mcp-remote-fields">
             <label className="mcp-remote-field">
-              <span>监听地址</span>
+              <span>{t("settings.mcp.remote.host")}</span>
               <input
                 className="settings-input"
                 value="127.0.0.1"
@@ -1415,7 +1416,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
               />
             </label>
             <label className="mcp-remote-field">
-              <span>端口</span>
+              <span>{t("settings.mcp.remote.port")}</span>
               <input
                 className="settings-input"
                 type="number"
@@ -1435,7 +1436,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
           </div>
 
           <p className="settings-note">
-            本服务使用本机 HTTP，仅接受回环连接。跨机器使用时请建立 SSH 隧道，例如：
+            {t("settings.mcp.remote.note")}
             <code>{`ssh -N -L ${settings.remote_port.toString()}:127.0.0.1:${settings.remote_port.toString()} <user>@<nexaterm-host>`}</code>
           </p>
 
@@ -1448,11 +1449,11 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
             >
               {remoteStatus?.running
                 ? remoteStatus.pid
-                  ? `服务运行中 · ${remoteStatus.pid.toString()}`
-                  : "服务运行中"
+                  ? t("settings.mcp.remote.runningPid", { pid: remoteStatus.pid })
+                  : t("settings.mcp.remote.running")
                 : settings.remote_enabled
-                ? "服务未运行"
-                : "服务已关闭"}
+                ? t("settings.mcp.remote.notRunning")
+                : t("settings.mcp.remote.disabled")}
             </span>
             <button
               className="settings-action-button"
@@ -1465,7 +1466,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
               ) : (
                 <RefreshCw className="ui-icon" aria-hidden="true" />
               )}
-              <span>刷新状态</span>
+              <span>{t("settings.mcp.remote.refresh")}</span>
             </button>
             <button
               className="settings-action-button"
@@ -1483,56 +1484,56 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
               ) : (
                 <Power className="ui-icon" aria-hidden="true" />
               )}
-              <span>重启服务</span>
+              <span>{t("settings.mcp.remote.restart")}</span>
             </button>
           </div>
 
           <div className="mcp-remote-runtime-meta">
-            <span>健康状态：{remoteStatus?.healthy ? "正常" : settings.remote_enabled ? "检查中或异常" : "未启用"}</span>
-            <span>自动重启：{(remoteStatus?.restart_count || 0).toString()} 次</span>
-            {remoteStatus?.started_at ? <span>启动：{remoteStatus.started_at}</span> : null}
-            {remoteStatus?.error ? <span className="is-error">最近错误：{remoteStatus.error}</span> : null}
+            <span>{t("settings.mcp.remote.health", { value: remoteStatus?.healthy ? t("settings.mcp.remote.healthOk") : settings.remote_enabled ? t("settings.mcp.remote.healthWarn") : t("settings.mcp.remote.healthDisabled") })}</span>
+            <span>{t("settings.mcp.remote.restarts", { count: remoteStatus?.restart_count || 0 })}</span>
+            {remoteStatus?.started_at ? <span>{t("settings.mcp.remote.started", { value: remoteStatus.started_at })}</span> : null}
+            {remoteStatus?.error ? <span className="is-error">{t("settings.mcp.remote.lastError", { value: remoteStatus.error })}</span> : null}
           </div>
 
-          <section className="mcp-remote-log" aria-label="远程 MCP 服务日志">
+          <section className="mcp-remote-log" aria-label={t("settings.mcp.log.aria")}>
             <header>
               <div>
-                <strong>服务日志</strong>
-                <small>{remoteLog?.truncated ? "显示最近 128 KB" : remoteLog?.path || remoteStatus?.log_path || "尚未读取"}</small>
+                <strong>{t("settings.mcp.log.title")}</strong>
+                <small>{remoteLog?.truncated ? t("settings.mcp.log.truncated") : remoteLog?.path || remoteStatus?.log_path || t("settings.mcp.log.unread")}</small>
               </div>
               <div>
-                <Tooltip label="刷新日志">
-                  <button type="button" aria-label="刷新远程 MCP 日志" onClick={() => void refreshRemoteLog()}>
+                <Tooltip label={t("settings.mcp.log.refresh")}>
+                  <button type="button" aria-label={t("settings.mcp.log.refreshAria")} onClick={() => void refreshRemoteLog()}>
                     {remoteActionBusy === "log" ? <Loader2 className="ui-icon spin" aria-hidden="true" /> : <RefreshCw className="ui-icon" aria-hidden="true" />}
                   </button>
                 </Tooltip>
-                <Tooltip label="复制日志">
-                  <button type="button" aria-label="复制远程 MCP 日志" disabled={!remoteLog?.content} onClick={() => void navigator.clipboard.writeText(remoteLog?.content || "")}>
+                <Tooltip label={t("settings.mcp.log.copy")}>
+                  <button type="button" aria-label={t("settings.mcp.log.copyAria")} disabled={!remoteLog?.content} onClick={() => void navigator.clipboard.writeText(remoteLog?.content || "")}>
                     <Copy className="ui-icon" aria-hidden="true" />
                   </button>
                 </Tooltip>
-                <Tooltip label="打开日志目录">
-                  <button type="button" aria-label="打开远程 MCP 日志目录" disabled={!remoteLog?.path && !remoteStatus?.log_path} onClick={() => void revealItemInDir(remoteLog?.path || remoteStatus?.log_path || "")}>
+                <Tooltip label={t("settings.mcp.log.open")}>
+                  <button type="button" aria-label={t("settings.mcp.log.openAria")} disabled={!remoteLog?.path && !remoteStatus?.log_path} onClick={() => void revealItemInDir(remoteLog?.path || remoteStatus?.log_path || "")}>
                     <FolderOpen className="ui-icon" aria-hidden="true" />
                   </button>
                 </Tooltip>
-                <Tooltip label="清空日志">
-                  <button type="button" aria-label="清空远程 MCP 日志" disabled={remoteActionBusy === "clear-log"} onClick={() => void clearRemoteLog()}>
+                <Tooltip label={t("settings.mcp.log.clear")}>
+                  <button type="button" aria-label={t("settings.mcp.log.clearAria")} disabled={remoteActionBusy === "clear-log"} onClick={() => void clearRemoteLog()}>
                     <Trash2 className="ui-icon" aria-hidden="true" />
                   </button>
                 </Tooltip>
               </div>
             </header>
-            <pre>{remoteLog?.content || "点击刷新查看远程 MCP 服务日志。"}</pre>
+            <pre>{remoteLog?.content || t("settings.mcp.log.empty")}</pre>
           </section>
 
           <div className="mcp-remote-token-line">
             <label className="mcp-remote-token-field">
-              <span>访问 token</span>
+              <span>{t("settings.mcp.token.title")}</span>
               <input
                 className="settings-input"
                 value={remoteTokenDraft}
-                placeholder={settings.remote_token_saved ? "重置后可显示明文" : "自动生成或输入自定义 token"}
+                placeholder={settings.remote_token_saved ? t("settings.mcp.token.revealPlaceholder") : t("settings.mcp.token.generatePlaceholder")}
                 disabled={loading || saving || !desktopRuntime}
                 onBlur={() => void saveRemoteToken()}
                 onChange={(event) => setRemoteTokenDraft(event.currentTarget.value)}
@@ -1544,10 +1545,10 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
               />
               <small>
                 {remoteToken
-                  ? `已保存${settings.remote_token_preview ? `（${settings.remote_token_preview}）` : ""}，配置 JSON 已自动填充`
+                  ? t("settings.mcp.token.saved", { preview: settings.remote_token_preview ? ` (${settings.remote_token_preview})` : "" })
                   : settings.remote_token_saved
-                  ? "旧 token 未保存明文，重置后会自动填充配置 JSON"
-                  : "开启远程服务时自动生成并填充配置 JSON"}
+                  ? t("settings.mcp.token.legacy")
+                  : t("settings.mcp.token.auto")}
               </small>
             </label>
             <div>
@@ -1562,7 +1563,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
                 ) : (
                   <KeyRound className="ui-icon" aria-hidden="true" />
                 )}
-                <span>重置 token</span>
+                <span>{t("settings.mcp.token.reset")}</span>
               </button>
               <button
                 className="settings-action-button"
@@ -1571,7 +1572,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
                 onClick={() => void copyText(remoteToken || "", setTokenCopied)}
               >
                 <Copy className="ui-icon" aria-hidden="true" />
-                <span>{tokenCopied ? "已复制" : "复制 token"}</span>
+                <span>{tokenCopied ? t("settings.mcp.copied") : t("settings.mcp.token.copy")}</span>
               </button>
             </div>
           </div>
@@ -1587,7 +1588,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
           <div
             className="settings-segmented mcp-config-tabs"
             role="tablist"
-            aria-label="MCP client 配置"
+            aria-label={t("settings.mcp.config.aria")}
           >
             {configTabs.map((tab) => (
               <button
@@ -1615,7 +1616,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
             onClick={() => void copyText(activeConfig.snippet, activeConfig.setCopied)}
           >
             <Check className="ui-icon" aria-hidden="true" />
-            <span>{activeConfig.copied ? "已复制" : "复制配置"}</span>
+            <span>{activeConfig.copied ? t("settings.mcp.copied") : t("settings.mcp.config.copy")}</span>
           </button>
           <pre
             id={`mcp-config-panel-${activeConfig.id}`}
@@ -1627,7 +1628,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
         </div>
 
         {!desktopRuntime ? (
-          <p className="settings-note">浏览器预览不能保存 MCP 设置，请在桌面端操作。</p>
+          <p className="settings-note">{t("settings.mcp.preview")}</p>
         ) : null}
         {error ? (
           <p className="settings-path-error" role="alert">
@@ -1639,13 +1640,13 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
       <div className="settings-panel mcp-connection-exposure-panel">
         <div className="mcp-connection-exposure-head">
           <span>
-            <strong>MCP 可用连接</strong>
+            <strong>{t("settings.mcp.connections.title")}</strong>
             <small>
               {connectionExposureSearchActive
-                ? `匹配 ${filteredConnections.length.toString()} / ${sshConnections.length.toString()}，已开放 ${exposedConnectionIds.length.toString()} 个 SSH 连接`
+                ? t("settings.mcp.connections.searchSummary", { matched: filteredConnections.length, total: sshConnections.length, exposed: exposedConnectionIds.length })
                 : settings.connection_exposure_mode === "all"
-                ? `默认开放全部 ${sshConnections.length.toString()} 个 SSH 连接`
-                : `已开放 ${exposedConnectionIds.length.toString()} / ${sshConnections.length.toString()} 个 SSH 连接`}
+                ? t("settings.mcp.connections.allSummary", { total: sshConnections.length })
+                : t("settings.mcp.connections.customSummary", { exposed: exposedConnectionIds.length, total: sshConnections.length })}
             </small>
           </span>
           <div>
@@ -1655,7 +1656,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
               disabled={connectionExposureBatchDisabled}
               onClick={() => setAllConnectionExposure(true)}
             >
-              {connectionExposureSearchActive ? "打开匹配" : "全部打开"}
+              {connectionExposureSearchActive ? t("settings.mcp.connections.openMatched") : t("settings.mcp.connections.openAll")}
             </button>
             <button
               className="settings-action-button"
@@ -1663,7 +1664,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
               disabled={connectionExposureBatchDisabled}
               onClick={() => setAllConnectionExposure(false)}
             >
-              {connectionExposureSearchActive ? "关闭匹配" : "全部关闭"}
+              {connectionExposureSearchActive ? t("settings.mcp.connections.closeMatched") : t("settings.mcp.connections.closeAll")}
             </button>
           </div>
         </div>
@@ -1673,17 +1674,17 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
             <input
               type="search"
               value={connectionExposureQuery}
-              placeholder="搜索连接名、主机、用户或分组"
-              aria-label="搜索 MCP 可用连接"
+              placeholder={t("settings.mcp.connections.searchPlaceholder")}
+              aria-label={t("settings.mcp.connections.searchAria")}
               onChange={(event) => setConnectionExposureQuery(event.currentTarget.value)}
             />
           </label>
         </div>
         <div className="mcp-connection-exposure-list">
           {sshConnections.length === 0 ? (
-            <p className="settings-note">还没有可供 MCP 使用的 SSH 连接。</p>
+            <p className="settings-note">{t("settings.mcp.connections.empty")}</p>
           ) : filteredConnections.length === 0 ? (
-            <p className="settings-note">没有匹配的连接。</p>
+            <p className="settings-note">{t("settings.mcp.connections.noMatch")}</p>
           ) : (
             filteredConnections.map((connection) => {
               const exposed = exposedConnectionIdSet.has(connection.id);
@@ -1698,7 +1699,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
                   <SettingsToggle
                     checked={exposed}
                     disabled={connectionExposureDisabled}
-                    label={`${connection.name} MCP 暴露`}
+                    label={t("settings.mcp.connections.toggle", { name: connection.name })}
                     onChange={(nextExposed) =>
                       setConnectionExposure(connection.id, nextExposed)
                     }
@@ -3439,7 +3440,7 @@ function LocalTerminalSettingsSection({
   function saveCustomProfile() {
     const normalized = normalizeLocalTerminalProfileInput(form);
     if (!normalized || !normalized.name || !normalized.command) {
-      setFormError("名称、类型和命令不能为空。");
+      setFormError(t("settings.localTerminal.error.required"));
       return;
     }
 
@@ -3475,12 +3476,12 @@ function LocalTerminalSettingsSection({
     <section className="settings-page-section">
       <header className="settings-section-head settings-section-head-row">
         <span>
-          <h1>终端设置</h1>
-          <p>统一管理终端粘贴行为、光标、默认本地 Shell 和 profile。</p>
+          <h1>{t("settings.localTerminal.title")}</h1>
+          <p>{t("settings.localTerminal.description")}</p>
         </span>
         <button className="repository-primary-button" type="button" onClick={resetForm}>
           <Plus className="ui-icon" aria-hidden="true" />
-          <span>新增终端 profile</span>
+          <span>{t("settings.localTerminal.addProfile")}</span>
         </button>
       </header>
 
@@ -3488,11 +3489,11 @@ function LocalTerminalSettingsSection({
         <SettingsRow
           className="settings-row-compact settings-local-terminal-default-row"
           icon={HardDrive}
-          title="默认终端"
+          title={t("settings.localTerminal.default.title")}
         >
           <div className="settings-local-terminal-default">
             <AppSelect
-              ariaLabel="默认终端"
+              ariaLabel={t("settings.localTerminal.default.aria")}
               className="settings-select"
               options={profileOptions.map((profile) => ({
                 label: (
@@ -3503,7 +3504,7 @@ function LocalTerminalSettingsSection({
                 ),
                 value: profile.id || `custom-fallback-${profile.name}`,
               }))}
-              placeholder={loading ? "探测中" : "选择默认终端"}
+              placeholder={loading ? t("settings.localTerminal.default.detecting") : t("settings.localTerminal.default.choose")}
               value={effectiveDefaultOption?.id || ""}
               onChange={(defaultProfileId) => onUpdate({ defaultProfileId })}
             />
@@ -3511,45 +3512,45 @@ function LocalTerminalSettingsSection({
         </SettingsRow>
         <SettingsRow
           icon={Terminal}
-          title="自动打开上次终端"
-          description="启动时回到上次活动连接和终端标签。"
+          title={t("settings.localTerminal.reopen.title")}
+          description={t("settings.localTerminal.reopen.description")}
         >
           <SettingsToggle
             checked={basicSettings.reopenLastTerminal}
-            label="自动打开上次终端"
+            label={t("settings.localTerminal.reopen.label")}
             onChange={(reopenLastTerminal) => onUpdateBasic({ reopenLastTerminal })}
           />
         </SettingsRow>
         <SettingsRow
           icon={RotateCcw}
-          title="恢复本地工作区"
-          description="后续预留：启动时恢复上次本地终端工作区。"
+          title={t("settings.localTerminal.restore.title")}
+          description={t("settings.localTerminal.restore.description")}
         >
           <SettingsToggle
             checked={settings.reopenLastLocalWorkspace}
-            label="恢复本地工作区"
+            label={t("settings.localTerminal.restore.label")}
             onChange={(reopenLastLocalWorkspace) => onUpdate({ reopenLastLocalWorkspace })}
           />
         </SettingsRow>
         <SettingsRow
           icon={Keyboard}
-          title="Ctrl+V 粘贴到终端"
-          description="开启后终端聚焦时 Ctrl+V 直接粘贴剪贴板内容；关闭后该按键交给 shell、Vim 或其他终端程序处理。"
+          title={t("settings.localTerminal.ctrlV.title")}
+          description={t("settings.localTerminal.ctrlV.description")}
         >
           <SettingsToggle
             checked={settings.ctrlVPaste}
-            label="Ctrl+V 粘贴到终端"
+            label={t("settings.localTerminal.ctrlV.label")}
             onChange={(ctrlVPaste) => onUpdate({ ctrlVPaste })}
           />
         </SettingsRow>
         <SettingsRow
           icon={Terminal}
-          title="记录终端输入"
-          description="开启后，将普通回车命令保存到历史；控制序列、Tab 和疑似敏感输入会丢弃。"
+          title={t("settings.localTerminal.history.title")}
+          description={t("settings.localTerminal.history.description")}
         >
           <SettingsToggle
             checked={commandSettings.recordTerminalInputHistory}
-            label="记录终端输入"
+            label={t("settings.localTerminal.history.label")}
             onChange={(recordTerminalInputHistory) =>
               onUpdateCommand({ recordTerminalInputHistory })
             }
@@ -3558,21 +3559,21 @@ function LocalTerminalSettingsSection({
       </div>
 
       <div className="settings-panel">
-        <SettingsRow icon={Terminal} title="光标样式" description="控制终端光标外观，已打开会话会即时更新。">
+        <SettingsRow icon={Terminal} title={t("settings.localTerminal.cursor.title")} description={t("settings.localTerminal.cursor.description")}>
           <SegmentedControl<TerminalCursorStyle>
             value={appearanceSettings.cursorStyle}
             options={[
-              { value: "block", label: "块" },
-              { value: "bar", label: "竖线" },
-              { value: "underline", label: "下划线" },
+              { value: "block", label: t("settings.localTerminal.cursor.block") },
+              { value: "bar", label: t("settings.localTerminal.cursor.bar") },
+              { value: "underline", label: t("settings.localTerminal.cursor.underline") },
             ]}
             onChange={(cursorStyle) => onUpdateAppearance({ cursorStyle })}
           />
         </SettingsRow>
-        <SettingsRow icon={Terminal} title="光标闪烁" description="关闭后使用静态光标，适合长时间阅读或录屏。">
+        <SettingsRow icon={Terminal} title={t("settings.localTerminal.blink.title")} description={t("settings.localTerminal.blink.description")}>
           <SettingsToggle
             checked={appearanceSettings.cursorBlink}
-            label="启用光标闪烁"
+            label={t("settings.localTerminal.blink.label")}
             onChange={(cursorBlink) => onUpdateAppearance({ cursorBlink })}
           />
         </SettingsRow>
@@ -3581,8 +3582,8 @@ function LocalTerminalSettingsSection({
       <div className="settings-panel local-terminal-detected-panel">
         <header className="local-terminal-panel-head">
           <span>
-            <strong>自动探测</strong>
-            <small>{loading ? "探测中..." : `${detectedProfiles.length.toString()} 项`}</small>
+            <strong>{t("settings.localTerminal.detected.title")}</strong>
+            <small>{loading ? t("settings.localTerminal.detected.loading") : t("settings.localTerminal.count", { count: detectedProfiles.length })}</small>
           </span>
           {error ? <small className="form-error">{error}</small> : null}
         </header>
@@ -3605,7 +3606,7 @@ function LocalTerminalSettingsSection({
                   type="button"
                   onClick={() => toggleHiddenProfile(profile.id, !hidden)}
                 >
-                  {hidden ? "显示" : "隐藏"}
+                  {hidden ? t("settings.localTerminal.show") : t("settings.localTerminal.hide")}
                 </button>
               </div>
             );
@@ -3617,13 +3618,13 @@ function LocalTerminalSettingsSection({
         <section className="settings-panel local-terminal-custom-list">
           <header className="local-terminal-panel-head">
             <span>
-              <strong>自定义 profile</strong>
-              <small>{customProfiles.length.toString()} 项</small>
+              <strong>{t("settings.localTerminal.custom.title")}</strong>
+              <small>{t("settings.localTerminal.count", { count: customProfiles.length })}</small>
             </span>
           </header>
           <div className="local-terminal-profile-list">
             {customProfiles.length === 0 ? (
-              <p className="settings-note">还没有自定义 profile。</p>
+              <p className="settings-note">{t("settings.localTerminal.custom.empty")}</p>
             ) : (
               customProfiles.map((profile, index) => (
                 <div className="local-terminal-profile-card" key={profile.id || `custom-${index.toString()}`}>
@@ -3642,7 +3643,7 @@ function LocalTerminalSettingsSection({
                       type="button"
                       onClick={() => setEditingProfile(profile)}
                     >
-                      编辑
+                      {t("settings.localTerminal.edit")}
                     </button>
                     <button
                       className="settings-action-button danger-button"
@@ -3661,8 +3662,8 @@ function LocalTerminalSettingsSection({
         <section className="settings-panel local-terminal-custom-form">
           <header className="local-terminal-panel-head">
             <span>
-              <strong>{editingProfile ? "编辑自定义 profile" : "新增自定义 profile"}</strong>
-              <small>用于补充 Git Bash、WSL 包装脚本或团队约定命令。</small>
+              <strong>{editingProfile ? t("settings.localTerminal.form.edit") : t("settings.localTerminal.form.new")}</strong>
+              <small>{t("settings.localTerminal.form.description")}</small>
             </span>
           </header>
           <div className="local-terminal-form-grid">
@@ -3679,25 +3680,25 @@ function LocalTerminalSettingsSection({
               <input
                 className="settings-input"
                 value={form.kind}
-                placeholder="例如 powershell、wsl、custom"
+                placeholder={t("settings.localTerminal.form.typePlaceholder")}
                 onChange={(event) => setForm({ ...form, kind: event.currentTarget.value })}
               />
             </label>
             <label className="local-terminal-form-span">
-              <span>命令</span>
+              <span>{t("settings.localTerminal.form.command")}</span>
               <input
                 className="settings-input"
                 value={form.command}
-                placeholder="例如 C:\\Program Files\\PowerShell\\7\\pwsh.exe"
+                placeholder={t("settings.localTerminal.form.commandPlaceholder")}
                 onChange={(event) => setForm({ ...form, command: event.currentTarget.value })}
               />
             </label>
             <label className="local-terminal-form-span">
-              <span>参数</span>
+              <span>{t("settings.localTerminal.form.args")}</span>
               <input
                 className="settings-input"
                 value={form.args.join(" ")}
-                placeholder='例如 -NoLogo -NoProfile'
+                placeholder={t("settings.localTerminal.form.argsPlaceholder")}
                 onChange={(event) =>
                   setForm({
                     ...form,
@@ -3710,11 +3711,11 @@ function LocalTerminalSettingsSection({
               />
             </label>
             <label className="local-terminal-form-span">
-              <span>启动目录</span>
+              <span>{t("settings.localTerminal.form.cwd")}</span>
               <input
                 className="settings-input"
                 value={form.cwd || ""}
-                placeholder="可选"
+                placeholder={t("settings.localTerminal.form.optional")}
                 onChange={(event) => setForm({ ...form, cwd: event.currentTarget.value })}
               />
             </label>
@@ -3727,7 +3728,7 @@ function LocalTerminalSettingsSection({
                 {t("settings.credentials.clear")}
               </button>
               <button className="primary-button" type="button" onClick={saveCustomProfile}>
-                保存 profile
+                {t("settings.localTerminal.form.save")}
               </button>
             </div>
           </footer>
@@ -3892,13 +3893,13 @@ function TerminalThemeSettingsSection({
     <section className="settings-page-section terminal-theme-section">
       <header className="settings-section-head settings-section-head-row">
         <span>
-          <h1>终端配色</h1>
-          <p>选择终端 surface 的 ANSI 配色方案，不改变整个应用主题。</p>
+          <h1>{t("settings.terminalTheme.title")}</h1>
+          <p>{t("settings.terminalTheme.description")}</p>
         </span>
-        <Tooltip label="自定义方案后续接入">
+        <Tooltip label={t("settings.terminalTheme.customLater")}>
           <button className="settings-action-button" type="button" disabled>
             <Plus className="ui-icon" aria-hidden="true" />
-            <span>新增</span>
+            <span>{t("settings.terminalTheme.add")}</span>
           </button>
         </Tooltip>
       </header>
@@ -3910,8 +3911,8 @@ function TerminalThemeSettingsSection({
             <input
               type="search"
               value={terminalSchemeQuery}
-              aria-label="搜索终端配色方案"
-              placeholder="搜索配色方案"
+              aria-label={t("settings.terminalTheme.searchAria")}
+              placeholder={t("settings.terminalTheme.searchPlaceholder")}
               onChange={(event) => setTerminalSchemeQuery(event.currentTarget.value)}
             />
           </label>
@@ -3919,8 +3920,8 @@ function TerminalThemeSettingsSection({
             value={terminalSchemeTone}
             options={[
               { value: "all", label: t("settings.credentials.filter.all") },
-              { value: "dark", label: "暗色", icon: Moon },
-              { value: "light", label: "亮色", icon: Sun },
+              { value: "dark", label: t("settings.terminalTheme.dark"), icon: Moon },
+              { value: "light", label: t("settings.terminalTheme.light"), icon: Sun },
             ]}
             onChange={setTerminalSchemeTone}
           />
@@ -3928,18 +3929,18 @@ function TerminalThemeSettingsSection({
         <span className="terminal-scheme-count">
           {schemesReady
             ? `${filteredTerminalColorSchemes.length.toString()} / ${allTerminalColorSchemes.length.toString()}`
-            : "加载中"}
+            : t("settings.terminalTheme.loading")}
         </span>
       </div>
 
-      <div ref={schemeListRef} className="terminal-scheme-list" aria-label="终端配色方案">
+      <div ref={schemeListRef} className="terminal-scheme-list" aria-label={t("settings.terminalTheme.listAria")}>
         {schemesLoadError ? (
           <div className="terminal-scheme-empty" role="status">
-            配色方案加载失败：{schemesLoadError}
+            {t("settings.terminalTheme.loadError", { message: schemesLoadError })}
           </div>
         ) : !schemesReady ? (
           <div className="terminal-scheme-empty" role="status">
-            正在加载配色方案...
+            {t("settings.terminalTheme.loadingSchemes")}
           </div>
         ) : filteredTerminalColorSchemes.length > 0 ? (
           <>
@@ -3986,19 +3987,19 @@ function TerminalThemeSettingsSection({
           </>
         ) : (
           <div className="terminal-scheme-empty" role="status">
-            未找到匹配的配色方案。
+            {t("settings.terminalTheme.noMatch")}
           </div>
         )}
       </div>
 
       <footer className="terminal-scheme-actions">
         <span>
-          当前方案：<strong>{selectedScheme.name}</strong>
+          {t("settings.terminalTheme.current")} <strong>{selectedScheme.name}</strong>
         </span>
         <div>
           <button className="settings-action-button" type="button" disabled>
             <Save className="ui-icon" aria-hidden="true" />
-            <span>已保存</span>
+            <span>{t("settings.terminalTheme.saved")}</span>
           </button>
           <button
             className="settings-action-button"
@@ -4006,7 +4007,7 @@ function TerminalThemeSettingsSection({
             onClick={() => onUpdate({ scheme: defaultSettings.terminalTheme.scheme })}
           >
             <Undo2 className="ui-icon" aria-hidden="true" />
-            <span>放弃更改</span>
+            <span>{t("settings.terminalTheme.discard")}</span>
           </button>
         </div>
       </footer>
