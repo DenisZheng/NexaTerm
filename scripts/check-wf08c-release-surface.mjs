@@ -7,6 +7,7 @@ const en = JSON.parse(readFileSync(new URL("../src/shared/i18n/locales/en.json",
 const zh = JSON.parse(readFileSync(new URL("../src/shared/i18n/locales/zh-CN.json", import.meta.url), "utf8"));
 const release = readFileSync(new URL("../.github/workflows/release.yml", import.meta.url), "utf8");
 const buildPlatform = readFileSync(new URL("../scripts/build-platform.mjs", import.meta.url), "utf8");
+const buildRs = readFileSync(new URL("../src-tauri/build.rs", import.meta.url), "utf8");
 const prepareSidecar = readFileSync(new URL("../scripts/prepare-mcp-sidecar.mjs", import.meta.url), "utf8");
 const mcp = readFileSync(new URL("../src-tauri/src/mcp.rs", import.meta.url), "utf8");
 const sidecar = readFileSync(new URL("../src-tauri/src/bin/mxterm_mcp.rs", import.meta.url), "utf8");
@@ -81,6 +82,16 @@ for (const needle of [
 ]) {
   if (!prepareSidecar.includes(needle)) {
     fail(`prepare-mcp-sidecar must emit canonical target-triple bundle: ${needle}`);
+  }
+}
+
+for (const needle of [
+  "ensure_external_bin_placeholder",
+  'format!("nexaterm-mcp-{target}{extension}")',
+  "tauri_build::build()",
+]) {
+  if (!buildRs.includes(needle)) {
+    fail(`build.rs must keep cargo check/test compatible with externalBin: ${needle}`);
   }
 }
 
