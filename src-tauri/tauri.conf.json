@@ -4,7 +4,7 @@
   "version": "0.1.17",
   "identifier": "com.nexaterm.app",
   "build": {
-    "beforeDevCommand": "pnpm dev",
+    "beforeDevCommand": "pnpm build:mcp-sidecar && pnpm dev",
     "devUrl": "http://localhost:5520",
     "beforeBuildCommand": "pnpm build && pnpm build:mcp-sidecar",
     "frontendDist": "../dist"
@@ -42,6 +42,9 @@
     "resources": [
       "../LICENSE",
       "../THIRD_PARTY_LICENSES.md"
+    ],
+    "externalBin": [
+      "binaries/nexaterm-mcp"
     ]
   },
   "plugins": {
