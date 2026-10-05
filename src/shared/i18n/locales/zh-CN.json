@@ -2521,5 +2521,7 @@
   "workspace.local.status.connected": "已连接",
   "workspace.local.status.connecting": "正在连接",
   "workspace.rdp.copyPreview": "复制预览",
-  "workspace.vnc.copyPreview": "复制预览"
+  "workspace.vnc.copyPreview": "复制预览",
+  "workspace.command.sendFailed": "命令发送失败：{message}",
+  "workspace.local.state": "终端状态"
 }
