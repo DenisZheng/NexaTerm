@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { readFileSync } from "node:fs";
+import { evaluateA15Evidence } from "./a15-evidence-check.mjs";
 
 const validator = readFileSync(new URL("./a15-evidence-check.mjs", import.meta.url), "utf8");
 const template = JSON.parse(readFileSync(new URL("../.trellis/tasks/10-05-wf-08e-a15-release-acceptance/A15_EVIDENCE_TEMPLATE.json", import.meta.url), "utf8"));
@@ -70,6 +71,16 @@ for (const predecessor of ["A09","A10"]) {
 }
 if (currentEvidence.signoff?.status !== "pending") {
   fail("current A15 signoff must remain pending until all real release blockers clear");
+}
+
+const currentResult = evaluateA15Evidence(currentEvidence);
+if (currentResult.eligible || currentResult.validSignoff) {
+  fail("current A15 evidence must still have real release blockers before final signoff");
+}
+for (const cleared of ["A09 MultiExec live fixed-target real Tauri", "A10 MultiExec disconnect/reconnect real Tauri"]) {
+  if (currentResult.blockers.some((item) => item.label === cleared)) {
+    fail(`cleared predecessor unexpectedly remains an A15 blocker: ${cleared}`);
+  }
 }
 if (!acceptance.includes("A09 / A10（2026-10-05 真实 Tauri 通过）")) {
   fail("canonical acceptance report must record the 2026-10-05 A09/A10 real-Tauri PASS");
