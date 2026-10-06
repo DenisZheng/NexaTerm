@@ -678,20 +678,13 @@ const maxRightPaneWidth = 560;
 const minCenterPaneWidth = 520;
 const paneKeyboardResizeStep = 16;
 const defaultEditorTerminalSplitPercent = 44;
-const commandSnippetRootGroup = "";
-const commandSnippetRootGroupLabel = () => tr("workspace.snippet.root");
+const commandSnippetRootGroup = "", commandSnippetRootGroupLabel = () => tr("workspace.snippet.root");
 const legacyCommandSnippetGroup = "未分组";
 const commandHistoryAllScopeKey = "all";
 const commandHistorySshScopePrefix = "ssh:";
 const commandHistoryLocalScopePrefix = "local:";
-function connectionPromptAuthKindOptions(): Array<{
-  label: string;
-  value: ConnectionAuthKind;
-}> {
-  return [
-    { label: tr("workspace.connection.auth.password"), value: "password" },
-    { label: tr("workspace.connection.auth.privateKey"), value: "private_key" },
-  ];
+function connectionPromptAuthKindOptions(): Array<{ label: string; value: ConnectionAuthKind }> {
+  return [{ label: tr("workspace.connection.auth.password"), value: "password" }, { label: tr("workspace.connection.auth.privateKey"), value: "private_key" }];
 }
 const minEditorTerminalSplitPercent = 24;
 const maxEditorTerminalSplitPercent = 72;
