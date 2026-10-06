@@ -12583,7 +12583,8 @@ function hiddenRdpEmbeddedBounds(): RdpEmbeddedBounds {
 function isSshConnection(
   connection?: ConnectionProfile | null,
 ): connection is SshConnectionProfile {
-  return (connection?.protocol || "ssh") === "ssh";
+  // 缺省协议只兼容已有 profile；关闭会话的过渡帧可能没有活动连接。
+  return Boolean(connection) && (connection?.protocol || "ssh") === "ssh";
 }
 
 function rdpStatusLabel(status: RdpSessionStatus) {
