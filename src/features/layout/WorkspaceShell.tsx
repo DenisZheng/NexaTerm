@@ -505,7 +505,7 @@ import { useSessionTabsController } from "../workspace/sessionTabs/useSessionTab
 import type { CloseSnapshot, SessionRef } from "../workspace/sessionTabs/closeDecision";
 import { applyWorkspaceRestorePlanToHydration, buildWorkspaceShellHydration } from "../workspace/restore/shellHydration";
 import { buildWorkspaceRestorePlan } from "../workspace/restore/restorePlan";
-import { seedWorkspaceRemoteFileDirectories, workspaceRemoteFileDirectories } from "../workspace/restore/remoteFileSnapshotBridge";
+import { seedWorkspaceRemoteFileDirectories, workspaceRemoteFileDirectories, workspaceRemoteFileFollowStates } from "../workspace/restore/remoteFileSnapshotBridge";
 import { snapshotTargetRefs, toSnapshot, type WorkspaceSnapshotV1 } from "../workspace/restore/snapshotTypes";
 import { useWorkspaceSnapshotLifecycle } from "../workspace/restore/useWorkspaceSnapshotLifecycle";
 import { workspaceSnapshotRuntime } from "./workspaceSnapshotRuntime";
@@ -1752,7 +1752,7 @@ export function WorkspaceShell() {
     workspaceItems,
   );
   const workspaceSnapshot = toSnapshot(
-    { activeItemId: activeWorkspaceItemId, files: { directories: workspaceRemoteFileDirectories(terminalTabs.map((tab) => tab.id)), followActivePane: settings.basic.filePanelFollowsActiveConnection }, order: workspaceItemOrder, sidebar: { collapsed: leftPaneCollapsed, view: workspaceSidebarView }, splitLayout: terminalSplitLayout },
+    { activeItemId: activeWorkspaceItemId, files: { directories: workspaceRemoteFileDirectories(terminalTabs.map((tab) => tab.id)), followActivePane: settings.basic.filePanelFollowsActiveConnection, followTerminalDirectories: workspaceRemoteFileFollowStates(terminalTabs.map((tab) => tab.id)) }, order: workspaceItemOrder, sidebar: { collapsed: leftPaneCollapsed, view: workspaceSidebarView }, splitLayout: terminalSplitLayout },
     { localTerminalTabs, rdpSessions, terminalTabs, vncSessions, targetRefs: { ...workspaceRestoreTargetRefsRef.current, connections: { ...workspaceRestoreTargetRefsRef.current.connections, ...Object.fromEntries(temporaryConnections.map((connection) => [connection.id, { kind: "temporary" as const, targetId: connection.id }])) } } },
   );
   useWorkspaceSnapshotLifecycle({ enabled: storageReady && !loading && !localTerminalProfilesLoading, onRestore: restoreWorkspaceShell, restoreOnLaunch: settings.basic.restoreWorkspaceOnLaunch, snapshot: workspaceSnapshot, runtime: hasTauriRuntime() ? workspaceSnapshotRuntime : null });
@@ -4457,7 +4457,7 @@ export function WorkspaceShell() {
     rdpSessionsRef.current = hydration.rdpSessions; setRdpSessions(hydration.rdpSessions); vncSessionsRef.current = hydration.vncSessions; setVncSessions(hydration.vncSessions);
     snapshot.order.forEach((itemId) => dispatchTabs({ type: "tabs/itemOpened", itemId })); setTerminalSplitLayout(hydration.splitLayout); setTerminalSplitHost(hydration.splitHost); setFocusedTerminalPaneId(hydration.focusedPaneId);
     setTerminalSplitTabActive(snapshot.activeItemId === SPLIT_ITEM_ID && Boolean(hydration.splitLayout)); setMultiExecMode("off"); setMultiExecTargets(new Set()); setTerminalSplitSyncError(null);
-    setLeftPaneCollapsed(snapshot.sidebar.collapsed); setWorkspaceSidebarView(snapshot.sidebar.view); seedWorkspaceRemoteFileDirectories(snapshot.files.directories);
+    setLeftPaneCollapsed(snapshot.sidebar.collapsed); setWorkspaceSidebarView(snapshot.sidebar.view); seedWorkspaceRemoteFileDirectories(snapshot.files.directories, snapshot.files.followTerminalDirectories);
     if (settings.basic.filePanelFollowsActiveConnection !== snapshot.files.followActivePane) updateBasic({ filePanelFollowsActiveConnection: snapshot.files.followActivePane });
     switch (hydration.active.kind) {
       case "ssh": dispatchTabs({ type: "tabs/activateTerminal", connectionId: hydration.active.connectionId, tabId: hydration.active.tabId, rememberUnified: false }); break;

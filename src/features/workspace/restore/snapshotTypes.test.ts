@@ -14,6 +14,7 @@ describe("WF-01 workspace snapshot contract", () => {
           "ssh:stale": "/private/stale",
         },
         followActivePane: true,
+        followTerminalDirectories: { "ssh:ssh-a": true, "local:local-a": true, "ssh:stale": true },
       },
       order: ["rdp:rdp-a", "ssh:ssh-a", "stale", "rdp:rdp-a"],
       sidebar: { collapsed: false, view: "files" as const },
@@ -88,6 +89,7 @@ describe("WF-01 workspace snapshot contract", () => {
       files: {
         directories: { "ssh:ssh-a": "/srv/app" },
         followActivePane: true,
+        followTerminalDirectories: { "ssh:ssh-a": true },
       },
       instances: [
         {

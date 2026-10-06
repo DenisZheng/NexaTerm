@@ -30,6 +30,19 @@ const valid = {
 };
 
 describe("WF-07 workspace snapshot decoding", () => {
+  it("恢复实例跟随开关，只接受仍存在 SSH 实例的布尔值", () => {
+    const snapshot = decodeWorkspaceSnapshot({
+      ...valid,
+      files: { ...valid.files, followTerminalDirectories: { "ssh:ssh-a": true, "ssh:gone": true } },
+    });
+    expect(snapshot.files.followTerminalDirectories).toEqual({ "ssh:ssh-a": true });
+    const invalid = decodeWorkspaceSnapshot({
+      ...valid,
+      files: { ...valid.files, followTerminalDirectories: { "ssh:ssh-a": "false" } },
+    });
+    expect(invalid.files.followTerminalDirectories).toEqual({});
+  });
+
   it("sanitizes stale references while preserving the v1 shell", () => {
     const snapshot = decodeWorkspaceSnapshot(valid);
     expect(snapshot.order).toEqual(["ssh:ssh-a"]);

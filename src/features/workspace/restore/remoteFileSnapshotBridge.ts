@@ -1,4 +1,4 @@
-type WorkspaceRemoteFileNavigation = { path: string };
+type WorkspaceRemoteFileNavigation = { path: string; followTerminalDirectory: boolean };
 
 const navigationByStateKey = new Map<string, WorkspaceRemoteFileNavigation>();
 const listeners = new Set<() => void>();
@@ -12,22 +12,28 @@ export function getWorkspaceRemoteFileNavigation(stateKey: string) {
   return navigationByStateKey.get(stateKey) || null;
 }
 
-export function publishWorkspaceRemoteFileNavigation(stateKey: string, path: string) {
+export function publishWorkspaceRemoteFileNavigation(stateKey: string, path: string, followTerminalDirectory = false) {
   if (!stateKey || !path) return;
   const current = navigationByStateKey.get(stateKey);
-  if (current?.path === path) return;
-  navigationByStateKey.set(stateKey, { path });
+  if (current?.path === path && current.followTerminalDirectory === followTerminalDirectory) return;
+  navigationByStateKey.set(stateKey, { path, followTerminalDirectory });
   revision += 1;
   listeners.forEach((listener) => listener());
 }
 
-export function seedWorkspaceRemoteFileDirectories(directories: Readonly<Record<string, string>>) {
+export function seedWorkspaceRemoteFileDirectories(
+  directories: Readonly<Record<string, string>>,
+  followTerminalDirectories: Readonly<Record<string, boolean>> = {},
+) {
   let changed = false;
   for (const [instanceId, path] of Object.entries(directories)) {
     if (!instanceId.startsWith("ssh:") || !path) continue;
     const stateKey = workspaceRemoteFileStateKey(instanceId.slice("ssh:".length));
-    if (navigationByStateKey.get(stateKey)?.path === path) continue;
-    navigationByStateKey.set(stateKey, { path });
+    // 旧 V1 快照未保存实例跟随开关，沿用 WS-F03 已确认的默认关闭。
+    const followTerminalDirectory = followTerminalDirectories[instanceId] ?? false;
+    const current = navigationByStateKey.get(stateKey);
+    if (current?.path === path && current.followTerminalDirectory === followTerminalDirectory) continue;
+    navigationByStateKey.set(stateKey, { path, followTerminalDirectory });
     changed = true;
   }
   if (changed) {
@@ -43,6 +49,15 @@ export function workspaceRemoteFileDirectories(tabIds: readonly string[]) {
     if (path) directories[`ssh:${tabId}`] = path;
   }
   return directories;
+}
+
+export function workspaceRemoteFileFollowStates(tabIds: readonly string[]) {
+  const states: Record<string, boolean> = {};
+  for (const tabId of tabIds) {
+    const navigation = navigationByStateKey.get(workspaceRemoteFileStateKey(tabId));
+    if (navigation) states[`ssh:${tabId}`] = navigation.followTerminalDirectory;
+  }
+  return states;
 }
 
 export function subscribeWorkspaceRemoteFileNavigation(listener: () => void) {

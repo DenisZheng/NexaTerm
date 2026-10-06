@@ -106,8 +106,13 @@ if (/shared\/tauri|\bwindow\.|\bdocument\./.test(lifecycle)) {
 if (!shell.includes('const prepareRequestId = `prepare-${crypto.randomUUID()}`')) {
   throw new Error("WF-07 SSH attempts must use unique output correlation ids");
 }
-if (!remoteFiles.includes("publishWorkspaceRemoteFileNavigation(stateKey, activeDirectoryPath)")) {
-  throw new Error("WF-07 Files must persist the active browsing directory rather than the tree root");
+if (!remoteFiles.includes("publishWorkspaceRemoteFileNavigation(stateKey, activeDirectoryPath, followTerminalDirectory)")) {
+  throw new Error("WF-07 Files must persist the active browsing directory and per-instance follow setting");
+}
+if (!shell.includes("followTerminalDirectories: workspaceRemoteFileFollowStates(")
+  || !shell.includes("seedWorkspaceRemoteFileDirectories(snapshot.files.directories, snapshot.files.followTerminalDirectories)")
+  || !remoteFiles.includes("followTerminalDirectory: restoredNavigation.followTerminalDirectory")) {
+  throw new Error("WF-07 Files per-instance follow setting must be wired through shell save and restore");
 }
 for (const needle of ["buildWorkspaceShellHydration", "applyWorkspaceRestorePlanToHydration", "splitLayout", "focusedPaneId"]) {
   if (!hydration.includes(needle)) throw new Error(`WF-07 shell hydration seam missing: ${needle}`);

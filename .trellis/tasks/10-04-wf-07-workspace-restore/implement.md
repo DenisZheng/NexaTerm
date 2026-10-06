@@ -38,3 +38,13 @@ Do not modify `scripts/line-budget.json`.
 - [x] 完整前端 518 PASS / 1 TODO，脚本 96 PASS / 3 既有跳过；Rust 快照 3 PASS；类型、构建、启动边界和行数门禁通过，规范见 `.trellis/spec/frontend/workspace-restore.md`。
 
 维护者已在修复提交 `f67154c` 上完成真实 Windows A14 两轮验收并确认通过；人工结果与自动化证据分别记录于 `A14_EVIDENCE.md`。
+
+## 2026-10-06 最终开发对账：Files 跟随设置遗漏
+
+- 对账基线：`main @ f3f92dcec6d589cef587245c0269d820ad79b2c5`。WS-F02 / WS-R01、历史交付计划 WF-07 和本任务 PRD 都要求按实例保留 Files 跟随设置。
+- 原实现只把活动目录和全局 `followActivePane` 写入快照；实例级 `followTerminalDirectory` 只在组件/module cache 中。冷启动会恢复为关闭；此前 source gate 与 A14-09 的概括性 PASS 未覆盖这个开关组合。
+- 本次在 V1 中增加可选 `files.followTerminalDirectories`，接通组件 → bridge → snapshot → decoder → shell seed → 组件恢复；仅切换开关也通知既有保存生命周期。旧快照缺省为关闭，过滤不存在实例及非布尔值，不改变数据库结构、全局绑定设置或 WS-F03 待确认行为。
+- 修复前新增回归在三个测试文件中复现 4 FAIL / 6 PASS；修复后完整前端 **544 PASS / 1 既有 TODO**（70 文件），恢复专项 **28 PASS**（8 文件），WF-07 脚本 **3 PASS**。
+- `npm run build`（tsc + Vite）、全部 17 个 WF source gates、workspace snapshot、startup boundary、line-budget 和 `git diff --check` 通过。构建有 Vite 大于 500 kB chunk 警告，无编译错误；Terminal、Files、Settings、Monaco 等仍为独立 chunk。
+- 本次不改 Rust；现有 Rust Value → SQLite JSON 存储保留新增字段。基线三平台 Rust CI #385 可复用为原实现证据，不能称为新补丁的 CI。补丁的远端 CI、合入与新增人工子场景仍待完成。
+- 本次未重新操作真实 GUI。原 A14 历史 PASS 保留，新增复验步骤见 `A14_EVIDENCE.md` 末节。
