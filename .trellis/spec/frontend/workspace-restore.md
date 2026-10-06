@@ -17,6 +17,7 @@ WF-07 / A14，产品行为按 `docs/WORKFLOW_SPEC.md` WS-R01/WS-R02。涉及加�
 - 500ms debounce 只依据序列化内容变化。按队列串行写入 SQLite，避免较慢的旧保存覆盖新布局；失败必须报告，不得记录为成功保存。
 - SSH `request_id` 在每次实际 attempt 生成，使用 `crypto.randomUUID()`；逻辑 tab id 在恢复/重试中保持不变。Host Key 或凭据续接仍走正常连接流程。
 - Files `directories` 存储 `activeDirectoryPath`，不是常驻树根 `currentPath`；恢复时从根加载祖先并展开到目标，保持既有树形浏览方式。
+- Files `followTerminalDirectories` 是 V1 的可选字段，按逻辑 SSH 实例保存“跟随终端目录”开关，与全局 `followActivePane` 分开。旧快照缺少该字段时沿用默认关闭；仅切换开关也必须通知快照生命周期保存，不能只依赖目录变化。投影与解码只保留现存 SSH 实例，解码只接受布尔值。
 
 ## 4. 验证与错误矩阵
 
@@ -29,6 +30,9 @@ WF-07 / A14，产品行为按 `docs/WORKFLOW_SPEC.md` WS-R01/WS-R02。涉及加�
 | load/save 失败 | 经 runtime 报告错误；不得标记保存成功 |
 | 两个 SSH 同毫秒开始/同 tab 重试 | 输出关联 ID 独立，字节不跨实例 |
 | `/srv/app` 已选为 Files 活动目录 | 重启后保留目录，根和祖先仍可见 |
+| 同一 SSH 配置的两个实例分别开/关跟随 | 冷启动各自恢复，开关不串实例 |
+| 目录不变，只切换跟随开关 | 快照内容更新并进入既有 debounce 保存 |
+| 旧 V1 快照缺少实例跟随字段 | 正常恢复，实例跟随默认关闭 |
 
 ## 5. Good / Base / Bad
 
@@ -41,6 +45,7 @@ WF-07 / A14，产品行为按 `docs/WORKFLOW_SPEC.md` WS-R01/WS-R02。涉及加�
 - lifecycle hook：就绪波动、普通 rerender、保存排序、unmount、错误上报；实际组合 `useConnections`，不能只测 planner。
 - `scripts/wf07-ssh-output.test.mjs`：执行 shell 实际连接函数，验证同毫秒并发和重试的输出隔离。
 - `RemoteFilePanel.restore.test.tsx`：实际浏览后重新挂载无缓存实例，检查目录与祖先加载。
+- `remoteFileSnapshotBridge.test.ts`：真实投影、JSON 序列化、解码与冷模块恢复的组合回归；同一配置的两个实例必须保留独立目录与 true/false 开关。
 - A14 人工坏项使用 `scripts/wf07_a14_fixture.py`，只在应用退出后修改唯一 `A14-` 测试项的快照引用；保留 profile/凭据和原布局，逆向恢复只还原该引用。不要用正常 UI 删除 profile 构造仍打开的占位项，因为该入口会关闭实例。
 
 ## 7. 错误与正确

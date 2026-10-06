@@ -62,6 +62,12 @@ export function decodeWorkspaceSnapshot(value: unknown): WorkspaceSnapshotV1 {
     files: {
       directories,
       followActivePane: Boolean(files.followActivePane),
+      ...(files.followTerminalDirectories === undefined ? {} : {
+        followTerminalDirectories: Object.fromEntries(
+          Object.entries(record(files.followTerminalDirectories, "files.followTerminalDirectories"))
+            .filter((entry): entry is [string, boolean] => sshIds.has(entry[0]) && typeof entry[1] === "boolean"),
+        ),
+      }),
     },
     instances,
     order,

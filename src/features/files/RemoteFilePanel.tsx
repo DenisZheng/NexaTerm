@@ -250,7 +250,7 @@ function RemoteFilePanelComponent({
                 currentPath: defaultRemotePath,
                 directoryEntries: {},
                 expandedDirectories: {},
-                followTerminalDirectory: currentRemoteFileFollowPolicy.defaultEnabled,
+                followTerminalDirectory: restoredNavigation.followTerminalDirectory,
                 locatedDirectoryPath: null,
                 showHidden: false,
               }
@@ -377,7 +377,7 @@ function RemoteFilePanelComponent({
       showHidden,
       followTerminalDirectory,
     });
-    publishWorkspaceRemoteFileNavigation(stateKey, activeDirectoryPath);
+    publishWorkspaceRemoteFileNavigation(stateKey, activeDirectoryPath, followTerminalDirectory);
   }, [
     activeDirectoryPath,
     currentPath,
