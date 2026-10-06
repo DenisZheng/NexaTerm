@@ -19,6 +19,7 @@ import {
 import { type CSSProperties, useEffect, useRef, useState } from "react";
 import "@xterm/xterm/css/xterm.css";
 
+import { useI18n, t as currentT } from "../../shared/i18n";
 import type { ConnectionProfile } from "../connections/connectionTypes";
 import {
   terminalClose,
@@ -155,6 +156,7 @@ export function TerminalPanel({
   visible = active,
   windowsPty,
 }: TerminalPanelProps) {
+  const { t } = useI18n();
   const hostRef = useRef<HTMLDivElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const terminalRef = useRef<Terminal | null>(null);
@@ -453,7 +455,7 @@ export function TerminalPanel({
           });
         })
         .catch((error) => {
-          terminal.writeln(`\r\n输入发送失败: ${formatError(error)}`);
+          terminal.writeln(`\r\n${currentT("terminal.output.sendFailed", { message: formatError(error) })}`);
         });
     });
 
@@ -518,10 +520,10 @@ export function TerminalPanel({
         sessionIdRef.current = null;
         setSessionId(null);
         const suffix =
-          event.exit_status === null ? "" : `，退出码 ${event.exit_status.toString()}`;
+          event.exit_status === null ? "" : currentT("terminal.output.exitSuffix", { code: event.exit_status });
         setStatus(`已断开${suffix}`);
         terminal.writeln(
-          `\r\n[会话已断开${suffix}${connection ? "，按 Enter 重新连接" : ""}]`,
+          `\r\n${currentT("terminal.output.disconnected", { suffix, reconnect: connection ? currentT("terminal.output.pressEnter") : "" })}`,
         );
       });
 
@@ -554,7 +556,7 @@ export function TerminalPanel({
           return;
         }
         setStatus("事件监听失败");
-        terminal.writeln(`\r\n事件监听初始化失败: ${formatError(error)}`);
+        terminal.writeln(`\r\n${currentT("terminal.output.listenerFailed", { message: formatError(error) })}`);
       });
     }
 
@@ -619,7 +621,7 @@ export function TerminalPanel({
 
     const found = searchAddon.findNext(searchQuery, getTerminalSearchOptions(searchCaseSensitive, true));
     if (!found) {
-      setSearchResultLabel("无匹配");
+      setSearchResultLabel(currentT("terminal.search.noMatch"));
     }
   }, [active, searchCaseSensitive, searchOpen, searchQuery]);
 
@@ -759,7 +761,7 @@ export function TerminalPanel({
     startedRef.current = true;
     if (!hasTauriRuntime()) {
       setStatus("预览");
-      terminal.writeln("\r\n普通浏览器预览中不会发起真实 SSH 连接。");
+      terminal.writeln(`\r\n${currentT("terminal.output.preview")}`);
       return;
     }
 
@@ -767,7 +769,7 @@ export function TerminalPanel({
     activeRequestIdRef.current = connectRequestId;
     fitAndSyncTerminalSize(terminal, fitAddon, sessionIdRef.current, lastSyncedSizeRef);
     terminal.clear();
-    terminal.writeln(`连接 ${connection.username}@${connection.host}:${connection.port} ...`);
+    terminal.writeln(currentT("terminal.output.connecting", { user: connection.username, host: connection.host, port: connection.port }));
     setStatus("连接中");
 
     void terminalConnect({
@@ -792,7 +794,7 @@ export function TerminalPanel({
       .catch((error) => {
         setSessionId(null);
         setStatus("连接失败");
-        terminal.writeln(`\r\n连接失败: ${formatError(error)}`);
+        terminal.writeln(`\r\n${currentT("terminal.output.connectFailed", { message: formatError(error) })}`);
       });
   }, [autoConnect, connection, listenersReady, tabId]);
 
@@ -888,7 +890,7 @@ export function TerminalPanel({
     lastSyncedSizeRef.current = null;
 
     fitAndSyncTerminalSize(terminal, fitAddon, null, lastSyncedSizeRef);
-    terminal.writeln(`\r\n[重新连接 ${connection.username}@${connection.host}:${connection.port} ...]`);
+    terminal.writeln(`\r\n${currentT("terminal.output.reconnecting", { user: connection.username, host: connection.host, port: connection.port })}`);
 
     try {
       const nextSessionId = await terminalConnect({
@@ -929,7 +931,7 @@ export function TerminalPanel({
       sessionIdRef.current = previousSessionId;
       setSessionId(previousSessionId);
       setStatus("重新连接失败");
-      terminal.writeln(`\r\n[重新连接失败: ${formatError(error)}]`);
+      terminal.writeln(`\r\n${currentT("terminal.output.reconnectFailed", { message: formatError(error) })}`);
     } finally {
       reconnectingRef.current = false;
       if (terminalRef.current === terminal) {
@@ -943,7 +945,7 @@ export function TerminalPanel({
       className={`terminal-panel ${visible ? "" : "is-hidden"} ${searchOpen ? "terminal-search-open" : ""} ${
         className || ""
       }`}
-      aria-label={`${title} 终端`}
+      aria-label={t("terminal.aria", { title })}
       aria-hidden={!visible}
       style={style}
       onPointerDown={onPaneFocus}
@@ -954,9 +956,9 @@ export function TerminalPanel({
             <Search className="ui-icon" aria-hidden="true" />
             <input
               ref={searchInputRef}
-              aria-label="搜索终端输出"
+              aria-label={t("terminal.search.aria")}
               value={searchQuery}
-              placeholder="搜索终端输出"
+              placeholder={t("terminal.search.placeholder")}
               spellCheck={false}
               onChange={(event) => onSearchQueryChange?.(tabId, event.currentTarget.value)}
               onKeyDown={(event) => {
@@ -992,21 +994,21 @@ export function TerminalPanel({
             </span>
           ) : null}
           <div className="terminal-search-actions">
-            <Tooltip label={searchCaseSensitive ? "区分大小写" : "不区分大小写"}>
+            <Tooltip label={searchCaseSensitive ? t("terminal.search.caseSensitive") : t("terminal.search.caseInsensitive")}>
               <button
                 className={searchCaseSensitive ? "active" : ""}
                 type="button"
-                aria-label="切换大小写匹配"
+                aria-label={t("terminal.search.toggleCase")}
                 aria-pressed={searchCaseSensitive}
                 onClick={() => onSearchCaseSensitiveToggle?.(tabId)}
               >
                 <CaseSensitive className="ui-icon" aria-hidden="true" />
               </button>
             </Tooltip>
-            <Tooltip label="上一个">
+            <Tooltip label={t("terminal.search.previous")}>
               <button
                 type="button"
-                aria-label="查找上一个"
+                aria-label={t("terminal.search.previousAria")}
                 disabled={searchQuery.trim().length === 0}
                 onClick={() =>
                   findPreviousTerminalSearch(
@@ -1020,10 +1022,10 @@ export function TerminalPanel({
                 <ChevronUp className="ui-icon" aria-hidden="true" />
               </button>
             </Tooltip>
-            <Tooltip label="下一个">
+            <Tooltip label={t("terminal.search.next")}>
               <button
                 type="button"
-                aria-label="查找下一个"
+                aria-label={t("terminal.search.nextAria")}
                 disabled={searchQuery.trim().length === 0}
                 onClick={() =>
                   findNextTerminalSearch(
@@ -1037,8 +1039,8 @@ export function TerminalPanel({
                 <ChevronDown className="ui-icon" aria-hidden="true" />
               </button>
             </Tooltip>
-            <Tooltip label="关闭搜索">
-              <button type="button" aria-label="关闭终端搜索" onClick={() => onSearchClose?.(tabId)}>
+            <Tooltip label={t("terminal.search.close")}>
+              <button type="button" aria-label={t("terminal.search.closeAria")} onClick={() => onSearchClose?.(tabId)}>
                 <X className="ui-icon" aria-hidden="true" />
               </button>
             </Tooltip>
@@ -1063,7 +1065,7 @@ export function TerminalPanel({
               onSelect={copyContextMenuSelection}
             >
               <Copy className="ui-icon" aria-hidden="true" />
-              <span>复制</span>
+              <span>{t("terminal.menu.copy")}</span>
             </ContextMenu.Item>
             <ContextMenu.Item
               className="context-menu-item"
@@ -1071,14 +1073,14 @@ export function TerminalPanel({
               onSelect={pasteFromContextMenu}
             >
               <ClipboardPaste className="ui-icon" aria-hidden="true" />
-              <span>粘贴</span>
+              <span>{t("terminal.menu.paste")}</span>
             </ContextMenu.Item>
             <ContextMenu.Item
               className="context-menu-item"
               onSelect={selectAllFromContextMenu}
             >
               <ScanText className="ui-icon" aria-hidden="true" />
-              <span>全选</span>
+              <span>{t("terminal.menu.selectAll")}</span>
             </ContextMenu.Item>
             {connection ? (
               <>
@@ -1089,7 +1091,7 @@ export function TerminalPanel({
                   onSelect={() => void reconnectCurrentTerminal()}
                 >
                   <RefreshCw className={`ui-icon ${reconnecting ? "spin" : ""}`} aria-hidden="true" />
-                  <span>重新连接</span>
+                  <span>{t("terminal.menu.reconnect")}</span>
                 </ContextMenu.Item>
               </>
             ) : null}
@@ -1100,7 +1102,7 @@ export function TerminalPanel({
               onSelect={sendContextMenuSelectionToAi}
             >
               <Bot className="ui-icon" aria-hidden="true" />
-              <span>发送到 AI 对话</span>
+              <span>{t("terminal.menu.sendAi")}</span>
             </ContextMenu.Item>
           </ContextMenu.Content>
         </ContextMenu.Portal>
@@ -1215,7 +1217,7 @@ function findNextTerminalSearch(
   }
   const found = searchAddon.findNext(query, getTerminalSearchOptions(caseSensitive));
   if (!found) {
-    setSearchResultLabel("无匹配");
+    setSearchResultLabel(currentT("terminal.search.noMatch"));
   }
 }
 
@@ -1230,16 +1232,16 @@ function findPreviousTerminalSearch(
   }
   const found = searchAddon.findPrevious(query, getTerminalSearchOptions(caseSensitive));
   if (!found) {
-    setSearchResultLabel("无匹配");
+    setSearchResultLabel(currentT("terminal.search.noMatch"));
   }
 }
 
 function formatSearchResultLabel(resultIndex: number, resultCount: number) {
   if (resultCount === 0) {
-    return "无匹配";
+    return currentT("terminal.search.noMatch");
   }
   if (resultIndex < 0) {
-    return `${resultCount.toString()} 项`;
+    return currentT("terminal.search.count", { count: resultCount });
   }
   return `${(resultIndex + 1).toString()} / ${resultCount.toString()}`;
 }
@@ -1358,7 +1360,7 @@ function syncTerminalSize(
   }
   lastSyncedSizeRef.current = sizeKey;
   void terminalResize(activeSessionId, cols, rows).catch((error) => {
-    terminal.writeln(`\r\n尺寸同步失败: ${formatError(error)}`);
+    terminal.writeln(`\r\n${currentT("terminal.output.resizeFailed", { message: formatError(error) })}`);
   });
 }
 

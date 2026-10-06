@@ -1,5 +1,6 @@
 import type { ConnectionGroupInput, StoredConnectionGroup, LegacyGroupReport, LegacyGroupResolution } from "../../features/connections/connectionGroupModel";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke as tauriInvoke } from "@tauri-apps/api/core";
+import { getLocale, t as tr } from "../i18n";
 import type {
   ConnectionRuntimeCredentialRequest,
   ConnectionStepResult,
@@ -138,6 +139,148 @@ import type {
   McpSettings,
   McpUpdateBlockerStatus,
 } from "../../features/settings/mcpSettingsTypes";
+
+
+const runtimePresentationKeys = new Set([
+  "detail",
+  "error",
+  "fallback_reason",
+  "last_error",
+  "message",
+  "reason",
+  "setup_hint",
+  "summary",
+  "warnings",
+]);
+
+function containsCjk(value: string) {
+  return /[\u3400-\u9fff]/.test(value);
+}
+
+function runtimeErrorMessage(code: string) {
+  if (code.startsWith("connection_")) return tr("runtime.error.connection");
+  if (code.startsWith("credential_")) return tr("runtime.error.credential");
+  if (code.startsWith("terminal_") || code.startsWith("local_terminal_") || code.startsWith("serial_") || code.startsWith("telnet_")) return tr("runtime.error.terminal");
+  if (code.startsWith("remote_file_") || code.startsWith("local_file_")) return tr("runtime.error.remoteFile");
+  if (code.startsWith("docker_")) return tr("runtime.error.docker");
+  if (code.startsWith("rdp_")) return tr("runtime.error.rdp");
+  if (code.startsWith("vnc_")) return tr("runtime.error.vnc");
+  if (code.startsWith("tunnel_")) return tr("runtime.error.tunnel");
+  if (code.startsWith("webdav_")) return tr("runtime.error.webdav");
+  if (code.startsWith("mcp_")) return tr("runtime.error.mcp");
+  if (code.startsWith("remote_monitor_") || code.startsWith("monitor_")) return tr("runtime.error.monitor");
+  if (code.startsWith("scheduled_task_")) return tr("runtime.error.schedule");
+  if (code.startsWith("network_")) return tr("runtime.error.network");
+  if (code.startsWith("host_key_")) return tr("runtime.error.hostKey");
+  if (code.includes("storage") || code.includes("repository") || code.includes("sqlite") || code.includes("vault")) return tr("runtime.error.storage");
+  return tr("runtime.error.generic");
+}
+
+function runtimeFallbackMessage(command: string) {
+  if (command.startsWith("rdp_")) return tr("runtime.message.rdp");
+  if (command.startsWith("vnc_")) return tr("runtime.message.vnc");
+  if (command.startsWith("docker_")) return tr("runtime.message.docker");
+  if (command.startsWith("webdav_")) return tr("runtime.message.webdav");
+  if (command.startsWith("remote_monitor_")) return tr("runtime.message.monitor");
+  if (command.startsWith("scheduled_task_")) return tr("runtime.message.schedule");
+  if (command.startsWith("network_")) return tr("runtime.message.network");
+  return tr("runtime.message.generic");
+}
+
+function localizeKnownRuntimeMessage(value: string, command: string) {
+  if (getLocale() !== "en" || !containsCjk(value)) return value;
+  switch (value) {
+    case "连接测试通过。":
+      return tr("workspace.connection.testSuccess");
+    case "容器已启动。":
+      return tr("docker.container.action.start");
+    case "容器已停止。":
+      return tr("docker.container.action.stop");
+    case "容器已重启。":
+      return tr("docker.container.action.restart");
+    case "容器已删除。":
+      return tr("docker.container.action.remove");
+    case "Docker 服务已启动。":
+      return tr("docker.engine.action.start");
+    case "Docker 服务已停止。":
+      return tr("docker.engine.action.stop");
+    case "Docker 服务已重启。":
+      return tr("docker.engine.action.restart");
+    case "镜像拉取完成。":
+      return tr("docker.image.pullComplete");
+    case "镜像已删除。":
+      return tr("docker.image.deleted");
+    case "容器重启策略已更新。":
+      return tr("docker.container.restartPolicyUpdated");
+    case "容器已加入网络。":
+      return tr("docker.container.networkJoined");
+    case "Docker 配置已保存。":
+      return tr("docker.config.saved");
+    case "定时任务已删除。":
+      return tr("docker.schedule.deleted");
+    case "定时任务已手动执行。":
+      return tr("docker.schedule.runComplete");
+    default:
+      return runtimeFallbackMessage(command);
+  }
+}
+
+function localizeRuntimePayloadValue(value: unknown, command: string, key = ""): unknown {
+  if (getLocale() !== "en") return value;
+  if (typeof value === "string") {
+    return runtimePresentationKeys.has(key) ? localizeKnownRuntimeMessage(value, command) : value;
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => localizeRuntimePayloadValue(item, command, key));
+  }
+  if (typeof value === "object" && value !== null) {
+    return Object.fromEntries(
+      Object.entries(value).map(([entryKey, entryValue]) => [
+        entryKey,
+        localizeRuntimePayloadValue(entryValue, command, entryKey),
+      ]),
+    );
+  }
+  return value;
+}
+
+function localizeInvokeError(error: unknown) {
+  if (getLocale() !== "en") return error;
+
+  if (typeof error === "object" && error !== null) {
+    const record = error as Record<string, unknown>;
+    const message = typeof record.message === "string" ? record.message : "";
+    if (message && containsCjk(message)) {
+      const code = typeof record.code === "string" ? record.code : "";
+      return { ...record, message: runtimeErrorMessage(code) };
+    }
+    return error;
+  }
+
+  if (typeof error === "string") {
+    try {
+      const parsed = JSON.parse(error) as Record<string, unknown>;
+      if (parsed && typeof parsed === "object" && typeof parsed.message === "string" && containsCjk(parsed.message)) {
+        const code = typeof parsed.code === "string" ? parsed.code : "";
+        return JSON.stringify({ ...parsed, message: runtimeErrorMessage(code) });
+      }
+    } catch {
+      // Plain runtime error text; fall through to a generic English message.
+    }
+    return containsCjk(error) ? tr("runtime.error.generic") : error;
+  }
+
+  return error;
+}
+
+async function invoke<T>(command: string, args?: Record<string, unknown>): Promise<T> {
+  try {
+    const result = await tauriInvoke<T>(command, args);
+    return localizeRuntimePayloadValue(result, command) as T;
+  } catch (error) {
+    throw localizeInvokeError(error);
+  }
+}
 
 export interface SecretVaultStatus {
   initialized: boolean;

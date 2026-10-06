@@ -415,7 +415,7 @@ import { AppActionBar } from "./AppActionBar";
 import { AppTitlebar } from "./AppTitlebar";
 import { buildTitlebarItems } from "./titlebarItems";
 import { useWorkspaceActionRuntime } from "./useWorkspaceActionRuntime";
-import { useI18n } from "../../shared/i18n";
+import { t as tr, useI18n } from "../../shared/i18n";
 import { buildSshRemoteFilePanelStack } from "./remoteFilePanelStrategy";
 import { closeConfirmationCopy } from "./closeConfirmationText";
 import { useCloseRequest } from "../workspace/sessionTabs/useCloseRequest";
@@ -678,19 +678,12 @@ const maxRightPaneWidth = 560;
 const minCenterPaneWidth = 520;
 const paneKeyboardResizeStep = 16;
 const defaultEditorTerminalSplitPercent = 44;
-const commandSnippetRootGroup = "";
-const commandSnippetRootGroupLabel = "根目录";
+const commandSnippetRootGroup = "", commandSnippetRootGroupLabel = () => tr("workspace.snippet.root");
 const legacyCommandSnippetGroup = "未分组";
-const commandHistoryAllScopeKey = "all";
-const commandHistorySshScopePrefix = "ssh:";
-const commandHistoryLocalScopePrefix = "local:";
-const connectionPromptAuthKindOptions: Array<{
-  label: string;
-  value: ConnectionAuthKind;
-}> = [
-  { label: "密码", value: "password" },
-  { label: "私钥", value: "private_key" },
-];
+const commandHistoryAllScopeKey = "all", commandHistorySshScopePrefix = "ssh:", commandHistoryLocalScopePrefix = "local:";
+function connectionPromptAuthKindOptions(): Array<{ label: string; value: ConnectionAuthKind }> {
+  return [{ label: tr("workspace.connection.auth.password"), value: "password" }, { label: tr("workspace.connection.auth.privateKey"), value: "private_key" }];
+}
 const minEditorTerminalSplitPercent = 24;
 const maxEditorTerminalSplitPercent = 72;
 const editorTerminalKeyboardResizeStep = 3;
@@ -1015,7 +1008,7 @@ export function WorkspaceShell() {
     useState<CommandHistoryEntry | null>(null);
   const [commandHistoryClearOpen, setCommandHistoryClearOpen] = useState(false);
   const [commandSenderLastSentLabel, setCommandSenderLastSentLabel] =
-    useState("上次发送：尚未发送");
+    useState(tr("workspace.command.last.none"));
   const [commandSenderDeliveryByKey, setCommandSenderDeliveryByKey] =
     useState<Record<string, { message?: string; status: CommandSenderDeliveryStatus }>>({});
   const [terminalSearchByTabId, setTerminalSearchByTabId] =
@@ -1071,7 +1064,7 @@ export function WorkspaceShell() {
   const [remoteFileProperties, setRemoteFileProperties] =
     useState<RemoteFilePropertiesState | null>(null);
   const handleTransferTaskError = useCallback((transferId: string, error: unknown) => {
-    failTransfer(transferId, "传输失败", error);
+    failTransfer(transferId, tr("workspace.transfer.failed"), error);
   }, []);
   const {
     enqueueRemoteFileTransfer,
@@ -1353,7 +1346,7 @@ export function WorkspaceShell() {
     start: (connectionId) => {
       const connection = connections.find((item) => item.id === connectionId);
       const handle = connection ? openNewConnectionSessionWithActivation(connection, false) : null;
-      if (!handle) throw new Error("连接已不存在，无法启动批量会话。");
+      if (!handle) throw new Error(tr("workspace.batch.connectionMissing"));
       return handle;
     },
     wait: (handle, reportStatus) => waitForBatchWorkspaceHandle(handle, () => ({ localTerminalTabs: localTerminalTabsRef.current, rdpSessions: rdpSessionsRef.current, terminalTabs: terminalTabsRef.current, vncSessions: vncSessionsRef.current }), reportStatus),
@@ -1486,7 +1479,7 @@ export function WorkspaceShell() {
   );
   const commandSnippetGroupOptions = useMemo(
     () => [
-      { label: commandSnippetRootGroupLabel, value: commandSnippetRootGroup },
+      { label: commandSnippetRootGroupLabel(), value: commandSnippetRootGroup },
       ...commandSnippetGroups.map((group) => ({ label: group, value: group })),
     ],
     [commandSnippetGroups],
@@ -1982,7 +1975,7 @@ export function WorkspaceShell() {
         return {
           binding: { kind: "ssh" as const, tabId: tab.id },
           group:
-            tab.connectionId === activeConnectionId ? "当前 SSH 连接" : "其他 SSH 连接",
+            tab.connectionId === activeConnectionId ? tr("workspace.connection.currentSsh") : tr("workspace.connection.otherSsh"),
           icon: <SquareTerminal className="ui-icon" aria-hidden="true" />,
           label: `${connection?.name || connection?.host || "SSH"} · ${tab.title}`,
           searchText: [
@@ -2006,16 +1999,16 @@ export function WorkspaceShell() {
             : tab.source === "telnet"
               ? "Telnet"
               : tab.source === "serial"
-                ? "串口"
-                : "本地";
+                ? tr("workspace.local.serial")
+                : tr("workspace.local.local");
         return {
           binding: { kind: "local" as const, tabId: tab.id },
           group:
             tab.profileKind === "wsl"
               ? "WSL"
               : tab.source === "local" || !tab.source
-                ? "本地终端"
-                : "Telnet / 串口",
+                ? tr("workspace.local.terminal")
+                : tr("workspace.local.character"),
           icon: <LocalTerminalIcon className="ui-icon" kind={tab.profileKind} title={tab.title} />,
           label: `${source} · ${tab.title}`,
           searchText: `${source} ${tab.title}`,
@@ -2057,15 +2050,15 @@ export function WorkspaceShell() {
         })),
       {
         disabled: !defaultLocalTerminalProfile,
-        group: "新建会话",
-        label: "新建默认本地终端",
+        group: tr("workspace.newSession.group"),
+        label: tr("workspace.newSession.defaultLocal"),
         value: "action:new-local",
         variant: "action" as const,
       },
       {
         disabled: terminalTabs.length === 0 && !isSshConnection(activeConnection),
-        group: "新建会话",
-        label: "新建当前连接 SSH 终端",
+        group: tr("workspace.newSession.group"),
+        label: tr("workspace.newSession.currentSsh"),
         value: "action:new-ssh",
         variant: "action" as const,
       },
@@ -2148,7 +2141,7 @@ export function WorkspaceShell() {
   }, [shouldShowAiAssistantPanel]);
 
   const aiAssistantPanelNode = shouldRenderAiAssistantPanel ? (
-    <Suspense fallback={<p className="file-panel-empty">正在加载 AI 面板...</p>}>
+    <Suspense fallback={<p className="file-panel-empty">{tr("workspace.loading.ai")}</p>}>
       <AiAssistantPanel
         active={showWorkspaceToolPane && !rightPaneCollapsed && rightTool === "ai"}
         commandDraft={commandSenderInput}
@@ -2653,7 +2646,7 @@ export function WorkspaceShell() {
     const retry = item.retry;
     const connection = retry.action === "download" ? null : connectionForTransfer(retry.connectionId);
     if (retry.action !== "download" && !connection) {
-      failTransfer(transferId, "重试失败", new Error("连接已不存在，无法重试传输。"));
+      failTransfer(transferId, tr("workspace.transfer.retryFailed"), new Error(tr("workspace.transfer.connectionMissing")));
       return;
     }
 
@@ -2710,7 +2703,7 @@ export function WorkspaceShell() {
     const mappedStage = code ? transferErrorStage(code) : null;
     const suggestion = code ? transferErrorSuggestion(code) : null;
     const baseError = formatDetailedError(error);
-    const errorText = suggestion ? `${baseError}\n建议：${suggestion}` : baseError;
+    const errorText = suggestion ? `${baseError}\n${tr("workspace.error.suggestion", { suggestion })}` : baseError;
     updateRemoteFileTransfer(transferId, {
       error: errorText,
       progressIndeterminate: false,
@@ -2750,13 +2743,13 @@ export function WorkspaceShell() {
       detail: null,
       indeterminate: true,
       progress: 2,
-      stage: "检查本地目标",
+      stage: tr("workspace.transfer.checkLocal"),
     });
     let check;
     try {
       check = await remoteFileCheckDownloadTarget(downloadOptions);
     } catch (error) {
-      failTransfer(transferId, "检查本地目标失败", error);
+      failTransfer(transferId, tr("workspace.transfer.checkLocalFailed"), error);
       return "failed";
     }
     if (!check.exists) {
@@ -2765,7 +2758,7 @@ export function WorkspaceShell() {
 
     return promptTransferConflictPolicy(
       check.name,
-      `本地目标已存在：${check.local_path}。请选择本次下载的处理方式。`,
+      tr("workspace.transfer.localExists", { path: check.local_path }),
     );
   }
 
@@ -2787,13 +2780,13 @@ export function WorkspaceShell() {
       detail: null,
       indeterminate: true,
       progress: 2,
-      stage: "检查同名目标",
+      stage: tr("workspace.transfer.checkRemote"),
     });
     let check;
     try {
       check = await remoteFileCheckPath(connection.id, remotePath);
     } catch (error) {
-      failTransfer(transferId, "检查同名目标失败", error);
+      failTransfer(transferId, tr("workspace.transfer.checkRemoteFailed"), error);
       return "failed";
     }
     if (!check.exists) {
@@ -2802,7 +2795,7 @@ export function WorkspaceShell() {
 
     return promptTransferConflictPolicy(
       remoteFileName(remotePath),
-      `远程目标已存在：${check.path}。请选择本次上传的处理方式。`,
+      tr("workspace.transfer.remoteExists", { path: check.path }),
     );
   }
 
@@ -2935,7 +2928,7 @@ export function WorkspaceShell() {
       path,
       savedContent: "",
       saveState: "loading",
-      statusMessage: "读取中",
+      statusMessage: tr("workspace.editor.reading"),
     };
 
     setRemoteFileTabs((tabs) => [...tabs, tab]);
@@ -2971,7 +2964,7 @@ export function WorkspaceShell() {
         path: result.path,
         savedContent: result.content,
         saveState: "ready",
-        statusMessage: "就绪",
+        statusMessage: tr("workspace.editor.ready"),
       }));
     } catch (error) {
       updateRemoteFileTab(tabId, (tab) => ({
@@ -2991,7 +2984,7 @@ export function WorkspaceShell() {
       content,
       dirty: content !== tab.savedContent,
       saveState: content === tab.savedContent ? "ready" : "dirty",
-      statusMessage: content === tab.savedContent ? "就绪" : "已修改",
+      statusMessage: content === tab.savedContent ? tr("workspace.editor.ready") : tr("workspace.editor.modified"),
     }));
   }
 
@@ -3005,7 +2998,7 @@ export function WorkspaceShell() {
       ...item,
       error: null,
       saveState: "saving",
-      statusMessage: "保存中",
+      statusMessage: tr("workspace.editor.saving"),
     }));
 
     void (hasTauriRuntime()
@@ -3033,7 +3026,7 @@ export function WorkspaceShell() {
           metadata: result.metadata,
           savedContent: item.content,
           saveState: "saved",
-          statusMessage: "已保存",
+          statusMessage: tr("workspace.editor.saved"),
         }));
         triggerRemoteFileRefresh(tab.connectionId, remotePathParent(tab.path));
       })
@@ -3043,7 +3036,7 @@ export function WorkspaceShell() {
             ...item,
             error: formatError(error),
             saveState: "conflict",
-            statusMessage: "远端已变化",
+            statusMessage: tr("workspace.editor.remoteChanged"),
           }));
           setPendingRemoteFileConflictId(tabId);
           return;
@@ -3069,7 +3062,7 @@ export function WorkspaceShell() {
       ...item,
       error: null,
       saveState: "loading",
-      statusMessage: "读取中",
+      statusMessage: tr("workspace.editor.reading"),
     }));
     void loadRemoteFileTab(connection, tab.path, tabId);
   }
@@ -3081,7 +3074,7 @@ export function WorkspaceShell() {
       dirty: false,
       error: null,
       saveState: "ready",
-      statusMessage: "已放弃更改",
+      statusMessage: tr("workspace.editor.discarded"),
     }));
   }
 
@@ -3400,7 +3393,7 @@ export function WorkspaceShell() {
           });
         })
         .catch((error: unknown) => {
-          showTransferPickerError("上传文件", parentPath, error);
+          showTransferPickerError(tr("workspace.transfer.uploadFile"), parentPath, error);
         });
       return;
     }
@@ -3429,7 +3422,7 @@ export function WorkspaceShell() {
           });
         })
         .catch((error: unknown) => {
-          showTransferPickerError("上传文件夹", parentPath, error);
+          showTransferPickerError(tr("workspace.transfer.uploadFolder"), parentPath, error);
         });
       return;
     }
@@ -3525,7 +3518,7 @@ export function WorkspaceShell() {
       progress: 100,
       progressDetail: null,
       remotePath: parentPath,
-      stage: "选择失败",
+      stage: tr("workspace.transfer.selectionFailed"),
     });
     updateRemoteFileTransfer(transferId, {
       error: formatError(error),
@@ -3542,7 +3535,7 @@ export function WorkspaceShell() {
     const connection = options.connection ?? activeConnection;
     if (!connection) {
       if (options.transferId) {
-        failTransfer(options.transferId, "重试失败", new Error("连接已不存在，无法重试传输。"));
+        failTransfer(options.transferId, tr("workspace.transfer.retryFailed"), new Error(tr("workspace.transfer.connectionMissing")));
       }
       return;
     }
@@ -3556,10 +3549,10 @@ export function WorkspaceShell() {
       name: localName,
       progress: 0,
       remotePath: uploadPath,
-      stage: "等待上传",
+      stage: tr("workspace.transfer.waitUpload"),
     });
     if (options.transferId) {
-      prepareTransferRetry(transferId, "准备重试");
+      prepareTransferRetry(transferId, tr("workspace.transfer.prepareRetry"));
     }
 
     enqueueRemoteFileTransfer(transferId, async () => {
@@ -3588,7 +3581,7 @@ export function WorkspaceShell() {
         setTransferProgress(transferId, {
           indeterminate: true,
           progress: 4,
-          stage: "上传中",
+          stage: tr("workspace.transfer.uploading"),
         });
         const result = await remoteFileUploadLocalFile({
           connectionId: connection.id,
@@ -3599,7 +3592,7 @@ export function WorkspaceShell() {
         });
         finishUploadTransfer(transferId, connection.id, result);
       } catch (error) {
-        failTransfer(transferId, "上传失败", error);
+        failTransfer(transferId, tr("workspace.transfer.uploadFailed"), error);
       }
     });
   }
@@ -3612,7 +3605,7 @@ export function WorkspaceShell() {
     const connection = options.connection ?? activeConnection;
     if (!connection) {
       if (options.transferId) {
-        failTransfer(options.transferId, "重试失败", new Error("连接已不存在，无法重试传输。"));
+        failTransfer(options.transferId, tr("workspace.transfer.retryFailed"), new Error(tr("workspace.transfer.connectionMissing")));
       }
       return;
     }
@@ -3626,10 +3619,10 @@ export function WorkspaceShell() {
       name: rootName,
       progress: 0,
       remotePath,
-      stage: "等待上传",
+      stage: tr("workspace.transfer.waitUpload"),
     });
     if (options.transferId) {
-      prepareTransferRetry(transferId, "准备重试");
+      prepareTransferRetry(transferId, tr("workspace.transfer.prepareRetry"));
     }
 
     enqueueRemoteFileTransfer(transferId, async () => {
@@ -3662,7 +3655,7 @@ export function WorkspaceShell() {
         setTransferProgress(transferId, {
           indeterminate: true,
           progress: 4,
-          stage: compress ? "打包并上传目录" : "扫描目录",
+          stage: compress ? tr("workspace.transfer.packUpload") : tr("workspace.transfer.scanDirectory"),
         });
         const result = await remoteFileUploadLocalArchive({
           compress,
@@ -3676,7 +3669,7 @@ export function WorkspaceShell() {
         });
         finishArchiveUploadTransfer(transferId, connection.id, result);
       } catch (error) {
-        failTransfer(transferId, "目录上传失败", error);
+        failTransfer(transferId, tr("workspace.transfer.directoryUploadFailed"), error);
       }
     });
   }
@@ -3689,7 +3682,7 @@ export function WorkspaceShell() {
     const connection = options.connection ?? activeConnection;
     if (!connection) {
       if (options.transferId) {
-        failTransfer(options.transferId, "重试失败", new Error("连接已不存在，无法重试传输。"));
+        failTransfer(options.transferId, tr("workspace.transfer.retryFailed"), new Error(tr("workspace.transfer.connectionMissing")));
       }
       return;
     }
@@ -3702,10 +3695,10 @@ export function WorkspaceShell() {
       name: item.file.name,
       progress: 0,
       remotePath: uploadPath,
-      stage: "等待上传",
+      stage: tr("workspace.transfer.waitUpload"),
     });
     if (options.transferId) {
-      prepareTransferRetry(transferId, "准备重试");
+      prepareTransferRetry(transferId, tr("workspace.transfer.prepareRetry"));
     }
 
     enqueueRemoteFileTransfer(transferId, async () => {
@@ -3714,7 +3707,7 @@ export function WorkspaceShell() {
           cap: 92,
           detail: formatTransferProgressBytes(0, item.file.size),
           start: 8,
-          stage: "上传中",
+          stage: tr("workspace.transfer.uploading"),
         });
         const result = await wait(240).then(() => {
           stopPulse();
@@ -3750,7 +3743,7 @@ export function WorkspaceShell() {
         setTransferProgress(transferId, {
           detail: formatTransferProgressBytes(0, item.file.size),
           progress: 4,
-          stage: "写入本地上传缓存",
+          stage: tr("workspace.transfer.writeUploadCache"),
         });
         const temp = await remoteFilePrepareUploadTemp(item.file.name);
         localPath = temp.local_path;
@@ -3760,14 +3753,14 @@ export function WorkspaceShell() {
             detail: formatTransferProgressBytes(loaded, total),
             progress: interpolateTransferProgress(4, 34, loaded, total),
             speedText: localSpeed.sample(loaded),
-            stage: "写入本地上传缓存",
+            stage: tr("workspace.transfer.writeUploadCache"),
           });
         });
         setTransferProgress(transferId, {
           detail: formatTransferProgressBytes(0, item.file.size),
           indeterminate: false,
           progress: 36,
-          stage: "上传中",
+          stage: tr("workspace.transfer.uploading"),
         });
         const result = await remoteFileUploadLocalFile({
           connectionId: connection.id,
@@ -3778,7 +3771,7 @@ export function WorkspaceShell() {
         });
         finishUploadTransfer(transferId, connection.id, result);
       } catch (error) {
-        failTransfer(transferId, "上传失败", error);
+        failTransfer(transferId, tr("workspace.transfer.uploadFailed"), error);
       } finally {
         if (localPath) {
           void remoteFileDeleteUploadTemp(localPath).catch(() => undefined);
@@ -3796,7 +3789,7 @@ export function WorkspaceShell() {
     const connection = options.connection ?? activeConnection;
     if (!connection) {
       if (options.transferId) {
-        failTransfer(options.transferId, "重试失败", new Error("连接已不存在，无法重试传输。"));
+        failTransfer(options.transferId, tr("workspace.transfer.retryFailed"), new Error(tr("workspace.transfer.connectionMissing")));
       }
       return;
     }
@@ -3809,10 +3802,10 @@ export function WorkspaceShell() {
       name: rootName,
       progress: 0,
       remotePath,
-      stage: "等待打包",
+      stage: tr("workspace.transfer.waitPack"),
     });
     if (options.transferId) {
-      prepareTransferRetry(transferId, "准备重试");
+      prepareTransferRetry(transferId, tr("workspace.transfer.prepareRetry"));
     }
 
     enqueueRemoteFileTransfer(transferId, async () => {
@@ -3821,7 +3814,7 @@ export function WorkspaceShell() {
           cap: 92,
           detail: formatTransferProgressBytes(0, totalUploadBytes(items)),
           start: 8,
-          stage: "上传归档并远程解压",
+          stage: tr("workspace.transfer.uploadExtract"),
         });
         const result = await wait(320).then(() => {
           stopPulse();
@@ -3862,14 +3855,14 @@ export function WorkspaceShell() {
         setTransferProgress(transferId, {
           detail: formatTransferProgressBytes(0, totalBytes),
           progress: 3,
-          stage: "本地打包 tar.gz",
+          stage: tr("workspace.transfer.localTar"),
         });
         const temp = await remoteFilePrepareUploadTemp(`${rootName}.tar.gz`);
         localPath = temp.local_path;
         const archiveSize = await buildTarGzArchiveToTemp(localPath, items, (progress) => {
           const detail =
             progress.phase === "compress"
-              ? `压缩包 ${formatFileSize(progress.archiveBytes)}`
+              ? tr("workspace.transfer.archiveSize", { size: formatFileSize(progress.archiveBytes) })
               : formatTransferProgressBytes(progress.loadedBytes, progress.totalBytes);
           const speedBytes = progress.phase === "compress" ? progress.archiveBytes : progress.loadedBytes;
           setTransferProgress(transferId, {
@@ -3879,14 +3872,14 @@ export function WorkspaceShell() {
                 ? 34
                 : interpolateTransferProgress(3, 32, progress.loadedBytes, progress.totalBytes),
             speedText: archiveSpeed.sample(speedBytes),
-            stage: progress.phase === "compress" ? "压缩 tar.gz" : "本地打包 tar.gz",
+            stage: progress.phase === "compress" ? tr("workspace.transfer.compressTar") : tr("workspace.transfer.localTar"),
           });
         });
         const stopPulse = startTransferProgressPulse(transferId, {
           cap: 92,
-          detail: `压缩包 ${formatFileSize(archiveSize)}`,
+          detail: tr("workspace.transfer.archiveSize", { size: formatFileSize(archiveSize) }),
           start: 38,
-          stage: "上传归档并远程解压",
+          stage: tr("workspace.transfer.uploadExtract"),
         });
         const result = await remoteFileUploadLocalArchive({
           compress: true,
@@ -3900,7 +3893,7 @@ export function WorkspaceShell() {
         }).finally(stopPulse);
         finishArchiveUploadTransfer(transferId, connection.id, result);
       } catch (error) {
-        failTransfer(transferId, "目录上传失败", error);
+        failTransfer(transferId, tr("workspace.transfer.directoryUploadFailed"), error);
       } finally {
         if (localPath) {
           void remoteFileDeleteUploadTemp(localPath).catch(() => undefined);
@@ -3924,7 +3917,7 @@ export function WorkspaceShell() {
       progressIndeterminate: false,
       remotePath: result.path,
       speedText: null,
-      stage: result.skipped ? "已跳过" : "上传完成",
+      stage: result.skipped ? tr("workspace.transfer.skipped") : tr("workspace.transfer.uploadComplete"),
       status: result.skipped ? "skipped" : "success",
     });
     triggerRemoteFileRefresh(connectionId, remotePathParent(result.path));
@@ -3945,7 +3938,7 @@ export function WorkspaceShell() {
       progressIndeterminate: false,
       remotePath: result.path,
       speedText: null,
-      stage: result.skipped ? "已跳过" : "目录上传完成",
+      stage: result.skipped ? tr("workspace.transfer.skipped") : tr("workspace.transfer.directoryUploadComplete"),
       status: result.skipped ? "skipped" : "success",
     });
     triggerRemoteFileRefresh(connectionId, remotePathParent(result.path));
@@ -3977,7 +3970,7 @@ export function WorkspaceShell() {
       : activeConnection;
     if (!connection) {
       if (options.transferId) {
-        failTransfer(options.transferId, "重试失败", new Error("连接已不存在，无法重试传输。"));
+        failTransfer(options.transferId, tr("workspace.transfer.retryFailed"), new Error(tr("workspace.transfer.connectionMissing")));
       }
       return;
     }
@@ -3989,10 +3982,10 @@ export function WorkspaceShell() {
       name: entry.name,
       progress: 0,
       remotePath: entry.path,
-      stage: isDirectory ? "等待扫描" : "等待下载",
+      stage: isDirectory ? tr("workspace.transfer.waitScan") : tr("workspace.transfer.waitDownload"),
     });
     if (options.transferId) {
-      prepareTransferRetry(transferId, "准备重试");
+      prepareTransferRetry(transferId, tr("workspace.transfer.prepareRetry"));
     }
 
     enqueueRemoteFileTransfer(transferId, async () => {
@@ -4032,9 +4025,9 @@ export function WorkspaceShell() {
             progress: 4,
             stage: isDirectory
               ? request.compress
-                ? "压缩中"
-                : "扫描目录"
-              : "准备下载",
+                ? tr("workspace.transfer.compressing")
+                : tr("workspace.transfer.scanDirectory")
+              : tr("workspace.transfer.prepareDownload"),
           });
           result = await remoteFileDownloadToLocal({
             ...request,
@@ -4045,7 +4038,7 @@ export function WorkspaceShell() {
             cap: 92,
             detail: null,
             start: 8,
-            stage: isDirectory ? "模拟目录下载" : "下载到本地",
+            stage: isDirectory ? tr("workspace.transfer.previewDirectoryDownload") : tr("workspace.transfer.downloadLocal"),
           });
           result = await wait(300).then(() =>
             previewRemoteFileDownloadToLocalResult(entry, isDirectory),
@@ -4055,7 +4048,7 @@ export function WorkspaceShell() {
         finishDownloadTransfer(transferId, result);
       } catch (error) {
         stopPulse?.();
-        failTransfer(transferId, "下载失败", error);
+        failTransfer(transferId, tr("workspace.transfer.downloadFailed"), error);
       }
     });
   }
@@ -4072,7 +4065,7 @@ export function WorkspaceShell() {
       progressIndeterminate: false,
       remotePath: result.remote_path,
       speedText: null,
-      stage: result.skipped ? "已跳过" : "下载完成",
+      stage: result.skipped ? tr("workspace.transfer.skipped") : tr("workspace.transfer.downloadComplete"),
       status: result.skipped ? "skipped" : "success",
     });
   }
@@ -4201,7 +4194,7 @@ export function WorkspaceShell() {
       ordinal,
       status: connectionStepStatusTitle(step),
       temporaryContextRef: step.temporaryContextRef || undefined,
-      title: step.mode === "terminal" ? "连接准备" : "连接测试",
+      title: step.mode === "terminal" ? tr("workspace.connection.prepare") : tr("workspace.connection.test"),
       type: "connecting",
       warmupOutput: [],
     };
@@ -4240,10 +4233,10 @@ export function WorkspaceShell() {
               status: connectionStepStatusTitle(step),
               title:
                 step.status === "error"
-                  ? "连接失败"
+                  ? tr("workspace.connection.failed")
                   : step.mode === "terminal"
-                    ? "连接准备"
-                    : "连接测试",
+                    ? tr("workspace.connection.prepare")
+                    : tr("workspace.connection.test"),
             }
           : tab,
         );
@@ -4481,7 +4474,7 @@ export function WorkspaceShell() {
   function retryRestoredSshTab(tabId: string) {
     const tab = terminalTabsRef.current.find((item) => item.id === tabId); const connection = tab ? connectionById.get(tab.connectionId) : null;
     if (tab && isSshConnection(connection)) { startConnectionStep(connection, "terminal", false, tab.id); return; }
-    if (tab) { const next = terminalTabsRef.current.map((item) => item.id === tabId ? { ...item, error: "保存的 SSH 连接已不存在。", status: "连接失败" } : item); terminalTabsRef.current = next; setTerminalTabs(next); }
+    if (tab) { const next = terminalTabsRef.current.map((item) => item.id === tabId ? { ...item, error: tr("workspace.savedSshMissing"), status: "连接失败" } : item); terminalTabsRef.current = next; setTerminalTabs(next); }
   }
 
   function retryRestoredLocalTab(tabId: string) {
@@ -4496,7 +4489,7 @@ export function WorkspaceShell() {
       const profile = localTerminalProfilesRef.current.find((item) => item.id === tab.profileId) || null;
       if (profile) { const next = { ...tab, error: undefined, profileKind: profile.kind, requestId, sessionId: undefined, source: "local" as const, status: "正在连接", title: localTerminalTitle(profile, displayOrdinal(tab.ordinal)), warmupOutput: [] }; const tabs = localTerminalTabsRef.current.map((item) => item.id === tab.id ? next : item); localTerminalTabsRef.current = tabs; setLocalTerminalTabs(tabs); void openRuntimeLocalTerminalSession(next, "local-preview", () => localTerminalOpen({ cols: 80, cwd: profile.cwd || undefined, profile: toLocalTerminalProfileInput(profile), request_id: requestId, rows: 24 })).catch(() => undefined); return; }
     }
-    const next = localTerminalTabsRef.current.map((item) => item.id === tab.id ? { ...item, error: "保存的本地终端或连接配置已不存在。", status: "连接失败" } : item); localTerminalTabsRef.current = next; setLocalTerminalTabs(next);
+    const next = localTerminalTabsRef.current.map((item) => item.id === tab.id ? { ...item, error: tr("workspace.savedLocalMissing"), status: "连接失败" } : item); localTerminalTabsRef.current = next; setLocalTerminalTabs(next);
   }
 
   function openHome() {
@@ -4779,7 +4772,7 @@ export function WorkspaceShell() {
     }
     if (multiExecTargets.size === 0) {
       setMultiExecMode("off");
-      setTerminalSplitSyncError("请先明确选择至少一个同步目标。");
+      setTerminalSplitSyncError(tr("workspace.split.chooseTarget"));
       return;
     }
     setMultiExecMode("live");
@@ -4831,7 +4824,7 @@ export function WorkspaceShell() {
         return next;
       });
       setTerminalSplitSyncError(
-        `同步输入有 ${failedKeys.size.toString()} 个目标写入失败，已从本次目标移除。`,
+        tr("workspace.split.writeFailed", { count: failedKeys.size }),
       );
     });
   }
@@ -5021,13 +5014,13 @@ export function WorkspaceShell() {
       const tab = remoteFileTabs.find(
         (item) => item.id === payload.id && item.connectionId === payload.connectionId,
       );
-      return tab?.name || "远程文件";
+      return tab?.name || tr("workspace.file.fallback");
     }
 
     const tab = terminalTabs.find(
       (item) => item.id === payload.id && item.connectionId === payload.connectionId,
     );
-    return tab?.title || "终端";
+    return tab?.title || tr("workspace.terminal.fallback");
   }
 
   function isTerminalSubtabActive(tab: TerminalTab) {
@@ -5152,7 +5145,7 @@ export function WorkspaceShell() {
       hideSplit: true,
       prepend: [
         {
-          label: "关闭分屏组",
+          label: tr("workspace.split.closeGroup"),
           onSelect: () => requestCloseTerminalSplitGroup(),
         },
       ],
@@ -5167,11 +5160,11 @@ export function WorkspaceShell() {
           <button
             className="subtab terminal-split-group-subtab"
             type="button"
-            aria-label={`打开分屏组，共 ${boundPaneCount.toString()} 个终端`}
+            aria-label={tr("workspace.split.openGroup", { count: boundPaneCount })}
             onClick={() => activateTerminalSplitTab()}
           >
             <PanelsTopLeft className="ui-icon" aria-hidden="true" />
-            <span>分屏</span>
+            <span>{tr("workspace.split.label")}</span>
             <span className="terminal-split-group-count" aria-hidden="true">
               {boundPaneCount.toString()}
             </span>
@@ -5179,7 +5172,7 @@ export function WorkspaceShell() {
           <button
             className="subtab-close"
             type="button"
-            aria-label="关闭分屏组"
+            aria-label={tr("workspace.split.closeGroup")}
             onClick={requestCloseTerminalSplitGroup}
           >
             <X className="ui-icon" aria-hidden="true" />
@@ -5243,7 +5236,7 @@ export function WorkspaceShell() {
           <button
             className="subtab-close"
             type="button"
-            aria-label={`关闭 ${tab.title}`}
+            aria-label={tr("workspace.closeNamed", { name: tab.title })}
             onClick={() => runTerminalInstanceAction("terminal.closeTab", "ssh", tab.id)}
           >
             <X className="ui-icon" aria-hidden="true" />
@@ -5318,7 +5311,7 @@ export function WorkspaceShell() {
           <button
             className="subtab-close"
             type="button"
-            aria-label={`关闭 ${tab.title}`}
+            aria-label={tr("workspace.closeNamed", { name: tab.title })}
             onClick={() => runTerminalInstanceAction("terminal.closeTab", "local", tab.id)}
           >
             <X className="ui-icon" aria-hidden="true" />
@@ -5361,23 +5354,23 @@ export function WorkspaceShell() {
     }
 
     return (
-      <div className="workbench-tab-scroll-controls" aria-label={`${label}滚动控制`}>
-        <Tooltip label="向左滚动标签">
+      <div className="workbench-tab-scroll-controls" aria-label={tr("workspace.tabs.scrollControls", { label })}>
+        <Tooltip label={tr("workspace.tabs.scrollLeft")}>
           <button
             className="workbench-tab-scroll-button"
             type="button"
-            aria-label={`向左滚动${label}`}
+            aria-label={tr("workspace.tabs.scrollLeftAria", { label })}
             disabled={!tabScroll.canScrollLeft}
             onClick={tabScroll.scrollLeft}
           >
             <ChevronLeft className="ui-icon" aria-hidden="true" />
           </button>
         </Tooltip>
-        <Tooltip label="向右滚动标签">
+        <Tooltip label={tr("workspace.tabs.scrollRight")}>
           <button
             className="workbench-tab-scroll-button"
             type="button"
-            aria-label={`向右滚动${label}`}
+            aria-label={tr("workspace.tabs.scrollRightAria", { label })}
             disabled={!tabScroll.canScrollRight}
             onClick={tabScroll.scrollRight}
           >
@@ -5397,41 +5390,41 @@ export function WorkspaceShell() {
         actions={[
           {
             hint: "Ctrl+F4",
-            label: "关闭",
+            label: tr("workspace.tabs.close"),
             onSelect: () => closeRemoteFileTab(tab.id),
           },
           {
             disabled: activeRemoteFileTabs.length <= 1,
-            label: "关闭其他",
+            label: tr("workspace.tabs.closeOthers"),
             onSelect: () => closeOtherRemoteFileTabs(tab.id),
           },
           {
             disabled: index >= activeRemoteFileTabs.length - 1,
-            label: "关闭右侧标签页",
+            label: tr("workspace.tabs.closeRight"),
             onSelect: () => closeRemoteFileTabsToRight(tab.id),
           },
           {
             disabled: savedTabs.length === 0,
             hint: "Ctrl+K U",
-            label: "关闭已保存",
+            label: tr("workspace.tabs.closeSaved"),
             onSelect: () => closeSavedRemoteFileTabsForConnection(tab.connectionId),
           },
           {
             disabled: activeRemoteFileTabs.length === 0,
             hint: "Ctrl+K W",
-            label: "全部关闭",
+            label: tr("workspace.tabs.closeAll"),
             onSelect: () => closeAllRemoteFileTabsForConnection(tab.connectionId),
           },
           {
             hint: "Shift+Alt+C",
-            label: "复制路径",
+            label: tr("workspace.tabs.copyPath"),
             onSelect: () => copyRemotePath(tab.path),
             separatorBefore: true,
           },
           ...(isConnectionTerminalFileUnified(tab.connectionId)
             ? [
                 {
-                  label: "恢复上下分屏",
+                  label: tr("workspace.tabs.restoreSplit"),
                   onSelect: () =>
                     restoreConnectionTerminalFileSplit(tab.connectionId, "file", {
                       connectionId: tab.connectionId,
@@ -5463,12 +5456,12 @@ export function WorkspaceShell() {
           >
             <RemoteFileIcon className="file-tab-icon" entry={{ name: tab.name, type: "file" }} />
             <span className="file-tab-name">{tab.name}</span>
-            {tab.dirty ? <span className="dirty-dot" aria-label="已修改" /> : null}
+            {tab.dirty ? <span className="dirty-dot" aria-label={tr("workspace.tabs.modified")} /> : null}
           </button>
           <button
             className="subtab-close"
             type="button"
-            aria-label={`关闭 ${tab.name}`}
+            aria-label={tr("workspace.closeNamed", { name: tab.name })}
             onClick={() => closeRemoteFileTab(tab.id)}
           >
             <X className="ui-icon" aria-hidden="true" />
@@ -5574,12 +5567,12 @@ export function WorkspaceShell() {
     const sshTab = terminalTabsRef.current.find((tab) => tab.id === tabId);
     const localTab = localTerminalTabsRef.current.find((tab) => tab.id === tabId);
     const sourceConnection = sshTab ? connectionById.get(sshTab.connectionId) || null : null;
-    const source = sourceConnection?.name || localTab?.title || sshTab?.title || "终端选区";
+    const source = sourceConnection?.name || localTab?.title || sshTab?.title || tr("workspace.ai.selectionSource");
     const directory = terminalDirectories[tabId];
     setAiInitialContexts([
       buildAiContextBlock({
         kind: "terminal_selection",
-        title: "终端选中文本",
+        title: tr("workspace.ai.selectionTitle"),
         source: directory ? `${source} · ${directory}` : source,
         content,
       }),
@@ -5609,8 +5602,8 @@ export function WorkspaceShell() {
   async function sendAiCommandToTerminal(command: string) {
     const target = resolveActiveAiCommandTarget();
     if (!target) {
-      setCommandSenderLastSentLabel("上次发送：当前没有可写入的激活终端");
-      throw new Error("当前没有可写入的激活终端。");
+      setCommandSenderLastSentLabel(tr("workspace.command.noWritable"));
+      throw new Error(tr("workspace.command.noWritableError"));
     }
     setSelectedCommandSnippetId(null);
     setSelectedCommandHistoryId(null);
@@ -5635,7 +5628,7 @@ export function WorkspaceShell() {
         },
         key: terminalPaneBindingKey({ kind: "local", tabId: activeLocalTerminalTab.id }),
         kind: "local",
-        label: "当前激活终端",
+        label: tr("workspace.command.activeTerminal"),
         sessionId: activeLocalTerminalTab.sessionId,
         tabId: activeLocalTerminalTab.id,
         tabTitle: activeLocalTerminalTab.title,
@@ -5661,7 +5654,7 @@ export function WorkspaceShell() {
         },
         key: terminalPaneBindingKey({ kind: "ssh", tabId: activeConnectedTerminalTab.id }),
         kind: "ssh",
-        label: connection?.name || "当前激活终端",
+        label: connection?.name || tr("workspace.command.activeTerminal"),
         sessionId: activeConnectedTerminalTab.sessionId,
         tabId: activeConnectedTerminalTab.id,
         tabTitle: activeConnectedTerminalTab.title,
@@ -5688,7 +5681,7 @@ export function WorkspaceShell() {
   async function runCommandSnippet(snippet: CommandSnippet) {
     const targets = prepareCommandSenderTargets();
     if (targets.length === 0) {
-      setCommandSenderLastSentLabel("上次发送：请选择目标后再执行片段");
+      setCommandSenderLastSentLabel(tr("workspace.command.chooseTargetSnippet"));
       return;
     }
     await sendCommandTextToTargets(snippet.command, true, snippet.id, targets, {
@@ -5699,7 +5692,7 @@ export function WorkspaceShell() {
   async function runCommandHistoryEntry(entry: CommandHistoryEntry) {
     const targets = prepareCommandSenderTargets();
     if (targets.length === 0) {
-      setCommandSenderLastSentLabel("上次发送：请选择目标后再执行历史命令");
+      setCommandSenderLastSentLabel(tr("workspace.command.chooseTargetHistory"));
       return;
     }
     await sendCommandTextToTargets(entry.command, true, null, targets, {
@@ -5716,10 +5709,10 @@ export function WorkspaceShell() {
   async function copyCommandLibraryText(command: string, label: string) {
     try {
       await copyText(command);
-      setCommandSenderLastSentLabel(`上次操作：已复制${label}`);
+      setCommandSenderLastSentLabel(tr("workspace.command.copied", { label }));
       setCommandLibraryError(null);
     } catch (error) {
-      setCommandLibraryError(`复制失败：${formatError(error)}`);
+      setCommandLibraryError(tr("workspace.command.copyFailed", { message: formatError(error) }));
     }
   }
 
@@ -5808,7 +5801,7 @@ export function WorkspaceShell() {
     const originalGroup = normalizeCommandSnippetGroupValue(commandSnippetGroupDialog.originalName);
     if (!nextGroup) {
       setCommandSnippetGroupDialog((state) =>
-        state ? { ...state, error: "请填写分组名称。" } : state,
+        state ? { ...state, error: tr("workspace.command.groupNameRequired") } : state,
       );
       return;
     }
@@ -5818,7 +5811,7 @@ export function WorkspaceShell() {
       )
     ) {
       setCommandSnippetGroupDialog((state) =>
-        state ? { ...state, error: "分组名称已存在。" } : state,
+        state ? { ...state, error: tr("workspace.command.groupExists") } : state,
       );
       return;
     }
@@ -5892,7 +5885,7 @@ export function WorkspaceShell() {
     }
 
     if (!hasTauriRuntime()) {
-      setCommandSnippetFormError("当前环境无法保存命令片段。");
+      setCommandSnippetFormError(tr("workspace.command.saveUnavailable"));
       return;
     }
 
@@ -6123,7 +6116,7 @@ export function WorkspaceShell() {
       targetKeys: targets.map((target) => target.key),
       write: async (sessionId, data) => {
         if (!hasTauriRuntime()) {
-          throw new Error("当前环境无法写入终端输入流。");
+          throw new Error(tr("workspace.command.writeUnavailable"));
         }
         await terminalWrite(sessionId, data);
       },
@@ -6136,7 +6129,7 @@ export function WorkspaceShell() {
           delivery.status === "failed"
             ? { message: formatError(delivery.error), status: "failed" }
             : delivery.status === "disconnected"
-              ? { message: "目标在发送前已断线或关闭。", status: "disconnected" }
+              ? { message: tr("workspace.command.targetDisconnected"), status: "disconnected" }
               : { status: "written" };
       });
       return nextDeliveryByKey;
@@ -6164,8 +6157,8 @@ export function WorkspaceShell() {
 
     setCommandSenderLastSentLabel(
       failedCount > 0 || disconnectedCount > 0
-        ? `上次发送：写入 ${successCount.toString()}，失败 ${failedCount.toString()}，断线 ${disconnectedCount.toString()}`
-        : `上次发送：已写入 ${successCount.toString()} 个目标`,
+        ? tr("workspace.command.sendSummary", { success: successCount, failed: failedCount, disconnected: disconnectedCount })
+        : tr("workspace.command.sendSuccess", { count: successCount }),
     );
     if (options.clearInput ?? true) {
       clearCommandSenderInput();
@@ -6288,7 +6281,7 @@ export function WorkspaceShell() {
     activate = true,
   ) {
     if (!profile) {
-      setLocalTerminalProfilesError("没有可用的本地终端类型。");
+      setLocalTerminalProfilesError(tr("workspace.local.noProfiles"));
       return null;
     }
 
@@ -6628,7 +6621,7 @@ export function WorkspaceShell() {
     updateRdpSession(sessionId, (session) => ({
       ...session,
       error: null,
-      message: "正在选择可用 RDP runner 并启动客户端。",
+      message: tr("workspace.rdp.launching"),
       preview: null,
       result: null,
       status: "launching",
@@ -6641,7 +6634,7 @@ export function WorkspaceShell() {
       }
       updateRdpSession(sessionId, (session) => ({
         ...session,
-        message: "浏览器预览模式不会启动桌面客户端，真实运行时会打开 RDP runner 或原生子窗口。",
+        message: tr("workspace.rdp.preview"),
         preview: previewRdpLaunchForBrowser(connection, desktopPlatform),
         status: "external",
       }));
@@ -6664,10 +6657,10 @@ export function WorkspaceShell() {
         message:
           result.fallback_reason ||
           (result.embedded
-            ? "嵌入式 RDP 会话已创建。"
+            ? tr("workspace.rdp.embeddedCreated")
             : nativeActiveX
-              ? "RDP 原生子窗口已打开。"
-            : "RDP 客户端已启动，凭据由客户端提示。"),
+              ? tr("workspace.rdp.nativeOpened")
+            : tr("workspace.rdp.externalStarted")),
         result,
         status: result.embedded ? "embedded" : nativeActiveX ? "native" : "external",
       }));
@@ -6694,14 +6687,14 @@ export function WorkspaceShell() {
     if (!connection) {
       updateRdpSession(sessionId, (current) => ({
         ...current,
-        message: "连接已删除，无法生成启动预览。",
+        message: tr("workspace.vnc.connectionDeleted"),
       }));
       return;
     }
 
     updateRdpSession(sessionId, (current) => ({
       ...current,
-      message: "正在生成启动预览。",
+      message: tr("workspace.rdp.previewGenerating"),
     }));
 
     try {
@@ -6710,13 +6703,13 @@ export function WorkspaceShell() {
         : previewRdpLaunchForBrowser(connection, desktopPlatform);
       updateRdpSession(sessionId, (current) => ({
         ...current,
-        message: "启动预览已更新，内容已隐藏敏感凭据。",
+        message: tr("workspace.rdp.previewReady"),
         preview,
       }));
     } catch (error) {
       updateRdpSession(sessionId, (current) => ({
         ...current,
-        message: `启动预览失败：${formatError(error)}`,
+        message: tr("workspace.rdp.previewFailed", { message: formatError(error) }),
       }));
     }
   }
@@ -6880,8 +6873,8 @@ export function WorkspaceShell() {
       ...session,
       error: null,
       message: openInRunnerHost
-        ? "正在创建 VNC 本地桥接并打开 runner host。"
-        : "正在创建 VNC 本地桥接并启动 noVNC。",
+        ? tr("workspace.vnc.hostLaunching")
+        : tr("workspace.vnc.embeddedLaunching"),
       preview: null,
       result: null,
       status: "launching",
@@ -6896,8 +6889,8 @@ export function WorkspaceShell() {
       updateVncSession(sessionId, (session) => ({
         ...session,
         message: openInRunnerHost
-          ? "浏览器预览模式不会创建 VNC 桥接，真实运行时会打开 VNC runner host。"
-          : "浏览器预览模式不会创建 VNC 桥接，真实运行时会打开 noVNC 内嵌画面。",
+          ? tr("workspace.vnc.previewHost")
+          : tr("workspace.vnc.previewEmbedded"),
         preview: previewVncLaunchForBrowser(connection),
         status: openInRunnerHost ? "windowed" : "external",
       }));
@@ -6927,7 +6920,7 @@ export function WorkspaceShell() {
           updateVncSession(sessionId, (session) => ({
             ...session,
             error: null,
-            message: result.fallback_reason || "VNC 画面已交给 RDP 风格 runner host。",
+            message: result.fallback_reason || tr("workspace.vnc.hostReady"),
             result,
             status: "windowed",
             windowLabel,
@@ -6938,7 +6931,7 @@ export function WorkspaceShell() {
           await vncCloseSession(result.session_id).catch(() => undefined);
           updateVncSession(sessionId, (session) => ({
             ...session,
-            error: `VNC runner host 打开失败：${formatDetailedError(error)}`,
+            error: tr("workspace.vnc.hostFailed", { message: formatDetailedError(error) }),
             message: null,
             status: "error",
           }));
@@ -6951,8 +6944,8 @@ export function WorkspaceShell() {
         message:
           result.fallback_reason ||
           (result.embedded
-            ? "VNC 桥接已创建，正在连接远程画面。"
-            : "VNC 客户端已启动，凭据由客户端提示。"),
+            ? tr("workspace.vnc.bridgeReady")
+            : tr("workspace.vnc.externalStarted")),
         result,
         status: result.embedded ? "embedded" : "external",
         windowLabel: null,
@@ -7004,7 +6997,7 @@ export function WorkspaceShell() {
         minWidth: 720,
         parent: "main",
         resizable: true,
-        title: "mXterm VNC",
+        title: "NexaTerm VNC",
         url: vncRunnerWindowUrl(),
         visible: true,
         width: 1280,
@@ -7034,14 +7027,14 @@ export function WorkspaceShell() {
     if (!connection) {
       updateVncSession(sessionId, (current) => ({
         ...current,
-        message: "连接已删除，无法生成启动预览。",
+        message: tr("workspace.vnc.connectionDeleted"),
       }));
       return;
     }
 
     updateVncSession(sessionId, (current) => ({
       ...current,
-      message: "正在生成 VNC 启动预览。",
+      message: tr("workspace.vnc.previewGenerating"),
     }));
 
     try {
@@ -7050,13 +7043,13 @@ export function WorkspaceShell() {
         : previewVncLaunchForBrowser(connection);
       updateVncSession(sessionId, (current) => ({
         ...current,
-        message: "VNC 启动预览已更新，内容已隐藏敏感凭据。",
+        message: tr("workspace.vnc.previewReady"),
         preview,
       }));
     } catch (error) {
       updateVncSession(sessionId, (current) => ({
         ...current,
-        message: `VNC 启动预览失败：${formatError(error)}`,
+        message: tr("workspace.vnc.previewFailed", { message: formatError(error) }),
       }));
     }
   }
@@ -7433,7 +7426,7 @@ export function WorkspaceShell() {
     if (!isSshConnection(activeConnection)) {
       return;
     }
-    const title = `容器 ${container.name || shortDockerRuntimeId(container.id)}`;
+    const title = tr("workspace.docker.containerTitle", { name: container.name || shortDockerRuntimeId(container.id) });
     const tab = buildDirectTerminalTab(terminalTabsRef.current, activeConnection, title);
     const command = `docker exec -it ${quotePosixShellForTerminal(container.id)} sh\r`;
     setTerminalTabs((tabs) => {
@@ -7540,7 +7533,7 @@ export function WorkspaceShell() {
               item.id === tab.id
                 ? {
                     ...item,
-                    error: `命令发送失败：${formatError(error)}`,
+                    error: tr("workspace.command.sendFailed", { message: formatError(error) }),
                   }
                 : item,
             );
@@ -7636,7 +7629,7 @@ export function WorkspaceShell() {
       hostKeyDecision: null,
       id: Date.now(),
       logs: [
-        `${mode === "terminal" ? "打开终端" : "测试连接"}：${formatConnectionAddress(connection)}`,
+        `${mode === "terminal" ? tr("workspace.connection.openTerminal") : tr("workspace.connection.test")}：${formatConnectionAddress(connection)}`,
       ],
       mode,
       password: "",
@@ -7676,7 +7669,7 @@ export function WorkspaceShell() {
       error: null,
       hostKey: null,
       hostKeyDecision: null,
-      logs: [...step.logs, "读取连接配置", "建立网络连接"],
+      logs: [...step.logs, tr("workspace.connection.readConfig"), tr("workspace.connection.network")],
       oldHostKeyFingerprint: null,
       sessionId: null,
       status: "running",
@@ -7690,7 +7683,7 @@ export function WorkspaceShell() {
       }
       const previewStep = {
         ...runningStep,
-        logs: [...runningStep.logs, "普通浏览器预览已跳过真实 SSH", "连接步骤完成"],
+        logs: [...runningStep.logs, tr("workspace.connection.browserSkip"), tr("workspace.connection.stepComplete")],
         status: "success" as ConnectionStepStatus,
       };
       if (step.mode === "terminal") {
@@ -7739,7 +7732,7 @@ export function WorkspaceShell() {
         void probeSystem(runtimeCredential).catch(() => null);
         updateConnectingTabStep(tabId, {
           ...runningStep,
-          logs: [...runningStep.logs, "认证通过", "连接测试通过"],
+          logs: [...runningStep.logs, tr("workspace.connection.authPassed"), tr("workspace.connection.testPassed")],
           status: "success",
         });
         return;
@@ -7787,7 +7780,7 @@ export function WorkspaceShell() {
           errorDetail,
           hostKey: hostKeyError.hostKey,
           hostKeyDecision: hostKeyError.decision,
-          logs: [...runningStep.logs, "等待确认主机密钥"],
+          logs: [...runningStep.logs, tr("workspace.connection.waitHostKey")],
           oldHostKeyFingerprint: hostKeyError.oldFingerprint,
           status: "waiting_host_key",
         });
@@ -7796,14 +7789,14 @@ export function WorkspaceShell() {
       const requestedPrompt = parseCredentialPromptTarget(nextError);
       if (requestedPrompt) {
         const promptTarget = { ...requestedPrompt, name: connectionById.get(requestedPrompt.connectionId)?.name };
-        updateConnectingTabStep(tabId, { ...runningStep, authKind: promptTarget.authKind, error: errorDetail.message, errorDetail, promptTarget, password: "", privateKeyPassphrase: "", privateKeyPath: "", logs: [...runningStep.logs, `等待 ${promptTarget.name || promptTarget.connectionId} 凭据`], status: "prompt" });
+        updateConnectingTabStep(tabId, { ...runningStep, authKind: promptTarget.authKind, error: errorDetail.message, errorDetail, promptTarget, password: "", privateKeyPassphrase: "", privateKeyPath: "", logs: [...runningStep.logs, tr("workspace.connection.waitCredentials", { name: promptTarget.name || promptTarget.connectionId })], status: "prompt" });
         return;
       }
       const nodeFailure = parseSshNodeFailure(nextError);
       const retryProfile = nodeFailure?.stage === "auth" ? connectionById.get(nodeFailure.connectionId) : step.connection.credential_mode === "prompt" && connectionStepErrorIndex(errorDetail.code) === 3 ? step.connection : null;
       if (retryProfile?.credential_mode === "prompt") {
         const promptTarget = credentialPromptTargetFromConnection(retryProfile);
-        updateConnectingTabStep(tabId, { ...runningStep, authKind: promptTarget.authKind, error: errorDetail.message, errorDetail, promptTarget, password: "", privateKeyPassphrase: "", privateKeyPath: "", logs: [...runningStep.logs, `${promptTarget.name} 认证未通过，等待重新输入`], status: "prompt" });
+        updateConnectingTabStep(tabId, { ...runningStep, authKind: promptTarget.authKind, error: errorDetail.message, errorDetail, promptTarget, password: "", privateKeyPassphrase: "", privateKeyPath: "", logs: [...runningStep.logs, tr("workspace.connection.authRetry", { name: promptTarget.name || promptTarget.connectionId })], status: "prompt" });
         return;
       }
       const nodeLabel = nodeFailure ? connectionById.get(nodeFailure.connectionId)?.name || nodeFailure.connectionId : "";
@@ -7838,8 +7831,8 @@ export function WorkspaceShell() {
       logs: [
         ...step.logs,
         step.hostKeyDecision === "changed"
-          ? "已更新主机密钥信任，重新连接"
-          : "已信任主机密钥，重新连接",
+          ? tr("workspace.connection.trustUpdated")
+          : tr("workspace.connection.trusted"),
       ],
       status: "running",
     };
@@ -7872,7 +7865,7 @@ export function WorkspaceShell() {
   ) {
     event.preventDefault();
     const runtimeCredentials = upsertRuntimeCredential(step.runtimeCredentials, step.promptTarget?.connectionId || step.connection.id, step.authKind, step.password, step.privateKeyPath, step.privateKeyPassphrase);
-    void runConnectionStep(tabId, { ...step, runtimeCredentials, logs: [...step.logs, "已输入本次凭据"] });
+    void runConnectionStep(tabId, { ...step, runtimeCredentials, logs: [...step.logs, tr("workspace.connection.credentialsEntered")] });
   }
 
   function handlePaneResizeStart(
@@ -8063,7 +8056,7 @@ export function WorkspaceShell() {
 
   function renderCommandLibraryPanel() {
     return (
-      <Suspense fallback={<p className="file-panel-empty">正在加载命令库...</p>}>
+      <Suspense fallback={<p className="file-panel-empty">{tr("workspace.loading.commands")}</p>}>
         <CommandLibraryPanel
           activeHistoryId={selectedCommandHistoryId}
           activeSnippetId={selectedCommandSnippetId}
@@ -8076,8 +8069,8 @@ export function WorkspaceShell() {
           snippets={commandSnippets}
           unavailableReason={commandLibraryUnavailableReason}
           onClearHistory={() => setCommandHistoryClearOpen(true)}
-          onCopyHistory={(entry) => void copyCommandLibraryText(entry.command, "历史命令")}
-          onCopySnippet={(snippet) => void copyCommandLibraryText(snippet.command, `片段“${snippet.title}”`)}
+          onCopyHistory={(entry) => void copyCommandLibraryText(entry.command, tr("workspace.command.copyHistory"))}
+          onCopySnippet={(snippet) => void copyCommandLibraryText(snippet.command, tr("workspace.command.copySnippet", { name: snippet.title }))}
           onCreateGroup={() => openCommandSnippetGroupCreateDialog()}
           onCreateSnippet={(group) => openCommandSnippetDialog(null, group)}
           onDeleteGroup={(group) => setPendingCommandSnippetGroupDelete(group)}
@@ -8102,15 +8095,15 @@ export function WorkspaceShell() {
     }
 
     return (
-      <section className="command-sender-panel" aria-label="命令操作台">
+      <section className="command-sender-panel" aria-label={tr("workspace.command.panelAria")}>
         <div className="command-sender-console">
           <header className="command-sender-console-head">
             <div className="command-sender-title">
-              <span>命令操作台</span>
+              <span>{tr("workspace.command.panelTitle")}</span>
             </div>
             <div className="command-select-row">
               <AppSelect
-                ariaLabel="发送模式"
+                ariaLabel={tr("workspace.command.modeAria")}
                 className="command-toolbar-app-select command-send-mode-select"
                 value="sequential"
                 options={[
@@ -8118,7 +8111,7 @@ export function WorkspaceShell() {
                     label: (
                       <span className="command-select-label">
                         <Send className="ui-icon" aria-hidden="true" />
-                        <span>逐条发送</span>
+                        <span>{tr("workspace.command.lineMode")}</span>
                       </span>
                     ),
                     value: "sequential",
@@ -8133,22 +8126,22 @@ export function WorkspaceShell() {
               <button
                 className="command-console-toggle command-sender-close"
                 type="button"
-                aria-label="关闭命令操作台"
+                aria-label={tr("workspace.command.close")}
                 onClick={closeCommandSender}
               >
                 <X className="ui-icon" aria-hidden="true" />
-                <span className="command-close-text">关闭</span>
+                <span className="command-close-text">{tr("workspace.command.close")}</span>
               </button>
             </div>
           </header>
 
           <div className="command-sender-console-body">
-            <aside className="command-sender-block command-target-pane" aria-label="投递目标">
+            <aside className="command-sender-block command-target-pane" aria-label={tr("workspace.command.targetsAria")}>
               <div className="command-sender-label">
                 <span className="command-target-title">
-                  <span>目标</span>
+                  <span>{tr("workspace.command.targets")}</span>
                   <span className="command-target-count">
-                    已选 {commandSenderSelectedCount.toString()} / {commandSenderTargets.length.toString()}
+                    {tr("workspace.command.selected", { selected: commandSenderSelectedCount, total: commandSenderTargets.length })}
                   </span>
                 </span>
                 <span className="command-target-tools">
@@ -8167,14 +8160,14 @@ export function WorkspaceShell() {
                       checked={commandSenderAllSelected}
                       onChange={toggleCommandSenderAllTargets}
                     />
-                    <span>{commandSenderAllSelected ? "取消全选" : "全选"}</span>
+                    <span>{commandSenderAllSelected ? tr("workspace.command.clearSelection") : tr("workspace.command.selectAll")}</span>
                   </label>
                 </span>
               </div>
 
               <div className="command-target-list">
                 {commandSenderTargets.length === 0 ? (
-                  <p className="command-sender-empty">暂无可写入的终端。</p>
+                  <p className="command-sender-empty">{tr("workspace.command.noTargets")}</p>
                 ) : (
                   commandSenderTargets.map((target) => {
                     const selected = selectedCommandTargetKeySet.has(target.key);
@@ -8209,12 +8202,12 @@ export function WorkspaceShell() {
                             <span className="command-target-terminal-instance">{target.tabTitle}</span>
                           </span>
                           <span className="command-target-state">
-                            {target.deliveryStatus === "disconnected" ? "断开" : "在线"}
+                            {target.deliveryStatus === "disconnected" ? tr("workspace.command.disconnected") : tr("workspace.command.online")}
                           </span>
                           <button
                             className={`command-target-delivery command-sender-status ${target.deliveryStatus}`}
                             type="button"
-                            title={target.deliveryMessage || "点击查看对应终端"}
+                            title={target.deliveryMessage || tr("workspace.command.openTarget")}
                             onClick={() => activateCommandSenderTarget(target)}
                           >
                             {commandSenderDeliveryLabel(target.deliveryStatus)}
@@ -8227,12 +8220,12 @@ export function WorkspaceShell() {
               </div>
             </aside>
 
-            <section className="command-sender-block command-compose-pane" aria-label="命令编辑">
-              <div className="command-compose-label">命令</div>
+            <section className="command-sender-block command-compose-pane" aria-label={tr("workspace.command.composeAria")}>
+              <div className="command-compose-label">{tr("workspace.command.command")}</div>
               <textarea
                 className="command-input command-sender-input"
                 value={commandSenderInput}
-                placeholder="输入要投递到目标终端的命令"
+                placeholder={tr("workspace.command.placeholder")}
                 spellCheck={false}
                 onChange={(event) =>
                   handleCommandSenderInputChange(event.currentTarget.value)
@@ -8251,16 +8244,16 @@ export function WorkspaceShell() {
               ) : null}
               {commandSenderRisky ? (
                 <div className="command-risk-warning command-sender-risk-warning show" role="status">
-                  检测到高风险片段，请确认目标机器和命令内容。
+                  {tr("workspace.command.risk")}
                 </div>
               ) : null}
               <div className="command-compose-footer command-sender-actions">
                 <div className="command-send-result">
                   {commandSenderInput.trim()
                     ? commandSenderSelectedCount > 0
-                      ? `${commandSenderSelectedCount.toString()} 个目标待发送。`
-                      : "请选择至少一个目标。"
-                    : "等待输入命令。"}
+                      ? tr("workspace.command.targetsReady", { count: commandSenderSelectedCount })
+                      : tr("workspace.command.chooseTarget")
+                    : tr("workspace.command.waitInput")}
                 </div>
                 <div className="command-actions">
                   <button
@@ -8270,7 +8263,7 @@ export function WorkspaceShell() {
                     onClick={() => void sendCommandToTargets(true)}
                   >
                     <CornerDownLeft className="ui-icon" aria-hidden="true" />
-                    <span>发送并回车</span>
+                    <span>{tr("workspace.command.sendEnter")}</span>
                   </button>
                   <button
                     className="secondary-button command-sender-secondary"
@@ -8278,7 +8271,7 @@ export function WorkspaceShell() {
                     disabled={!commandSenderCanSend}
                     onClick={() => void sendCommandToTargets(false)}
                   >
-                    发送不回车
+                    {tr("workspace.command.sendNoEnter")}
                   </button>
                   <button
                     className="secondary-button clear-command-button command-sender-secondary"
@@ -8287,7 +8280,7 @@ export function WorkspaceShell() {
                     onClick={clearCommandSenderInput}
                   >
                     <Trash2 className="ui-icon" aria-hidden="true" />
-                    <span>清空</span>
+                    <span>{tr("workspace.command.clear")}</span>
                   </button>
                 </div>
               </div>
@@ -8329,7 +8322,7 @@ export function WorkspaceShell() {
         appUpdateNotice={
           appUpdate.workspaceNoticeVisible
             ? {
-                label: appUpdate.workspaceNoticeLabel || "有可用更新",
+                label: appUpdate.workspaceNoticeLabel || tr("workspace.update.available"),
                 onDismiss: appUpdate.dismissWorkspaceNotice,
                 onOpen: () => openSettingsSection("basic"),
               }
@@ -8406,7 +8399,7 @@ export function WorkspaceShell() {
           <div
             className="pane-resizer left-pane-resizer"
             role="separator"
-            aria-label="拖拽调整左侧栏宽度，双击恢复默认"
+            aria-label={tr("workspace.layout.resizeLeft")}
             aria-orientation="vertical"
             aria-valuemin={minLeftPaneWidth}
             aria-valuemax={maxLeftPaneWidth}
@@ -8418,7 +8411,7 @@ export function WorkspaceShell() {
           />
         ) : null}
 
-        <section className={`main-workbench ${showMultiExecBar ? "multi-exec-open" : ""}`} aria-label="工作区">
+        <section className={`main-workbench ${showMultiExecBar ? "multi-exec-open" : ""}`} aria-label={tr("workspace.aria")}>
           <ConnectionHome
             connections={connections}
             error={error}
@@ -8442,24 +8435,24 @@ export function WorkspaceShell() {
                 activeRemoteFileTabs.length > 0 && !isActiveTerminalFileUnified ? "true" : "false"
               }
               data-workbench-tab-dragging={workbenchTabMouseDrag?.active ? "true" : undefined}
-              aria-label="编辑器和终端"
+              aria-label={tr("workspace.aria.editorTerminal")}
               aria-hidden={showingHome}
             >
               {activeRemoteFileTabs.length > 0 && !isActiveTerminalFileUnified ? (
-                <section className="remote-editor-pane" aria-label="远程文件编辑区">
+                <section className="remote-editor-pane" aria-label={tr("workspace.aria.remoteEditor")}>
                   <nav
                     className="remote-editor-tabs"
-                    aria-label="远程文件标签"
+                    aria-label={tr("workspace.aria.remoteTabs")}
                     data-workbench-tab-drop-zone="file"
                     data-workbench-tab-drop-active={workbenchTabDropZone === "file" ? "true" : undefined}
                   >
                     <div className="workbench-tab-scroll-list" ref={remoteEditorTabScroll.ref}>
                       {activeRemoteFileTabs.map(renderRemoteFileSubtab)}
                     </div>
-                    {renderWorkbenchTabScrollControls(remoteEditorTabScroll, "远程文件标签")}
+                    {renderWorkbenchTabScrollControls(remoteEditorTabScroll, tr("workspace.aria.remoteTabs"))}
                   </nav>
 
-                  <section className="remote-editor-stack" aria-label="文件编辑器">
+                  <section className="remote-editor-stack" aria-label={tr("workspace.aria.fileEditor")}>
                     <Suspense fallback={<RemoteEditorLoadingFallback />}>
                       {remoteFileTabs.map((tab) => (
                         <RemoteFileEditor
@@ -8487,7 +8480,7 @@ export function WorkspaceShell() {
                 <div
                   className="editor-terminal-resizer"
                   role="separator"
-                  aria-label="拖拽调整文件编辑器和终端高度，双击恢复默认"
+                  aria-label={tr("workspace.layout.resizeEditor")}
                   aria-orientation="horizontal"
                   aria-valuemin={minEditorTerminalSplitPercent}
                   aria-valuemax={maxEditorTerminalSplitPercent}
@@ -8505,12 +8498,12 @@ export function WorkspaceShell() {
                 } ${showTerminalWorkbench ? "" : "is-hidden"}`}
                 data-workbench-surface={activeWorkbenchSurface}
                 data-terminal-tone={terminalTone}
-                aria-label="终端区"
+                aria-label={tr("workspace.aria.terminalArea")}
                 aria-hidden={!showTerminalWorkbench}
               >
                 <nav
                   className={`terminal-subtabs ${isActiveTerminalFileUnified ? "unified-subtabs" : ""}`}
-                  aria-label={isActiveTerminalFileUnified ? "当前连接终端和文件标签" : "当前连接终端标签"}
+                  aria-label={isActiveTerminalFileUnified ? tr("workspace.aria.unifiedTabs") : tr("workspace.aria.terminalTabs")}
                   data-workbench-tab-drop-zone="terminal"
                   data-workbench-tab-drop-active={workbenchTabDropZone === "terminal" ? "true" : undefined}
                 >
@@ -8521,11 +8514,11 @@ export function WorkspaceShell() {
                     {isActiveTerminalFileUnified ? activeRemoteFileTabs.map(renderRemoteFileSubtab) : null}
                     {activeWorkspaceMode === "local" ? (
                       <>
-                        <Tooltip label="新建默认终端">
+                        <Tooltip label={tr("workspace.terminal.newDefault")}>
                           <button
                             className="add-subtab"
                             type="button"
-                            aria-label="新建默认终端"
+                            aria-label={tr("workspace.terminal.newDefault")}
                             disabled={!defaultLocalTerminalProfile}
                             onClick={() =>
                               void openLocalTerminalByProfile(resolveDefaultLocalTerminalProfile())
@@ -8553,11 +8546,11 @@ export function WorkspaceShell() {
                         ) : null}
                       </>
                     ) : activeConnectedTerminalTab ? (
-                      <Tooltip label="新建同连接终端">
+                      <Tooltip label={tr("workspace.terminal.newSameConnection")}>
                         <button
                           className="add-subtab"
                           type="button"
-                          aria-label="新建同连接终端"
+                          aria-label={tr("workspace.terminal.newSameConnection")}
                           onClick={openTerminalInActiveConnection}
                         >
                           <Plus className="ui-icon" aria-hidden="true" />
@@ -8565,7 +8558,7 @@ export function WorkspaceShell() {
                       </Tooltip>
                     ) : null}
                   </div>
-                  {renderWorkbenchTabScrollControls(sshTerminalTabScroll, "终端标签")}
+                  {renderWorkbenchTabScrollControls(sshTerminalTabScroll, tr("workspace.tabs.terminal"))}
                   <div className="terminal-subtab-actions">
                     <TerminalSplitMenu
                       autoCreateSameSession={terminalSplitAutoCreateSameSession}
@@ -8585,11 +8578,11 @@ export function WorkspaceShell() {
                           onEnabledChange={setTerminalSplitSyncState}
                           onParticipantChange={setTerminalSplitSyncParticipant}
                         />
-                        <Tooltip label="均分所有 pane">
+                        <Tooltip label={tr("workspace.split.equalize")}>
                           <button
                             className="add-subtab terminal-split-equalize"
                             type="button"
-                            aria-label="均分所有终端 pane"
+                            aria-label={tr("workspace.split.equalize")}
                             onClick={equalizeTerminalSplitPanes}
                           >
                             <LayoutGrid className="ui-icon" aria-hidden="true" />
@@ -8610,24 +8603,24 @@ export function WorkspaceShell() {
                     ) : null}
                     {!terminalSplitActive && activeTerminalToolbarTabId ? (
                       <>
-                        <Tooltip label={activeTerminalToolbarSearch?.open ? "关闭终端搜索" : "搜索终端输出"}>
+                        <Tooltip label={activeTerminalToolbarSearch?.open ? tr("workspace.terminal.searchClose") : tr("workspace.terminal.search")}>
                           <button
                             className={`add-subtab terminal-search-toggle ${
                               activeTerminalToolbarSearch?.open ? "active" : ""
                             }`}
                             type="button"
-                            aria-label="搜索终端输出"
+                            aria-label={tr("workspace.terminal.search")}
                             aria-expanded={Boolean(activeTerminalToolbarSearch?.open)}
                             onClick={() => toggleTerminalSearch(activeTerminalToolbarTabId)}
                           >
                             <Search className="ui-icon" aria-hidden="true" />
                           </button>
                         </Tooltip>
-                        <Tooltip label="清屏">
+                        <Tooltip label={tr("workspace.terminal.clear")}>
                           <button
                             className="add-subtab terminal-clear-button"
                             type="button"
-                            aria-label="清屏"
+                            aria-label={tr("workspace.terminal.clear")}
                             onClick={() => clearTerminalTab(activeTerminalToolbarTabId)}
                           >
                             <Eraser className="ui-icon" aria-hidden="true" />
@@ -8640,7 +8633,7 @@ export function WorkspaceShell() {
                         <button
                           className={`add-subtab command-sender-toggle ${commandSenderOpen ? "active" : ""}`}
                           type="button"
-                          aria-label="打开命令操作台 Command Sender"
+                          aria-label={tr("workspace.command.open")}
                           aria-expanded={commandSenderOpen}
                           onClick={openCommandSender}
                         >
@@ -8648,11 +8641,11 @@ export function WorkspaceShell() {
                         </button>
                       </Tooltip>
                     ) : null}
-                    <Tooltip label={rightPaneCollapsed ? "展开右侧面板" : "收起右侧面板"}>
+                    <Tooltip label={rightPaneCollapsed ? tr("workspace.right.expand") : tr("workspace.right.collapse")}>
                       <button
                         className="add-subtab terminal-subtab-panel-toggle"
                         type="button"
-                        aria-label={rightPaneCollapsed ? "展开右侧面板" : "收起右侧面板"}
+                        aria-label={rightPaneCollapsed ? tr("workspace.right.expand") : tr("workspace.right.collapse")}
                         aria-expanded={!rightPaneCollapsed}
                         onClick={() => setRightPaneCollapsed((collapsed) => !collapsed)}
                       >
@@ -8671,7 +8664,7 @@ export function WorkspaceShell() {
                     terminalSplitActive ? "terminal-split-stack" : ""
                   }`}
                   data-unified-active-kind={activeUnifiedTabKind || undefined}
-                  aria-label={isActiveTerminalFileUnified ? "终端和文件编辑器" : "终端"}
+                  aria-label={isActiveTerminalFileUnified ? tr("workspace.aria.terminalAndEditor") : tr("workspace.aria.terminal")}
                 >
                   {terminalSplitActive && terminalSplitLayout ? (
                     <TerminalSplitLayout
@@ -8760,7 +8753,7 @@ export function WorkspaceShell() {
                             {...terminalSplitStatusProps({ kind: "ssh", tabId: tab.id })}
                             connection={connectionById.get(tab.connectionId) || null}
                             error={null}
-                            status="正在加载终端"
+                            status={tr("workspace.terminal.loading")}
                             title={tab.title}
                           />
                         }
@@ -8844,7 +8837,7 @@ export function WorkspaceShell() {
                                     : null
                                 }
                                 source={tab.source || "local"}
-                                status="正在加载终端"
+                                status={tr("workspace.terminal.loading")}
                                 title={tab.title}
                                 onOpenSettings={openLocalTerminalSettings}
                               />
@@ -8949,10 +8942,10 @@ export function WorkspaceShell() {
                   showRdpWorkspace ? "" : "is-hidden"
                 }`}
                 data-workbench-surface="panel"
-                aria-label="RDP 会话区"
+                aria-label={tr("workspace.rdp.area")}
                 aria-hidden={!showRdpWorkspace}
               >
-                <nav className="terminal-subtabs rdp-subtabs" aria-label="RDP 会话标签">
+                <nav className="terminal-subtabs rdp-subtabs" aria-label={tr("workspace.rdp.tabs")}>
                   <div className="workbench-tab-scroll-list" ref={rdpTabScroll.ref}>
                     {activeRdpSessions.map((session, index) => (
                       <TabContextMenu
@@ -8960,23 +8953,23 @@ export function WorkspaceShell() {
                         actions={[
                           {
                             hint: "Ctrl+F4",
-                            label: "关闭",
+                            label: tr("workspace.tabs.close"),
                             onSelect: () => closeRdpSession(session.id),
                           },
                           {
                             disabled: activeRdpSessions.length <= 1,
-                            label: "关闭其他",
+                            label: tr("workspace.tabs.closeOthers"),
                             onSelect: () => closeOtherRdpSessions(session.id),
                           },
                           {
                             disabled: index >= activeRdpSessions.length - 1,
-                            label: "关闭右侧标签页",
+                            label: tr("workspace.tabs.closeRight"),
                             onSelect: () => closeRdpSessionsToRight(session.id),
                           },
                           {
                             disabled: activeRdpSessions.length === 0,
                             hint: "Ctrl+K W",
-                            label: "全部关闭",
+                            label: tr("workspace.tabs.closeAll"),
                             onSelect: () => closeAllRdpSessionsForConnection(session.connectionId),
                           },
                         ]}
@@ -8997,7 +8990,7 @@ export function WorkspaceShell() {
                           <button
                             className="subtab-close"
                             type="button"
-                            aria-label={`关闭 ${session.title}`}
+                            aria-label={tr("workspace.closeNamed", { name: session.title })}
                             onClick={() => closeRdpSession(session.id)}
                           >
                             <X className="ui-icon" aria-hidden="true" />
@@ -9006,13 +8999,13 @@ export function WorkspaceShell() {
                       </TabContextMenu>
                     ))}
                   </div>
-                  {renderWorkbenchTabScrollControls(rdpTabScroll, "RDP 会话标签")}
+                  {renderWorkbenchTabScrollControls(rdpTabScroll, tr("workspace.rdp.tabs"))}
                   <div className="terminal-subtab-actions">
-                    <Tooltip label={rightPaneCollapsed ? "展开右侧面板" : "收起右侧面板"}>
+                    <Tooltip label={rightPaneCollapsed ? tr("workspace.right.expand") : tr("workspace.right.collapse")}>
                       <button
                         className="add-subtab terminal-subtab-panel-toggle"
                         type="button"
-                        aria-label={rightPaneCollapsed ? "展开右侧面板" : "收起右侧面板"}
+                        aria-label={rightPaneCollapsed ? tr("workspace.right.expand") : tr("workspace.right.collapse")}
                         aria-expanded={!rightPaneCollapsed}
                         onClick={() => setRightPaneCollapsed((collapsed) => !collapsed)}
                       >
@@ -9026,7 +9019,7 @@ export function WorkspaceShell() {
                   </div>
                 </nav>
 
-                <section className="rdp-stack" aria-label="RDP 会话状态">
+                <section className="rdp-stack" aria-label={tr("workspace.rdp.state")}>
                   {rdpSessions.map((session) => (
                     <RdpSessionStatusPanel
                       active={showRdpWorkspace && session.id === activeRdpSession?.id}
@@ -9050,10 +9043,10 @@ export function WorkspaceShell() {
                   showVncWorkspace ? "" : "is-hidden"
                 }`}
                 data-workbench-surface="panel"
-                aria-label="VNC 会话区"
+                aria-label={tr("workspace.vnc.area")}
                 aria-hidden={!showVncWorkspace}
               >
-                <nav className="terminal-subtabs rdp-subtabs vnc-subtabs" aria-label="VNC 会话标签">
+                <nav className="terminal-subtabs rdp-subtabs vnc-subtabs" aria-label={tr("workspace.vnc.tabs")}>
                   <div className="workbench-tab-scroll-list" ref={vncTabScroll.ref}>
                     {activeVncSessions.map((session, index) => (
                       <TabContextMenu
@@ -9061,23 +9054,23 @@ export function WorkspaceShell() {
                         actions={[
                           {
                             hint: "Ctrl+F4",
-                            label: "关闭",
+                            label: tr("workspace.tabs.close"),
                             onSelect: () => closeVncSession(session.id),
                           },
                           {
                             disabled: activeVncSessions.length <= 1,
-                            label: "关闭其他",
+                            label: tr("workspace.tabs.closeOthers"),
                             onSelect: () => closeOtherVncSessions(session.id),
                           },
                           {
                             disabled: index >= activeVncSessions.length - 1,
-                            label: "关闭右侧标签页",
+                            label: tr("workspace.tabs.closeRight"),
                             onSelect: () => closeVncSessionsToRight(session.id),
                           },
                           {
                             disabled: activeVncSessions.length === 0,
                             hint: "Ctrl+K W",
-                            label: "全部关闭",
+                            label: tr("workspace.tabs.closeAll"),
                             onSelect: () => closeAllVncSessionsForConnection(session.connectionId),
                           },
                         ]}
@@ -9098,7 +9091,7 @@ export function WorkspaceShell() {
                           <button
                             className="subtab-close"
                             type="button"
-                            aria-label={`关闭 ${session.title}`}
+                            aria-label={tr("workspace.closeNamed", { name: session.title })}
                             onClick={() => closeVncSession(session.id)}
                           >
                             <X className="ui-icon" aria-hidden="true" />
@@ -9107,13 +9100,13 @@ export function WorkspaceShell() {
                       </TabContextMenu>
                     ))}
                   </div>
-                  {renderWorkbenchTabScrollControls(vncTabScroll, "VNC 会话标签")}
+                  {renderWorkbenchTabScrollControls(vncTabScroll, tr("workspace.vnc.tabs"))}
                   <div className="terminal-subtab-actions">
-                    <Tooltip label={rightPaneCollapsed ? "展开右侧面板" : "收起右侧面板"}>
+                    <Tooltip label={rightPaneCollapsed ? tr("workspace.right.expand") : tr("workspace.right.collapse")}>
                       <button
                         className="add-subtab terminal-subtab-panel-toggle"
                         type="button"
-                        aria-label={rightPaneCollapsed ? "展开右侧面板" : "收起右侧面板"}
+                        aria-label={rightPaneCollapsed ? tr("workspace.right.expand") : tr("workspace.right.collapse")}
                         aria-expanded={!rightPaneCollapsed}
                         onClick={() => setRightPaneCollapsed((collapsed) => !collapsed)}
                       >
@@ -9127,7 +9120,7 @@ export function WorkspaceShell() {
                   </div>
                 </nav>
 
-                <section className="rdp-stack vnc-stack" aria-label="VNC 会话状态">
+                <section className="rdp-stack vnc-stack" aria-label={tr("workspace.vnc.state")}>
                   {vncSessions.map((session) => (
                     <VncSessionStatusPanel
                       active={showVncWorkspace && session.id === activeVncSession?.id}
@@ -9181,7 +9174,7 @@ export function WorkspaceShell() {
           <div
             className="pane-resizer right-pane-resizer"
             role="separator"
-            aria-label="拖拽调整右侧工具面板宽度，双击恢复默认"
+            aria-label={tr("workspace.layout.resizeRight")}
             aria-orientation="vertical"
             aria-valuemin={minRightPaneWidth}
             aria-valuemax={maxRightPaneWidth}
@@ -9196,8 +9189,8 @@ export function WorkspaceShell() {
         {showWorkspaceToolPane ? (
           <Suspense
             fallback={
-              <aside className="tool-pane" aria-label="右侧工具面板">
-                <p className="file-panel-empty">正在加载工具面板...</p>
+              <aside className="tool-pane" aria-label={tr("workspace.right.aria")}>
+                <p className="file-panel-empty">{tr("workspace.loading.tools")}</p>
               </aside>
             }
           >
@@ -9256,7 +9249,7 @@ export function WorkspaceShell() {
                         key={panel.key}
                         monitorPanel={
                           panel.active && rightTool === "monitor" ? (
-                            <Suspense fallback={<p className="file-panel-empty">正在加载监控...</p>}>
+                            <Suspense fallback={<p className="file-panel-empty">{tr("workspace.loading.monitor")}</p>}>
                               <MonitorPanel active connection={panelConnection} />
                             </Suspense>
                           ) : null
@@ -9265,7 +9258,7 @@ export function WorkspaceShell() {
                         commandPanel={panel.active && rightTool === "commands" ? renderCommandLibraryPanel() : null}
                         tunnelPanel={
                           panel.active && rightTool === "tunnels" ? (
-                            <Suspense fallback={<p className="file-panel-empty">正在加载隧道...</p>}>
+                            <Suspense fallback={<p className="file-panel-empty">{tr("workspace.loading.tunnels")}</p>}>
                               <TunnelPanel
                                 activeConnectionId={panel.connectionId}
                                 connections={connections.filter(isSshConnection)}
@@ -9275,7 +9268,7 @@ export function WorkspaceShell() {
                         }
                         toolsPanel={
                           panel.renderDockerTools ? (
-                            <Suspense fallback={<p className="file-panel-empty">正在加载 Docker 面板...</p>}>
+                            <Suspense fallback={<p className="file-panel-empty">{tr("workspace.loading.docker")}</p>}>
                               <DockerToolPanel
                                 active={panel.active && rightTool === "tools"}
                                 activeConnectionId={panel.connectionId}
@@ -9300,7 +9293,7 @@ export function WorkspaceShell() {
                     aiPanel={aiAssistantPanelNode}
                     tunnelPanel={
                       rightTool === "tunnels" && isSshConnection(activeConnection) ? (
-                        <Suspense fallback={<p className="file-panel-empty">正在加载隧道...</p>}>
+                        <Suspense fallback={<p className="file-panel-empty">{tr("workspace.loading.tunnels")}</p>}>
                           <TunnelPanel
                             activeConnectionId={activeConnection.id}
                             connections={connections.filter(isSshConnection)}
@@ -9408,14 +9401,14 @@ export function WorkspaceShell() {
             <header className="command-snippet-dialog-head">
               <div>
                 <Dialog.Title asChild>
-                  <h2>{commandSnippetDraft.id ? "编辑命令片段" : "保存命令片段"}</h2>
+                  <h2>{commandSnippetDraft.id ? tr("workspace.snippet.edit") : tr("workspace.snippet.saveTitle")}</h2>
                 </Dialog.Title>
                 <Dialog.Description className="dialog-subtitle">
-                  保存后可在右侧命令面板快速复制、插入或发送。
+                  {tr("workspace.snippet.description")}
                 </Dialog.Description>
               </div>
               <Dialog.Close asChild>
-                <button className="icon-button" type="button" aria-label="关闭命令片段">
+                <button className="icon-button" type="button" aria-label={tr("workspace.snippet.close")}>
                   <X className="ui-icon" aria-hidden="true" />
                 </button>
               </Dialog.Close>
@@ -9424,10 +9417,10 @@ export function WorkspaceShell() {
             <div className="command-snippet-dialog-body">
               <form className="command-snippet-form" onSubmit={(event) => void saveCommandSnippetDraft(event)}>
                 <label className="command-snippet-field">
-                  <span>文件夹</span>
+                  <span>{tr("workspace.snippet.folder")}</span>
                   <div className="command-snippet-group-control">
                     <AppSelect
-                      ariaLabel="命令片段文件夹"
+                      ariaLabel={tr("workspace.snippet.folderAria")}
                       className="command-snippet-group-select"
                       menuMinWidth={180}
                       options={commandSnippetGroupOptions}
@@ -9439,11 +9432,11 @@ export function WorkspaceShell() {
                         }))
                       }
                     />
-                    <Tooltip label="新增分组">
+                    <Tooltip label={tr("workspace.snippet.newGroup")}>
                       <button
                         className="command-snippet-group-add"
                         type="button"
-                        aria-label="新增命令片段分组"
+                        aria-label={tr("workspace.snippet.newGroupAria")}
                         onClick={() => openCommandSnippetGroupCreateDialog(true)}
                       >
                         <Plus className="ui-icon" aria-hidden="true" />
@@ -9452,7 +9445,7 @@ export function WorkspaceShell() {
                   </div>
                 </label>
                 <label className="command-snippet-field">
-                  <span>标题</span>
+                  <span>{tr("workspace.snippet.title")}</span>
                   <input
                     value={commandSnippetDraft.title}
                     onChange={(event) => {
@@ -9467,7 +9460,7 @@ export function WorkspaceShell() {
                   />
                 </label>
                 <label className="command-snippet-field command-snippet-command-field">
-                  <span>命令</span>
+                  <span>{tr("workspace.snippet.command")}</span>
                   <textarea
                     value={commandSnippetDraft.command}
                     spellCheck={false}
@@ -9483,7 +9476,7 @@ export function WorkspaceShell() {
                   />
                 </label>
                 <label className="command-snippet-field">
-                  <span>说明</span>
+                  <span>{tr("workspace.snippet.descriptionField")}</span>
                   <input
                     value={commandSnippetDraft.description}
                     onChange={(event) => {
@@ -9498,10 +9491,10 @@ export function WorkspaceShell() {
                   />
                 </label>
                 <label className="command-snippet-field">
-                  <span>标签</span>
+                  <span>{tr("workspace.snippet.tags")}</span>
                   <input
                     value={commandSnippetDraft.tagsText}
-                    placeholder="多个标签用逗号分隔"
+                    placeholder={tr("workspace.snippet.tagsPlaceholder")}
                     onChange={(event) => {
                       const value = event.target?.value;
                       if (value !== undefined) {
@@ -9528,18 +9521,18 @@ export function WorkspaceShell() {
                     }}
                   />
                   <Star className="ui-icon" aria-hidden="true" />
-                  <span>收藏置顶</span>
+                  <span>{tr("workspace.snippet.favorite")}</span>
                 </label>
                 {commandSnippetFormError ? (
                   <p className="command-snippet-form-error">{commandSnippetFormError}</p>
                 ) : null}
                 <footer className="command-snippet-form-actions">
                   <Dialog.Close asChild>
-                    <button className="secondary-button" type="button">取消</button>
+                    <button className="secondary-button" type="button">{tr("workspace.snippet.cancel")}</button>
                   </Dialog.Close>
                   <button className="primary-button" type="submit">
                     <CheckCircle2 className="ui-icon" aria-hidden="true" />
-                    <span>保存片段</span>
+                    <span>{tr("workspace.snippet.save")}</span>
                   </button>
                 </footer>
               </form>
@@ -9568,16 +9561,16 @@ export function WorkspaceShell() {
                 <Dialog.Title asChild>
                   <h2>
                     {commandSnippetGroupDialog?.mode === "rename"
-                      ? "重命名片段分组"
-                      : "新增片段分组"}
+                      ? tr("workspace.snippet.groupRename")
+                      : tr("workspace.snippet.groupNew")}
                   </h2>
                 </Dialog.Title>
                 <Dialog.Description className="dialog-subtitle">
-                  分组只保留一层，用来整理右侧命令片段。
+                  {tr("workspace.snippet.groupDescription")}
                 </Dialog.Description>
               </div>
               <Dialog.Close asChild>
-                <button className="icon-button" type="button" aria-label="关闭片段分组">
+                <button className="icon-button" type="button" aria-label={tr("workspace.snippet.groupClose")}>
                   <X className="ui-icon" aria-hidden="true" />
                 </button>
               </Dialog.Close>
@@ -9585,7 +9578,7 @@ export function WorkspaceShell() {
 
             <form className="command-snippet-group-form" onSubmit={(event) => void saveCommandSnippetGroupDialog(event)}>
               <label className="command-snippet-field">
-                <span>分组名称</span>
+                <span>{tr("workspace.snippet.groupName")}</span>
                 <input
                   autoFocus
                   value={commandSnippetGroupDialog?.value || ""}
@@ -9604,11 +9597,11 @@ export function WorkspaceShell() {
               ) : null}
               <footer className="command-snippet-form-actions">
                 <Dialog.Close asChild>
-                  <button className="secondary-button" type="button">取消</button>
+                  <button className="secondary-button" type="button">{tr("workspace.snippet.cancel")}</button>
                 </Dialog.Close>
                 <button className="primary-button" type="submit">
                   <CheckCircle2 className="ui-icon" aria-hidden="true" />
-                  <span>保存</span>
+                  <span>{tr("workspace.snippet.groupSave")}</span>
                 </button>
               </footer>
             </form>
@@ -9617,14 +9610,14 @@ export function WorkspaceShell() {
       </Dialog.Root>
 
       <ConfirmDialog
-        confirmLabel="删除"
+        confirmLabel={tr("workspace.delete")}
         description={
           pendingCommandSnippetDelete
-            ? `删除“${pendingCommandSnippetDelete.title}”后，命令操作台将不再展示这个片段。`
+            ? tr("workspace.snippet.deleteDescription", { name: pendingCommandSnippetDelete.title })
             : ""
         }
         open={Boolean(pendingCommandSnippetDelete)}
-        title="删除命令片段"
+        title={tr("workspace.snippet.deleteTitle")}
         onConfirm={confirmDeleteCommandSnippet}
         onOpenChange={(open) => {
           if (!open) {
@@ -9634,20 +9627,20 @@ export function WorkspaceShell() {
       />
 
       <ConfirmDialog
-        confirmLabel="删除"
+        confirmLabel={tr("workspace.delete")}
         description={
           pendingCommandSnippetGroupDelete
-            ? `将删除“${pendingCommandSnippetGroupDelete}”分组，以及其中 ${commandSnippets
+            ? tr("workspace.snippet.deleteGroupDescription", { name: pendingCommandSnippetGroupDelete, count: commandSnippets
                 .filter(
                   (snippet) =>
                     normalizeCommandSnippetGroupValue(snippet.group) ===
                     normalizeCommandSnippetGroupValue(pendingCommandSnippetGroupDelete),
                 )
-                .length.toString()} 条命令片段。此操作不可撤销。`
+                .length })
             : ""
         }
         open={Boolean(pendingCommandSnippetGroupDelete)}
-        title="删除片段分组"
+        title={tr("workspace.snippet.deleteGroupTitle")}
         onConfirm={confirmDeleteCommandSnippetGroup}
         onOpenChange={(open) => {
           if (!open) {
@@ -9657,14 +9650,14 @@ export function WorkspaceShell() {
       />
 
       <ConfirmDialog
-        confirmLabel="删除"
+        confirmLabel={tr("workspace.delete")}
         description={
           pendingCommandHistoryDelete
-            ? `删除历史命令“${truncateCommandLabel(pendingCommandHistoryDelete.command, 48)}”。`
+            ? tr("workspace.history.deleteDescription", { command: truncateCommandLabel(pendingCommandHistoryDelete.command, 48) })
             : ""
         }
         open={Boolean(pendingCommandHistoryDelete)}
-        title="删除历史命令"
+        title={tr("workspace.history.deleteTitle")}
         onConfirm={confirmDeleteCommandHistory}
         onOpenChange={(open) => {
           if (!open) {
@@ -9674,23 +9667,23 @@ export function WorkspaceShell() {
       />
 
       <ConfirmDialog
-        confirmLabel="清空"
-        description="清空后，命令操作台不再展示任何历史命令；命令片段不受影响。"
+        confirmLabel={tr("workspace.clear")}
+        description={tr("workspace.history.clearDescription")}
         open={commandHistoryClearOpen}
-        title="清空历史命令"
+        title={tr("workspace.history.clearTitle")}
         onConfirm={confirmClearCommandHistory}
         onOpenChange={setCommandHistoryClearOpen}
       />
 
       <ConfirmDialog
-        confirmLabel="放弃"
+        confirmLabel={tr("workspace.discard")}
         description={
           pendingRemoteFileCloseTab
-            ? `关闭“${pendingRemoteFileCloseTab.name}”会丢弃尚未保存的修改。`
+            ? tr("workspace.file.closeModifiedDescription", { name: pendingRemoteFileCloseTab.name })
             : ""
         }
         open={Boolean(pendingRemoteFileCloseTab)}
-        title="关闭已修改文件"
+        title={tr("workspace.file.closeModifiedTitle")}
         onConfirm={() => {
           if (pendingRemoteFileCloseTab) {
             closeRemoteFileTabNow(pendingRemoteFileCloseTab.id);
@@ -9718,7 +9711,7 @@ export function WorkspaceShell() {
       />
 
       <ConfirmDialog
-        confirmLabel="删除"
+        confirmLabel={tr("workspace.delete")}
         description={
           remoteFileDeleteTarget
             ? remoteFileDeleteDescription(
@@ -9729,7 +9722,7 @@ export function WorkspaceShell() {
             : ""
         }
         open={Boolean(remoteFileDeleteTarget)}
-        title={remoteFileDeleteEntries.length > 1 ? "删除所选远程文件" : "删除远程文件"}
+        title={remoteFileDeleteEntries.length > 1 ? tr("workspace.file.deleteSelectedTitle") : tr("workspace.file.deleteTitle")}
         onConfirm={confirmRemoteFileDelete}
         onOpenChange={(open) => {
           if (!open) {
@@ -9757,10 +9750,10 @@ export function WorkspaceShell() {
               <RefreshCw className="ui-icon" />
             </div>
             <div className="confirm-dialog-copy">
-              <Dialog.Title className="confirm-dialog-title">远端文件已变化</Dialog.Title>
+              <Dialog.Title className="confirm-dialog-title">{tr("workspace.file.conflictTitle")}</Dialog.Title>
               <Dialog.Description className="confirm-dialog-description">
                 {pendingRemoteFileConflictTab
-                  ? `“${pendingRemoteFileConflictTab.name}”在打开后被远端修改。你可以重新加载远端版本，或覆盖保存当前编辑内容。`
+                  ? tr("workspace.file.conflictDescription", { name: pendingRemoteFileConflictTab.name })
                   : ""}
               </Dialog.Description>
               {pendingRemoteFileConflictTab?.error ? (
@@ -9777,7 +9770,7 @@ export function WorkspaceShell() {
                   setPendingRemoteFileConflictId(null);
                 }}
               >
-                重新加载
+                {tr("workspace.file.reload")}
               </button>
               <button
                 className="danger-button"
@@ -9789,10 +9782,10 @@ export function WorkspaceShell() {
                   setPendingRemoteFileConflictId(null);
                 }}
               >
-                覆盖保存
+                {tr("workspace.file.overwrite")}
               </button>
               <Dialog.Close asChild>
-                <button type="button">取消</button>
+                <button type="button">{tr("workspace.file.cancel")}</button>
               </Dialog.Close>
             </footer>
           </Dialog.Content>
@@ -9820,21 +9813,21 @@ export function WorkspaceShell() {
               <header className="dialog-head">
                 <div className="dialog-title-group">
                   <Dialog.Title asChild>
-                    <strong>{remoteFileTextAction ? remoteFileActionTitle(remoteFileTextAction) : "远程文件"}</strong>
+                    <strong>{remoteFileTextAction ? remoteFileActionTitle(remoteFileTextAction) : tr("workspace.file.dialogFallback")}</strong>
                   </Dialog.Title>
                   <Dialog.Description className="dialog-subtitle">
                     {remoteFileTextAction ? remoteFileActionDescription(remoteFileTextAction) : ""}
                   </Dialog.Description>
                 </div>
                 <Dialog.Close asChild>
-                  <button className="icon-button dialog-close-button" type="button" aria-label="关闭">
+                  <button className="icon-button dialog-close-button" type="button" aria-label={tr("workspace.file.close")}>
                     <X className="ui-icon" aria-hidden="true" />
                   </button>
                 </Dialog.Close>
               </header>
               <div className="dialog-body">
                 <label className="remote-file-name-field">
-                  <span>名称</span>
+                  <span>{tr("workspace.file.name")}</span>
                   <input
                     autoFocus
                     spellCheck={false}
@@ -9849,10 +9842,10 @@ export function WorkspaceShell() {
               <footer className="dialog-actions remote-file-text-actions">
                 <span />
                 <Dialog.Close asChild>
-                  <button type="button">取消</button>
+                  <button type="button">{tr("workspace.file.cancel")}</button>
                 </Dialog.Close>
                 <button className="primary-button" type="submit">
-                  确认
+                  {tr("workspace.file.confirm")}
                 </button>
               </footer>
             </form>
@@ -9874,21 +9867,21 @@ export function WorkspaceShell() {
             <header className="dialog-head">
               <div className="dialog-title-group">
                 <Dialog.Title asChild>
-                  <strong>查看属性</strong>
+                  <strong>{tr("workspace.file.properties")}</strong>
                 </Dialog.Title>
                 <Dialog.Description className="dialog-subtitle">
                   {remoteFileProperties?.entry.path || ""}
                 </Dialog.Description>
               </div>
               <Dialog.Close asChild>
-                <button className="icon-button dialog-close-button" type="button" aria-label="关闭">
+                <button className="icon-button dialog-close-button" type="button" aria-label={tr("workspace.file.close")}>
                   <X className="ui-icon" aria-hidden="true" />
                 </button>
               </Dialog.Close>
             </header>
             <div className="dialog-body">
               {remoteFileProperties?.loading ? (
-                <p className="file-panel-empty">读取属性中...</p>
+                <p className="file-panel-empty">{tr("workspace.file.loadingProperties")}</p>
               ) : remoteFileProperties?.error ? (
                 <p className="remote-file-dialog-error">{remoteFileProperties.error}</p>
               ) : remoteFileProperties?.metadata ? (
@@ -9905,10 +9898,10 @@ export function WorkspaceShell() {
                   }
                 }}
               >
-                复制路径
+                {tr("workspace.file.copyPath")}
               </button>
               <Dialog.Close asChild>
-                <button className="primary-button" type="button">关闭</button>
+                <button className="primary-button" type="button">{tr("workspace.file.close")}</button>
               </Dialog.Close>
             </footer>
           </Dialog.Content>
@@ -9934,23 +9927,23 @@ export function WorkspaceShell() {
               <RefreshCw className="ui-icon" />
             </div>
             <div className="confirm-dialog-copy">
-              <Dialog.Title className="confirm-dialog-title">同名目标策略</Dialog.Title>
+              <Dialog.Title className="confirm-dialog-title">{tr("workspace.file.conflictPolicy")}</Dialog.Title>
               <Dialog.Description className="confirm-dialog-description">
                 {transferConflictPrompt ? transferConflictPrompt.description : ""}
               </Dialog.Description>
             </div>
             <footer className="confirm-dialog-actions transfer-conflict-actions">
               <button type="button" onClick={() => settleTransferConflictPrompt("rename")}>
-                重命名
+                {tr("workspace.file.rename")}
               </button>
               <button type="button" onClick={() => settleTransferConflictPrompt("skip")}>
-                跳过
+                {tr("workspace.file.skip")}
               </button>
               <button className="danger-button" type="button" onClick={() => settleTransferConflictPrompt("overwrite")}>
-                覆盖
+                {tr("workspace.file.overwriteAction")}
               </button>
               <button type="button" onClick={() => settleTransferConflictPrompt(null)}>
-                取消
+                {tr("workspace.file.cancel")}
               </button>
             </footer>
           </Dialog.Content>
@@ -10015,14 +10008,14 @@ function ConnectionSearchDialogFallback() {
   return (
     <Dialog.Root open>
       <Dialog.Overlay className="dialog-backdrop connection-search-backdrop" />
-      <Dialog.Content className="connection-search-dialog" aria-label="加载连接搜索">
+      <Dialog.Content className="connection-search-dialog" aria-label={tr("workspace.loading.connectionSearch")}>
         <header className="connection-search-head">
           <div>
-            <Dialog.Title className="connection-search-title">快速打开连接</Dialog.Title>
-            <Dialog.Description className="sr-only">正在加载连接搜索</Dialog.Description>
+            <Dialog.Title className="connection-search-title">{tr("workspace.loading.connectionSearchTitle")}</Dialog.Title>
+            <Dialog.Description className="sr-only">{tr("workspace.loading.connectionSearchDescription")}</Dialog.Description>
           </div>
         </header>
-        <p className="file-panel-empty">正在加载连接搜索...</p>
+        <p className="file-panel-empty">{tr("workspace.loading.connectionSearchBody")}</p>
       </Dialog.Content>
     </Dialog.Root>
   );
@@ -10030,11 +10023,11 @@ function ConnectionSearchDialogFallback() {
 
 function SettingsViewFallback({ hidden }: { hidden: boolean }) {
   return (
-    <section className="settings-view" hidden={hidden} aria-label="设置" aria-hidden={hidden}>
-      <aside className="settings-sidebar app-sidebar" aria-label="设置分类" />
+    <section className="settings-view" hidden={hidden} aria-label={tr("workspace.loading.settings")} aria-hidden={hidden}>
+      <aside className="settings-sidebar app-sidebar" aria-label={tr("workspace.loading.settingsCategories")} />
       <main className="settings-content">
         <section className="settings-page-section">
-          <p className="file-panel-empty">正在加载设置...</p>
+          <p className="file-panel-empty">{tr("workspace.loading.settingsBody")}</p>
         </section>
       </main>
     </section>
@@ -10043,10 +10036,10 @@ function SettingsViewFallback({ hidden }: { hidden: boolean }) {
 
 function RemoteEditorLoadingFallback() {
   return (
-    <div className="remote-editor-loading" aria-live="polite" aria-label="正在加载文件编辑器">
+    <div className="remote-editor-loading" aria-live="polite" aria-label={tr("workspace.loading.editorAria")}>
       <div>
         <Loader2 className="ui-icon spin" aria-hidden="true" />
-        <span>正在加载编辑器...</span>
+        <span>{tr("workspace.loading.editor")}</span>
       </div>
     </div>
   );
@@ -10143,7 +10136,7 @@ function RdpSessionStatusPanel({
   return (
     <section
       className={`rdp-session-status ${session.status} ${active ? "" : "is-hidden"}`}
-      aria-label={`${session.title} RDP 状态`}
+      aria-label={`${session.title} ${tr("workspace.rdp.state")}`}
       aria-hidden={!active}
     >
       <div className="rdp-session-shell">
@@ -10163,18 +10156,18 @@ function RdpSessionStatusPanel({
             <span>
               <strong>{connection?.name || session.title}</strong>
               <small>
-                {connection ? `RDP · ${formatConnectionAddress(connection)}` : "连接已不可用"}
+                {connection ? `RDP · ${formatConnectionAddress(connection)}` : tr("workspace.rdp.connectionUnavailable")}
               </small>
             </span>
           </div>
           <div className="rdp-session-actions">
             <button type="button" onClick={onPreview}>
               <FileText className="ui-icon" aria-hidden="true" />
-              <span>预览</span>
+              <span>{tr("workspace.rdp.preview")}</span>
             </button>
             <button type="button" disabled={!hasCommand} onClick={onCopyCommand}>
               <Clipboard className="ui-icon" aria-hidden="true" />
-              <span>命令</span>
+              <span>{tr("workspace.snippet.command")}</span>
             </button>
             <button type="button" disabled={!hasRdpFile} onClick={onCopyRdpFile}>
               <FileText className="ui-icon" aria-hidden="true" />
@@ -10182,9 +10175,9 @@ function RdpSessionStatusPanel({
             </button>
             <button type="button" onClick={onRetry}>
               <RefreshCw className="ui-icon" aria-hidden="true" />
-              <span>重试</span>
+              <span>{tr("workspace.rdp.retry")}</span>
             </button>
-            <button type="button" aria-label={`关闭 ${session.title}`} onClick={onClose}>
+            <button type="button" aria-label={tr("workspace.closeNamed", { name: session.title })} onClick={onClose}>
               <X className="ui-icon" aria-hidden="true" />
             </button>
           </div>
@@ -10196,7 +10189,7 @@ function RdpSessionStatusPanel({
           </span>
           <span>{formatRdpRunnerKind(runner)}</span>
           {session.result?.process_id ? <span>PID {session.result.process_id.toString()}</span> : null}
-          {session.result?.rdp_file_path ? <span title={session.result.rdp_file_path}>临时 .rdp</span> : null}
+          {session.result?.rdp_file_path ? <span title={session.result.rdp_file_path}>{tr("workspace.rdp.tempFile")}</span> : null}
         </div>
 
         {session.message ? (
@@ -10212,12 +10205,12 @@ function RdpSessionStatusPanel({
             <MonitorPlay className="ui-icon" aria-hidden="true" />
             <span>
               <strong>
-                {session.status === "embedded" ? "嵌入式 RDP 会话区域" : "正在准备嵌入式会话"}
+                {session.status === "embedded" ? tr("workspace.rdp.embeddedArea") : tr("workspace.rdp.embeddedPreparing")}
               </strong>
               <small>
                 {session.status === "embedded"
-                  ? "Windows 原生宿主已接管该区域，切换标签或调整窗口时会同步尺寸。"
-                  : "RDP 客户端启动后会自动挂载到这里；不可嵌入时会回退到外部窗口。"}
+                  ? tr("workspace.rdp.nativeOwned")
+                  : tr("workspace.rdp.mounting")}
               </small>
             </span>
           </div>
@@ -10229,13 +10222,13 @@ function RdpSessionStatusPanel({
             </section>
             {session.preview?.rdp_file_content ? (
               <section className="rdp-session-preview-card">
-                <strong>生成的 .rdp</strong>
+                <strong>{tr("workspace.rdp.generated")}</strong>
                 <pre>{session.preview.rdp_file_content}</pre>
               </section>
             ) : null}
             {session.preview?.warnings.length ? (
               <section className="rdp-session-preview-card subtle">
-                <strong>提示</strong>
+                <strong>{tr("workspace.rdp.hint")}</strong>
                 {session.preview.warnings.map((warning) => (
                   <small key={warning}>{warning}</small>
                 ))}
@@ -10266,7 +10259,7 @@ function RdpSessionToolPanel({
   if (!connection || !session) {
     return (
       <section className="rdp-tool-panel">
-        <p className="file-panel-empty">打开一个 RDP 会话后显示 runner 状态。</p>
+        <p className="file-panel-empty">{tr("workspace.rdp.empty")}</p>
       </section>
     );
   }
@@ -10278,7 +10271,7 @@ function RdpSessionToolPanel({
   const resources = connection.rdp?.resources;
 
   return (
-    <section className="rdp-tool-panel" aria-label="RDP 工具">
+    <section className="rdp-tool-panel" aria-label={tr("workspace.rdp.tools")}>
       <header className="rdp-tool-head">
         <span>
           <strong>{connection.name}</strong>
@@ -10290,19 +10283,19 @@ function RdpSessionToolPanel({
       <div className="rdp-tool-actions">
         <button type="button" onClick={() => onPreview(session)}>
           <FileText className="ui-icon" aria-hidden="true" />
-          预览
+          {tr("workspace.rdp.preview")}
         </button>
         <button type="button" disabled={!hasCommand} onClick={() => onCopyCommand(session)}>
           <Clipboard className="ui-icon" aria-hidden="true" />
-          复制命令
+          {tr("workspace.rdp.copyCommand")}
         </button>
         <button type="button" disabled={!hasRdpFile} onClick={() => onCopyRdpFile(session)}>
           <Clipboard className="ui-icon" aria-hidden="true" />
-          复制 .rdp
+          {tr("workspace.rdp.copyFile")}
         </button>
         <button type="button" onClick={() => onRetry(session)}>
           <RefreshCw className="ui-icon" aria-hidden="true" />
-          重试
+          {tr("workspace.rdp.retry")}
         </button>
       </div>
 
@@ -10312,15 +10305,15 @@ function RdpSessionToolPanel({
           <dd>{formatRdpRunnerKind(runner)}</dd>
         </div>
         <div>
-          <dt>模式</dt>
+          <dt>{tr("workspace.rdp.mode")}</dt>
           <dd>{rdpRenderModeLabel(connection.rdp?.runner.render_mode || "embedded")}</dd>
         </div>
         <div>
-          <dt>显示</dt>
+          <dt>{tr("workspace.rdp.display")}</dt>
           <dd>{rdpDisplaySummary(display)}</dd>
         </div>
         <div>
-          <dt>资源</dt>
+          <dt>{tr("workspace.rdp.resources")}</dt>
           <dd>{rdpResourceSummary(resources)}</dd>
         </div>
       </dl>
@@ -10331,8 +10324,8 @@ function RdpSessionToolPanel({
 
       {session.preview || session.result ? (
         <section className="rdp-tool-preview">
-          <strong>启动材料</strong>
-          <code>{rdpSessionCommandText(session) || "嵌入式 runner 不需要外部命令。"}</code>
+          <strong>{tr("workspace.rdp.launchMaterial")}</strong>
+          <code>{rdpSessionCommandText(session) || tr("workspace.rdp.noExternalCommand")}</code>
           {session.preview?.setup_hint || session.result?.setup_hint ? (
             <small>{session.preview?.setup_hint || session.result?.setup_hint}</small>
           ) : null}
@@ -10341,7 +10334,7 @@ function RdpSessionToolPanel({
           ) : null}
         </section>
       ) : (
-        <p className="rdp-tool-note">启动后可在这里查看 runner、生成命令和脱敏 `.rdp` 预览。</p>
+        <p className="rdp-tool-note">{tr("workspace.rdp.toolNote")}</p>
       )}
     </section>
   );
@@ -10379,7 +10372,7 @@ function VncSessionStatusPanel({
   return (
     <section
       className={`rdp-session-status vnc-session-status ${session.status} ${active ? "" : "is-hidden"}`}
-      aria-label={`${session.title} VNC 状态`}
+      aria-label={`${session.title} ${tr("workspace.vnc.state")}`}
       aria-hidden={!active}
     >
       <div className="rdp-session-shell vnc-session-shell">
@@ -10399,24 +10392,24 @@ function VncSessionStatusPanel({
             <span>
               <strong>{connection?.name || session.title}</strong>
               <small>
-                {connection ? `VNC · ${formatConnectionAddress(connection)}` : "连接已不可用"}
+                {connection ? `VNC · ${formatConnectionAddress(connection)}` : tr("workspace.vnc.connectionUnavailable")}
               </small>
             </span>
           </div>
           <div className="rdp-session-actions">
             <button type="button" onClick={onPreview}>
               <FileText className="ui-icon" aria-hidden="true" />
-              <span>预览</span>
+              <span>{tr("workspace.rdp.preview")}</span>
             </button>
             <button type="button" disabled={!hasCommand} onClick={onCopyCommand}>
               <Clipboard className="ui-icon" aria-hidden="true" />
-              <span>命令</span>
+              <span>{tr("workspace.snippet.command")}</span>
             </button>
             <button type="button" onClick={onRetry}>
               <RefreshCw className="ui-icon" aria-hidden="true" />
-              <span>重试</span>
+              <span>{tr("workspace.rdp.retry")}</span>
             </button>
-            <button type="button" aria-label={`关闭 ${session.title}`} onClick={onClose}>
+            <button type="button" aria-label={tr("workspace.closeNamed", { name: session.title })} onClick={onClose}>
               <X className="ui-icon" aria-hidden="true" />
             </button>
           </div>
@@ -10428,7 +10421,7 @@ function VncSessionStatusPanel({
           </span>
           <span>{formatVncRunnerKind(runner)}</span>
           {session.result?.process_id ? <span>PID {session.result.process_id.toString()}</span> : null}
-          {session.result?.embedded ? <span>本地桥接</span> : null}
+          {session.result?.embedded ? <span>{tr("workspace.vnc.bridge")}</span> : null}
         </div>
 
         {session.message ? (
@@ -10440,7 +10433,7 @@ function VncSessionStatusPanel({
         ) : null}
 
         {showEmbeddedViewer && session.result ? (
-          <Suspense fallback={<p className="file-panel-empty">正在加载 VNC 画面...</p>}>
+          <Suspense fallback={<p className="file-panel-empty">{tr("workspace.vnc.loading")}</p>}>
             <VncViewerSurface
               active={active}
               config={config}
@@ -10458,7 +10451,7 @@ function VncSessionStatusPanel({
             </section>
             {session.preview?.warnings.length || session.result?.warnings.length ? (
               <section className="rdp-session-preview-card subtle">
-                <strong>提示</strong>
+                <strong>{tr("workspace.rdp.hint")}</strong>
                 {(session.preview?.warnings || session.result?.warnings || []).map((warning) => (
                   <small key={warning}>{warning}</small>
                 ))}
@@ -10487,7 +10480,7 @@ function VncSessionToolPanel({
   if (!connection || !session) {
     return (
       <section className="rdp-tool-panel vnc-tool-panel">
-        <p className="file-panel-empty">打开一个 VNC 会话后显示 runner 状态。</p>
+        <p className="file-panel-empty">{tr("workspace.vnc.empty")}</p>
       </section>
     );
   }
@@ -10498,7 +10491,7 @@ function VncSessionToolPanel({
   const input = connection.vnc?.input;
 
   return (
-    <section className="rdp-tool-panel vnc-tool-panel" aria-label="VNC 工具">
+    <section className="rdp-tool-panel vnc-tool-panel" aria-label={tr("workspace.vnc.tools")}>
       <header className="rdp-tool-head">
         <span>
           <strong>{connection.name}</strong>
@@ -10510,15 +10503,15 @@ function VncSessionToolPanel({
       <div className="rdp-tool-actions">
         <button type="button" onClick={() => onPreview(session)}>
           <FileText className="ui-icon" aria-hidden="true" />
-          预览
+          {tr("workspace.rdp.preview")}
         </button>
         <button type="button" disabled={!hasCommand} onClick={() => onCopyCommand(session)}>
           <Clipboard className="ui-icon" aria-hidden="true" />
-          复制命令
+          {tr("workspace.rdp.copyCommand")}
         </button>
         <button type="button" onClick={() => onRetry(session)}>
           <RefreshCw className="ui-icon" aria-hidden="true" />
-          重试
+          {tr("workspace.rdp.retry")}
         </button>
       </div>
 
@@ -10528,15 +10521,15 @@ function VncSessionToolPanel({
           <dd>{formatVncRunnerKind(runner)}</dd>
         </div>
         <div>
-          <dt>模式</dt>
+          <dt>{tr("workspace.rdp.mode")}</dt>
           <dd>{vncRenderModeLabel(connection.vnc?.runner.render_mode || "embedded")}</dd>
         </div>
         <div>
-          <dt>显示</dt>
+          <dt>{tr("workspace.rdp.display")}</dt>
           <dd>{vncDisplaySummary(display)}</dd>
         </div>
         <div>
-          <dt>输入</dt>
+          <dt>{tr("workspace.vnc.input")}</dt>
           <dd>{vncInputSummary(input)}</dd>
         </div>
       </dl>
@@ -10547,8 +10540,8 @@ function VncSessionToolPanel({
 
       {session.preview || session.result ? (
         <section className="rdp-tool-preview">
-          <strong>启动材料</strong>
-          <code>{vncSessionCommandText(session) || "noVNC 模式不需要外部命令。"}</code>
+          <strong>{tr("workspace.rdp.launchMaterial")}</strong>
+          <code>{vncSessionCommandText(session) || tr("workspace.vnc.noExternalCommand")}</code>
           {session.preview?.setup_hint || session.result?.setup_hint ? (
             <small>{session.preview?.setup_hint || session.result?.setup_hint}</small>
           ) : null}
@@ -10557,7 +10550,7 @@ function VncSessionToolPanel({
           ) : null}
         </section>
       ) : (
-        <p className="rdp-tool-note">启动后可在这里查看 bridge、runner 和脱敏命令预览。</p>
+        <p className="rdp-tool-note">{tr("workspace.vnc.toolNote")}</p>
       )}
     </section>
   );
@@ -10581,7 +10574,7 @@ function LocalTerminalEmptyPanel({
   return (
     <section
       className={`terminal-direct-status local-terminal-empty ${active ? "" : "is-hidden"}`}
-      aria-label="本地终端空状态"
+      aria-label={tr("workspace.local.emptyAria")}
       aria-hidden={!active}
     >
       <div>
@@ -10592,21 +10585,21 @@ function LocalTerminalEmptyPanel({
         ) : (
           <LocalTerminalIcon className="ui-icon" kind={profileName ? "powershell_core" : "custom"} />
         )}
-        <strong>{loading ? "探测本地终端中" : "打开本地终端"}</strong>
+        <strong>{loading ? tr("workspace.local.detecting") : tr("workspace.local.open")}</strong>
         <span>
           {error
             ? error
             : profileName
-              ? `默认会打开 ${profileName}，也可以在上方下拉中切换其他类型。`
-              : "还没有可用的本地终端类型，请先检查设置或补充自定义 profile。"}
+              ? tr("workspace.local.defaultHint", { name: profileName })
+              : tr("workspace.local.noTypeHint")}
         </span>
         <div className="local-terminal-status-actions">
           <button className="primary-button" type="button" disabled={!profileName || loading} onClick={onOpenDefault}>
             <Play className="ui-icon" aria-hidden="true" />
-            打开默认终端
+            {tr("workspace.local.openDefault")}
           </button>
           <button type="button" onClick={onOpenSettings}>
-            打开设置
+            {tr("workspace.local.openSettings")}
           </button>
         </div>
       </div>
@@ -10642,7 +10635,7 @@ function LocalTerminalStatusPanel({
   onRetry?: () => void;
 }) {
   const failed = status === "连接失败";
-  const subject = source === "telnet" ? "Telnet 会话" : source === "serial" ? "串口会话" : "本地终端";
+  const subject = source === "telnet" ? tr("workspace.local.telnetSession") : source === "serial" ? tr("workspace.local.serialSession") : tr("workspace.local.subject");
   const description = profile ? `${profile.name} · ${profile.command}` : title;
 
   return (
@@ -10650,7 +10643,7 @@ function LocalTerminalStatusPanel({
       className={`terminal-direct-status local-terminal-status ${failed ? "is-error" : "is-loading"} ${
         visible ? "" : "is-hidden"
       } ${className || ""}`}
-      aria-label={`${title} 状态`}
+      aria-label={`${title} ${tr("workspace.local.state")}`}
       aria-hidden={!visible}
       style={style}
       onPointerDown={onPaneFocus}
@@ -10661,16 +10654,16 @@ function LocalTerminalStatusPanel({
         ) : (
           <Loader2 className="ui-icon spin" aria-hidden="true" />
         )}
-        <strong>{failed ? `${subject}打开失败` : status}</strong>
+        <strong>{failed ? tr("workspace.local.openFailed", { subject }) : localTerminalStatusLabel(status)}</strong>
         <span>{description}</span>
         {error ? <small>{error}</small> : null}
         {failed && onRetry ? (
           <div className="local-terminal-status-actions">
             <button className="primary-button" type="button" onClick={onRetry}>
               <RefreshCw className="ui-icon" aria-hidden="true" />
-              重试
+              {tr("workspace.rdp.retry")}
             </button>
-            {source === "local" ? <button type="button" onClick={onOpenSettings}>打开设置</button> : null}
+            {source === "local" ? <button type="button" onClick={onOpenSettings}>{tr("workspace.local.openSettings")}</button> : null}
           </div>
         ) : null}
       </div>
@@ -10701,12 +10694,12 @@ function LocalTerminalLauncher({
 
   return (
     <div className="local-terminal-launcher">
-      <Tooltip label={loading ? "正在探测终端类型" : "选择终端类型"}>
+      <Tooltip label={loading ? tr("workspace.local.detectingTypes") : tr("workspace.local.chooseType")}>
         <button
           ref={triggerRef}
           className="add-subtab local-terminal-launch-button"
           type="button"
-          aria-label={loading ? "正在探测终端类型" : "选择终端类型"}
+          aria-label={loading ? tr("workspace.local.detectingTypes") : tr("workspace.local.chooseType")}
           aria-expanded={open}
           aria-haspopup="menu"
           disabled={menuDisabled}
@@ -10722,7 +10715,7 @@ function LocalTerminalLauncher({
       </Tooltip>
       <AnchoredSurfacePortal
         anchorRef={triggerRef}
-        ariaLabel="选择终端类型"
+        ariaLabel={tr("workspace.local.chooseTypeAria")}
         className="local-terminal-profile-menu dropdown-menu-content"
         desiredHeight={420}
         minHeight={180}
@@ -10785,7 +10778,7 @@ function DirectTerminalStatusPanel({
       className={`terminal-direct-status ${failed ? "is-error" : "is-loading"} ${
         visible ? "" : "is-hidden"
       } ${className || ""}`}
-      aria-label={`${title} 状态`}
+      aria-label={`${title} ${tr("workspace.local.state")}`}
       aria-hidden={!visible}
       style={style}
       onPointerDown={onPaneFocus}
@@ -10796,17 +10789,26 @@ function DirectTerminalStatusPanel({
         ) : (
           <Loader2 className="ui-icon spin" aria-hidden="true" />
         )}
-        <strong>{failed ? "连接失败" : "正在添加终端"}</strong>
+        <strong>{failed ? tr("workspace.connection.failed") : tr("workspace.local.adding")}</strong>
         <span>
           {connection
             ? `${connection.username}@${connection.host}:${connection.port.toString()}`
-            : "当前连接"}
+            : tr("workspace.local.currentConnection")}
         </span>
         {error ? <small>{error}</small> : null}
-        {failed && onRetry ? <button className="primary-button" type="button" onClick={onRetry}><RefreshCw className="ui-icon" aria-hidden="true" />重试</button> : null}
+        {failed && onRetry ? <button className="primary-button" type="button" onClick={onRetry}><RefreshCw className="ui-icon" aria-hidden="true" />{tr("workspace.rdp.retry")}</button> : null}
       </div>
     </section>
   );
+}
+
+function localTerminalStatusLabel(status: string) {
+  if (status === "正在打开") return tr("workspace.local.status.opening");
+  if (status === "预览") return tr("workspace.local.status.preview");
+  if (status === "已连接") return tr("workspace.local.status.connected");
+  if (status === "正在连接") return tr("workspace.local.status.connecting");
+  if (status === "连接失败") return tr("workspace.connection.failed");
+  return status;
 }
 
 function ConnectionStepPanel({
@@ -10847,30 +10849,30 @@ function ConnectionStepPanel({
   const { t } = useI18n();
   const hostKeyChanged = step.hostKeyDecision === "changed";
   const activeStepIndex = currentConnectionStepIndex(step);
-  const closeLabel = step.status === "running" ? "取消" : "关闭";
+  const closeLabel = step.status === "running" ? tr("workspace.connection.cancel") : tr("workspace.connection.close");
   const progressPercent = Math.max(8, Math.min(100, ((activeStepIndex + 1) / 5) * 100));
   const showStepDetail = step.status !== "idle" && step.status !== "running";
   const stepItems = [
     {
-      description: "加载连接参数和认证材料",
-      label: "读取配置",
+      description: tr("workspace.connection.step.readDescription"),
+      label: tr("workspace.connection.step.read"),
     },
     {
-      description: `TCP 握手 ${step.connection.host}:${step.connection.port.toString()}`,
-      label: "网络连接",
+      description: tr("workspace.connection.step.networkDescription", { host: step.connection.host, port: step.connection.port }),
+      label: tr("workspace.connection.step.network"),
     },
     {
-      description: "校验服务器指纹和 known_hosts",
-      label: "主机密钥验证",
+      description: tr("workspace.connection.step.hostKeyDescription"),
+      label: tr("workspace.connection.step.hostKey"),
     },
     {
       description: connectionStepAuthDescription(step),
-      label: "用户认证",
+      label: tr("workspace.connection.step.auth"),
     },
     {
       description:
-        step.mode === "terminal" ? "启动交互式 Shell 会话" : "完成连接测试流程",
-      label: step.mode === "terminal" ? "打开终端" : "完成测试",
+        step.mode === "terminal" ? tr("workspace.connection.step.finishTerminal") : tr("workspace.connection.step.finishTest"),
+      label: step.mode === "terminal" ? tr("workspace.connection.step.openTerminal") : tr("workspace.connection.step.finish"),
     },
   ];
 
@@ -10878,7 +10880,7 @@ function ConnectionStepPanel({
     <section
       className={`connection-step-page ${visible ? "" : "is-hidden"} ${className || ""}`}
       data-step-status={step.status}
-      aria-label="连接步骤"
+      aria-label={tr("workspace.connection.stepsAria")}
       aria-hidden={!visible}
       style={style}
       onPointerDown={onPaneFocus}
@@ -10889,11 +10891,11 @@ function ConnectionStepPanel({
             {step.status === "success" && !step.temporary ? (
               <button
                 type="button"
-                aria-label="编辑连接"
+                aria-label={tr("workspace.connection.edit")}
                 onClick={() => onEdit(step.connection)}
               >
                 <Pencil className="ui-icon" aria-hidden="true" />
-                <span>编辑</span>
+                <span>{tr("workspace.connection.editShort")}</span>
               </button>
             ) : null}
             <button type="button" aria-label={closeLabel} onClick={onCancel}>
@@ -10919,7 +10921,7 @@ function ConnectionStepPanel({
             </span>
           </header>
 
-          <ol className="connection-step-list" aria-label="连接阶段">
+          <ol className="connection-step-list" aria-label={tr("workspace.connection.stagesAria")}>
             {stepItems.map((item, index) => {
               const state = connectionStepItemState(step, index, activeStepIndex);
               return (
@@ -10978,8 +10980,8 @@ function ConnectionStepPanel({
                   <header>
                     <KeyRound className="ui-icon" aria-hidden="true" />
                     <span>
-                      <strong>{step.promptTarget?.connectionId !== step.connection.id ? "输入跳板机凭据" : "输入本次凭据"}</strong>
-                      <small>{step.promptTarget ? `${step.promptTarget.name || step.promptTarget.connectionId} · ${step.promptTarget.username}@${step.promptTarget.host}:${step.promptTarget.port.toString()}` : "这部分不会保存到连接配置。"}</small>
+                      <strong>{step.promptTarget?.connectionId !== step.connection.id ? tr("workspace.connection.jumpCredentials") : tr("workspace.connection.credentials")}</strong>
+                      <small>{step.promptTarget ? tr("workspace.connection.credentialsTarget", { name: step.promptTarget.name || step.promptTarget.connectionId, user: step.promptTarget.username, host: step.promptTarget.host, port: step.promptTarget.port }) : tr("workspace.connection.credentialsHint")}</small>
                     </span>
                   </header>
                   {step.temporary ? (
@@ -10990,17 +10992,17 @@ function ConnectionStepPanel({
                     </label>
                   ) : null}
                   <label>
-                    <span>认证方式</span>
+                    <span>{tr("workspace.connection.authMethod")}</span>
                     <AppSelect
-                      ariaLabel="认证方式"
+                      ariaLabel={tr("workspace.connection.authMethod")}
                       value={step.authKind}
-                      options={connectionPromptAuthKindOptions}
+                      options={connectionPromptAuthKindOptions()}
                       onChange={onPromptAuthKindChange}
                     />
                   </label>
                   {step.authKind === "password" ? (
                     <label>
-                      <span>密码</span>
+                      <span>{tr("workspace.connection.password")}</span>
                       <input
                         type="password"
                         value={step.password}
@@ -11010,7 +11012,7 @@ function ConnectionStepPanel({
                   ) : (
                     <>
                       <label>
-                        <span>私钥路径</span>
+                        <span>{tr("workspace.connection.privateKey")}</span>
                         <input
                           value={step.privateKeyPath}
                           placeholder="~/.ssh/id_ed25519"
@@ -11020,7 +11022,7 @@ function ConnectionStepPanel({
                         />
                       </label>
                       <label>
-                        <span>私钥口令</span>
+                        <span>{tr("workspace.connection.passphrase")}</span>
                         <input
                           type="password"
                           value={step.privateKeyPassphrase}
@@ -11032,7 +11034,7 @@ function ConnectionStepPanel({
                     </>
                   )}
                   <button className="primary-button" type="submit">
-                    继续连接
+                    {tr("workspace.connection.continue")}
                   </button>
                 </form>
               ) : null}
@@ -11042,19 +11044,19 @@ function ConnectionStepPanel({
                   <header>
                     <LockKeyhole className="ui-icon" aria-hidden="true" />
                     <span>
-                      <strong>确认主机密钥</strong>
+                      <strong>{tr("workspace.connection.hostKeyConfirm")}</strong>
                       <small>
-                        {hostKeyChanged ? "主机密钥已变化" : step.hostKey.key_algorithm}
+                        {hostKeyChanged ? tr("workspace.connection.hostKeyChanged") : step.hostKey.key_algorithm}
                       </small>
                     </span>
                   </header>
                   {hostKeyChanged && step.oldHostKeyFingerprint ? (
-                    <code>旧指纹：{step.oldHostKeyFingerprint}</code>
+                    <code>{tr("workspace.connection.oldFingerprint", { value: step.oldHostKeyFingerprint })}</code>
                   ) : null}
                   <code>{step.hostKey.fingerprint_sha256}</code>
                   {step.error ? <p className="form-error">{step.error}</p> : null}
                   <button className="primary-button" type="button" onClick={onTrustHostKey}>
-                    {hostKeyChanged ? "更新信任并继续" : "信任并继续"}
+                    {hostKeyChanged ? tr("workspace.connection.updateTrust") : tr("workspace.connection.trust")}
                   </button>
                 </div>
               ) : null}
@@ -11062,7 +11064,7 @@ function ConnectionStepPanel({
               {step.status === "success" && step.mode === "test" ? (
                 <div className="connection-step-success">
                   <CheckCircle2 className="ui-icon" aria-hidden="true" />
-                  <span>连接测试通过。</span>
+                  <span>{tr("workspace.connection.testSuccess")}</span>
                 </div>
               ) : null}
 
@@ -11071,7 +11073,7 @@ function ConnectionStepPanel({
                   <header>
                     <AlertTriangle className="ui-icon" aria-hidden="true" />
                     <strong>
-                      {step.errorDetail?.rawMessage || step.errorDetail?.message || step.error || "连接失败"}
+                      {step.errorDetail?.rawMessage || step.errorDetail?.message || step.error || tr("workspace.connection.errorFallback")}
                     </strong>
                   </header>
                   {step.errorDetail?.suggestion ? (
@@ -11084,12 +11086,12 @@ function ConnectionStepPanel({
                       onClick={onRetry}
                     >
                       <RefreshCw className="ui-icon" aria-hidden="true" />
-                      <span>重试</span>
+                      <span>{tr("workspace.rdp.retry")}</span>
                     </button>
                     {!step.temporary ? (
                       <button className="connection-step-secondary-button" type="button" onClick={() => onEdit(step.connection)}>
                         <Pencil className="ui-icon" aria-hidden="true" />
-                        <span>编辑连接</span>
+                        <span>{tr("workspace.connection.edit")}</span>
                       </button>
                     ) : null}
                   </div>
@@ -11102,11 +11104,11 @@ function ConnectionStepPanel({
             <summary>
               <span>
                 <ChevronLeft className="ui-icon" aria-hidden="true" />
-                连接日志
+                {tr("workspace.connection.logs")}
               </span>
-              <small>{step.logs.length.toString()} 条</small>
+              <small>{tr("workspace.connection.logCount", { count: step.logs.length })}</small>
             </summary>
-            <div aria-label="连接日志">
+            <div aria-label={tr("workspace.connection.logsAria")}>
               <div>
                 {step.logs.map((line, index) => (
                   <code key={`${line}-${index.toString()}`}>{line}</code>
@@ -11214,10 +11216,10 @@ function connectionStepAuthDescription(step: ConnectionStepState) {
       : step.connection.inline_auth_kind || step.connection.auth_kind || step.authKind;
 
   if (step.connection.credential_mode === "prompt") {
-    return authKind === "private_key" ? "使用本次输入的 SSH 密钥" : "使用本次输入的 SSH 密码";
+    return authKind === "private_key" ? tr("workspace.connection.authRuntimePrivate") : tr("workspace.connection.authRuntimePassword");
   }
 
-  return authKind === "private_key" ? "使用 SSH 密钥认证" : "使用密码认证";
+  return authKind === "private_key" ? tr("workspace.connection.authSavedPrivate") : tr("workspace.connection.authSavedPassword");
 }
 
 function connectionStepItemLabel(
@@ -11225,113 +11227,113 @@ function connectionStepItemLabel(
   status: ConnectionStepStatus,
 ) {
   if (state === "done") {
-    return "完成";
+    return tr("workspace.step.complete");
   }
   if (state === "error") {
-    return "失败";
+    return tr("workspace.step.failed");
   }
   if (state === "active") {
     if (status === "prompt") {
-      return "等待输入";
+      return tr("workspace.step.waitInput");
     }
     if (status === "waiting_host_key") {
-      return "待确认";
+      return tr("workspace.step.waitConfirm");
     }
     if (status === "idle") {
-      return "准备中";
+      return tr("workspace.step.preparing");
     }
-    return "进行中";
+    return tr("workspace.step.running");
   }
-  return "待处理";
+  return tr("workspace.step.pending");
 }
 
 function connectionStepStatusTitle(step: ConnectionStepState) {
   if (step.status === "success") {
-    return "测试通过";
+    return tr("workspace.step.testPassed");
   }
   if (step.status === "error") {
-    return "连接失败";
+    return tr("workspace.step.connectionFailed");
   }
   if (step.status === "waiting_host_key") {
-    return "等待确认";
+    return tr("workspace.step.waitConfirm");
   }
   if (step.status === "prompt") {
-    return "需要凭据";
+    return tr("workspace.step.credentialsRequired");
   }
-  return "正在检查";
+  return tr("workspace.step.checking");
 }
 
 function connectionStepPanelTitle(step: ConnectionStepState) {
   if (step.status === "success") {
-    return "连接检查完成";
+    return tr("workspace.step.checkComplete");
   }
   if (step.status === "error") {
-    return "连接未完成";
+    return tr("workspace.step.checkIncomplete");
   }
   if (step.status === "waiting_host_key") {
-    return "主机密钥确认";
+    return tr("workspace.step.hostKey");
   }
   if (step.status === "prompt") {
-    return "补充认证信息";
+    return tr("workspace.step.authInfo");
   }
-  return "执行连接检查";
+  return tr("workspace.step.execute");
 }
 
 function connectionStepPanelDescription(step: ConnectionStepState) {
   if (step.status === "success") {
-    return "本次测试没有创建终端会话。";
+    return tr("workspace.step.note.test");
   }
   if (step.status === "error") {
-    return "错误保留在当前页面，不会写入终端。";
+    return tr("workspace.step.note.error");
   }
   if (step.status === "waiting_host_key") {
-    return "首次连接或指纹变化时需要显式信任。";
+    return tr("workspace.step.note.hostKey");
   }
   if (step.status === "prompt") {
-    return "临时凭据只用于这一次连接。";
+    return tr("workspace.step.note.credential");
   }
-  return "连接步骤会在这里实时更新。";
+  return tr("workspace.step.note.live");
 }
 
 function RemoteFilePropertiesTable({ metadata }: { metadata: RemoteFileEntryMetadata }) {
   return (
     <dl className="remote-file-properties">
       <div>
-        <dt>名称</dt>
+        <dt>{tr("workspace.file.meta.name")}</dt>
         <dd>{metadata.name}</dd>
       </div>
       <div>
-        <dt>类型</dt>
+        <dt>{tr("workspace.file.meta.type")}</dt>
         <dd>{remoteFileKindLabel(metadata.type)}</dd>
       </div>
       {shouldShowRemoteFileSize(metadata.type) ? (
         <div>
-          <dt>大小</dt>
+          <dt>{tr("workspace.file.meta.size")}</dt>
           <dd>{formatFileSize(metadata.size)}</dd>
         </div>
       ) : null}
       <div>
-        <dt>用户</dt>
+        <dt>{tr("workspace.file.meta.user")}</dt>
         <dd>{formatRemoteFileIdentity(metadata.owner, metadata.uid, "UID")}</dd>
       </div>
       <div>
-        <dt>用户组</dt>
+        <dt>{tr("workspace.file.meta.group")}</dt>
         <dd>{formatRemoteFileIdentity(metadata.group, metadata.gid, "GID")}</dd>
       </div>
       <div>
-        <dt>权限</dt>
-        <dd>{metadata.mode || "未知"}</dd>
+        <dt>{tr("workspace.file.meta.permissions")}</dt>
+        <dd>{metadata.mode || tr("workspace.file.meta.unknown")}</dd>
       </div>
       <div>
-        <dt>修改时间</dt>
-        <dd>{formatRemoteFileTimestamp(metadata.mtime, "未知")}</dd>
+        <dt>{tr("workspace.file.meta.modified")}</dt>
+        <dd>{formatRemoteFileTimestamp(metadata.mtime, tr("workspace.file.meta.unknown"))}</dd>
       </div>
       <div>
-        <dt>创建时间</dt>
-        <dd>{formatRemoteFileTimestamp(metadata.birthtime, "系统不支持")}</dd>
+        <dt>{tr("workspace.file.meta.created")}</dt>
+        <dd>{formatRemoteFileTimestamp(metadata.birthtime, tr("workspace.file.meta.unsupported"))}</dd>
       </div>
       <div>
-        <dt>绝对路径</dt>
+        <dt>{tr("workspace.file.meta.path")}</dt>
         <dd>{metadata.path}</dd>
       </div>
     </dl>
@@ -11367,6 +11369,7 @@ function ConnectionHome({
   onPreloadCreateConnection?: () => void;
   onRefresh: () => void | Promise<void>;
 }) {
+  const { t } = useI18n();
   const [filter, setFilter] = useState<ConnectionFilter>("recent");
   const [query, setQuery] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<ConnectionProfile | null>(null);
@@ -11464,17 +11467,17 @@ function ConnectionHome({
   }, [hidden, latencyByConnectionId, loading, probeLatencies, rows]);
 
   return (
-    <section className={`connection-home ${hidden ? "is-hidden" : ""}`} aria-label="连接首页" aria-hidden={hidden}>
+    <section className={`connection-home ${hidden ? "is-hidden" : ""}`} aria-label={t("connectionHome.aria")} aria-hidden={hidden}>
       <header className="repository-toolbar">
         <div className="toolbar-left">
-          <div className="filter-tabs" aria-label="连接筛选">
+          <div className="filter-tabs" aria-label={t("connectionHome.filterAria")}>
             <button
               className={`filter-tab ${filter === "recent" ? "active" : ""}`}
               type="button"
               onClick={() => setFilter("recent")}
             >
               <Clock3 className="ui-icon" aria-hidden="true" />
-              <span>最近</span>
+              <span>{t("connectionHome.filter.recent")}</span>
             </button>
             <button
               className={`filter-tab ${filter === "all" ? "active" : ""}`}
@@ -11482,7 +11485,7 @@ function ConnectionHome({
               onClick={() => setFilter("all")}
             >
               <List className="ui-icon" aria-hidden="true" />
-              <span>全部</span>
+              <span>{t("connectionHome.filter.all")}</span>
             </button>
             <button
               className={`filter-tab ${filter === "favorites" ? "active" : ""}`}
@@ -11490,14 +11493,14 @@ function ConnectionHome({
               onClick={() => setFilter("favorites")}
             >
               <Star className="ui-icon" aria-hidden="true" />
-              <span>收藏</span>
+              <span>{t("connectionHome.filter.favorites")}</span>
             </button>
           </div>
           <label className="repository-search">
             <Search className="ui-icon" aria-hidden="true" />
             <input
-              aria-label="搜索连接"
-              placeholder="搜索名称、地址、备注"
+              aria-label={t("connectionHome.searchAria")}
+              placeholder={t("connectionHome.searchPlaceholder")}
               value={query}
               onChange={(event) => setQuery(event.target.value)}
             />
@@ -11505,11 +11508,11 @@ function ConnectionHome({
         </div>
 
         <div className="toolbar-right">
-          <Tooltip label="刷新连接并探测延迟">
+          <Tooltip label={t("connectionHome.refresh")}>
             <button
               className="repository-icon-button"
               type="button"
-              aria-label="刷新连接并探测延迟"
+              aria-label={t("connectionHome.refresh")}
               disabled={loading}
               onClick={() => void refreshConnectionsAndLatency()}
             >
@@ -11525,26 +11528,26 @@ function ConnectionHome({
             onPointerEnter={onPreloadCreateConnection}
           >
             <Plus className="ui-icon" aria-hidden="true" />
-            <span>新建连接</span>
+            <span>{t("connectionHome.newConnection")}</span>
           </button>
         </div>
       </header>
 
       <div className="connection-home-body">
-        <section className="connection-board" aria-label="连接表格">
+        <section className="connection-board" aria-label={t("connectionHome.tableAria")}>
           <div className="connection-head" role="row">
-            <span>系统</span>
-            <span>最后连接</span>
-            <span>延迟</span>
-            <span>名称</span>
-            <span>备注</span>
-            <span className="action-head">操作</span>
+            <span>{t("connectionHome.column.system")}</span>
+            <span>{t("connectionHome.column.last")}</span>
+            <span>{t("connectionHome.column.latency")}</span>
+            <span>{t("connectionHome.column.name")}</span>
+            <span>{t("connectionHome.column.notes")}</span>
+            <span className="action-head">{t("connectionHome.column.actions")}</span>
           </div>
           <div className="connection-board-body">
-            {loading ? <p className="connection-board-note">加载连接中...</p> : null}
+            {loading ? <p className="connection-board-note">{t("connectionHome.loading")}</p> : null}
             {error ? <p className="connection-board-error">{error}</p> : null}
             {!loading && rows.length === 0 ? (
-              <p className="connection-board-note">暂无匹配连接</p>
+              <p className="connection-board-note">{t("connectionHome.empty")}</p>
             ) : null}
 
             {rows.map((connection) => {
@@ -11558,13 +11561,13 @@ function ConnectionHome({
                     <ConnectionSystemLogo connection={connection} />
                   </span>
                   <span className="last-cell">
-                    <strong>{hasLastConnectedAt ? formatRelativeTime(lastConnectedAt) : "未连接"}</strong>
+                    <strong>{hasLastConnectedAt ? formatRelativeTime(lastConnectedAt) : t("connectionHome.neverConnected")}</strong>
                     <span>
                       {lastConnectedAt === "demo"
-                        ? "最近使用"
+                        ? t("connectionHome.recentUse")
                         : hasLastConnectedAt
-                          ? "最近连接"
-                          : "等待首次连接"}
+                          ? t("connectionHome.recentConnection")
+                          : t("connectionHome.awaitingFirst")}
                     </span>
                   </span>
                   <span className="latency-cell">
@@ -11574,8 +11577,8 @@ function ConnectionHome({
                     <button
                       className="connection-name-link"
                       type="button"
-                      aria-label={`打开连接 ${connection.name}`}
-                      title={`打开连接 ${connection.name}`}
+                      aria-label={t("connectionHome.open", { name: connection.name })}
+                      title={t("connectionHome.open", { name: connection.name })}
                       onClick={() => onConnect(connection)}
                     >
                       <span className="connection-name">{connection.name}</span>
@@ -11589,8 +11592,8 @@ function ConnectionHome({
                     <button
                       className="connection-action-icon connect"
                       type="button"
-                      aria-label={`连接 ${connection.name}`}
-                      title="连接"
+                      aria-label={t("connectionHome.connect", { name: connection.name })}
+                      title={t("connectionHome.connectTitle")}
                       onClick={() => onConnect(connection)}
                     >
                       <Play className="ui-icon" aria-hidden="true" />
@@ -11598,8 +11601,8 @@ function ConnectionHome({
                     <button
                       className="connection-action-icon"
                       type="button"
-                      aria-label={`编辑 ${connection.name}`}
-                      title="编辑"
+                      aria-label={t("connectionHome.edit", { name: connection.name })}
+                      title={t("connectionHome.editTitle")}
                       onClick={() => onEdit(connection)}
                     >
                       <Pencil className="ui-icon" aria-hidden="true" />
@@ -11607,8 +11610,8 @@ function ConnectionHome({
                     <button
                       className="connection-action-icon"
                       type="button"
-                      aria-label={`删除 ${connection.name}`}
-                      title="删除"
+                      aria-label={t("connectionHome.delete", { name: connection.name })}
+                      title={t("connectionHome.deleteTitle")}
                       onClick={() => setDeleteTarget(connection)}
                     >
                       <Trash2 className="ui-icon" aria-hidden="true" />
@@ -11620,51 +11623,51 @@ function ConnectionHome({
           </div>
         </section>
 
-        <aside className="side-summary" aria-label="连接概览和仓库维护">
+        <aside className="side-summary" aria-label={t("connectionHome.summaryAria")}>
           <section className="summary-block">
-            <p className="summary-title">仓库概览</p>
+            <p className="summary-title">{t("connectionHome.overview")}</p>
             <div className="summary-grid">
               <div className="summary-item">
                 <strong>{connections.length.toString()}</strong>
-                <span>连接</span>
+                <span>{t("connectionHome.connections")}</span>
               </div>
               <div className="summary-item">
                 <strong>{groups.groups.length.toString()}</strong>
-                <span>分组</span>
+                <span>{t("connectionHome.groups")}</span>
               </div>
               <div className="summary-item">
                 <strong>{favoriteCount.toString()}</strong>
-                <span>收藏</span>
+                <span>{t("connectionHome.favorites")}</span>
               </div>
               <div className="summary-item">
                 <strong>{weekCount.toString()}</strong>
-                <span>本周连接</span>
+                <span>{t("connectionHome.week")}</span>
               </div>
             </div>
           </section>
 
           <section className="summary-block">
-            <p className="summary-title">仓库维护</p>
+            <p className="summary-title">{t("connectionHome.maintenance")}</p>
             <div className="quick-links">
               <button className="quick-link" type="button" onClick={onImportConnections}>
                 <Upload className="ui-icon" aria-hidden="true" />
                 <span>
-                  <strong>导入连接</strong>
-                  <small>批量迁移时使用</small>
+                  <strong>{t("connectionHome.import")}</strong>
+                  <small>{t("connectionHome.importHint")}</small>
                 </span>
               </button>
               <button className="quick-link" type="button" onClick={onExportConnections}>
                 <Download className="ui-icon" aria-hidden="true" />
                 <span>
-                  <strong>导出连接</strong>
-                  <small>加密迁移全部连接</small>
+                  <strong>{t("connectionHome.export")}</strong>
+                  <small>{t("connectionHome.exportHint")}</small>
                 </span>
               </button>
             </div>
           </section>
 
           <section className="summary-block">
-            <p className="summary-title">最近活动</p>
+            <p className="summary-title">{t("connectionHome.recentActivity")}</p>
             <div className="activity-list">
               {activityConnections.length > 0 ? (
                 activityConnections.map((connection) => (
@@ -11682,19 +11685,19 @@ function ConnectionHome({
                   </button>
                 ))
               ) : (
-                <p className="connection-board-note">暂无最近活动</p>
+                <p className="connection-board-note">{t("connectionHome.noRecent")}</p>
               )}
             </div>
           </section>
         </aside>
       </div>
       <ConfirmDialog
-        confirmLabel="删除"
+        confirmLabel={t("connectionHome.deleteConfirm")}
         description={
-          deleteTarget ? `确认删除连接“${deleteTarget.name}”吗？这个操作无法撤销。` : ""
+          deleteTarget ? t("connectionHome.deleteDescription", { name: deleteTarget.name }) : ""
         }
         open={Boolean(deleteTarget)}
-        title="删除连接"
+        title={t("connectionHome.deleteDialogTitle")}
         onConfirm={async () => {
           if (deleteTarget) {
             await onDelete(deleteTarget);
@@ -11721,7 +11724,7 @@ function LatencyIndicator({ state }: { state?: LatencyProbeState }) {
     return (
       <>
         <span className="latency-dot idle" />
-        <span>未测</span>
+        <span>{tr("workspace.probe.notTested")}</span>
       </>
     );
   }
@@ -11730,7 +11733,7 @@ function LatencyIndicator({ state }: { state?: LatencyProbeState }) {
     return (
       <>
         <Loader2 className="ui-icon latency-spinner spin" aria-hidden="true" />
-        <span>探测中</span>
+        <span>{tr("workspace.probe.running")}</span>
       </>
     );
   }
@@ -11739,7 +11742,7 @@ function LatencyIndicator({ state }: { state?: LatencyProbeState }) {
     return (
       <>
         <span className="latency-dot fail" />
-        <span>超时</span>
+        <span>{tr("workspace.probe.timeout")}</span>
       </>
     );
   }
@@ -11827,13 +11830,13 @@ function formatRelativeTime(value?: string | null) {
   const normalized = value?.trim().toLowerCase();
 
   if (normalized === "demo" || normalized === "preview") {
-    return "最近";
+    return tr("workspace.recent");
   }
 
   const timestamp = connectionTimestampOf(value);
 
   if (!timestamp) {
-    return "最近";
+    return tr("workspace.recent");
   }
 
   const diffMs = Date.now() - timestamp;
@@ -11841,11 +11844,11 @@ function formatRelativeTime(value?: string | null) {
   const hour = 60 * minute;
   const day = 24 * hour;
 
-  if (diffMs < minute) return "刚刚";
-  if (diffMs < hour) return `${Math.floor(diffMs / minute).toString()} 分钟前`;
-  if (diffMs < day) return `${Math.floor(diffMs / hour).toString()} 小时前`;
-  if (diffMs < 2 * day) return "昨天";
-  return `${Math.floor(diffMs / day).toString()} 天前`;
+  if (diffMs < minute) return tr("workspace.time.justNow");
+  if (diffMs < hour) return tr("workspace.time.minutesAgo", { count: Math.floor(diffMs / minute) });
+  if (diffMs < day) return tr("workspace.time.hoursAgo", { count: Math.floor(diffMs / hour) });
+  if (diffMs < 2 * day) return tr("workspace.time.yesterday");
+  return tr("workspace.time.daysAgo", { count: Math.floor(diffMs / day) });
 }
 
 function countConnectedWithinWeek(connections: ConnectionProfile[]) {
@@ -11913,7 +11916,7 @@ function nextTerminalOrdinalForConnection(tabs: TerminalTab[], connectionId: str
 /** 工作区内终端子标签标题；编号显示规则与顶层实例标签共用 `displayOrdinal`（WS-E11）。 */
 function terminalTabTitle(ordinal: number) {
   const displayNumber = displayOrdinal(ordinal);
-  return displayNumber === null ? "终端" : `终端 ${displayNumber.toString()}`;
+  return displayNumber === null ? tr("workspace.terminal.title") : tr("workspace.terminal.numbered", { number: displayNumber });
 }
 
 function shortDockerRuntimeId(id: string) {
@@ -11943,7 +11946,7 @@ function formatDetailedError(error: unknown) {
   // raw_message 缺失时用诊断 ID 兜底，保证用户报障时仍有可对上内部日志的线索。
   const diagnosticId = errorDiagnosticId(error);
   if (!rawMessage && diagnosticId) {
-    return `${message}\n诊断 ID：${diagnosticId}`;
+    return `${message}\n${tr("workspace.diagnostic", { id: diagnosticId })}`;
   }
   return message;
 }
@@ -11970,64 +11973,64 @@ function extractTransferErrorCode(error: unknown): string | null {
 
 function transferErrorStage(code: string): string | null {
   if (code === "remote_file_upload_confirm_timeout") {
-    return "远程写入确认超时";
+    return tr("workspace.sftp.writeTimeout");
   }
   if (code === "remote_file_upload_confirm_failed") {
-    return "远程写入确认失败";
+    return tr("workspace.sftp.writeFailed");
   }
   if (
     code === "remote_sftp_subsystem_failed" ||
     code === "remote_sftp_subsystem_timeout"
   ) {
-    return "SFTP 子系统不可用";
+    return tr("workspace.sftp.unavailable");
   }
   if (
     code === "remote_sftp_connect_failed" ||
     code.startsWith("remote_sftp_connect_")
   ) {
-    return "SFTP 连接失败";
+    return tr("workspace.sftp.connectionFailed");
   }
   if (
     code === "remote_sftp_channel_failed" ||
     code === "remote_sftp_init_failed" ||
     code === "remote_sftp_channel_timeout"
   ) {
-    return "SFTP 通道建立失败";
+    return tr("workspace.sftp.channelFailed");
   }
   if (code === "remote_sftp_auth_timeout") {
-    return "SFTP 认证超时";
+    return tr("workspace.sftp.authTimeout");
   }
   return null;
 }
 
 function transferErrorSuggestion(code: string): string | null {
   if (code === "remote_file_upload_confirm_timeout") {
-    return "远端写入响应或关闭确认超时，临时 .mxpart 文件会保留用于重试。请检查网络、远端 SFTP 服务或目录负载后重试。";
+    return tr("workspace.sftp.suggestion.writeTimeout");
   }
   if (code === "remote_file_upload_confirm_failed") {
-    return "远端写入确认失败，临时 .mxpart 文件可能保留在目标目录；请检查目录权限、磁盘空间和远端文件系统状态。";
+    return tr("workspace.sftp.suggestion.writeFailed");
   }
   if (
     code === "remote_sftp_subsystem_failed" ||
     code === "remote_sftp_subsystem_timeout"
   ) {
-    return "该服务器可能未启用 SFTP 子系统，请联系管理员检查 sshd_config 中的 'Subsystem sftp' 配置，或在设置中关闭相关压缩选项。";
+    return tr("workspace.sftp.suggestion.unavailable");
   }
   if (
     code === "remote_sftp_connect_failed" ||
     code.startsWith("remote_sftp_connect_")
   ) {
-    return "SFTP 连接无法建立，请检查网络连通性、防火墙规则或代理设置。";
+    return tr("workspace.sftp.suggestion.connection");
   }
   if (
     code === "remote_sftp_channel_failed" ||
     code === "remote_sftp_init_failed" ||
     code === "remote_sftp_channel_timeout"
   ) {
-    return "SFTP 通道无法建立，服务器可能限制了 SFTP 会话数或子系统异常，请稍后重试或联系管理员。";
+    return tr("workspace.sftp.suggestion.channel");
   }
   if (code === "remote_sftp_auth_timeout") {
-    return "SFTP 认证超时，请确认凭据有效或检查网络延迟。";
+    return tr("workspace.sftp.suggestion.authTimeout");
   }
   return null;
 }
@@ -12066,7 +12069,7 @@ function describeConnectionStepError(error: unknown): ConnectionStepErrorDetail 
     code,
     message: connectionErrorSummary(code, message),
     // raw_message 下线后仍要给出可追溯的线索：优先展示诊断 ID，供用户报障时对上内部日志。
-    rawMessage: rawMessage || (diagnosticId ? `诊断 ID：${diagnosticId}` : message),
+    rawMessage: rawMessage || (diagnosticId ? tr("workspace.diagnostic", { id: diagnosticId }) : message),
     recoverable,
     stage: connectionErrorStage(code),
     suggestion: connectionErrorSuggestion(code),
@@ -12082,13 +12085,13 @@ function normalizeErrorText(value: unknown) {
 
 function connectionErrorStage(code: string) {
   if (isConnectTimeoutCode(code)) {
-    return "网络连接超时";
+    return tr("workspace.error.stage.networkTimeout");
   }
   if (isConnectionStageError(code)) {
-    return "网络连接阶段";
+    return tr("workspace.error.stage.network");
   }
   if (code === "host_key_unknown" || code === "host_key_changed") {
-    return "主机密钥阶段";
+    return tr("workspace.error.stage.hostKey");
   }
   if (
     code === "terminal_auth_failed" ||
@@ -12099,72 +12102,72 @@ function connectionErrorStage(code: string) {
     code === "terminal_private_key_not_found" ||
     code.startsWith("credential_")
   ) {
-    return "用户认证阶段";
+    return tr("workspace.error.stage.auth");
   }
   if (
     code === "terminal_channel_open_failed" ||
     code === "terminal_pty_failed" ||
     code === "terminal_shell_failed"
   ) {
-    return "远程终端初始化阶段";
+    return tr("workspace.error.stage.terminal");
   }
-  return "连接阶段";
+  return tr("workspace.error.stage.connection");
 }
 
 function connectionErrorSuggestion(code: string) {
   const networkKind = connectionNetworkKind(code);
   if (networkKind === "timeout") {
-    return "检查主机 IP、端口、防火墙和网络连通性；确认目标 SSH 服务可以从本机访问。";
+    return tr("workspace.error.suggest.networkTimeout");
   }
   if (networkKind === "refused") {
-    return "目标主机可达但端口拒绝连接，确认 SSH 服务已启动、端口填写正确，或安全组允许访问。";
+    return tr("workspace.error.suggest.refused");
   }
   if (networkKind === "unreachable") {
-    return "本机到目标主机没有可用路由，检查 VPN、网段、网关或代理配置。";
+    return tr("workspace.error.suggest.unreachable");
   }
   if (networkKind === "reset") {
-    return "连接被对端重置，检查 SSH 服务策略、代理链路或中间防火墙。";
+    return tr("workspace.error.suggest.reset");
   }
   if (code.startsWith("proxy_")) {
-    return "检查代理类型、代理地址端口以及代理用户名密码。";
+    return tr("workspace.error.suggest.proxy");
   }
   if (code === "terminal_auth_rejected") {
-    return "主机已响应但认证被拒绝，检查用户名、密码或私钥是否匹配。";
+    return tr("workspace.error.suggest.auth");
   }
   if (code === "terminal_private_key_invalid") {
-    return "检查私钥文件格式：支持 OpenSSH、PEM 与 PuTTY PPK（v2/v3）；确认文件未损坏且算法受支持。";
+    return tr("workspace.error.suggest.keyFormat");
   }
   if (code === "terminal_private_key_passphrase") {
-    return "该私钥已加密，请填写正确的私钥口令。";
+    return tr("workspace.error.suggest.passphrase");
   }
   if (code === "terminal_private_key_not_found") {
-    return "私钥文件不存在或无法读取，检查路径与文件权限。";
+    return tr("workspace.error.suggest.keyFile");
   }
   if (code === "terminal_auth_failed" || code === "terminal_auth_timeout") {
-    return "检查认证方式、用户名、密码或私钥；如果服务器禁用该方式，需要换用允许的认证方式。";
+    return tr("workspace.error.suggest.authMethod");
   }
   if (code === "host_key_changed") {
-    return "确认目标主机是否重装或变更过；只有确认安全后再更新信任。";
+    return tr("workspace.error.suggest.hostKeyChanged");
   }
   if (code === "host_key_unknown") {
-    return "核对主机指纹，确认无误后信任并继续连接。";
+    return tr("workspace.error.suggest.hostKeyUnknown");
   }
   if (code === "terminal_pty_failed" || code === "terminal_shell_failed") {
-    return "SSH 已登录但远程终端初始化失败，检查服务器是否允许分配 PTY 和启动默认 Shell。";
+    return tr("workspace.error.suggest.terminal");
   }
-  return "查看底层原因后重试；如果配置有误，点击编辑连接调整主机、端口、代理或认证信息。";
+  return tr("workspace.error.suggest.generic");
 }
 
 function connectionErrorSummary(code: string, fallback: string) {
   const networkKind = connectionNetworkKind(code);
   if (networkKind === "timeout") {
-    return "连接超时";
+    return tr("workspace.error.timeout");
   }
   if (networkKind === "refused") {
-    return "端口无法连接";
+    return tr("workspace.error.refused");
   }
   if (networkKind === "unreachable") {
-    return "主机不可达";
+    return tr("workspace.error.unreachable");
   }
   return fallback;
 }
@@ -12211,7 +12214,7 @@ function previewLocalTerminalProfiles(platform: string): LocalTerminalProfile[] 
         icon: "terminal-cmd",
         id: "cmd",
         kind: "cmd",
-        name: "命令提示符",
+        name: tr("workspace.local.previewCmd"),
         platform,
       }),
       buildPreviewLocalTerminalProfile({
@@ -12488,7 +12491,7 @@ function compareCommandSnippets(left: CommandSnippet, right: CommandSnippet) {
 }
 
 function commandLibraryRestartMessage() {
-  return "刚更新命令片段功能后需要重启应用，重启后这里会加载片段和历史命令。";
+  return tr("workspace.snippet.restartRequired");
 }
 
 function isCommandLibraryCommandMissingError(error: unknown) {
@@ -12586,15 +12589,15 @@ function isSshConnection(
 function rdpStatusLabel(status: RdpSessionStatus) {
   switch (status) {
     case "launching":
-      return "启动中";
+      return tr("workspace.rdp.status.starting");
     case "embedded":
-      return "嵌入式";
+      return tr("workspace.rdp.status.embedded");
     case "native":
-      return "原生窗口";
+      return tr("workspace.rdp.status.native");
     case "external":
-      return "外部客户端";
+      return tr("workspace.rdp.status.external");
     case "error":
-      return "失败";
+      return tr("workspace.step.failed");
     default:
       return "RDP";
   }
@@ -12603,13 +12606,13 @@ function rdpStatusLabel(status: RdpSessionStatus) {
 function rdpRenderModeLabel(mode: string) {
   switch (mode) {
     case "embedded":
-      return "嵌入式优先";
+      return tr("workspace.rdp.runner.embedded");
     case "external":
-      return "外部客户端";
+      return tr("workspace.rdp.status.external");
     case "custom":
-      return "自定义 runner";
+      return tr("workspace.rdp.runner.custom");
     default:
-      return "自动";
+      return tr("workspace.rdp.runner.auto");
   }
 }
 
@@ -12617,15 +12620,15 @@ function rdpDisplaySummary(
   display?: NonNullable<ConnectionProfile["rdp"]>["display"] | null,
 ) {
   if (!display) {
-    return "默认显示";
+    return tr("workspace.rdp.display.default");
   }
   const size =
     display.mode === "fullscreen" || display.mode === "all_monitors"
       ? rdpDisplayModeLabel(display.mode)
       : `${(display.width || 1440).toString()} x ${(display.height || 900).toString()}`;
   const flags = [
-    display.dynamic_resize ? "动态尺寸" : null,
-    display.use_multimon ? "多显示器" : null,
+    display.dynamic_resize ? tr("workspace.rdp.display.dynamic") : null,
+    display.use_multimon ? tr("workspace.rdp.display.multimon") : null,
   ].filter(Boolean);
   return [size, ...flags].join(" · ");
 }
@@ -12633,15 +12636,15 @@ function rdpDisplaySummary(
 function rdpDisplayModeLabel(mode: string) {
   switch (mode) {
     case "embedded":
-      return "嵌入";
+      return tr("workspace.rdp.display.embedded");
     case "windowed":
-      return "窗口";
+      return tr("workspace.rdp.display.window");
     case "fullscreen":
-      return "全屏";
+      return tr("workspace.rdp.display.fullscreen");
     case "all_monitors":
-      return "全屏多屏";
+      return tr("workspace.rdp.display.fullscreenAll");
     default:
-      return "默认";
+      return tr("workspace.rdp.display.defaultMode");
   }
 }
 
@@ -12649,26 +12652,26 @@ function rdpResourceSummary(
   resources?: NonNullable<ConnectionProfile["rdp"]>["resources"] | null,
 ) {
   if (!resources) {
-    return "默认资源";
+    return tr("workspace.rdp.resources.default");
   }
   const enabled = [
-    resources.clipboard ? "剪贴板" : null,
-    resources.drives ? "磁盘" : null,
-    resources.printers ? "打印机" : null,
-    resources.smart_cards ? "智能卡" : null,
-    resources.audio !== "disabled" ? `音频${rdpAudioLabel(resources.audio)}` : null,
+    resources.clipboard ? tr("workspace.rdp.resources.clipboard") : null,
+    resources.drives ? tr("workspace.rdp.resources.drives") : null,
+    resources.printers ? tr("workspace.rdp.resources.printers") : null,
+    resources.smart_cards ? tr("workspace.rdp.resources.smartCards") : null,
+    resources.audio !== "disabled" ? tr("workspace.rdp.resources.audio", { mode: rdpAudioLabel(resources.audio) }) : null,
   ].filter(Boolean);
-  return enabled.length ? enabled.join(" · ") : "无重定向";
+  return enabled.length ? enabled.join(" · ") : tr("workspace.rdp.resources.none");
 }
 
 function rdpAudioLabel(mode: string) {
   if (mode === "remote") {
-    return "远端";
+    return tr("workspace.rdp.audio.remote");
   }
   if (mode === "disabled") {
-    return "关闭";
+    return tr("workspace.rdp.audio.disabled");
   }
-  return "本机";
+  return tr("workspace.rdp.audio.local");
 }
 
 function previewRdpLaunchForBrowser(
@@ -12712,10 +12715,10 @@ function previewRdpLaunchForBrowser(
           ? []
           : ["<generated.rdp>"];
   const warnings = [
-    "浏览器预览模式不会启动桌面 RDP 客户端。",
-    "预览内容不会包含密码，真实启动也不会通过命令行传递明文密码。",
+    tr("workspace.rdp.preview.browser"),
+    tr("workspace.rdp.preview.noPassword"),
     config?.raw_rdp_settings?.trim()
-      ? "高级 .rdp 设置会在桌面运行时由后端校验后合并。"
+      ? tr("workspace.rdp.preview.raw")
       : null,
   ].filter((item): item is string => Boolean(item));
 
@@ -12725,9 +12728,9 @@ function previewRdpLaunchForBrowser(
     executable,
     fallback_reason:
       runner === "mstsc"
-        ? "浏览器预览按 Windows 外部 runner 展示。"
+        ? tr("workspace.rdp.preview.windows")
         : runner === "macos_app"
-          ? "浏览器预览按 macOS 系统 RDP 客户端展示。"
+          ? tr("workspace.rdp.preview.macos")
           : null,
     rdp_file_content:
       runner === "mstsc" || runner === "macos_app" || runner === "custom"
@@ -12815,30 +12818,30 @@ function rdpSessionFileText(session: RdpSessionTab) {
 
 function rdpSessionPrimaryDetail(session: RdpSessionTab) {
   if (session.status === "embedded") {
-    return { title: "启动方式", value: "Windows embedded RDP host" };
+    return { title: tr("workspace.launch.method"), value: "Windows embedded RDP host" };
   }
   if (session.status === "native") {
-    return { title: "启动方式", value: "Windows ActiveX 原生子窗口" };
+    return { title: tr("workspace.launch.method"), value: "Windows ActiveX native child window" };
   }
   const command = rdpSessionCommandText(session);
   if (command) {
-    return { title: "启动命令", value: command };
+    return { title: tr("workspace.launch.command"), value: command };
   }
-  return { title: "启动状态", value: session.message || rdpStatusLabel(session.status) };
+  return { title: tr("workspace.launch.status"), value: session.message || rdpStatusLabel(session.status) };
 }
 
 function vncStatusLabel(status: VncSessionStatus) {
   switch (status) {
     case "launching":
-      return "启动中";
+      return tr("workspace.rdp.status.starting");
     case "embedded":
-      return "内嵌画面";
+      return tr("workspace.vnc.status.embedded");
     case "windowed":
-      return "runner 窗口";
+      return tr("workspace.vnc.status.window");
     case "external":
-      return "外部客户端";
+      return tr("workspace.rdp.status.external");
     case "error":
-      return "失败";
+      return tr("workspace.step.failed");
     default:
       return "VNC";
   }
@@ -12847,15 +12850,15 @@ function vncStatusLabel(status: VncSessionStatus) {
 function vncRenderModeLabel(mode: string) {
   switch (mode) {
     case "embedded":
-      return "noVNC 内嵌";
+      return tr("workspace.vnc.runner.embedded");
     case "windowed":
-      return "RDP 窗口 noVNC";
+      return tr("workspace.vnc.runner.window");
     case "external":
-      return "外部客户端";
+      return tr("workspace.rdp.status.external");
     case "custom":
-      return "自定义 runner";
+      return tr("workspace.rdp.runner.custom");
     default:
-      return "自动";
+      return tr("workspace.rdp.runner.auto");
   }
 }
 
@@ -12863,17 +12866,17 @@ function vncDisplaySummary(
   display?: NonNullable<ConnectionProfile["vnc"]>["display"] | null,
 ) {
   if (!display) {
-    return "默认显示";
+    return tr("workspace.rdp.display.default");
   }
   const scale =
     display.scale_mode === "actual"
-      ? "原始尺寸"
+      ? tr("workspace.vnc.display.actual")
       : display.scale_mode === "stretch"
-        ? "拉伸适配"
-        : "适应窗口";
+        ? tr("workspace.vnc.display.stretch")
+        : tr("workspace.vnc.display.fit");
   const flags = [
-    display.resize_session ? "远端自适应" : null,
-    display.clip_viewport ? "裁剪视口" : null,
+    display.resize_session ? tr("workspace.vnc.display.remoteResize") : null,
+    display.clip_viewport ? tr("workspace.vnc.display.clip") : null,
   ].filter(Boolean);
   return [scale, ...flags].join(" · ");
 }
@@ -12882,12 +12885,12 @@ function vncInputSummary(
   input?: NonNullable<ConnectionProfile["vnc"]>["input"] | null,
 ) {
   if (!input) {
-    return "默认输入";
+    return tr("workspace.vnc.input.default");
   }
   const enabled = [
-    input.view_only ? "只看" : "键鼠",
-    input.clipboard ? "剪贴板" : null,
-    input.shared ? "共享会话" : null,
+    input.view_only ? tr("workspace.vnc.input.viewOnly") : tr("workspace.vnc.input.keyboardMouse"),
+    input.clipboard ? tr("workspace.vnc.input.clipboard") : null,
+    input.shared ? tr("workspace.vnc.input.shared") : null,
   ].filter(Boolean);
   return enabled.join(" · ");
 }
@@ -12917,10 +12920,10 @@ function previewVncLaunchForBrowser(connection: ConnectionProfile): VncLaunchPre
         ? [config.runner.custom_args_template || "{host}::{port}"]
         : [`${connection.host}::${connection.port.toString()}`];
   const warnings = [
-    "浏览器预览模式不会创建本地 VNC 桥接。",
-    "预览内容不会包含密码，外部 VNC 客户端也不会通过命令行接收明文密码。",
+    tr("workspace.vnc.preview.browser"),
+    tr("workspace.vnc.preview.noPassword"),
     config.raw_runner_args?.trim()
-      ? "高级 runner 参数会在桌面运行时由后端校验后合并。"
+      ? tr("workspace.vnc.preview.raw")
       : null,
   ].filter((item): item is string => Boolean(item));
 
@@ -12929,7 +12932,7 @@ function previewVncLaunchForBrowser(connection: ConnectionProfile): VncLaunchPre
     connection_id: connection.id,
     embedded: runner === "novnc",
     executable,
-    fallback_reason: runner === "novnc" ? null : "浏览器预览按外部 VNC runner 展示。",
+    fallback_reason: runner === "novnc" ? null : tr("workspace.vnc.preview.external"),
     render_mode: renderMode,
     runner,
     setup_hint: null,
@@ -12958,16 +12961,16 @@ function vncSessionCommandText(session: VncSessionTab) {
 
 function vncSessionPrimaryDetail(session: VncSessionTab) {
   if (session.status === "embedded") {
-    return { title: "启动方式", value: "noVNC 本地桥接" };
+    return { title: tr("workspace.launch.method"), value: "noVNC local bridge" };
   }
   if (session.status === "windowed") {
-    return { title: "启动方式", value: "RDP 风格 runner host" };
+    return { title: tr("workspace.launch.method"), value: "RDP-style runner host" };
   }
   const command = vncSessionCommandText(session);
   if (command) {
-    return { title: "启动命令", value: command };
+    return { title: tr("workspace.launch.command"), value: command };
   }
-  return { title: "启动状态", value: session.message || vncStatusLabel(session.status) };
+  return { title: tr("workspace.launch.status"), value: session.message || vncStatusLabel(session.status) };
 }
 
 function quoteCommandArgForDisplay(value: string) {
@@ -13061,14 +13064,14 @@ function buildCommandHistoryScopeOptions({
       (profile) => profile.id === activeLocalTerminalTab.profileId,
     );
     addOption({
-      badge: "本地",
-      label: `当前终端（${activeProfile?.name || activeLocalTerminalTab.title}）`,
+      badge: tr("workspace.command.target.local"),
+      label: tr("workspace.command.target.currentTerminal", { name: activeProfile?.name || activeLocalTerminalTab.title }),
       value: defaultScopeKey,
     });
   } else if (activeWorkspaceMode === "ssh" && isSshConnection(activeConnection)) {
     addOption({
       badge: "SSH",
-      label: `当前连接（${activeConnection.name}）`,
+      label: tr("workspace.command.target.currentConnection", { name: activeConnection.name }),
       value: defaultScopeKey,
     });
   }
@@ -13088,7 +13091,7 @@ function buildCommandHistoryScopeOptions({
     .filter((profile) => !profile.hidden || profile.id === activeLocalTerminalTab?.profileId)
     .forEach((profile) => {
       addOption({
-        badge: "本地",
+        badge: tr("workspace.command.target.local"),
         label: profile.name,
         value: commandHistoryKeyForScope({
           scope_kind: "local_profile",
@@ -13098,7 +13101,7 @@ function buildCommandHistoryScopeOptions({
     });
 
   addOption({
-    label: "全部历史",
+    label: tr("workspace.command.target.allHistory"),
     value: commandHistoryAllScopeKey,
   });
 
@@ -13172,15 +13175,15 @@ function buildCommandSenderTargets({
 
 function commandSenderDeliveryLabel(status: CommandSenderDeliveryStatus) {
   if (status === "written") {
-    return "已写入";
+    return tr("workspace.command.delivery.written");
   }
   if (status === "failed") {
-    return "发送失败";
+    return tr("workspace.command.delivery.failed");
   }
   if (status === "disconnected") {
-    return "已断线";
+    return tr("workspace.command.delivery.disconnected");
   }
-  return "未发送";
+  return tr("workspace.command.delivery.notSent");
 }
 
 function buildAiContextBlock({
@@ -13295,13 +13298,13 @@ function uniqueRemoteParentPaths(entries: RemoteFileEntry[]) {
 function remoteFileDeleteDescription(entries: RemoteFileEntry[], affectedTabs: number, dirtyTabs: number) {
   const base =
     entries.length === 1
-      ? `确认删除“${entries[0].path}”吗？这个操作无法撤销。`
-      : `确认删除选中的 ${entries.length.toString()} 个远程条目吗？这个操作无法撤销。`;
+      ? tr("workspace.file.deleteOne", { path: entries[0].path })
+      : tr("workspace.file.deleteMany", { count: entries.length });
   if (dirtyTabs > 0) {
-    return `${base} 将同时关闭 ${affectedTabs.toString()} 个已打开文件，其中 ${dirtyTabs.toString()} 个有未保存修改。`;
+    return tr("workspace.file.deleteWithDirty", { base, open: affectedTabs, dirty: dirtyTabs });
   }
   if (affectedTabs > 0) {
-    return `${base} 将同时关闭 ${affectedTabs.toString()} 个已打开文件。`;
+    return tr("workspace.file.deleteWithOpen", { base, open: affectedTabs });
   }
   return base;
 }
@@ -13385,20 +13388,20 @@ function previewRemoteFileContent(path: string, connectionName = "preview") {
   if (name.endsWith(".conf")) {
     return "server {\n  listen 80;\n  server_name example.local;\n}\n";
   }
-  return `# ${name}\n# ${connectionName}:${path}\n\n编辑这里的内容后可看到 dirty 状态和保存入口。\n`;
+  return tr("workspace.file.previewBody", { name, connection: connectionName, path });
 }
 
 function remoteFileActionTitle(action: RemoteFileTextAction) {
-  if (action.action === "create-file") return "新建文件";
-  if (action.action === "create-directory") return "新建文件夹";
-  return "重命名";
+  if (action.action === "create-file") return tr("workspace.file.action.createFile");
+  if (action.action === "create-directory") return tr("workspace.file.action.createDirectory");
+  return tr("workspace.file.action.rename");
 }
 
 function remoteFileActionDescription(action: RemoteFileTextAction) {
   if (action.action === "rename") {
-    return `父目录：${remotePathParent(action.entry.path)}`;
+    return tr("workspace.file.parent", { path: remotePathParent(action.entry.path) });
   }
-  return `父目录：${action.parentPath}`;
+  return tr("workspace.file.parent", { path: action.parentPath });
 }
 
 function toRemoteFileConflictPolicy(
@@ -13423,15 +13426,15 @@ function isValidRemoteBaseName(name: string) {
 function remoteFileNameValidationMessage(name: string) {
   const trimmed = name.trim();
   if (!trimmed) {
-    return "请输入名称。";
+    return tr("workspace.file.validation.required");
   }
   if (trimmed === "." || trimmed === "..") {
-    return "名称不能是 . 或 ..。";
+    return tr("workspace.file.validation.dot");
   }
   if (/[\\/]/.test(trimmed)) {
-    return "这里只能填写名称，不能包含路径。";
+    return tr("workspace.file.validation.path");
   }
-  return "请输入有效名称。";
+  return tr("workspace.file.validation.invalid");
 }
 
 function getFileRelativePath(file: File) {
@@ -13765,7 +13768,7 @@ async function prewarmLazyModuleBatch(
 }
 
 function transferSessionName(connection: ConnectionProfile) {
-  return sanitizeLocalSegment(connection.name || connection.host || "mxterm-session");
+  return sanitizeLocalSegment(connection.name || connection.host || "nexaterm-session");
 }
 
 function formatTransferTimestamp(date: Date, format: FileTransferTimestampFormat) {
@@ -13790,7 +13793,7 @@ function padDatePart(value: number) {
 
 function sanitizeLocalSegment(value: string) {
   const sanitized = value.trim().replace(/[<>:"/\\|?*\u0000-\u001f]/g, "_");
-  return sanitized || "mxterm-session";
+  return sanitized || "nexaterm-session";
 }
 
 function previewRemoteFileUploadResult(path: string, size: number): RemoteFileUploadResult {
@@ -13843,7 +13846,7 @@ function previewRemoteFileEntryMetadata(entry: RemoteFileEntry): RemoteFileEntry
   return {
     birthtime: Date.now() / 1000 - 86400,
     gid: 1000,
-    group: "mxterm",
+    group: "nexaterm",
     mode: entry.type === "directory" ? "755" : "644",
     mtime: Date.now() / 1000,
     name: entry.name,

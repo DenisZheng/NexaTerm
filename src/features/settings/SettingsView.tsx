@@ -46,7 +46,7 @@ import {
   X,
 } from "lucide-react";
 
-import { useI18n } from "../../shared/i18n";
+import { useI18n, type MessageKey, type Translate } from "../../shared/i18n";
 import { AppSelect } from "../../shared/ui/AppSelect";
 import { AppCombobox } from "../../shared/ui/AppCombobox";
 import { Tooltip } from "../../shared/ui/Tooltip";
@@ -179,29 +179,21 @@ interface SettingsViewProps {
 }
 
 const settingsSections: Array<{
-  description: string;
+  descriptionKey: MessageKey;
   icon: typeof Settings;
   id: SettingsSectionId;
-  label: string;
+  labelKey: MessageKey;
 }> = [
-  { id: "basic", label: "基础设置", description: "启动、连接与面板行为", icon: Settings },
-  { id: "credentials", label: "账号管理", description: "复用登录账号（用户名+密码/私钥）", icon: Shield },
-  { id: "mcp", label: "MCP", description: "AI Agent 连接与受控 SSH 工具", icon: Waypoints },
-  { id: "ai", label: "AI", description: "对话模型配置与 API Key", icon: Bot },
-  { id: "security", label: "安全", description: "安全密码与本机保护", icon: ShieldCheck },
-  { id: "sync", label: "同步", description: "WebDAV 手动同步", icon: Cloud },
-  { id: "shortcuts", label: "快捷键", description: "应用内键盘操作与冲突管理", icon: Keyboard },
-  { id: "appearance", label: "外观", description: "主题、密度与强调色", icon: Palette },
-  { id: "localTerminal", label: "终端设置", description: "终端行为与 profile 管理", icon: HardDrive },
-  { id: "terminalTheme", label: "终端配色", description: "终端 ANSI 主题方案", icon: Terminal },
-];
-
-const credentialKindOptions: Array<{
-  label: string;
-  value: ConnectionAuthKind;
-}> = [
-  { label: "密码账号", value: "password" },
-  { label: "私钥账号", value: "private_key" },
+  { id: "basic", labelKey: "settings.nav.basic.label", descriptionKey: "settings.nav.basic.description", icon: Settings },
+  { id: "credentials", labelKey: "settings.nav.credentials.label", descriptionKey: "settings.nav.credentials.description", icon: Shield },
+  { id: "mcp", labelKey: "settings.nav.mcp.label", descriptionKey: "settings.nav.mcp.description", icon: Waypoints },
+  { id: "ai", labelKey: "settings.nav.ai.label", descriptionKey: "settings.nav.ai.description", icon: Bot },
+  { id: "security", labelKey: "settings.nav.security.label", descriptionKey: "settings.nav.security.description", icon: ShieldCheck },
+  { id: "sync", labelKey: "settings.nav.sync.label", descriptionKey: "settings.nav.sync.description", icon: Cloud },
+  { id: "shortcuts", labelKey: "settings.nav.shortcuts.label", descriptionKey: "settings.nav.shortcuts.description", icon: Keyboard },
+  { id: "appearance", labelKey: "settings.nav.appearance.label", descriptionKey: "settings.nav.appearance.description", icon: Palette },
+  { id: "localTerminal", labelKey: "settings.nav.localTerminal.label", descriptionKey: "settings.nav.localTerminal.description", icon: HardDrive },
+  { id: "terminalTheme", labelKey: "settings.nav.terminalTheme.label", descriptionKey: "settings.nav.terminalTheme.description", icon: Terminal },
 ];
 
 export function SettingsView({
@@ -234,6 +226,7 @@ export function SettingsView({
   onUpdateShortcuts,
   onUpdateTerminalTheme,
 }: SettingsViewProps) {
+  const { t } = useI18n();
   const [activeSection, setActiveSection] = useState<SettingsSectionId>("basic");
   const [accentDraft, setAccentDraft] = useState(settings.appearance.accentColorCustom);
   const effectiveAllowPasswordReveal =
@@ -250,14 +243,14 @@ export function SettingsView({
   }, [requestedActiveSection, activeSectionRequestKey]);
 
   return (
-    <section className="settings-view" hidden={hidden} aria-label="设置" aria-hidden={hidden}>
-      <aside className="settings-sidebar app-sidebar" aria-label="设置分类">
+    <section className="settings-view" hidden={hidden} aria-label={t("settings.shell.aria")} aria-hidden={hidden}>
+      <aside className="settings-sidebar app-sidebar" aria-label={t("settings.nav.aria")}>
         <button className="settings-return" type="button" onClick={onReturnWorkspace}>
           <ArrowLeft className="ui-icon" aria-hidden="true" />
-          <span>返回工作区</span>
+          <span>{t("settings.returnWorkspace")}</span>
         </button>
 
-        <nav className="settings-nav" aria-label="设置导航">
+        <nav className="settings-nav" aria-label={t("settings.nav.navigation")}>
           {settingsSections.map((section) => {
             const Icon = section.icon;
             return (
@@ -270,15 +263,15 @@ export function SettingsView({
               >
                 <Icon className="ui-icon" aria-hidden="true" />
                 <span>
-                  <strong>{section.label}</strong>
-                  <small>{section.description}</small>
+                  <strong>{t(section.labelKey)}</strong>
+                  <small>{t(section.descriptionKey)}</small>
                 </span>
               </button>
             );
           })}
         </nav>
 
-        <div className="settings-sidebar-foot">设置会自动保存到本机。</div>
+        <div className="settings-sidebar-foot">{t("settings.autoSave")}</div>
       </aside>
 
       <div className="settings-content">
@@ -366,12 +359,8 @@ interface AiProviderDraft {
   api_key_touched: boolean;
 }
 
-const aiAccessModeOptions: Array<{ label: string; value: AiApiFormat }> = [
-  { label: "Claude Messages（原生）", value: "anthropic" },
-  { label: "OpenAI Chat Completions（兼容）", value: "openai_compatible" },
-];
-
 function AiSettingsSection() {
+  const { t } = useI18n();
   const desktopRuntime = hasTauriRuntime();
   const [configs, setConfigs] = useState<AiProviderConfig[]>([]);
   const [selectedId, setSelectedId] = useState("");
@@ -391,17 +380,17 @@ function AiSettingsSection() {
   const savedApiKeyCount = configs.filter((config) => config.api_key_saved).length;
   const apiKeyStatus = draft.api_key_touched
     ? draft.api_key.trim()
-      ? "将更新 API Key"
-      : "将清空 API Key"
+      ? t("settings.ai.key.willUpdate")
+      : t("settings.ai.key.willClear")
     : selectedConfig?.api_key_saved
       ? draft.api_key
-        ? "已显示 API Key，未修改则保持原 Key"
-        : "已保存 API Key"
-      : "未保存 API Key";
-  const formTitle = selectedConfig ? "编辑配置" : "新增配置";
+        ? t("settings.ai.key.revealed")
+        : t("settings.ai.key.saved")
+      : t("settings.ai.key.notSaved");
+  const formTitle = selectedConfig ? t("settings.ai.form.edit") : t("settings.ai.form.new");
   const formDescription = selectedConfig
-    ? `${formatAiAccessModeLabel(draft.api_format)} · ${draft.model || "未设置模型"}`
-    : "配置名称用于在 AI 面板中切换；接入模式决定请求协议。";
+    ? `${formatAiAccessModeLabel(draft.api_format, t)} · ${draft.model || t("settings.ai.form.unsetModel")}`
+    : t("settings.ai.form.description");
   const modelSourceKey = [
     draft.api_format,
     draft.endpoint.trim(),
@@ -454,7 +443,7 @@ function AiSettingsSection() {
         setDraft(nextSelected ? draftFromConfig(next.find((config) => config.id === nextSelected) || null) : emptyAiProviderDraft());
       } catch (nextError) {
         if (!disposed) {
-          setError(formatSettingsError(nextError, "AI 配置读取失败。"));
+          setError(formatSettingsError(nextError, t("settings.ai.error.load")));
         }
       } finally {
         if (!disposed) {
@@ -467,7 +456,7 @@ function AiSettingsSection() {
       disposed = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [desktopRuntime]);
+  }, [desktopRuntime, t]);
 
   function selectConfig(id: string) {
     setSelectedId(id);
@@ -525,7 +514,7 @@ function AiSettingsSection() {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!desktopRuntime) {
-      setError("桌面端才能保存 AI 配置。");
+      setError(t("settings.ai.error.saveDesktop"));
       return;
     }
     setSaving(true);
@@ -535,9 +524,9 @@ function AiSettingsSection() {
       const input = buildAiProviderConfigInput(draft);
       const saved = await aiProviderConfigSave(input);
       await reloadConfigs(saved.id);
-      setMessage("AI 配置已保存。");
+      setMessage(t("settings.ai.message.saved"));
     } catch (nextError) {
-      setError(formatSettingsError(nextError, "AI 配置保存失败。"));
+      setError(formatSettingsError(nextError, t("settings.ai.error.save")));
     } finally {
       setSaving(false);
     }
@@ -545,7 +534,7 @@ function AiSettingsSection() {
 
   async function testConfig() {
     if (!desktopRuntime) {
-      setError("桌面端才能测试 AI 配置。");
+      setError(t("settings.ai.error.testDesktop"));
       return;
     }
     setTesting(true);
@@ -555,7 +544,7 @@ function AiSettingsSection() {
       const result = await aiProviderConfigTest(buildAiProviderConfigInput(draft));
       setMessage(result.message);
     } catch (nextError) {
-      setError(formatSettingsError(nextError, "AI 配置测试失败。"));
+      setError(formatSettingsError(nextError, t("settings.ai.error.test")));
     } finally {
       setTesting(false);
     }
@@ -563,7 +552,7 @@ function AiSettingsSection() {
 
   async function fetchModels() {
     if (!desktopRuntime) {
-      setError("桌面端才能获取模型列表。");
+      setError(t("settings.ai.error.modelsDesktop"));
       return;
     }
     setModelsLoading(true);
@@ -576,12 +565,12 @@ function AiSettingsSection() {
         return;
       }
       setModelOptions(models);
-      setMessage(`已获取 ${models.length.toString()} 个模型，可直接选择，也可以继续手填。`);
+      setMessage(t("settings.ai.message.models", { count: models.length }));
     } catch (nextError) {
       if (modelSourceKeyRef.current !== requestSourceKey) {
         return;
       }
-      setError(formatSettingsError(nextError, "模型列表获取失败。"));
+      setError(formatSettingsError(nextError, t("settings.ai.error.models")));
       setModelOptions([]);
     } finally {
       if (modelSourceKeyRef.current === requestSourceKey) {
@@ -598,9 +587,9 @@ function AiSettingsSection() {
       await aiProviderConfigDelete(deleteTarget.id);
       setDeleteTarget(null);
       await reloadConfigs();
-      setMessage("AI 配置已删除。");
+      setMessage(t("settings.ai.message.deleted"));
     } catch (nextError) {
-      setError(formatSettingsError(nextError, "AI 配置删除失败。"));
+      setError(formatSettingsError(nextError, t("settings.ai.error.delete")));
     }
   }
 
@@ -614,7 +603,7 @@ function AiSettingsSection() {
       return;
     }
     if (!desktopRuntime) {
-      setError("桌面端才能查看已保存的 API Key。");
+      setError(t("settings.ai.error.revealDesktop"));
       return;
     }
     const configId = draft.id || selectedConfig.id;
@@ -637,7 +626,7 @@ function AiSettingsSection() {
       );
       setShowApiKey(true);
     } catch (nextError) {
-      setError(formatSettingsError(nextError, "API Key 读取失败。"));
+      setError(formatSettingsError(nextError, t("settings.ai.error.reveal")));
     } finally {
       setApiKeyRevealBusy(false);
     }
@@ -646,21 +635,21 @@ function AiSettingsSection() {
   return (
     <section className="settings-page-section">
       <header className="settings-section-head">
-        <h1>AI</h1>
-        <p>维护对话模型配置；名称用于显示，API Key 只保存到本机 vault。</p>
+        <h1>{t("settings.ai.title")}</h1>
+        <p>{t("settings.ai.description")}</p>
       </header>
 
       <div className="ai-settings-layout">
-        <section className="settings-panel ai-settings-list-panel" aria-label="AI 配置列表">
+        <section className="settings-panel ai-settings-list-panel" aria-label={t("settings.ai.listAria")}>
           <header className="ai-settings-list-head">
             <span>
-              <strong>模型配置</strong>
-              <small>{aiConfigSummary(configs.length, savedApiKeyCount)}</small>
+              <strong>{t("settings.ai.list.title")}</strong>
+              <small>{aiConfigSummary(configs.length, savedApiKeyCount, t)}</small>
             </span>
             <button
               className="repository-icon-button"
               type="button"
-              aria-label="新增 AI 配置"
+              aria-label={t("settings.ai.list.newAria")}
               disabled={loading || saving || testing || modelsLoading}
               onClick={newConfig}
             >
@@ -669,14 +658,14 @@ function AiSettingsSection() {
           </header>
 
           <div className="ai-settings-list-body">
-            {loading ? <p className="settings-note">加载 AI 配置中...</p> : null}
+            {loading ? <p className="settings-note">{t("settings.ai.list.loading")}</p> : null}
             {configs.length === 0 && !loading ? (
               <div className="ai-settings-empty-state">
                 <Bot className="ui-icon" aria-hidden="true" />
-                <strong>还没有保存 AI 配置</strong>
-                <small>先添加配置名称、接入模式、API 地址和模型，AI 面板就可以直接切换使用。</small>
+                <strong>{t("settings.ai.empty.title")}</strong>
+                <small>{t("settings.ai.empty.description")}</small>
                 <div>
-                  <button type="button" onClick={newConfig}>新增配置</button>
+                  <button type="button" onClick={newConfig}>{t("settings.ai.empty.new")}</button>
                 </div>
               </div>
             ) : null}
@@ -693,14 +682,14 @@ function AiSettingsSection() {
                 </span>
                 <span className="ai-settings-list-copy">
                   <strong>{config.name}</strong>
-                  <small>{aiConfigMetaSummary(config)}</small>
+                  <small>{aiConfigMetaSummary(config, t)}</small>
                 </span>
                 <span
                   className={`ai-settings-list-kind ${
                     config.api_key_saved ? "saved" : "missing"
                   }`}
                 >
-                  {config.api_key_saved ? "已存 Key" : "未存 Key"}
+                  {config.api_key_saved ? t("settings.ai.key.badge.saved") : t("settings.ai.key.badge.missing")}
                 </span>
               </button>
             ))}
@@ -725,12 +714,12 @@ function AiSettingsSection() {
             <SettingsRow
               className="ai-provider-row-field"
               icon={Bot}
-              title="配置名称"
-              description="用于在列表和 AI 面板中识别这条配置。"
+              title={t("settings.ai.name.title")}
+              description={t("settings.ai.name.description")}
             >
               <input
                 value={draft.name}
-                placeholder="例如 MiniMax · MiniMax-M3"
+                placeholder={t("settings.ai.name.placeholder")}
                 onChange={(event) => {
                   const value = event.target?.value;
                   if (value !== undefined) {
@@ -742,8 +731,8 @@ function AiSettingsSection() {
             <SettingsRow
               className="ai-provider-row-field"
               icon={Server}
-              title="请求地址"
-              description="可填写官方 API、代理或企业网关地址。"
+              title={t("settings.ai.endpoint.title")}
+              description={t("settings.ai.endpoint.description")}
             >
               <input
                 value={draft.endpoint}
@@ -764,13 +753,13 @@ function AiSettingsSection() {
             <SettingsRow
               className="ai-provider-row-field"
               icon={Layers}
-              title="接入模式"
-              description="选择实际请求协议；国内兼容服务通常使用 OpenAI Chat Completions。"
+              title={t("settings.ai.access.title")}
+              description={t("settings.ai.access.description")}
             >
               <AppSelect
-                ariaLabel="AI 配置接入模式"
+                ariaLabel={t("settings.ai.access.aria")}
                 className="ai-settings-inline-select"
-                options={aiAccessModeOptions}
+                options={[{ label: t("settings.ai.access.anthropic"), value: "anthropic" }, { label: t("settings.ai.access.openai"), value: "openai_compatible" }]}
                 value={draft.api_format}
                 onChange={(api_format) =>
                   setDraft((value) => ({
@@ -791,7 +780,7 @@ function AiSettingsSection() {
                 <input
                   value={draft.api_key}
                   type={showApiKey ? "text" : "password"}
-                  placeholder={selectedConfig?.api_key_saved ? "留空保留已保存 key" : "粘贴 API Key"}
+                  placeholder={selectedConfig?.api_key_saved ? t("settings.ai.key.placeholder.keep") : t("settings.ai.key.placeholder.input")}
                   spellCheck={false}
                   autoComplete="off"
                   onChange={(event) => {
@@ -807,7 +796,7 @@ function AiSettingsSection() {
                 />
                 <button
                   type="button"
-                  aria-label={showApiKey ? "隐藏 API Key" : "显示 API Key"}
+                  aria-label={showApiKey ? t("settings.ai.key.hide") : t("settings.ai.key.show")}
                   disabled={apiKeyRevealBusy || loading || saving}
                   onClick={() => void toggleApiKeyVisibility()}
                 >
@@ -824,19 +813,19 @@ function AiSettingsSection() {
             <SettingsRow
               className="ai-provider-row-field ai-model-row-field"
               icon={FileKey}
-              title="模型"
-              description="可手工填写模型 id，也可通过接口自动获取后选择。"
+              title={t("settings.ai.model.title")}
+              description={t("settings.ai.model.description")}
             >
               <div className="ai-model-field">
                 <div className="ai-model-input-row">
                   <AppCombobox
-                    ariaLabel="AI 模型"
+                    ariaLabel={t("settings.ai.model.aria")}
                     className="ai-model-combobox"
                     disabled={loading || saving || testing || modelsLoading || !desktopRuntime}
-                    emptyText="没有匹配的已获取模型"
+                    emptyText={t("settings.ai.model.empty")}
                     menuMinWidth={420}
                     options={modelSelectOptions}
-                    placeholder="例如 gpt-4.1-mini / claude-sonnet-4 / MiniMax-M3"
+                    placeholder={t("settings.ai.model.placeholder")}
                     value={draft.model}
                     onChange={(value) => {
                       setDraft((current) => ({ ...current, model: value }));
@@ -853,7 +842,7 @@ function AiSettingsSection() {
                     ) : (
                       <RefreshCw className="ui-icon" aria-hidden="true" />
                     )}
-                    <span>{modelsLoading ? "获取中" : "获取模型"}</span>
+                    <span>{modelsLoading ? t("settings.ai.model.loading") : t("settings.ai.model.fetch")}</span>
                   </button>
                 </div>
               </div>
@@ -861,7 +850,7 @@ function AiSettingsSection() {
           </div>
 
           {!desktopRuntime ? (
-            <p className="settings-note">浏览器预览不能保存 AI 配置，请在桌面端操作。</p>
+            <p className="settings-note">{t("settings.ai.preview")}</p>
           ) : null}
           {error ? <p className="settings-path-error" role="alert">{error}</p> : null}
           {message ? <p className="settings-note" role="status">{message}</p> : null}
@@ -876,7 +865,7 @@ function AiSettingsSection() {
                   onClick={() => setDeleteTarget(selectedConfig)}
                 >
                   <Trash2 className="ui-icon" aria-hidden="true" />
-                  删除
+                  {t("settings.credentials.delete")}
                 </button>
               ) : null}
             </div>
@@ -886,7 +875,7 @@ function AiSettingsSection() {
                 type="button"
                 onClick={resetDraft}
               >
-                {selectedConfig ? "重置" : "清空"}
+                {selectedConfig ? t("settings.ai.reset") : t("settings.ai.clear")}
               </button>
               <button
                 disabled={saving || loading || testing || modelsLoading || !desktopRuntime}
@@ -898,7 +887,7 @@ function AiSettingsSection() {
                 ) : (
                   <RefreshCw className="ui-icon" aria-hidden="true" />
                 )}
-                <span>{testing ? "测试中" : "测试配置"}</span>
+                <span>{testing ? t("settings.ai.testing") : t("settings.ai.test")}</span>
               </button>
               <button
                 className="primary-button"
@@ -906,7 +895,7 @@ function AiSettingsSection() {
                 disabled={saving || loading || testing || modelsLoading || !desktopRuntime}
               >
                 <Save className="ui-icon" aria-hidden="true" />
-                <span>{saving ? "保存中" : "保存配置"}</span>
+                <span>{saving ? t("settings.ai.saving") : t("settings.ai.save")}</span>
               </button>
             </div>
           </footer>
@@ -915,9 +904,9 @@ function AiSettingsSection() {
 
       <ConfirmDialog
         open={Boolean(deleteTarget)}
-        title="删除 AI 配置"
-        description={`确认删除“${deleteTarget?.name || "该配置"}”吗？API Key 也会从 vault 删除。`}
-        confirmLabel="删除"
+        title={t("settings.ai.delete.title")}
+        description={t("settings.ai.delete.description", { name: deleteTarget?.name || t("settings.ai.delete.fallback") })}
+        confirmLabel={t("settings.credentials.deleteConfirm")}
         onConfirm={confirmDeleteConfig}
         onOpenChange={(open) => {
           if (!open) {
@@ -936,6 +925,7 @@ function isSshConnection(connection: ConnectionProfile) {
 }
 
 function McpSettingsSection({ connections }: { connections: ConnectionProfile[] }) {
+  const { t } = useI18n();
   const [settings, setSettings] = useState<McpSettings>(defaultMcpSettings);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -1002,13 +992,13 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
   const remoteMcpUrl = `http://127.0.0.1:${settings.remote_port.toString()}/mcp`;
   const remoteSseUrl = `http://127.0.0.1:${settings.remote_port.toString()}/sse`;
   const remoteToken = settings.remote_token || settings.generated_remote_token || null;
-  const remoteTokenForSnippet = remoteToken || "<你的 token>";
+  const remoteTokenForSnippet = remoteToken || t("settings.mcp.tokenPlaceholder");
   const configSnippet = useMemo(
     () =>
       JSON.stringify(
         {
           mcpServers: {
-            mxterm: {
+            nexaterm: {
               command: executablePath,
               args: [],
             },
@@ -1024,7 +1014,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
       JSON.stringify(
         {
           mcpServers: {
-            mxterm: {
+            nexaterm: {
               type: "streamable-http",
               url: remoteMcpUrl,
               headers: {
@@ -1043,7 +1033,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
       JSON.stringify(
         {
           mcpServers: {
-            mxterm: {
+            nexaterm: {
               type: "sse",
               url: remoteSseUrl,
               headers: {
@@ -1061,27 +1051,27 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
     {
       id: "stdio" as const,
       label: "stdio client",
-      title: "stdio client 配置",
-      description: "发布包中 sidecar 会随 NexaTerm 一起提供；开发期可替换为本地绝对路径。",
+      title: t("settings.mcp.config.stdio.title"),
+      description: t("settings.mcp.config.stdio.description"),
       snippet: configSnippet,
       copied,
       setCopied,
     },
     {
       id: "remote-http" as const,
-      label: "远程 HTTP client",
-      title: "远程 HTTP client 配置",
+      label: t("settings.mcp.config.remote.label"),
+      title: t("settings.mcp.config.remote.title"),
       description:
-        "主入口使用 Streamable HTTP，但服务只监听 127.0.0.1。跨机器访问必须先建立 SSH 隧道，再让客户端连接隧道本地端口。",
+        t("settings.mcp.config.remote.description"),
       snippet: remoteConfigSnippet,
       copied: remoteConfigCopied,
       setCopied: setRemoteConfigCopied,
     },
     {
       id: "legacy-sse" as const,
-      label: "旧版 SSE 兼容",
-      title: "旧版 SSE 兼容配置",
-      description: "少数旧客户端仍使用 `/sse` 和 `/messages` 双端点。",
+      label: t("settings.mcp.config.sse.label"),
+      title: t("settings.mcp.config.sse.title"),
+      description: t("settings.mcp.config.sse.description"),
       snippet: legacySseConfigSnippet,
       copied: legacySseConfigCopied,
       setCopied: setLegacySseConfigCopied,
@@ -1117,7 +1107,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
         }
       } catch (error) {
         if (!cancelled) {
-          setError(error instanceof Error ? error.message : "MCP 设置读取失败。");
+          setError(error instanceof Error ? error.message : t("settings.mcp.error.load"));
         }
       } finally {
         if (!cancelled) {
@@ -1129,11 +1119,11 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
     return () => {
       cancelled = true;
     };
-  }, [desktopRuntime]);
+  }, [desktopRuntime, t]);
 
   async function saveUpdate(update: Partial<McpSettings>) {
     if (!desktopRuntime) {
-      setError("需要在 MXterm 桌面端保存 MCP 设置。");
+      setError(t("settings.mcp.error.desktop"));
       return;
     }
     const previous = settings;
@@ -1153,7 +1143,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
       setSettings(saved);
     } catch (error) {
       setSettings(previous);
-      setError(error instanceof Error ? error.message : "MCP 设置保存失败。");
+      setError(error instanceof Error ? error.message : t("settings.mcp.error.save"));
     } finally {
       setSaving(false);
     }
@@ -1208,14 +1198,14 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
       onCopied(true);
       window.setTimeout(() => onCopied(false), 1600);
     } catch {
-      setError("无法写入剪贴板，可手动复制下方配置。");
+      setError(t("settings.mcp.error.clipboard"));
     }
   }
 
   async function saveRemoteEndpoint() {
     const remote_port = Number(remotePortDraft);
     if (!Number.isInteger(remote_port) || remote_port < 1 || remote_port > 65535) {
-      setError("远程 MCP 端口必须在 1 到 65535 之间。");
+      setError(t("settings.mcp.error.port"));
       return;
     }
     if (remote_port === settings.remote_port) {
@@ -1236,7 +1226,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
       if (settings.remote_token_saved) {
         setRemoteTokenDraft(remoteToken || "");
       } else {
-        setError("请输入远程 MCP token。");
+        setError(t("settings.mcp.error.token"));
       }
       return;
     }
@@ -1261,7 +1251,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
         remote_token_preview: status.token_preview,
       }));
     } catch (error) {
-      setError(error instanceof Error ? error.message : "远程 MCP 服务状态读取失败。");
+      setError(error instanceof Error ? error.message : t("settings.mcp.error.status"));
     } finally {
       setRemoteActionBusy(null);
     }
@@ -1282,7 +1272,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
         remote_token_preview: status.token_preview,
       }));
     } catch (error) {
-      setError(error instanceof Error ? error.message : "远程 MCP 服务重启失败。");
+      setError(error instanceof Error ? error.message : t("settings.mcp.error.restart"));
     } finally {
       setRemoteActionBusy(null);
     }
@@ -1296,7 +1286,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
     try {
       setRemoteLog(await mcpRemoteLogRead());
     } catch (error) {
-      setError(error instanceof Error ? error.message : "远程 MCP 日志读取失败。");
+      setError(error instanceof Error ? error.message : t("settings.mcp.error.logRead"));
     } finally {
       setRemoteActionBusy(null);
     }
@@ -1310,7 +1300,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
     try {
       setRemoteLog(await mcpRemoteLogClear());
     } catch (error) {
-      setError(error instanceof Error ? error.message : "远程 MCP 日志清空失败。");
+      setError(error instanceof Error ? error.message : t("settings.mcp.error.logClear"));
     } finally {
       setRemoteActionBusy(null);
     }
@@ -1327,7 +1317,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
       setSettings(next);
       setTokenCopied(false);
     } catch (error) {
-      setError(error instanceof Error ? error.message : "远程 MCP token 重置失败。");
+      setError(error instanceof Error ? error.message : t("settings.mcp.error.tokenReset"));
     } finally {
       setRemoteActionBusy(null);
     }
@@ -1337,53 +1327,53 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
     <section className="settings-page-section">
       <header className="settings-section-head">
         <h1>MCP</h1>
-        <p>把 NexaTerm 保存的连接提供给 AI Agent；网络模式固定 loopback，跨机器访问需使用 SSH 隧道。</p>
+        <p>{t("settings.mcp.description")}</p>
       </header>
 
       <div className="settings-panel mcp-settings-panel">
         <SettingsRow
           icon={Waypoints}
-          title="启用 MXterm MCP"
-          description="默认关闭。关闭时 sidecar 只返回禁用状态，不暴露连接信息。"
+          title={t("settings.mcp.enable.title")}
+          description={t("settings.mcp.enable.description")}
         >
           <SettingsToggle
             checked={settings.enabled}
             disabled={loading || saving || !desktopRuntime}
-            label="启用 MXterm MCP"
+            label={t("settings.mcp.enable.label")}
             onChange={(enabled) => void saveUpdate({ enabled })}
           />
         </SettingsRow>
 
         <SettingsRow
           icon={Server}
-          title="暴露连接信息"
-          description="只返回脱敏后的连接元数据，不返回密码、私钥口令或 vault 明文。"
+          title={t("settings.mcp.expose.title")}
+          description={t("settings.mcp.expose.description")}
         >
           <SettingsToggle
             checked={settings.expose_connections}
             disabled={loading || saving || !desktopRuntime || !settings.enabled}
-            label="暴露连接信息"
+            label={t("settings.mcp.expose.label")}
             onChange={(expose_connections) => void saveUpdate({ expose_connections })}
           />
         </SettingsRow>
 
         <SettingsRow
           icon={Terminal}
-          title="启用 SSH 操作"
-          description="允许 Agent 通过已保存 connection_id 测试连接、执行命令和传输文件。"
+          title={t("settings.mcp.ssh.title")}
+          description={t("settings.mcp.ssh.description")}
         >
           <SettingsToggle
             checked={settings.ssh_operations_enabled}
             disabled={loading || saving || !desktopRuntime || !settings.enabled}
-            label="启用 SSH 操作"
+            label={t("settings.mcp.ssh.label")}
             onChange={(ssh_operations_enabled) => void saveUpdate({ ssh_operations_enabled })}
           />
         </SettingsRow>
 
         <SettingsRow
           icon={ShieldCheck}
-          title="允许危险命令确认"
-          description="关闭时拒绝命中启发式规则的命令（子串匹配，可能漏报/误报，不是安全边界）；开启后仍需要 MCP 工具参数显式确认。"
+          title={t("settings.mcp.dangerous.title")}
+          description={t("settings.mcp.dangerous.description")}
         >
           <SettingsToggle
             checked={settings.allow_dangerous_commands}
@@ -1394,7 +1384,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
               !settings.enabled ||
               !settings.ssh_operations_enabled
             }
-            label="允许危险命令确认"
+            label={t("settings.mcp.dangerous.label")}
             onChange={(allow_dangerous_commands) =>
               void saveUpdate({ allow_dangerous_commands })
             }
@@ -1403,13 +1393,13 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
 
         <SettingsRow
           icon={Globe2}
-          title="远程 MCP 服务"
-          description="服务固定监听 127.0.0.1；跨机器访问只允许通过 SSH 隧道转发。"
+          title={t("settings.mcp.remote.title")}
+          description={t("settings.mcp.remote.description")}
         >
           <SettingsToggle
             checked={settings.remote_enabled}
             disabled={loading || saving || !desktopRuntime || !settings.enabled}
-            label="远程 MCP 服务"
+            label={t("settings.mcp.remote.label")}
             onChange={(remote_enabled) => void saveUpdate({ remote_enabled })}
           />
         </SettingsRow>
@@ -1417,7 +1407,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
         <div className="mcp-remote-service-block">
           <div className="mcp-remote-fields">
             <label className="mcp-remote-field">
-              <span>监听地址</span>
+              <span>{t("settings.mcp.remote.host")}</span>
               <input
                 className="settings-input"
                 value="127.0.0.1"
@@ -1426,7 +1416,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
               />
             </label>
             <label className="mcp-remote-field">
-              <span>端口</span>
+              <span>{t("settings.mcp.remote.port")}</span>
               <input
                 className="settings-input"
                 type="number"
@@ -1446,7 +1436,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
           </div>
 
           <p className="settings-note">
-            本服务使用本机 HTTP，仅接受回环连接。跨机器使用时请建立 SSH 隧道，例如：
+            {t("settings.mcp.remote.note")}
             <code>{`ssh -N -L ${settings.remote_port.toString()}:127.0.0.1:${settings.remote_port.toString()} <user>@<nexaterm-host>`}</code>
           </p>
 
@@ -1459,11 +1449,11 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
             >
               {remoteStatus?.running
                 ? remoteStatus.pid
-                  ? `服务运行中 · ${remoteStatus.pid.toString()}`
-                  : "服务运行中"
+                  ? t("settings.mcp.remote.runningPid", { pid: remoteStatus.pid })
+                  : t("settings.mcp.remote.running")
                 : settings.remote_enabled
-                ? "服务未运行"
-                : "服务已关闭"}
+                ? t("settings.mcp.remote.notRunning")
+                : t("settings.mcp.remote.disabled")}
             </span>
             <button
               className="settings-action-button"
@@ -1476,7 +1466,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
               ) : (
                 <RefreshCw className="ui-icon" aria-hidden="true" />
               )}
-              <span>刷新状态</span>
+              <span>{t("settings.mcp.remote.refresh")}</span>
             </button>
             <button
               className="settings-action-button"
@@ -1494,56 +1484,56 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
               ) : (
                 <Power className="ui-icon" aria-hidden="true" />
               )}
-              <span>重启服务</span>
+              <span>{t("settings.mcp.remote.restart")}</span>
             </button>
           </div>
 
           <div className="mcp-remote-runtime-meta">
-            <span>健康状态：{remoteStatus?.healthy ? "正常" : settings.remote_enabled ? "检查中或异常" : "未启用"}</span>
-            <span>自动重启：{(remoteStatus?.restart_count || 0).toString()} 次</span>
-            {remoteStatus?.started_at ? <span>启动：{remoteStatus.started_at}</span> : null}
-            {remoteStatus?.error ? <span className="is-error">最近错误：{remoteStatus.error}</span> : null}
+            <span>{t("settings.mcp.remote.health", { value: remoteStatus?.healthy ? t("settings.mcp.remote.healthOk") : settings.remote_enabled ? t("settings.mcp.remote.healthWarn") : t("settings.mcp.remote.healthDisabled") })}</span>
+            <span>{t("settings.mcp.remote.restarts", { count: remoteStatus?.restart_count || 0 })}</span>
+            {remoteStatus?.started_at ? <span>{t("settings.mcp.remote.started", { value: remoteStatus.started_at })}</span> : null}
+            {remoteStatus?.error ? <span className="is-error">{t("settings.mcp.remote.lastError", { value: remoteStatus.error })}</span> : null}
           </div>
 
-          <section className="mcp-remote-log" aria-label="远程 MCP 服务日志">
+          <section className="mcp-remote-log" aria-label={t("settings.mcp.log.aria")}>
             <header>
               <div>
-                <strong>服务日志</strong>
-                <small>{remoteLog?.truncated ? "显示最近 128 KB" : remoteLog?.path || remoteStatus?.log_path || "尚未读取"}</small>
+                <strong>{t("settings.mcp.log.title")}</strong>
+                <small>{remoteLog?.truncated ? t("settings.mcp.log.truncated") : remoteLog?.path || remoteStatus?.log_path || t("settings.mcp.log.unread")}</small>
               </div>
               <div>
-                <Tooltip label="刷新日志">
-                  <button type="button" aria-label="刷新远程 MCP 日志" onClick={() => void refreshRemoteLog()}>
+                <Tooltip label={t("settings.mcp.log.refresh")}>
+                  <button type="button" aria-label={t("settings.mcp.log.refreshAria")} onClick={() => void refreshRemoteLog()}>
                     {remoteActionBusy === "log" ? <Loader2 className="ui-icon spin" aria-hidden="true" /> : <RefreshCw className="ui-icon" aria-hidden="true" />}
                   </button>
                 </Tooltip>
-                <Tooltip label="复制日志">
-                  <button type="button" aria-label="复制远程 MCP 日志" disabled={!remoteLog?.content} onClick={() => void navigator.clipboard.writeText(remoteLog?.content || "")}>
+                <Tooltip label={t("settings.mcp.log.copy")}>
+                  <button type="button" aria-label={t("settings.mcp.log.copyAria")} disabled={!remoteLog?.content} onClick={() => void navigator.clipboard.writeText(remoteLog?.content || "")}>
                     <Copy className="ui-icon" aria-hidden="true" />
                   </button>
                 </Tooltip>
-                <Tooltip label="打开日志目录">
-                  <button type="button" aria-label="打开远程 MCP 日志目录" disabled={!remoteLog?.path && !remoteStatus?.log_path} onClick={() => void revealItemInDir(remoteLog?.path || remoteStatus?.log_path || "")}>
+                <Tooltip label={t("settings.mcp.log.open")}>
+                  <button type="button" aria-label={t("settings.mcp.log.openAria")} disabled={!remoteLog?.path && !remoteStatus?.log_path} onClick={() => void revealItemInDir(remoteLog?.path || remoteStatus?.log_path || "")}>
                     <FolderOpen className="ui-icon" aria-hidden="true" />
                   </button>
                 </Tooltip>
-                <Tooltip label="清空日志">
-                  <button type="button" aria-label="清空远程 MCP 日志" disabled={remoteActionBusy === "clear-log"} onClick={() => void clearRemoteLog()}>
+                <Tooltip label={t("settings.mcp.log.clear")}>
+                  <button type="button" aria-label={t("settings.mcp.log.clearAria")} disabled={remoteActionBusy === "clear-log"} onClick={() => void clearRemoteLog()}>
                     <Trash2 className="ui-icon" aria-hidden="true" />
                   </button>
                 </Tooltip>
               </div>
             </header>
-            <pre>{remoteLog?.content || "点击刷新查看远程 MCP 服务日志。"}</pre>
+            <pre>{remoteLog?.content || t("settings.mcp.log.empty")}</pre>
           </section>
 
           <div className="mcp-remote-token-line">
             <label className="mcp-remote-token-field">
-              <span>访问 token</span>
+              <span>{t("settings.mcp.token.title")}</span>
               <input
                 className="settings-input"
                 value={remoteTokenDraft}
-                placeholder={settings.remote_token_saved ? "重置后可显示明文" : "自动生成或输入自定义 token"}
+                placeholder={settings.remote_token_saved ? t("settings.mcp.token.revealPlaceholder") : t("settings.mcp.token.generatePlaceholder")}
                 disabled={loading || saving || !desktopRuntime}
                 onBlur={() => void saveRemoteToken()}
                 onChange={(event) => setRemoteTokenDraft(event.currentTarget.value)}
@@ -1555,10 +1545,10 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
               />
               <small>
                 {remoteToken
-                  ? `已保存${settings.remote_token_preview ? `（${settings.remote_token_preview}）` : ""}，配置 JSON 已自动填充`
+                  ? t("settings.mcp.token.saved", { preview: settings.remote_token_preview ? ` (${settings.remote_token_preview})` : "" })
                   : settings.remote_token_saved
-                  ? "旧 token 未保存明文，重置后会自动填充配置 JSON"
-                  : "开启远程服务时自动生成并填充配置 JSON"}
+                  ? t("settings.mcp.token.legacy")
+                  : t("settings.mcp.token.auto")}
               </small>
             </label>
             <div>
@@ -1573,7 +1563,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
                 ) : (
                   <KeyRound className="ui-icon" aria-hidden="true" />
                 )}
-                <span>重置 token</span>
+                <span>{t("settings.mcp.token.reset")}</span>
               </button>
               <button
                 className="settings-action-button"
@@ -1582,7 +1572,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
                 onClick={() => void copyText(remoteToken || "", setTokenCopied)}
               >
                 <Copy className="ui-icon" aria-hidden="true" />
-                <span>{tokenCopied ? "已复制" : "复制 token"}</span>
+                <span>{tokenCopied ? t("settings.mcp.copied") : t("settings.mcp.token.copy")}</span>
               </button>
             </div>
           </div>
@@ -1598,7 +1588,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
           <div
             className="settings-segmented mcp-config-tabs"
             role="tablist"
-            aria-label="MCP client 配置"
+            aria-label={t("settings.mcp.config.aria")}
           >
             {configTabs.map((tab) => (
               <button
@@ -1626,7 +1616,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
             onClick={() => void copyText(activeConfig.snippet, activeConfig.setCopied)}
           >
             <Check className="ui-icon" aria-hidden="true" />
-            <span>{activeConfig.copied ? "已复制" : "复制配置"}</span>
+            <span>{activeConfig.copied ? t("settings.mcp.copied") : t("settings.mcp.config.copy")}</span>
           </button>
           <pre
             id={`mcp-config-panel-${activeConfig.id}`}
@@ -1638,7 +1628,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
         </div>
 
         {!desktopRuntime ? (
-          <p className="settings-note">浏览器预览不能保存 MCP 设置，请在桌面端操作。</p>
+          <p className="settings-note">{t("settings.mcp.preview")}</p>
         ) : null}
         {error ? (
           <p className="settings-path-error" role="alert">
@@ -1650,13 +1640,13 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
       <div className="settings-panel mcp-connection-exposure-panel">
         <div className="mcp-connection-exposure-head">
           <span>
-            <strong>MCP 可用连接</strong>
+            <strong>{t("settings.mcp.connections.title")}</strong>
             <small>
               {connectionExposureSearchActive
-                ? `匹配 ${filteredConnections.length.toString()} / ${sshConnections.length.toString()}，已开放 ${exposedConnectionIds.length.toString()} 个 SSH 连接`
+                ? t("settings.mcp.connections.searchSummary", { matched: filteredConnections.length, total: sshConnections.length, exposed: exposedConnectionIds.length })
                 : settings.connection_exposure_mode === "all"
-                ? `默认开放全部 ${sshConnections.length.toString()} 个 SSH 连接`
-                : `已开放 ${exposedConnectionIds.length.toString()} / ${sshConnections.length.toString()} 个 SSH 连接`}
+                ? t("settings.mcp.connections.allSummary", { total: sshConnections.length })
+                : t("settings.mcp.connections.customSummary", { exposed: exposedConnectionIds.length, total: sshConnections.length })}
             </small>
           </span>
           <div>
@@ -1666,7 +1656,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
               disabled={connectionExposureBatchDisabled}
               onClick={() => setAllConnectionExposure(true)}
             >
-              {connectionExposureSearchActive ? "打开匹配" : "全部打开"}
+              {connectionExposureSearchActive ? t("settings.mcp.connections.openMatched") : t("settings.mcp.connections.openAll")}
             </button>
             <button
               className="settings-action-button"
@@ -1674,7 +1664,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
               disabled={connectionExposureBatchDisabled}
               onClick={() => setAllConnectionExposure(false)}
             >
-              {connectionExposureSearchActive ? "关闭匹配" : "全部关闭"}
+              {connectionExposureSearchActive ? t("settings.mcp.connections.closeMatched") : t("settings.mcp.connections.closeAll")}
             </button>
           </div>
         </div>
@@ -1684,17 +1674,17 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
             <input
               type="search"
               value={connectionExposureQuery}
-              placeholder="搜索连接名、主机、用户或分组"
-              aria-label="搜索 MCP 可用连接"
+              placeholder={t("settings.mcp.connections.searchPlaceholder")}
+              aria-label={t("settings.mcp.connections.searchAria")}
               onChange={(event) => setConnectionExposureQuery(event.currentTarget.value)}
             />
           </label>
         </div>
         <div className="mcp-connection-exposure-list">
           {sshConnections.length === 0 ? (
-            <p className="settings-note">还没有可供 MCP 使用的 SSH 连接。</p>
+            <p className="settings-note">{t("settings.mcp.connections.empty")}</p>
           ) : filteredConnections.length === 0 ? (
-            <p className="settings-note">没有匹配的连接。</p>
+            <p className="settings-note">{t("settings.mcp.connections.noMatch")}</p>
           ) : (
             filteredConnections.map((connection) => {
               const exposed = exposedConnectionIdSet.has(connection.id);
@@ -1709,7 +1699,7 @@ function McpSettingsSection({ connections }: { connections: ConnectionProfile[] 
                   <SettingsToggle
                     checked={exposed}
                     disabled={connectionExposureDisabled}
-                    label={`${connection.name} MCP 暴露`}
+                    label={t("settings.mcp.connections.toggle", { name: connection.name })}
                     onChange={(nextExposed) =>
                       setConnectionExposure(connection.id, nextExposed)
                     }
@@ -1741,6 +1731,7 @@ function SecuritySettingsSection({
   onUnlockSecuritySettings: (masterPassword: string) => Promise<boolean>;
   onUpdate: (update: Partial<SecuritySettings>) => void;
 }) {
+  const { t } = useI18n();
   const [enabling, setEnabling] = useState(false);
   const [settingsUnlocked, setSettingsUnlocked] = useState(false);
   const [masterPassword, setMasterPassword] = useState("");
@@ -1763,11 +1754,11 @@ function SecuritySettingsSection({
     event.preventDefault();
     const password = masterPassword.trim();
     if (!password) {
-      setLocalError("请输入安全密码。");
+      setLocalError(t("settings.security.error.passwordRequired"));
       return;
     }
     if (password !== confirmPassword.trim()) {
-      setLocalError("两次输入的安全密码不一致。");
+      setLocalError(t("settings.security.error.passwordMismatch"));
       return;
     }
 
@@ -1786,7 +1777,7 @@ function SecuritySettingsSection({
     event.preventDefault();
     const password = unlockPassword.trim();
     if (!password) {
-      setLocalError("请输入安全密码。");
+      setLocalError(t("settings.security.error.passwordRequired"));
       return;
     }
     setLocalError(null);
@@ -1801,11 +1792,11 @@ function SecuritySettingsSection({
     event.preventDefault();
     const password = nextPassword.trim();
     if (!password) {
-      setLocalError("请输入新的安全密码。");
+      setLocalError(t("settings.security.error.newPasswordRequired"));
       return;
     }
     if (password !== nextConfirmPassword.trim()) {
-      setLocalError("两次输入的安全密码不一致。");
+      setLocalError(t("settings.security.error.passwordMismatch"));
       return;
     }
     setLocalError(null);
@@ -1828,33 +1819,33 @@ function SecuritySettingsSection({
   }
 
   const autoLockOptions = [
-    { label: "不自动锁定", value: "0" },
-    { label: "5 分钟", value: "5" },
-    { label: "15 分钟", value: "15" },
-    { label: "30 分钟", value: "30" },
-    { label: "60 分钟", value: "60" },
+    { label: t("settings.security.autoLock.never"), value: "0" },
+    { label: t("settings.security.autoLock.minutes", { count: 5 }), value: "5" },
+    { label: t("settings.security.autoLock.minutes", { count: 15 }), value: "15" },
+    { label: t("settings.security.autoLock.minutes", { count: 30 }), value: "30" },
+    { label: t("settings.security.autoLock.minutes", { count: 60 }), value: "60" },
   ];
 
   return (
     <section className="settings-page-section">
       <header className="settings-section-head">
-        <h1>安全</h1>
-        <p>默认无打扰；需要更强保护时，可开启总安全密码。</p>
+        <h1>{t("settings.security.title")}</h1>
+        <p>{t("settings.security.description")}</p>
       </header>
 
       <div className="settings-panel">
         <SettingsRow
           icon={LockKeyhole}
-          title="高级安全保护"
+          title={t("settings.security.advanced.title")}
           description={
             settings.masterPasswordEnabled
-              ? "已开启。vault 使用安全密码加密，启动后必须解锁。"
-              : "默认关闭；macOS/Windows 的本机解锁 key 存入系统凭据存储，Linux 使用 0600 权限本地 key。"
+              ? t("settings.security.advanced.enabledDescription")
+              : t("settings.security.advanced.disabledDescription")
           }
         >
           <SettingsToggle
             checked={settings.masterPasswordEnabled}
-            label="高级安全保护"
+            label={t("settings.security.advanced.label")}
             onChange={(checked) => {
               if (checked) {
                 setEnabling(true);
@@ -1870,7 +1861,7 @@ function SecuritySettingsSection({
         {!settings.masterPasswordEnabled && enabling ? (
           <form className="settings-security-master-form" onSubmit={submitEnable}>
             <label className="credential-field">
-              <span>安全密码</span>
+              <span>{t("settings.security.password")}</span>
               <input
                 className="settings-input"
                 type="password"
@@ -1880,7 +1871,7 @@ function SecuritySettingsSection({
               />
             </label>
             <label className="credential-field">
-              <span>确认安全密码</span>
+              <span>{t("settings.security.passwordConfirm")}</span>
               <input
                 className="settings-input"
                 type="password"
@@ -1891,7 +1882,7 @@ function SecuritySettingsSection({
             </label>
             <div className="settings-security-master-actions">
               <button className="settings-action-button" type="submit" disabled={busy}>
-                启用
+                {t("settings.security.enable")}
               </button>
               <button
                 className="settings-action-button"
@@ -1904,7 +1895,7 @@ function SecuritySettingsSection({
                   setConfirmPassword("");
                 }}
               >
-                取消
+                {t("settings.security.cancel")}
               </button>
             </div>
           </form>
@@ -1913,7 +1904,7 @@ function SecuritySettingsSection({
         {settings.masterPasswordEnabled && !settingsUnlocked ? (
           <form className="settings-security-master-form" onSubmit={submitUnlock}>
             <label className="credential-field">
-              <span>安全密码</span>
+              <span>{t("settings.security.password")}</span>
               <input
                 className="settings-input"
                 type="password"
@@ -1924,7 +1915,7 @@ function SecuritySettingsSection({
             </label>
             <div className="settings-security-master-actions">
               <button className="settings-action-button" type="submit" disabled={busy}>
-                解锁安全设置
+                {t("settings.security.unlock")}
               </button>
             </div>
           </form>
@@ -1934,11 +1925,11 @@ function SecuritySettingsSection({
           <>
             <SettingsRow
               icon={Clock3}
-              title="闲置自动锁定"
-              description="锁定后会清除内存中的 vault 解锁状态，需要重新输入安全密码。"
+              title={t("settings.security.autoLock.title")}
+              description={t("settings.security.autoLock.description")}
             >
               <AppSelect
-                ariaLabel="闲置自动锁定"
+                ariaLabel={t("settings.security.autoLock.aria")}
                 className="settings-select"
                 value={String(settings.autoLockMinutes)}
                 options={autoLockOptions}
@@ -1950,12 +1941,12 @@ function SecuritySettingsSection({
 
             <SettingsRow
               icon={Eye}
-              title="允许查看已保存密码"
-              description="关闭后，连接编辑和账号管理不显示眼睛按钮，只能替换密码。"
+              title={t("settings.security.reveal.title")}
+              description={t("settings.security.reveal.description")}
             >
               <SettingsToggle
                 checked={settings.allowPasswordReveal}
-                label="允许查看已保存密码"
+                label={t("settings.security.reveal.label")}
                 onChange={(allowPasswordReveal) => onUpdate({ allowPasswordReveal })}
               />
             </SettingsRow>
@@ -1963,7 +1954,7 @@ function SecuritySettingsSection({
             {changingPassword ? (
               <form className="settings-security-master-form" onSubmit={submitChangePassword}>
                 <label className="credential-field">
-                  <span>新的安全密码</span>
+                  <span>{t("settings.security.newPassword")}</span>
                   <input
                     className="settings-input"
                     type="password"
@@ -1973,7 +1964,7 @@ function SecuritySettingsSection({
                   />
                 </label>
                 <label className="credential-field">
-                  <span>确认安全密码</span>
+                  <span>{t("settings.security.passwordConfirm")}</span>
                   <input
                     className="settings-input"
                     type="password"
@@ -1984,7 +1975,7 @@ function SecuritySettingsSection({
                 </label>
                 <div className="settings-security-master-actions">
                   <button className="settings-action-button" type="submit" disabled={busy}>
-                    保存新密码
+                    {t("settings.security.saveNewPassword")}
                   </button>
                   <button
                     className="settings-action-button"
@@ -1996,7 +1987,7 @@ function SecuritySettingsSection({
                       setNextConfirmPassword("");
                     }}
                   >
-                    取消
+                    {t("settings.security.cancel")}
                   </button>
                 </div>
               </form>
@@ -2008,7 +1999,7 @@ function SecuritySettingsSection({
                   disabled={busy}
                   onClick={() => setChangingPassword(true)}
                 >
-                  修改安全密码
+                  {t("settings.security.changePassword")}
                 </button>
                 <button
                   className="danger-button credential-danger-button"
@@ -2016,7 +2007,7 @@ function SecuritySettingsSection({
                   disabled={busy}
                   onClick={() => void disableMasterPassword()}
                 >
-                  关闭高级保护
+                  {t("settings.security.disable")}
                 </button>
               </div>
             )}
@@ -2024,7 +2015,7 @@ function SecuritySettingsSection({
         ) : null}
 
         <p className="settings-note">
-          密码与口令始终保存在加密 vault；高级保护关闭时仅由本机解锁 key 自动打开。开启后如果忘记安全密码，已保存的密码和口令无法恢复。
+          {t("settings.security.note")}
         </p>
 
         {localError || error ? (
@@ -2052,6 +2043,7 @@ function CredentialSettingsSection({
   onDelete: (credential: CredentialProfile) => Promise<void>;
   onSave: (input: CredentialProfileInput) => Promise<void>;
 }) {
+  const { t } = useI18n();
   const [editing, setEditing] = useState<CredentialProfile | null>(null);
   const [form, setForm] = useState<CredentialProfileInput>(emptyCredentialForm());
   const [busy, setBusy] = useState(false);
@@ -2077,7 +2069,10 @@ function CredentialSettingsSection({
       }),
     [credentials, kindFilter, query],
   );
-  const editingKindLabel = form.kind === "private_key" ? "私钥" : "密码";
+  const editingKindLabel =
+    form.kind === "private_key"
+      ? t("settings.credentials.kind.privateKeyShort")
+      : t("settings.credentials.kind.passwordShort");
 
   function startCreate(kind: ConnectionAuthKind = "password") {
     setEditing(null);
@@ -2150,7 +2145,7 @@ function CredentialSettingsSection({
         setForm((current) => ({ ...current, private_key_path: selectedPath }));
       }
     } catch (error) {
-      setFormError(error instanceof Error ? error.message : "无法打开私钥文件选择器");
+      setFormError(error instanceof Error ? error.message : t("settings.credentials.error.privateKeyPicker"));
     }
   }
 
@@ -2158,8 +2153,8 @@ function CredentialSettingsSection({
     <section className="settings-page-section credential-page-section">
       <header className="settings-section-head settings-section-head-row">
         <span>
-          <h1>账号管理</h1>
-          <p>保存可复用的登录账号（用户名 + 密码或私钥），连接时直接引用。</p>
+          <h1>{t("settings.credentials.title")}</h1>
+          <p>{t("settings.credentials.description")}</p>
         </span>
         <button
           className="repository-primary-button credential-new-button"
@@ -2167,21 +2162,21 @@ function CredentialSettingsSection({
           onClick={() => startCreate()}
         >
           <Plus className="ui-icon" aria-hidden="true" />
-          <span>新增账号</span>
+          <span>{t("settings.credentials.new")}</span>
         </button>
       </header>
 
       <div className="credential-settings-layout">
-        <section className="settings-panel credential-list-panel" aria-label="账号列表">
+        <section className="settings-panel credential-list-panel" aria-label={t("settings.credentials.listAria")}>
           <header className="credential-list-head">
             <span>
-              <strong>账号库</strong>
-              <small>{credentialSummary(credentials.length, passwordCount, privateKeyCount)}</small>
+              <strong>{t("settings.credentials.library")}</strong>
+              <small>{credentialSummary(credentials.length, passwordCount, privateKeyCount, t)}</small>
             </span>
             <button
               className="repository-icon-button"
               type="button"
-              aria-label="新增私钥账号"
+              aria-label={t("settings.credentials.newPrivateKeyAria")}
               onClick={() => startCreate("private_key")}
             >
               <FileKey className="ui-icon" aria-hidden="true" />
@@ -2193,42 +2188,42 @@ function CredentialSettingsSection({
               <Search className="ui-icon" aria-hidden="true" />
               <input
                 value={query}
-                placeholder="搜索账号"
-                aria-label="搜索账号"
+                placeholder={t("settings.credentials.searchPlaceholder")}
+                aria-label={t("settings.credentials.searchAria")}
                 onChange={(event) => setQuery(event.currentTarget.value)}
               />
             </label>
             <SegmentedControl
               value={kindFilter}
               options={[
-                { value: "all", label: "全部" },
-                { value: "password", label: "密码账号" },
-                { value: "private_key", label: "私钥账号" },
+                { value: "all", label: t("settings.credentials.filter.all") },
+                { value: "password", label: t("settings.credentials.kind.password") },
+                { value: "private_key", label: t("settings.credentials.kind.privateKey") },
               ]}
               onChange={setKindFilter}
             />
           </div>
 
           <div className="credential-list-body">
-            {loading ? <p className="settings-note">加载账号中...</p> : null}
+            {loading ? <p className="settings-note">{t("settings.credentials.loading")}</p> : null}
             {error ? <p className="form-error credential-list-error">{error}</p> : null}
             {credentials.length === 0 && !loading ? (
               <div className="credential-empty-state">
                 <ShieldCheck className="ui-icon" aria-hidden="true" />
-                <strong>还没有保存账号</strong>
-                <small>先添加一个账号（用户名 + 密码或私钥），连接配置里可以直接引用。</small>
+                <strong>{t("settings.credentials.empty.title")}</strong>
+                <small>{t("settings.credentials.empty.description")}</small>
                 <div>
                   <button type="button" onClick={() => startCreate("password")}>
-                    新建密码账号
+                    {t("settings.credentials.empty.newPassword")}
                   </button>
                   <button type="button" onClick={() => startCreate("private_key")}>
-                    新建私钥账号
+                    {t("settings.credentials.empty.newPrivateKey")}
                   </button>
                 </div>
               </div>
             ) : null}
             {credentials.length > 0 && filteredCredentials.length === 0 ? (
-              <p className="settings-note">没有匹配的账号。</p>
+              <p className="settings-note">{t("settings.credentials.noMatch")}</p>
             ) : null}
             {filteredCredentials.map((credential) => {
               const Icon = credential.kind === "private_key" ? FileKey : KeyRound;
@@ -2247,13 +2242,13 @@ function CredentialSettingsSection({
                   <span className="credential-list-copy">
                     <strong>{credential.name}</strong>
                     <small>
-                      {credential.username || "未设置用户名"}
-                      {` · ${credential.kind === "private_key" ? "私钥账号" : "密码账号"}`}
+                      {credential.username || t("settings.credentials.noUsername")}
+                      {` · ${credential.kind === "private_key" ? t("settings.credentials.kind.privateKey") : t("settings.credentials.kind.password")}`}
                       {credential.notes ? ` · ${credential.notes}` : ""}
                     </small>
                   </span>
                   <span className="credential-list-kind">
-                    {credential.kind === "private_key" ? "私钥账号" : "密码账号"}
+                    {credential.kind === "private_key" ? t("settings.credentials.kind.privateKey") : t("settings.credentials.kind.password")}
                   </span>
                 </button>
               );
@@ -2271,29 +2266,29 @@ function CredentialSettingsSection({
               )}
             </span>
             <span>
-              <strong>{editing ? "编辑账号" : `新增${editingKindLabel}账号`}</strong>
-              <small>账号包含用户名和认证材料，不包含主机、端口。</small>
+              <strong>{editing ? t("settings.credentials.edit") : t("settings.credentials.create", { kind: editingKindLabel })}</strong>
+              <small>{t("settings.credentials.formDescription")}</small>
             </span>
           </header>
 
           <div className="credential-form-body">
             <label className="credential-field credential-field-name">
-              <span>名称</span>
+              <span>{t("settings.credentials.name")}</span>
               <input
                 className="settings-input"
                 value={form.name || ""}
-                placeholder="例如：生产只读账号"
-                aria-label="账号名称"
+                placeholder={t("settings.credentials.namePlaceholder")}
+                aria-label={t("settings.credentials.nameAria")}
                 onChange={(event) => setForm({ ...form, name: event.currentTarget.value })}
               />
             </label>
             <label className="credential-field credential-field-kind">
-              <span>类型</span>
+              <span>{t("settings.credentials.type")}</span>
               <AppSelect
-                ariaLabel="账号认证类型"
+                ariaLabel={t("settings.credentials.typeAria")}
                 className="settings-select"
                 value={form.kind}
-                options={credentialKindOptions}
+                options={[{ label: t("settings.credentials.kind.password"), value: "password" }, { label: t("settings.credentials.kind.privateKey"), value: "private_key" }]}
                 onChange={(kind) => {
                   setForm(emptyCredentialForm(kind, form));
                   setShowSecret(false);
@@ -2303,27 +2298,27 @@ function CredentialSettingsSection({
             </label>
 
             <label className="credential-field credential-field-full">
-              <span>用户名</span>
+              <span>{t("settings.credentials.username")}</span>
               <input
                 className="settings-input"
                 {...usernameInputAttributes}
                 value={form.username || ""}
-                placeholder="例如：root、deploy"
-                aria-label="账号用户名"
+                placeholder={t("settings.credentials.usernamePlaceholder")}
+                aria-label={t("settings.credentials.usernameAria")}
                 onChange={(event) => setForm({ ...form, username: event.currentTarget.value })}
               />
             </label>
 
             {form.kind === "password" ? (
               <label className="credential-field credential-field-full">
-                <span>账号密码</span>
+                <span>{t("settings.credentials.password")}</span>
                 <div className="credential-secret-field">
                   <LockKeyhole className="ui-icon" aria-hidden="true" />
                   <input
                     type={showSecret ? "text" : "password"}
                     value={form.password || ""}
-                    placeholder={editing ? "已保存，留空保留" : "输入账号密码"}
-                    aria-label="账号密码"
+                    placeholder={editing ? t("settings.credentials.passwordKeep") : t("settings.credentials.passwordInput")}
+                    aria-label={t("settings.credentials.passwordAria")}
                     onChange={(event) =>
                       setForm({
                         ...form,
@@ -2336,7 +2331,7 @@ function CredentialSettingsSection({
                     <button
                       type="button"
                       disabled={busy}
-                      aria-label={showSecret ? "隐藏密码" : "显示密码"}
+                      aria-label={showSecret ? t("settings.credentials.passwordHide") : t("settings.credentials.passwordShow")}
                       onClick={() => void toggleCredentialSecretVisibility()}
                     >
                       {showSecret ? (
@@ -2351,13 +2346,13 @@ function CredentialSettingsSection({
             ) : (
               <>
                 <label className="credential-field credential-field-full">
-                  <span>账号私钥路径</span>
+                  <span>{t("settings.credentials.privateKeyPath")}</span>
                   <div className="settings-path-picker credential-private-key-picker">
                     <input
                       className="settings-input settings-path-input"
                       value={form.private_key_path || ""}
                       placeholder="~/.ssh/id_ed25519"
-                      aria-label="账号私钥路径"
+                      aria-label={t("settings.credentials.privateKeyPathAria")}
                       onChange={(event) =>
                         setForm({ ...form, private_key_path: event.currentTarget.value })
                       }
@@ -2365,23 +2360,23 @@ function CredentialSettingsSection({
                     <button
                       className="settings-action-button settings-path-button"
                       type="button"
-                      aria-label="选择账号私钥文件"
+                      aria-label={t("settings.credentials.privateKeyChooseAria")}
                       onClick={choosePrivateKeyPath}
                     >
                       <FolderOpen className="ui-icon" aria-hidden="true" />
-                      <span>选择</span>
+                      <span>{t("settings.credentials.choose")}</span>
                     </button>
                   </div>
                 </label>
                 <label className="credential-field credential-field-full">
-                  <span>账号私钥口令</span>
+                  <span>{t("settings.credentials.passphrase")}</span>
                   <div className="credential-secret-field">
                     <LockKeyhole className="ui-icon" aria-hidden="true" />
                     <input
                       type={showPassphrase ? "text" : "password"}
                       value={form.private_key_passphrase || ""}
-                      placeholder={editing ? "已保存，留空保留" : "可选"}
-                      aria-label="账号私钥口令"
+                      placeholder={editing ? t("settings.credentials.passphraseKeep") : t("settings.credentials.optional")}
+                      aria-label={t("settings.credentials.passphraseAria")}
                       onChange={(event) =>
                         setForm({
                           ...form,
@@ -2394,7 +2389,7 @@ function CredentialSettingsSection({
                       <button
                         type="button"
                         disabled={busy}
-                        aria-label={showPassphrase ? "隐藏私钥口令" : "显示私钥口令"}
+                        aria-label={showPassphrase ? t("settings.credentials.passphraseHide") : t("settings.credentials.passphraseShow")}
                         onClick={() => void toggleCredentialPassphraseVisibility()}
                       >
                         {showPassphrase ? (
@@ -2410,12 +2405,12 @@ function CredentialSettingsSection({
             )}
 
             <label className="credential-field credential-field-full">
-              <span>备注</span>
+              <span>{t("settings.credentials.notes")}</span>
               <textarea
                 className="settings-input credential-notes-input"
                 value={form.notes || ""}
-                placeholder="可选，用于本机识别和检索。"
-                aria-label="账号备注"
+                placeholder={t("settings.credentials.notesPlaceholder")}
+                aria-label={t("settings.credentials.notesAria")}
                 onChange={(event) => setForm({ ...form, notes: event.currentTarget.value })}
               />
             </label>
@@ -2433,17 +2428,17 @@ function CredentialSettingsSection({
                   onClick={() => setDeleteTarget(editing)}
                 >
                   <Trash2 className="ui-icon" aria-hidden="true" />
-                  删除
+                  {t("settings.credentials.delete")}
                 </button>
               ) : null}
             </div>
             <div>
               <button disabled={busy} type="button" onClick={() => startCreate(form.kind)}>
-                清空
+                {t("settings.credentials.clear")}
               </button>
               <button className="primary-button" disabled={busy} type="submit">
                 <ShieldCheck className="ui-icon" aria-hidden="true" />
-                保存账号
+                {t("settings.credentials.save")}
               </button>
             </div>
           </footer>
@@ -2451,14 +2446,14 @@ function CredentialSettingsSection({
       </div>
 
       <ConfirmDialog
-        confirmLabel="删除"
+        confirmLabel={t("settings.credentials.deleteConfirm")}
         description={
           deleteTarget
-            ? `确认删除账号“${deleteTarget.name}”吗？如果已有连接正在使用它，请先修改这些连接后再删除。`
+            ? t("settings.credentials.deleteDescription", { name: deleteTarget.name })
             : ""
         }
         open={Boolean(deleteTarget)}
-        title="删除账号"
+        title={t("settings.credentials.deleteTitle")}
         onConfirm={confirmDelete}
         onOpenChange={(open) => {
           if (!open) {
@@ -2546,11 +2541,15 @@ function emptyCredentialForm(
   };
 }
 
-function credentialSummary(total: number, passwordCount: number, privateKeyCount: number) {
+function credentialSummary(total: number, passwordCount: number, privateKeyCount: number, t: Translate) {
   if (total === 0) {
-    return "0 项账号";
+    return t("settings.credentials.summary.zero");
   }
-  return `${total.toString()} 项 · ${passwordCount.toString()} 密码 · ${privateKeyCount.toString()} 私钥`;
+  return t("settings.credentials.summary", {
+    total,
+    password: passwordCount,
+    privateKey: privateKeyCount,
+  });
 }
 
 function formatError(error: unknown) {
@@ -2624,20 +2623,25 @@ function providerFromAiApiFormat(apiFormat: AiApiFormat): AiProviderKind {
   return apiFormat === "anthropic" ? "claude" : "openai";
 }
 
-function formatAiAccessModeLabel(apiFormat: AiApiFormat) {
-  return apiFormat === "anthropic" ? "Claude Messages" : "OpenAI Chat Completions";
+function formatAiAccessModeLabel(apiFormat: AiApiFormat, t: Translate) {
+  return apiFormat === "anthropic"
+    ? t("settings.ai.access.anthropic")
+    : t("settings.ai.access.openai");
 }
 
-function aiConfigSummary(total: number, savedApiKeyCount: number) {
+function aiConfigSummary(total: number, savedApiKeyCount: number, t: Translate) {
   if (total === 0) {
-    return "0 项配置";
+    return t("settings.ai.summary.zero");
   }
-  return `${total.toString()} 项 · ${savedApiKeyCount.toString()} 项已存 Key`;
+  return t("settings.ai.summary", { total, saved: savedApiKeyCount });
 }
 
-function aiConfigMetaSummary(config: Pick<AiProviderConfig, "provider" | "api_format" | "model" | "endpoint">) {
+function aiConfigMetaSummary(
+  config: Pick<AiProviderConfig, "provider" | "api_format" | "model" | "endpoint">,
+  t: Translate,
+) {
   return [
-    formatAiAccessModeLabel(config.api_format),
+    formatAiAccessModeLabel(config.api_format, t),
     config.model,
     summarizeAiEndpoint(config.endpoint),
   ]
@@ -2693,31 +2697,31 @@ function BasicSettingsSection({
         onUpdateFileTransfer({ downloadRoot: selectedPath });
       }
     } catch (error) {
-      setDownloadRootError(error instanceof Error ? error.message : "无法打开目录选择器");
+      setDownloadRootError(error instanceof Error ? error.message : t("settings.downloadRoot.error"));
     }
   }
 
   return (
     <section className="settings-page-section">
       <header className="settings-section-head">
-        <h1>基础设置</h1>
-        <p>控制 MXterm 启动、连接失败和文件面板跟随行为。</p>
+        <h1>{t("settings.basic.title")}</h1>
+        <p>{t("settings.basic.description")}</p>
       </header>
 
       <div className="settings-panel settings-update-panel" id="settings-app-update">
         <SettingsRow
           icon={Download}
-          title="应用更新"
+          title={t("settings.update.title")}
           description={
             <span>
-              当前 {appUpdate.currentVersion} · {appUpdate.distributionLabel}
+              {t("settings.update.current", { version: appUpdate.currentVersion, distribution: appUpdate.distributionLabel })}
             </span>
           }
         >
           <div className="settings-update-control">
             <div className="settings-update-status" role="status">
               <strong>{appUpdate.statusLabel}</strong>
-              <small>{appUpdate.message || "通过 GitHub Release 检查新版本。"}</small>
+              <small>{appUpdate.message || t("settings.update.releaseFallback")}</small>
             </div>
             <div className="settings-update-actions">
               <button
@@ -2730,7 +2734,7 @@ function BasicSettingsSection({
                   className={`ui-icon ${appUpdate.checking ? "spin" : ""}`}
                   aria-hidden="true"
                 />
-                <span>{appUpdate.checking ? "检查中" : "立即检查"}</span>
+                <span>{appUpdate.checking ? t("settings.update.checking") : t("settings.update.checkNow")}</span>
               </button>
               <button
                 className="settings-action-button"
@@ -2743,7 +2747,7 @@ function BasicSettingsSection({
                 ) : (
                   <Download className="ui-icon" aria-hidden="true" />
                 )}
-                <span>{appUpdate.installing ? "安装中" : "安装并重启"}</span>
+                <span>{appUpdate.installing ? t("settings.update.installing") : t("settings.update.installRestart")}</span>
               </button>
               <button
                 className="settings-action-button"
@@ -2758,12 +2762,12 @@ function BasicSettingsSection({
         </SettingsRow>
         <SettingsRow
           icon={RefreshCw}
-          title="自动检查更新"
-          description="启动后静默检查新版本；不会自动下载或安装。"
+          title={t("settings.update.auto.title")}
+          description={t("settings.update.auto.description")}
         >
           <SettingsToggle
             checked={settings.autoCheckAppUpdate}
-            label="自动检查更新"
+            label={t("settings.update.auto.title")}
             onChange={(autoCheckAppUpdate) => onUpdate({ autoCheckAppUpdate })}
           />
         </SettingsRow>
@@ -2789,34 +2793,34 @@ function BasicSettingsSection({
         </SettingsRow>
         <SettingsRow
           icon={RotateCcw}
-          title="启动时恢复布局"
-          description="重新打开应用后恢复上次的工作区布局。"
+          title={t("settings.restore.title")}
+          description={t("settings.restore.description")}
         >
           <SettingsToggle
             checked={settings.restoreWorkspaceOnLaunch}
-            label="启动时恢复布局"
+            label={t("settings.restore.title")}
             onChange={(restoreWorkspaceOnLaunch) => onUpdate({ restoreWorkspaceOnLaunch })}
           />
         </SettingsRow>
         <SettingsRow
           icon={Server}
-          title="保留失败页"
-          description="连接失败时保留当前会话页，方便查看原因、重试或编辑连接。"
+          title={t("settings.keepFailed.title")}
+          description={t("settings.keepFailed.description")}
         >
           <SettingsToggle
             checked={settings.keepFailedTerminalTabs}
-            label="保留失败页"
+            label={t("settings.keepFailed.title")}
             onChange={(keepFailedTerminalTabs) => onUpdate({ keepFailedTerminalTabs })}
           />
         </SettingsRow>
         <SettingsRow
           icon={Folder}
-          title="文件面板跟随连接"
-          description="切换活动连接时，右侧文件面板跟随当前会话。"
+          title={t("settings.filePanelFollow.title")}
+          description={t("settings.filePanelFollow.description")}
         >
           <SettingsToggle
             checked={settings.filePanelFollowsActiveConnection}
-            label="文件面板跟随连接"
+            label={t("settings.filePanelFollow.title")}
             onChange={(filePanelFollowsActiveConnection) =>
               onUpdate({ filePanelFollowsActiveConnection })
             }
@@ -2824,24 +2828,24 @@ function BasicSettingsSection({
         </SettingsRow>
         <SettingsRow
           icon={Rows3}
-          title="远程文件打开方式"
-          description="控制新会话中远程文件编辑器和终端的默认布局。"
+          title={t("settings.remoteFileOpen.title")}
+          description={t("settings.remoteFileOpen.description")}
         >
           <AppSelect
-            ariaLabel="远程文件打开方式"
+            ariaLabel={t("settings.remoteFileOpen.title")}
             menuMinWidth={150}
             value={settings.remoteFileOpenMode}
             options={[
-              { label: "上下分屏", value: "split" },
-              { label: "统一 tab", value: "unified" },
+              { label: t("settings.remoteFileOpen.split"), value: "split" },
+              { label: t("settings.remoteFileOpen.unified"), value: "unified" },
             ]}
             onChange={(remoteFileOpenMode) => onUpdate({ remoteFileOpenMode })}
           />
         </SettingsRow>
         <SettingsRow
           icon={Clock3}
-          title="左侧最近连接"
-          description="限制左侧连接树“最近”分组展示数量。"
+          title={t("settings.recent.title")}
+          description={t("settings.recent.description")}
         >
           <Stepper
             value={settings.recentConnectionLimit}
@@ -2854,11 +2858,11 @@ function BasicSettingsSection({
       <div className="settings-panel">
         <SettingsRow
           icon={Download}
-          title="下载根目录"
+          title={t("settings.downloadRoot.title")}
           description={
             hasCustomDownloadRoot
-              ? "使用自定义本地根目录，可随时恢复系统默认。"
-              : "未设置时使用系统 Downloads，可选择自定义目录。"
+              ? t("settings.downloadRoot.customDescription")
+              : t("settings.downloadRoot.defaultDescription")
           }
         >
           <div className="settings-path-control">
@@ -2866,9 +2870,9 @@ function BasicSettingsSection({
               <input
                 className="settings-input settings-path-input"
                 value={fileTransferSettings.downloadRoot}
-                placeholder="使用系统 Downloads"
+                placeholder={t("settings.downloadRoot.placeholder")}
                 spellCheck={false}
-                aria-label="下载根目录"
+                aria-label={t("settings.downloadRoot.title")}
                 onChange={(event) => {
                   setDownloadRootError(null);
                   onUpdateFileTransfer({ downloadRoot: event.currentTarget.value });
@@ -2878,24 +2882,24 @@ function BasicSettingsSection({
                 className="settings-action-button settings-path-button"
                 type="button"
                 disabled={!hasTauriRuntime()}
-                title={hasTauriRuntime() ? "选择下载目录" : "桌面模式可选择目录"}
+                title={hasTauriRuntime() ? t("settings.downloadRoot.chooseTitle") : t("settings.downloadRoot.desktopTitle")}
                 onClick={() => void chooseDownloadRoot()}
               >
                 <FolderOpen className="ui-icon" aria-hidden="true" />
-                <span>选择</span>
+                <span>{t("settings.credentials.choose")}</span>
               </button>
               <button
                 className="settings-action-button settings-path-button"
                 type="button"
                 disabled={!hasCustomDownloadRoot}
-                title="恢复系统 Downloads"
+                title={t("settings.downloadRoot.resetTitle")}
                 onClick={() => {
                   setDownloadRootError(null);
                   onUpdateFileTransfer({ downloadRoot: "" });
                 }}
               >
                 <X className="ui-icon" aria-hidden="true" />
-                <span>默认</span>
+                <span>{t("settings.downloadRoot.default")}</span>
               </button>
             </div>
             {downloadRootError ? <small className="settings-path-error">{downloadRootError}</small> : null}
@@ -2903,8 +2907,8 @@ function BasicSettingsSection({
         </SettingsRow>
         <SettingsRow
           icon={Waypoints}
-          title="文件传输并发数"
-          description="同时执行的上传和下载任务数；超过后进入传输队列等待。"
+          title={t("settings.transfer.concurrent.title")}
+          description={t("settings.transfer.concurrent.description")}
         >
           <Stepper<FileTransferConcurrency>
             value={fileTransferSettings.concurrentTransfers}
@@ -2916,61 +2920,61 @@ function BasicSettingsSection({
         </SettingsRow>
         <SettingsRow
           icon={Folder}
-          title="按连接分组"
-          description="下载到 <连接名称>/<时间戳> 子目录。"
+          title={t("settings.transfer.group.title")}
+          description={t("settings.transfer.group.description")}
         >
           <SettingsToggle
             checked={fileTransferSettings.groupBySession}
-            label="按连接分组"
+            label={t("settings.transfer.group.title")}
             onChange={(groupBySession) => onUpdateFileTransfer({ groupBySession })}
           />
         </SettingsRow>
         <SettingsRow
           icon={Clock3}
-          title="时间戳目录"
-          description="每轮下载放入独立时间戳目录。"
+          title={t("settings.transfer.timestampDir.title")}
+          description={t("settings.transfer.timestampDir.description")}
         >
           <SettingsToggle
             checked={fileTransferSettings.timestampDirectory}
-            label="时间戳目录"
+            label={t("settings.transfer.timestampDir.title")}
             onChange={(timestampDirectory) => onUpdateFileTransfer({ timestampDirectory })}
           />
         </SettingsRow>
-        <SettingsRow icon={Clock3} title="时间戳格式" description="用于默认下载目录命名。">
+        <SettingsRow icon={Clock3} title={t("settings.transfer.timestampFormat.title")} description={t("settings.transfer.timestampFormat.description")}>
           <SegmentedControl<FileTransferTimestampFormat>
             value={fileTransferSettings.timestampFormat}
             options={[
-              { value: "yyyyMMddHHmm", label: "紧凑" },
-              { value: "yyyyMMdd-HHmm", label: "短横" },
-              { value: "yyyy-MM-dd-HHmm", label: "日期" },
+              { value: "yyyyMMddHHmm", label: t("settings.transfer.timestampFormat.compact") },
+              { value: "yyyyMMdd-HHmm", label: t("settings.transfer.timestampFormat.dash") },
+              { value: "yyyy-MM-dd-HHmm", label: t("settings.transfer.timestampFormat.date") },
             ]}
             onChange={(timestampFormat) => onUpdateFileTransfer({ timestampFormat })}
           />
         </SettingsRow>
-        <SettingsRow icon={Save} title="保留压缩包" description="目录上传/下载后保留中间 tar.gz。">
+        <SettingsRow icon={Save} title={t("settings.transfer.keepArchives.title")} description={t("settings.transfer.keepArchives.description")}>
           <SettingsToggle
             checked={fileTransferSettings.keepArchives}
-            label="保留压缩包"
+            label={t("settings.transfer.keepArchives.title")}
             onChange={(keepArchives) => onUpdateFileTransfer({ keepArchives })}
           />
         </SettingsRow>
-        <SettingsRow icon={Archive} title="压缩目录传输" description="上传/下载目录时打包成 tar.gz 传输，节省带宽。服务器或本机缺少 tar 时自动降级为逐文件传输。">
+        <SettingsRow icon={Archive} title={t("settings.transfer.compress.title")} description={t("settings.transfer.compress.description")}>
           <SettingsToggle
             checked={fileTransferSettings.compressDirectories}
-            label="压缩目录传输"
+            label={t("settings.transfer.compress.title")}
             onChange={(compressDirectories) =>
               onUpdateFileTransfer({ compressDirectories })
             }
           />
         </SettingsRow>
-        <SettingsRow icon={Rows3} title="同名冲突" description="上传/下载遇到同名目标时的默认策略。">
+        <SettingsRow icon={Rows3} title={t("settings.transfer.conflict.title")} description={t("settings.transfer.conflict.description")}>
           <SegmentedControl<FileTransferConflictPolicy>
             value={fileTransferSettings.conflictPolicyDefault}
             options={[
-              { value: "ask", label: "询问" },
-              { value: "rename", label: "重命名" },
-              { value: "overwrite", label: "覆盖" },
-              { value: "skip", label: "跳过" },
+              { value: "ask", label: t("settings.transfer.conflict.ask") },
+              { value: "rename", label: t("settings.transfer.conflict.rename") },
+              { value: "overwrite", label: t("settings.transfer.conflict.overwrite") },
+              { value: "skip", label: t("settings.transfer.conflict.skip") },
             ]}
             onChange={(conflictPolicyDefault) =>
               onUpdateFileTransfer({ conflictPolicyDefault })
@@ -2981,9 +2985,9 @@ function BasicSettingsSection({
 
       <ConfirmDialog
         open={appUpdate.mcpStopConfirmationOpen}
-        title="关闭 MCP 后安装更新"
-        description={`检测到 ${appUpdate.mcpStopProcessCount.toString()} 个 MCP 进程正在使用更新文件。继续会关闭这些进程，并中断其它 Agent 当前的 MCP 调用，然后安装更新并重启 MXterm。`}
-        confirmLabel="关闭并安装"
+        title={t("settings.update.mcpConfirm.title")}
+        description={t("settings.update.mcpConfirm.description", { count: appUpdate.mcpStopProcessCount })}
+        confirmLabel={t("settings.update.mcpConfirm.confirm")}
         onConfirm={appUpdate.confirmInstallAfterMcpStop}
         onOpenChange={(open) => {
           if (!open) {
@@ -3012,12 +3016,13 @@ function AppearanceSettingsSection({
   onReset: () => void;
   onUpdate: (update: Partial<AppearanceSettings>) => void;
 }) {
+  const { t } = useI18n();
   const [uiFontDraft, setUiFontDraft] = useState(settings.uiFontCustom);
   const [terminalFontDraft, setTerminalFontDraft] = useState(settings.terminalFontCustom);
   const windowMaterialDescription =
     supportedWindowMaterials.length > 1
-      ? "选择窗口背景材质；不支持的平台会自动回退。"
-      : "当前平台仅支持默认窗口背景。";
+      ? t("settings.appearance.material.descriptionSupported")
+      : t("settings.appearance.material.descriptionDefault");
 
   useEffect(() => {
     setUiFontDraft(settings.uiFontCustom);
@@ -3057,8 +3062,8 @@ function AppearanceSettingsSection({
   return (
     <section className="settings-page-section">
       <header className="settings-section-head">
-        <h1>外观</h1>
-        <p>调整 MXterm 的主题、窗口材质、界面字体、密度和面板细节。</p>
+        <h1>{t("settings.appearance.title")}</h1>
+        <p>{t("settings.appearance.description")}</p>
       </header>
 
       <div className="appearance-preview" aria-hidden="true">
@@ -3070,14 +3075,14 @@ function AppearanceSettingsSection({
         </div>
         <div className="appearance-preview-main">
           <div className="appearance-preview-toolbar">
-            <span>MXterm 预览</span>
+            <span>{t("settings.appearance.preview")}</span>
             <i />
           </div>
           <div className="appearance-preview-workbench">
             <div className="appearance-preview-terminal">
               <code>$ ssh prod-core</code>
               <code>connected to 10.0.2.16</code>
-              <code>~/apps/mxterm $</code>
+              <code>~/apps/nexaterm $</code>
             </div>
             <div className="appearance-preview-files">
               <span>src</span>
@@ -3089,57 +3094,57 @@ function AppearanceSettingsSection({
       </div>
 
       <div className="settings-panel">
-        <SettingsRow icon={Monitor} title="主题模式" description="浅色、深色和系统主题会同步应用到整个工作区。">
+        <SettingsRow icon={Monitor} title={t("settings.appearance.theme.title")} description={t("settings.appearance.theme.description")}>
           <SegmentedControl
             value={settings.themeMode}
             options={[
-              { value: "system", label: "系统", icon: Monitor },
-              { value: "light", label: "浅色", icon: Sun },
-              { value: "dark", label: "深色", icon: Moon },
+              { value: "system", label: t("settings.appearance.theme.system"), icon: Monitor },
+              { value: "light", label: t("settings.appearance.theme.light"), icon: Sun },
+              { value: "dark", label: t("settings.appearance.theme.dark"), icon: Moon },
             ]}
             onChange={(themeMode) => onUpdate({ themeMode })}
           />
         </SettingsRow>
 
-        <SettingsRow icon={Layers} title="窗口材质" description={windowMaterialDescription}>
+        <SettingsRow icon={Layers} title={t("settings.appearance.material.title")} description={windowMaterialDescription}>
           <SegmentedControl<WindowMaterialMode>
             value={effectiveWindowMaterial}
             options={supportedWindowMaterials.map((material) => ({
               value: material,
-              label: getWindowMaterialLabel(material),
+              label: material === "auto" ? t("settings.appearance.material.auto") : getWindowMaterialLabel(material),
             }))}
             onChange={(windowMaterial) => onUpdate({ windowMaterial })}
           />
         </SettingsRow>
 
-        <SettingsRow icon={Palette} title="强调色" description="用于选中态、关键按钮和焦点高亮。">
+        <SettingsRow icon={Palette} title={t("settings.appearance.accent.title")} description={t("settings.appearance.accent.description")}>
           <div className="settings-accent-picker">
             {accentColorPresets.map((preset) => (
               <button
                 className={settings.accentColor === preset.value ? "active" : ""}
                 key={preset.value}
                 type="button"
-                aria-label={`选择${preset.label}色`}
-                title={preset.label}
+                aria-label={t("settings.appearance.accent.chooseAria", { name: appearanceAccentLabel(preset.value, t) })}
+                title={appearanceAccentLabel(preset.value, t)}
                 onClick={() => onUpdate({ accentColor: preset.value })}
               >
                 <span
                   className="settings-accent-swatch"
                   style={{ "--settings-accent-swatch": preset.light } as CSSProperties}
                 />
-                <span>{preset.label}</span>
+                <span>{appearanceAccentLabel(preset.value, t)}</span>
               </button>
             ))}
             <label
               className={`settings-accent-custom ${
                 settings.accentColor === "custom" ? "active" : ""
               }`}
-              title="自定义强调色"
+              title={t("settings.appearance.accent.customTitle")}
             >
               <input
                 type="color"
                 value={normalizeHexColor(accentDraft, defaultSettings.appearance.accentColorCustom)}
-                aria-label="选择自定义强调色"
+                aria-label={t("settings.appearance.accent.customAria")}
                 onChange={(event) => commitCustomAccent(event.target.value)}
               />
               <span
@@ -3151,14 +3156,14 @@ function AppearanceSettingsSection({
                   ),
                 } as CSSProperties}
               />
-              <span>自选</span>
+              <span>{t("settings.appearance.accent.custom")}</span>
             </label>
             <input
               className="settings-input settings-accent-value-input"
               value={accentDraft}
               maxLength={7}
               spellCheck={false}
-              aria-label="自定义强调色值"
+              aria-label={t("settings.appearance.accent.valueAria")}
               onFocus={() => {
                 if (settings.accentColor !== "custom") {
                   onUpdate({ accentColor: "custom" as AccentColor });
@@ -3176,32 +3181,32 @@ function AppearanceSettingsSection({
           </div>
         </SettingsRow>
 
-        <SettingsRow icon={Rows3} title="界面密度" description="影响连接树、文件树、工具栏和设置行距。">
+        <SettingsRow icon={Rows3} title={t("settings.appearance.density.title")} description={t("settings.appearance.density.description")}>
           <SegmentedControl
             value={settings.density}
             options={[
-              { value: "comfortable", label: "舒适" },
-              { value: "compact", label: "紧凑" },
+              { value: "comfortable", label: t("settings.appearance.density.comfortable") },
+              { value: "compact", label: t("settings.appearance.density.compact") },
             ]}
             onChange={(density) => onUpdate({ density })}
           />
         </SettingsRow>
 
-        <SettingsRow icon={Type} title="界面字体" description="用于菜单、侧栏、按钮和设置页。">
+        <SettingsRow icon={Type} title={t("settings.appearance.uiFont.title")} description={t("settings.appearance.uiFont.description")}>
           <FontFamilyControl<UiFontPreset>
             modeValue={settings.uiFontMode}
             onModeChange={(uiFontMode) => onUpdate({ uiFontMode })}
             presetValue={settings.uiFontPreset}
-            presetOptions={uiFontPresets}
+            presetOptions={uiFontPresets.map((preset) => ({ ...preset, label: appearanceFontPresetLabel(preset.value, preset.label, t) }))}
             onPresetChange={(uiFontPreset) => onUpdate({ uiFontPreset })}
             customValue={uiFontDraft}
-            customPlaceholder={'例如 "Microsoft YaHei UI", "Segoe UI", sans-serif'}
+            customPlaceholder={t("settings.appearance.uiFont.placeholder")}
             onCustomChange={setUiFontDraft}
             onCustomCommit={() => commitUiFontFamily(uiFontDraft)}
           />
         </SettingsRow>
 
-        <SettingsRow icon={Terminal} title="终端字体" description="用于 xterm 会话、预览和等宽文本。">
+        <SettingsRow icon={Terminal} title={t("settings.appearance.terminalFont.title")} description={t("settings.appearance.terminalFont.description")}>
           <FontFamilyControl<TerminalFontPreset>
             modeValue={settings.terminalFontMode}
             onModeChange={(terminalFontMode) => onUpdate({ terminalFontMode })}
@@ -3209,13 +3214,13 @@ function AppearanceSettingsSection({
             presetOptions={terminalFontPresets}
             onPresetChange={(terminalFontPreset) => onUpdate({ terminalFontPreset })}
             customValue={terminalFontDraft}
-            customPlaceholder={'例如 "JetBrains Mono", "Cascadia Mono", Consolas, monospace'}
+            customPlaceholder={t("settings.appearance.terminalFont.placeholder")}
             onCustomChange={setTerminalFontDraft}
             onCustomCommit={() => commitTerminalFontFamily(terminalFontDraft)}
           />
         </SettingsRow>
 
-        <SettingsRow icon={Type} title="UI 字号" description="调整菜单、侧栏、按钮和设置页文字。">
+        <SettingsRow icon={Type} title={t("settings.appearance.uiFontSize.title")} description={t("settings.appearance.uiFontSize.description")}>
           <Stepper
             value={settings.uiFontSize}
             values={[12, 13, 14, 15] as const}
@@ -3223,7 +3228,7 @@ function AppearanceSettingsSection({
           />
         </SettingsRow>
 
-        <SettingsRow icon={Terminal} title="终端字号" description="调整 xterm 会话字号并自动重新适配尺寸。">
+        <SettingsRow icon={Terminal} title={t("settings.appearance.terminalFontSize.title")} description={t("settings.appearance.terminalFontSize.description")}>
           <Stepper
             value={settings.terminalFontSize}
             values={[12, 13, 14, 15, 16] as const}
@@ -3231,30 +3236,30 @@ function AppearanceSettingsSection({
           />
         </SettingsRow>
 
-        <SettingsRow icon={PanelLeft} title="图标大小" description="影响连接树、文件树和工具按钮图标。">
+        <SettingsRow icon={PanelLeft} title={t("settings.appearance.iconSize.title")} description={t("settings.appearance.iconSize.description")}>
           <SegmentedControl
             value={settings.iconSize}
             options={[
-              { value: "small", label: "小" },
-              { value: "medium", label: "中" },
-              { value: "large", label: "大" },
+              { value: "small", label: t("settings.appearance.iconSize.small") },
+              { value: "medium", label: t("settings.appearance.iconSize.medium") },
+              { value: "large", label: t("settings.appearance.iconSize.large") },
             ]}
             onChange={(iconSize) => onUpdate({ iconSize })}
           />
         </SettingsRow>
 
-        <SettingsRow icon={PanelLeft} title="记住面板宽度" description="保留左侧连接仓库和右侧文件面板拖拽宽度。">
+        <SettingsRow icon={PanelLeft} title={t("settings.appearance.rememberPaneWidths.title")} description={t("settings.appearance.rememberPaneWidths.description")}>
           <SettingsToggle
             checked={settings.rememberPaneWidths}
-            label="记住面板宽度"
+            label={t("settings.appearance.rememberPaneWidths.label")}
             onChange={(rememberPaneWidths) => onUpdate({ rememberPaneWidths })}
           />
         </SettingsRow>
 
-        <SettingsRow icon={RotateCcw} title="恢复默认外观" description="恢复外观、终端显示和终端配色默认值。">
+        <SettingsRow icon={RotateCcw} title={t("settings.appearance.reset.title")} description={t("settings.appearance.reset.description")}>
           <button className="settings-action-button" type="button" onClick={onReset}>
             <RotateCcw className="ui-icon" aria-hidden="true" />
-            <span>重置</span>
+            <span>{t("settings.appearance.reset")}</span>
           </button>
         </SettingsRow>
       </div>
@@ -3283,14 +3288,15 @@ function FontFamilyControl<TPreset extends string>({
   onCustomChange: (value: string) => void;
   onCustomCommit: () => void;
 }) {
+  const { t } = useI18n();
   return (
     <div className="settings-font-control">
       <div className="settings-font-main">
         <SegmentedControl
           value={modeValue}
           options={[
-            { value: "preset", label: "预设" },
-            { value: "custom", label: "自定义" },
+            { value: "preset", label: t("settings.appearance.fontMode.preset") },
+            { value: "custom", label: t("settings.appearance.fontMode.custom") },
           ]}
           onChange={onModeChange}
         />
@@ -3299,8 +3305,8 @@ function FontFamilyControl<TPreset extends string>({
             className="settings-input settings-font-custom-input"
             value={customValue}
             placeholder={customPlaceholder}
-            title="支持直接输入字体名，或输入完整 font-family 栈。"
-            aria-label="自定义字体"
+            title={t("settings.appearance.fontCustomTitle")}
+            aria-label={t("settings.appearance.fontCustomAria")}
             spellCheck={false}
             onChange={(event) => onCustomChange(event.currentTarget.value)}
             onBlur={onCustomCommit}
@@ -3313,7 +3319,7 @@ function FontFamilyControl<TPreset extends string>({
           />
         ) : (
           <AppSelect
-            ariaLabel="选择字体预设"
+            ariaLabel={t("settings.appearance.fontPresetAria")}
             className="settings-select"
             value={presetValue}
             options={presetOptions.map((preset) => ({
@@ -3326,6 +3332,20 @@ function FontFamilyControl<TPreset extends string>({
       </div>
     </div>
   );
+}
+
+function appearanceAccentLabel(value: string, t: Translate) {
+  if (value === "blue") return t("settings.appearance.accent.blue");
+  if (value === "emerald") return t("settings.appearance.accent.emerald");
+  if (value === "amber") return t("settings.appearance.accent.amber");
+  if (value === "rose") return t("settings.appearance.accent.rose");
+  return t("settings.appearance.accent.violet");
+}
+
+function appearanceFontPresetLabel(value: string, fallback: string, t: Translate) {
+  if (value === "system") return t("settings.appearance.uiFont.systemDefault");
+  if (value === "microsoft-yahei") return t("settings.appearance.uiFont.microsoftYahei");
+  return fallback;
 }
 
 function LocalTerminalSettingsSection({
@@ -3347,6 +3367,7 @@ function LocalTerminalSettingsSection({
   onUpdateBasic: (update: Partial<BasicSettings>) => void;
   onUpdateCommand: (update: Partial<CommandSettings>) => void;
 }) {
+  const { t } = useI18n();
   const [detectedProfiles, setDetectedProfiles] = useState<LocalTerminalProfile[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -3370,14 +3391,14 @@ function LocalTerminalSettingsSection({
       try {
         const profiles = hasTauriRuntime()
           ? await localTerminalListProfiles()
-          : previewSettingsLocalTerminalProfiles();
+          : previewSettingsLocalTerminalProfiles(t);
         if (!disposed) {
           setDetectedProfiles(profiles);
         }
       } catch (nextError) {
         if (!disposed) {
           setError(formatError(nextError));
-          setDetectedProfiles(previewSettingsLocalTerminalProfiles());
+          setDetectedProfiles(previewSettingsLocalTerminalProfiles(t));
         }
       } finally {
         if (!disposed) {
@@ -3419,7 +3440,7 @@ function LocalTerminalSettingsSection({
   function saveCustomProfile() {
     const normalized = normalizeLocalTerminalProfileInput(form);
     if (!normalized || !normalized.name || !normalized.command) {
-      setFormError("名称、类型和命令不能为空。");
+      setFormError(t("settings.localTerminal.error.required"));
       return;
     }
 
@@ -3455,12 +3476,12 @@ function LocalTerminalSettingsSection({
     <section className="settings-page-section">
       <header className="settings-section-head settings-section-head-row">
         <span>
-          <h1>终端设置</h1>
-          <p>统一管理终端粘贴行为、光标、默认本地 Shell 和 profile。</p>
+          <h1>{t("settings.localTerminal.title")}</h1>
+          <p>{t("settings.localTerminal.description")}</p>
         </span>
         <button className="repository-primary-button" type="button" onClick={resetForm}>
           <Plus className="ui-icon" aria-hidden="true" />
-          <span>新增终端 profile</span>
+          <span>{t("settings.localTerminal.addProfile")}</span>
         </button>
       </header>
 
@@ -3468,11 +3489,11 @@ function LocalTerminalSettingsSection({
         <SettingsRow
           className="settings-row-compact settings-local-terminal-default-row"
           icon={HardDrive}
-          title="默认终端"
+          title={t("settings.localTerminal.default.title")}
         >
           <div className="settings-local-terminal-default">
             <AppSelect
-              ariaLabel="默认终端"
+              ariaLabel={t("settings.localTerminal.default.aria")}
               className="settings-select"
               options={profileOptions.map((profile) => ({
                 label: (
@@ -3483,7 +3504,7 @@ function LocalTerminalSettingsSection({
                 ),
                 value: profile.id || `custom-fallback-${profile.name}`,
               }))}
-              placeholder={loading ? "探测中" : "选择默认终端"}
+              placeholder={loading ? t("settings.localTerminal.default.detecting") : t("settings.localTerminal.default.choose")}
               value={effectiveDefaultOption?.id || ""}
               onChange={(defaultProfileId) => onUpdate({ defaultProfileId })}
             />
@@ -3491,45 +3512,45 @@ function LocalTerminalSettingsSection({
         </SettingsRow>
         <SettingsRow
           icon={Terminal}
-          title="自动打开上次终端"
-          description="启动时回到上次活动连接和终端标签。"
+          title={t("settings.localTerminal.reopen.title")}
+          description={t("settings.localTerminal.reopen.description")}
         >
           <SettingsToggle
             checked={basicSettings.reopenLastTerminal}
-            label="自动打开上次终端"
+            label={t("settings.localTerminal.reopen.label")}
             onChange={(reopenLastTerminal) => onUpdateBasic({ reopenLastTerminal })}
           />
         </SettingsRow>
         <SettingsRow
           icon={RotateCcw}
-          title="恢复本地工作区"
-          description="后续预留：启动时恢复上次本地终端工作区。"
+          title={t("settings.localTerminal.restore.title")}
+          description={t("settings.localTerminal.restore.description")}
         >
           <SettingsToggle
             checked={settings.reopenLastLocalWorkspace}
-            label="恢复本地工作区"
+            label={t("settings.localTerminal.restore.label")}
             onChange={(reopenLastLocalWorkspace) => onUpdate({ reopenLastLocalWorkspace })}
           />
         </SettingsRow>
         <SettingsRow
           icon={Keyboard}
-          title="Ctrl+V 粘贴到终端"
-          description="开启后终端聚焦时 Ctrl+V 直接粘贴剪贴板内容；关闭后该按键交给 shell、Vim 或其他终端程序处理。"
+          title={t("settings.localTerminal.ctrlV.title")}
+          description={t("settings.localTerminal.ctrlV.description")}
         >
           <SettingsToggle
             checked={settings.ctrlVPaste}
-            label="Ctrl+V 粘贴到终端"
+            label={t("settings.localTerminal.ctrlV.label")}
             onChange={(ctrlVPaste) => onUpdate({ ctrlVPaste })}
           />
         </SettingsRow>
         <SettingsRow
           icon={Terminal}
-          title="记录终端输入"
-          description="开启后，将普通回车命令保存到历史；控制序列、Tab 和疑似敏感输入会丢弃。"
+          title={t("settings.localTerminal.history.title")}
+          description={t("settings.localTerminal.history.description")}
         >
           <SettingsToggle
             checked={commandSettings.recordTerminalInputHistory}
-            label="记录终端输入"
+            label={t("settings.localTerminal.history.label")}
             onChange={(recordTerminalInputHistory) =>
               onUpdateCommand({ recordTerminalInputHistory })
             }
@@ -3538,21 +3559,21 @@ function LocalTerminalSettingsSection({
       </div>
 
       <div className="settings-panel">
-        <SettingsRow icon={Terminal} title="光标样式" description="控制终端光标外观，已打开会话会即时更新。">
+        <SettingsRow icon={Terminal} title={t("settings.localTerminal.cursor.title")} description={t("settings.localTerminal.cursor.description")}>
           <SegmentedControl<TerminalCursorStyle>
             value={appearanceSettings.cursorStyle}
             options={[
-              { value: "block", label: "块" },
-              { value: "bar", label: "竖线" },
-              { value: "underline", label: "下划线" },
+              { value: "block", label: t("settings.localTerminal.cursor.block") },
+              { value: "bar", label: t("settings.localTerminal.cursor.bar") },
+              { value: "underline", label: t("settings.localTerminal.cursor.underline") },
             ]}
             onChange={(cursorStyle) => onUpdateAppearance({ cursorStyle })}
           />
         </SettingsRow>
-        <SettingsRow icon={Terminal} title="光标闪烁" description="关闭后使用静态光标，适合长时间阅读或录屏。">
+        <SettingsRow icon={Terminal} title={t("settings.localTerminal.blink.title")} description={t("settings.localTerminal.blink.description")}>
           <SettingsToggle
             checked={appearanceSettings.cursorBlink}
-            label="启用光标闪烁"
+            label={t("settings.localTerminal.blink.label")}
             onChange={(cursorBlink) => onUpdateAppearance({ cursorBlink })}
           />
         </SettingsRow>
@@ -3561,8 +3582,8 @@ function LocalTerminalSettingsSection({
       <div className="settings-panel local-terminal-detected-panel">
         <header className="local-terminal-panel-head">
           <span>
-            <strong>自动探测</strong>
-            <small>{loading ? "探测中..." : `${detectedProfiles.length.toString()} 项`}</small>
+            <strong>{t("settings.localTerminal.detected.title")}</strong>
+            <small>{loading ? t("settings.localTerminal.detected.loading") : t("settings.localTerminal.count", { count: detectedProfiles.length })}</small>
           </span>
           {error ? <small className="form-error">{error}</small> : null}
         </header>
@@ -3585,7 +3606,7 @@ function LocalTerminalSettingsSection({
                   type="button"
                   onClick={() => toggleHiddenProfile(profile.id, !hidden)}
                 >
-                  {hidden ? "显示" : "隐藏"}
+                  {hidden ? t("settings.localTerminal.show") : t("settings.localTerminal.hide")}
                 </button>
               </div>
             );
@@ -3597,13 +3618,13 @@ function LocalTerminalSettingsSection({
         <section className="settings-panel local-terminal-custom-list">
           <header className="local-terminal-panel-head">
             <span>
-              <strong>自定义 profile</strong>
-              <small>{customProfiles.length.toString()} 项</small>
+              <strong>{t("settings.localTerminal.custom.title")}</strong>
+              <small>{t("settings.localTerminal.count", { count: customProfiles.length })}</small>
             </span>
           </header>
           <div className="local-terminal-profile-list">
             {customProfiles.length === 0 ? (
-              <p className="settings-note">还没有自定义 profile。</p>
+              <p className="settings-note">{t("settings.localTerminal.custom.empty")}</p>
             ) : (
               customProfiles.map((profile, index) => (
                 <div className="local-terminal-profile-card" key={profile.id || `custom-${index.toString()}`}>
@@ -3622,14 +3643,14 @@ function LocalTerminalSettingsSection({
                       type="button"
                       onClick={() => setEditingProfile(profile)}
                     >
-                      编辑
+                      {t("settings.localTerminal.edit")}
                     </button>
                     <button
                       className="settings-action-button danger-button"
                       type="button"
                       onClick={() => deleteCustomProfile(profile.id)}
                     >
-                      删除
+                      {t("settings.credentials.delete")}
                     </button>
                   </div>
                 </div>
@@ -3641,13 +3662,13 @@ function LocalTerminalSettingsSection({
         <section className="settings-panel local-terminal-custom-form">
           <header className="local-terminal-panel-head">
             <span>
-              <strong>{editingProfile ? "编辑自定义 profile" : "新增自定义 profile"}</strong>
-              <small>用于补充 Git Bash、WSL 包装脚本或团队约定命令。</small>
+              <strong>{editingProfile ? t("settings.localTerminal.form.edit") : t("settings.localTerminal.form.new")}</strong>
+              <small>{t("settings.localTerminal.form.description")}</small>
             </span>
           </header>
           <div className="local-terminal-form-grid">
             <label>
-              <span>名称</span>
+              <span>{t("settings.credentials.name")}</span>
               <input
                 className="settings-input"
                 value={form.name}
@@ -3655,29 +3676,29 @@ function LocalTerminalSettingsSection({
               />
             </label>
             <label>
-              <span>类型</span>
+              <span>{t("settings.credentials.type")}</span>
               <input
                 className="settings-input"
                 value={form.kind}
-                placeholder="例如 powershell、wsl、custom"
+                placeholder={t("settings.localTerminal.form.typePlaceholder")}
                 onChange={(event) => setForm({ ...form, kind: event.currentTarget.value })}
               />
             </label>
             <label className="local-terminal-form-span">
-              <span>命令</span>
+              <span>{t("settings.localTerminal.form.command")}</span>
               <input
                 className="settings-input"
                 value={form.command}
-                placeholder="例如 C:\\Program Files\\PowerShell\\7\\pwsh.exe"
+                placeholder={t("settings.localTerminal.form.commandPlaceholder")}
                 onChange={(event) => setForm({ ...form, command: event.currentTarget.value })}
               />
             </label>
             <label className="local-terminal-form-span">
-              <span>参数</span>
+              <span>{t("settings.localTerminal.form.args")}</span>
               <input
                 className="settings-input"
                 value={form.args.join(" ")}
-                placeholder='例如 -NoLogo -NoProfile'
+                placeholder={t("settings.localTerminal.form.argsPlaceholder")}
                 onChange={(event) =>
                   setForm({
                     ...form,
@@ -3690,11 +3711,11 @@ function LocalTerminalSettingsSection({
               />
             </label>
             <label className="local-terminal-form-span">
-              <span>启动目录</span>
+              <span>{t("settings.localTerminal.form.cwd")}</span>
               <input
                 className="settings-input"
                 value={form.cwd || ""}
-                placeholder="可选"
+                placeholder={t("settings.localTerminal.form.optional")}
                 onChange={(event) => setForm({ ...form, cwd: event.currentTarget.value })}
               />
             </label>
@@ -3704,10 +3725,10 @@ function LocalTerminalSettingsSection({
             <div />
             <div>
               <button type="button" onClick={resetForm}>
-                清空
+                {t("settings.credentials.clear")}
               </button>
               <button className="primary-button" type="button" onClick={saveCustomProfile}>
-                保存 profile
+                {t("settings.localTerminal.form.save")}
               </button>
             </div>
           </footer>
@@ -3734,7 +3755,7 @@ function emptyLocalTerminalProfile(): LocalTerminalProfileInput {
   };
 }
 
-function previewSettingsLocalTerminalProfiles(): LocalTerminalProfile[] {
+function previewSettingsLocalTerminalProfiles(t: Translate): LocalTerminalProfile[] {
   return [
     {
       args: ["-NoLogo", "-NoProfile"],
@@ -3760,7 +3781,7 @@ function previewSettingsLocalTerminalProfiles(): LocalTerminalProfile[] {
       icon: "terminal-cmd",
       id: "cmd",
       kind: "cmd",
-      name: "命令提示符",
+      name: t("settings.localTerminal.preview.cmd"),
       platform: "windows",
       source: "detected",
     },
@@ -3774,6 +3795,7 @@ function TerminalThemeSettingsSection({
   settings: TerminalThemeSettings;
   onUpdate: (update: Partial<TerminalThemeSettings>) => void;
 }) {
+  const { t } = useI18n();
   const [terminalSchemeQuery, setTerminalSchemeQuery] = useState("");
   const [terminalSchemeTone, setTerminalSchemeTone] =
     useState<"all" | TerminalColorSchemeTone>("all");
@@ -3871,13 +3893,13 @@ function TerminalThemeSettingsSection({
     <section className="settings-page-section terminal-theme-section">
       <header className="settings-section-head settings-section-head-row">
         <span>
-          <h1>终端配色</h1>
-          <p>选择终端 surface 的 ANSI 配色方案，不改变整个应用主题。</p>
+          <h1>{t("settings.terminalTheme.title")}</h1>
+          <p>{t("settings.terminalTheme.description")}</p>
         </span>
-        <Tooltip label="自定义方案后续接入">
+        <Tooltip label={t("settings.terminalTheme.customLater")}>
           <button className="settings-action-button" type="button" disabled>
             <Plus className="ui-icon" aria-hidden="true" />
-            <span>新增</span>
+            <span>{t("settings.terminalTheme.add")}</span>
           </button>
         </Tooltip>
       </header>
@@ -3889,17 +3911,17 @@ function TerminalThemeSettingsSection({
             <input
               type="search"
               value={terminalSchemeQuery}
-              aria-label="搜索终端配色方案"
-              placeholder="搜索配色方案"
+              aria-label={t("settings.terminalTheme.searchAria")}
+              placeholder={t("settings.terminalTheme.searchPlaceholder")}
               onChange={(event) => setTerminalSchemeQuery(event.currentTarget.value)}
             />
           </label>
           <SegmentedControl
             value={terminalSchemeTone}
             options={[
-              { value: "all", label: "全部" },
-              { value: "dark", label: "暗色", icon: Moon },
-              { value: "light", label: "亮色", icon: Sun },
+              { value: "all", label: t("settings.credentials.filter.all") },
+              { value: "dark", label: t("settings.terminalTheme.dark"), icon: Moon },
+              { value: "light", label: t("settings.terminalTheme.light"), icon: Sun },
             ]}
             onChange={setTerminalSchemeTone}
           />
@@ -3907,18 +3929,18 @@ function TerminalThemeSettingsSection({
         <span className="terminal-scheme-count">
           {schemesReady
             ? `${filteredTerminalColorSchemes.length.toString()} / ${allTerminalColorSchemes.length.toString()}`
-            : "加载中"}
+            : t("settings.terminalTheme.loading")}
         </span>
       </div>
 
-      <div ref={schemeListRef} className="terminal-scheme-list" aria-label="终端配色方案">
+      <div ref={schemeListRef} className="terminal-scheme-list" aria-label={t("settings.terminalTheme.listAria")}>
         {schemesLoadError ? (
           <div className="terminal-scheme-empty" role="status">
-            配色方案加载失败：{schemesLoadError}
+            {t("settings.terminalTheme.loadError", { message: schemesLoadError })}
           </div>
         ) : !schemesReady ? (
           <div className="terminal-scheme-empty" role="status">
-            正在加载配色方案...
+            {t("settings.terminalTheme.loadingSchemes")}
           </div>
         ) : filteredTerminalColorSchemes.length > 0 ? (
           <>
@@ -3965,19 +3987,19 @@ function TerminalThemeSettingsSection({
           </>
         ) : (
           <div className="terminal-scheme-empty" role="status">
-            未找到匹配的配色方案。
+            {t("settings.terminalTheme.noMatch")}
           </div>
         )}
       </div>
 
       <footer className="terminal-scheme-actions">
         <span>
-          当前方案：<strong>{selectedScheme.name}</strong>
+          {t("settings.terminalTheme.current")} <strong>{selectedScheme.name}</strong>
         </span>
         <div>
           <button className="settings-action-button" type="button" disabled>
             <Save className="ui-icon" aria-hidden="true" />
-            <span>已保存</span>
+            <span>{t("settings.terminalTheme.saved")}</span>
           </button>
           <button
             className="settings-action-button"
@@ -3985,7 +4007,7 @@ function TerminalThemeSettingsSection({
             onClick={() => onUpdate({ scheme: defaultSettings.terminalTheme.scheme })}
           >
             <Undo2 className="ui-icon" aria-hidden="true" />
-            <span>放弃更改</span>
+            <span>{t("settings.terminalTheme.discard")}</span>
           </button>
         </div>
       </footer>

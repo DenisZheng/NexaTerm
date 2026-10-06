@@ -11,6 +11,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import { useI18n } from "../../shared/i18n";
 import { Tooltip } from "../../shared/ui/Tooltip";
 import {
   clearFinishedTransfers,
@@ -27,6 +28,7 @@ import {
   transferInlineErrorText,
   transferItemSizeText,
   transferKindLabel,
+  transferStageLabel,
   transferSourcePath,
   transferTargetPath,
 } from "./remoteFileTransferUtils";
@@ -41,6 +43,7 @@ interface RemoteFileTransferPanelProps {
 }
 
 export function RemoteFileTransferPanel(props: RemoteFileTransferPanelProps) {
+  const { t } = useI18n();
   const transfers = useRemoteFileTransferStore((state) => state.items);
   const [expanded, setExpanded] = useState(false);
   const runningCount = transfers.filter((item) => item.status === "running").length;
@@ -57,18 +60,18 @@ export function RemoteFileTransferPanel(props: RemoteFileTransferPanelProps) {
   const summaryProgress = summaryTransfer ? clampTransferProgress(summaryTransfer.progress) : 0;
   const summaryProgressText = summaryTransfer
     ? `${Math.round(summaryProgress).toString()}%`
-    : "空闲";
+    : t("files.transfer.idle");
   const summaryProgressScale = summaryProgress / 100;
 
   return (
-    <section className={`transfer-panel ${expanded ? "open" : ""}`} aria-label="文件传输">
+    <section className={`transfer-panel ${expanded ? "open" : ""}`} aria-label={t("files.transfer.aria")}>
       <header className="transfer-panel-bar">
         <div className="transfer-panel-summary transfer-progress-summary">
-          <strong>传输</strong>
-          {runningCount > 0 ? <span className="transfer-chip running">{runningCount.toString()} 进行中</span> : null}
-          {queuedCount > 0 ? <span className="transfer-chip">{queuedCount.toString()} 排队</span> : null}
-          {errorCount > 0 ? <span className="transfer-chip error">{errorCount.toString()} 失败</span> : null}
-          {transfers.length === 0 ? <span className="transfer-chip">无任务</span> : null}
+          <strong>{t("files.transfer.title")}</strong>
+          {runningCount > 0 ? <span className="transfer-chip running">{t("files.transfer.running", { count: runningCount })}</span> : null}
+          {queuedCount > 0 ? <span className="transfer-chip">{t("files.transfer.queued", { count: queuedCount })}</span> : null}
+          {errorCount > 0 ? <span className="transfer-chip error">{t("files.transfer.failed", { count: errorCount })}</span> : null}
+          {transfers.length === 0 ? <span className="transfer-chip">{t("files.transfer.none")}</span> : null}
         </div>
         <div className="transfer-progress-mini" aria-hidden="true">
           <span style={{ transform: `scaleX(${summaryProgressScale.toString()})` }} />
@@ -80,22 +83,22 @@ export function RemoteFileTransferPanel(props: RemoteFileTransferPanelProps) {
           aria-expanded={expanded}
           onClick={() => setExpanded((open) => !open)}
         >
-          {expanded ? "收起" : "展开"}
+          {expanded ? t("files.transfer.collapse") : t("files.transfer.expand")}
           <ChevronDown className="ui-icon" aria-hidden="true" />
         </button>
       </header>
 
       <div className="transfer-drawer">
         <div className="transfer-drawer-head">
-          <strong>传输队列</strong>
+          <strong>{t("files.transfer.queue")}</strong>
           <button type="button" disabled={finishedCount === 0} onClick={clearFinishedTransfers}>
-            清理完成项
+            {t("files.transfer.clearFinished")}
           </button>
         </div>
 
         <div className="transfer-list">
           {transfers.length === 0 ? (
-            <p className="file-panel-empty">上传和下载任务会显示在这里。</p>
+            <p className="file-panel-empty">{t("files.transfer.empty")}</p>
           ) : (
             transfers.map((item) => (
               <RemoteFileTransferRow
@@ -125,6 +128,7 @@ const RemoteFileTransferRow = memo(function RemoteFileTransferRow({
   onOpenLocalPath,
   onRevealLocalPath,
 }: RemoteFileTransferPanelProps & { item: RemoteFileTransferItem }) {
+  const { t } = useI18n();
   const progressValue = clampTransferProgress(item.progress);
   const progressLabel = `${Math.round(progressValue).toString()}%`;
   const progressScale = progressValue / 100;
@@ -134,17 +138,17 @@ const RemoteFileTransferRow = memo(function RemoteFileTransferRow({
   const statusText = transferDisplayStatusLabel(item);
   const fileTypeClass = transferFileTypeClass(item);
   const detailText = [
-    `状态：${statusText}`,
-    `阶段：${item.stage}`,
-    `方向：${transferDirectionLabel(item.direction)}`,
-    `类型：${transferKindLabel(item.kind)}`,
-    `进度：${progressLabel}`,
-    `大小：${sizeText}`,
-    item.speedText ? `速度：${item.speedText}` : null,
-    `创建时间：${formatTransferDetailTime(item.createdAt)}`,
-    item.error ? `错误：${item.error}` : null,
-    `来源：${transferSourcePath(item)}`,
-    `目标：${transferTargetPath(item)}`,
+    t("files.transfer.detail.status", { value: statusText }),
+    t("files.transfer.detail.stage", { value: transferStageLabel(item.stage) }),
+    t("files.transfer.detail.direction", { value: transferDirectionLabel(item.direction) }),
+    t("files.transfer.detail.type", { value: transferKindLabel(item.kind) }),
+    t("files.transfer.detail.progress", { value: progressLabel }),
+    t("files.transfer.detail.size", { value: sizeText }),
+    item.speedText ? t("files.transfer.detail.speed", { value: item.speedText }) : null,
+    t("files.transfer.detail.created", { value: formatTransferDetailTime(item.createdAt) }),
+    item.error ? t("files.transfer.detail.error", { value: item.error }) : null,
+    t("files.transfer.detail.source", { value: transferSourcePath(item) }),
+    t("files.transfer.detail.target", { value: transferTargetPath(item) }),
   ].filter(Boolean).join("\n");
 
   return (
@@ -168,7 +172,7 @@ const RemoteFileTransferRow = memo(function RemoteFileTransferRow({
         </div>
         <div className="transfer-item-meta">
           <span className="transfer-tag direction">
-            {item.direction === "upload" ? "上传" : "下载"}
+            {item.direction === "upload" ? t("files.transfer.direction.upload") : t("files.transfer.direction.download")}
           </span>
           <span className={`transfer-status-dot ${item.status}`} aria-hidden="true" />
           <span className="transfer-size-text" title={sizeText}>
@@ -184,20 +188,20 @@ const RemoteFileTransferRow = memo(function RemoteFileTransferRow({
       </div>
 
       <div className="transfer-item-actions">
-        <Tooltip label="复制路径">
+        <Tooltip label={t("files.transfer.copyPath")}>
           <button
             type="button"
-            aria-label={`复制 ${item.name} 路径`}
+            aria-label={t("files.transfer.copyPathAria", { name: item.name })}
             onClick={() => onCopyPath(item.localPath || item.remotePath)}
           >
             <Clipboard className="ui-icon" aria-hidden="true" />
           </button>
         </Tooltip>
         {item.localPath && item.kind !== "directory" ? (
-          <Tooltip label="打开">
+          <Tooltip label={t("files.transfer.open")}>
             <button
               type="button"
-              aria-label={`打开 ${item.name}`}
+              aria-label={t("files.transfer.openAria", { name: item.name })}
               onClick={() => onOpenLocalPath(item.localPath || "")}
             >
               <ExternalLink className="ui-icon" aria-hidden="true" />
@@ -205,10 +209,10 @@ const RemoteFileTransferRow = memo(function RemoteFileTransferRow({
           </Tooltip>
         ) : null}
         {item.localPath ? (
-          <Tooltip label="定位">
+          <Tooltip label={t("files.transfer.reveal")}>
             <button
               type="button"
-              aria-label={`定位 ${item.name}`}
+              aria-label={t("files.transfer.revealAria", { name: item.name })}
               onClick={() => onRevealLocalPath(item.localPath || "")}
             >
               <FolderOpen className="ui-icon" aria-hidden="true" />
@@ -216,24 +220,24 @@ const RemoteFileTransferRow = memo(function RemoteFileTransferRow({
           </Tooltip>
         ) : null}
         {item.status === "error" && item.retry ? (
-          <Tooltip label="重试">
-            <button type="button" aria-label={`重试 ${item.name}`} onClick={() => onRetry(item.id)}>
+          <Tooltip label={t("files.transfer.retry")}>
+            <button type="button" aria-label={t("files.transfer.retryAria", { name: item.name })} onClick={() => onRetry(item.id)}>
               <RefreshCw className="ui-icon" aria-hidden="true" />
             </button>
           </Tooltip>
         ) : null}
         {item.status === "queued" || item.status === "running" ? (
-          <Tooltip label="取消">
-            <button type="button" aria-label={`取消 ${item.name}`} onClick={() => onCancel(item.id)}>
+          <Tooltip label={t("files.transfer.cancel")}>
+            <button type="button" aria-label={t("files.transfer.cancelAria", { name: item.name })} onClick={() => onCancel(item.id)}>
               <X className="ui-icon" aria-hidden="true" />
             </button>
           </Tooltip>
         ) : null}
         {canRemove ? (
-          <Tooltip label="移除任务">
+          <Tooltip label={t("files.transfer.remove")}>
             <button
               type="button"
-              aria-label={`删除任务 ${item.name}`}
+              aria-label={t("files.transfer.removeAria", { name: item.name })}
               onClick={() => onRemove(item.id)}
             >
               <Trash2 className="ui-icon" aria-hidden="true" />
@@ -246,7 +250,7 @@ const RemoteFileTransferRow = memo(function RemoteFileTransferRow({
         <div
           className={`transfer-progress ${item.progressIndeterminate ? "indeterminate" : ""}`}
           role="progressbar"
-          aria-label={`${item.name} ${item.stage}`}
+          aria-label={`${item.name} ${transferStageLabel(item.stage)}`}
           aria-valuemax={100}
           aria-valuemin={0}
           aria-valuenow={Math.round(progressValue)}

@@ -95,26 +95,26 @@ describe("WF-07 A14 real restart acceptance", () => {
     expect(hydration.terminalTabs).toHaveLength(3);
     expect(hydration.localTerminalTabs).toHaveLength(2);
     expect(hydration.terminalTabs.find((tab) => tab.id === "ssh-a")).toMatchObject({
-      status: "正在恢复",
+      status: "Restoring",
       title: "SSH A",
     });
     expect(hydration.terminalTabs.find((tab) => tab.id === "ssh-b")).toMatchObject({
-      status: "正在恢复",
+      status: "Restoring",
       title: "SSH B",
     });
     expect(hydration.terminalTabs.find((tab) => tab.id === "ssh-broken")).toMatchObject({
-      error: expect.stringContaining("已不存在"),
-      status: "连接失败",
+      error: expect.stringContaining("no longer exists"),
+      status: "Connection failed",
       title: "Deleted SSH",
     });
     expect(hydration.localTerminalTabs.find((tab) => tab.id === "local-a")).toMatchObject({
       profileKind: "local",
-      status: "正在恢复",
+      status: "Restoring",
       title: "Local",
     });
     expect(hydration.localTerminalTabs.find((tab) => tab.id === "wsl-a")).toMatchObject({
       profileKind: "wsl",
-      status: "正在恢复",
+      status: "Restoring",
       title: "Ubuntu 24.04",
     });
 
@@ -153,12 +153,12 @@ describe("WF-07 A14 real restart acceptance", () => {
     expect(plan.multiExecMode).toBe("off");
     expect(plan.items.filter((item) => item.status === "ready").every((item) => !item.autoReconnect)).toBe(true);
     expect(hydration.terminalTabs.find((tab) => tab.id === "ssh-a")).toMatchObject({
-      error: expect.stringContaining("自动重连未开启"),
-      status: "连接失败",
+      error: expect.stringContaining("automatic reconnect is disabled"),
+      status: "Connection failed",
     });
     expect(hydration.localTerminalTabs.find((tab) => tab.id === "wsl-a")).toMatchObject({
-      error: expect.stringContaining("自动重连未开启"),
-      status: "连接失败",
+      error: expect.stringContaining("automatic reconnect is disabled"),
+      status: "Connection failed",
     });
   });
 });

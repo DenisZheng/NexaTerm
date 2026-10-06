@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useI18n } from "../../shared/i18n";
 import { Minus, Plus, type LucideIcon } from "lucide-react";
 
 interface SettingsRowProps {
@@ -81,6 +82,7 @@ export function Stepper<T extends number>({
   values: readonly T[];
   onChange: (value: T) => void;
 }) {
+  const { t } = useI18n();
   const currentIndex = values.indexOf(value);
   const canDecrease = currentIndex > 0;
   const canIncrease = currentIndex >= 0 && currentIndex < values.length - 1;
@@ -89,7 +91,7 @@ export function Stepper<T extends number>({
     <div className="settings-stepper">
       <button
         type="button"
-        aria-label="减小"
+        aria-label={t("settings.controls.decrease")}
         disabled={!canDecrease}
         onClick={() => {
           if (canDecrease) {
@@ -102,7 +104,7 @@ export function Stepper<T extends number>({
       <span>{value.toString()}</span>
       <button
         type="button"
-        aria-label="增大"
+        aria-label={t("settings.controls.increase")}
         disabled={!canIncrease}
         onClick={() => {
           if (canIncrease) {

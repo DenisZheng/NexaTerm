@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 
+import { useI18n, type Translate } from "../../shared/i18n";
 import { AppSelect } from "../../shared/ui/AppSelect";
 import { Tooltip } from "../../shared/ui/Tooltip";
 import {
@@ -81,6 +82,7 @@ export function TerminalSplitLayout({
   onSelectSession,
   onToggleSearch,
 }: TerminalSplitLayoutProps) {
+  const { t } = useI18n();
   const surfaceRef = useRef<HTMLDivElement | null>(null);
   const [activeResize, setActiveResize] = useState<ActiveResize | null>(null);
   const panes = useMemo(() => collectTerminalSplitPanes(layout), [layout]);
@@ -151,15 +153,15 @@ export function TerminalSplitLayout({
         const selectedOption = bindingKey ? sessionOptionByValue.get(bindingKey) : undefined;
         const focused = pane.id === focusedPaneId;
         const syncParticipant = Boolean(bindingKey && syncParticipantKeys.has(bindingKey));
-        const syncRole = syncEnabled && syncParticipant ? (focused ? "主输入" : "接收") : null;
-        const options = buildPaneOptions(pane, sessionOptions, occupiedBindingKeys);
+        const syncRole = syncEnabled && syncParticipant ? (focused ? "source" : "target") : null;
+        const options = buildPaneOptions(pane, sessionOptions, occupiedBindingKeys, t);
 
         return (
           <section
             className={`terminal-split-pane-frame ${focused ? "is-focused" : ""} ${
               pane.binding ? "has-terminal" : "is-empty"
-            } ${syncRole === "主输入" ? "is-sync-source" : ""} ${
-              syncRole === "接收" ? "is-sync-target" : ""
+            } ${syncRole === "source" ? "is-sync-source" : ""} ${
+              syncRole === "target" ? "is-sync-target" : ""
             }`}
             data-pane-id={pane.id}
             key={pane.id}
@@ -172,12 +174,12 @@ export function TerminalSplitLayout({
               </span>
               {pane.binding ? (
                 <AppSelect
-                  ariaLabel={`切换分屏终端 ${index + 1}`}
+                  ariaLabel={t("terminal.split.switchAria", { index: index + 1 })}
                   className="terminal-split-session-select"
                   menuMinWidth={248}
                   options={options}
                   searchable
-                  searchPlaceholder="搜索会话或 SSH 连接"
+                  searchPlaceholder={t("terminal.split.searchPlaceholder")}
                   value={bindingKey || emptyPaneValue(pane.id)}
                   onChange={(nextValue) => {
                     const option = options.find((item) => item.value === nextValue);
@@ -188,16 +190,16 @@ export function TerminalSplitLayout({
                 />
               ) : (
                 <AppSelect
-                  ariaLabel={`为 pane ${index + 1} 选择终端`}
+                  ariaLabel={t("terminal.split.chooseAria", { index: index + 1 })}
                   className="terminal-split-session-select terminal-split-empty-header-select"
                   menuMinWidth={248}
                   openRequestKey={
                     pickerOpenRequest?.paneId === pane.id ? pickerOpenRequest.key : 0
                   }
                   options={options}
-                  placeholder="选择终端"
+                  placeholder={t("terminal.split.choose")}
                   searchable
-                  searchPlaceholder="搜索会话或 SSH 连接"
+                  searchPlaceholder={t("terminal.split.searchPlaceholder")}
                   value={emptyPaneValue(pane.id)}
                   onChange={(nextValue) => {
                     const option = options.find((item) => item.value === nextValue);
@@ -209,19 +211,19 @@ export function TerminalSplitLayout({
                 />
               )}
               <span className="terminal-split-pane-meta">
-                {syncRole ? <span className="terminal-split-sync-role">{syncRole}</span> : null}
+                {syncRole ? <span className="terminal-split-sync-role">{syncRole === "source" ? t("terminal.split.source") : t("terminal.split.target")}</span> : null}
                 {selectedOption?.status ? (
                   <span className="terminal-split-session-status">{selectedOption.status}</span>
                 ) : null}
               </span>
               <div className="terminal-split-pane-actions">
-                <Tooltip label="搜索当前终端">
+                <Tooltip label={t("terminal.split.searchCurrent")}>
                   <button
                     className={`terminal-split-pane-action ${
                       selectedOption?.searchOpen ? "active" : ""
                     }`}
                     type="button"
-                    aria-label={`搜索终端 ${index + 1}`}
+                    aria-label={t("terminal.split.searchAria", { index: index + 1 })}
                     aria-pressed={Boolean(selectedOption?.searchOpen)}
                     disabled={!pane.binding}
                     onClick={() => pane.binding && onToggleSearch(pane.binding)}
@@ -229,22 +231,22 @@ export function TerminalSplitLayout({
                     <Search className="ui-icon" aria-hidden="true" />
                   </button>
                 </Tooltip>
-                <Tooltip label="清屏">
+                <Tooltip label={t("terminal.split.clear")}>
                   <button
                     className="terminal-split-pane-action"
                     type="button"
-                    aria-label={`清屏终端 ${index + 1}`}
+                    aria-label={t("terminal.split.clearAria", { index: index + 1 })}
                     disabled={!pane.binding}
                     onClick={() => pane.binding && onClearPane(pane.binding)}
                   >
                     <Eraser className="ui-icon" aria-hidden="true" />
                   </button>
                 </Tooltip>
-                <Tooltip label="关闭当前 pane">
+                <Tooltip label={t("terminal.split.closePane")}>
                   <button
                     className="terminal-split-pane-action terminal-split-pane-close"
                     type="button"
-                    aria-label={`关闭终端 pane ${index + 1}`}
+                    aria-label={t("terminal.split.closePaneAria", { index: index + 1 })}
                     onClick={() => onClosePane(pane.id)}
                   >
                     <X className="ui-icon" aria-hidden="true" />
@@ -263,8 +265,8 @@ export function TerminalSplitLayout({
           role="separator"
           aria-label={
             resizer.direction === "row"
-              ? "调整左右终端分屏宽度，双击恢复均分"
-              : "调整上下终端分屏高度，双击恢复均分"
+              ? t("terminal.split.resizeRow")
+              : t("terminal.split.resizeColumn")
           }
           aria-orientation={resizer.direction === "row" ? "vertical" : "horizontal"}
           aria-valuemin={20}
@@ -320,13 +322,14 @@ function buildPaneOptions(
   pane: TerminalSplitPane,
   sessionOptions: TerminalSplitSessionOption[],
   occupiedBindingKeys: ReadonlySet<string>,
+  t: Translate,
 ) {
   const currentBindingKey = pane.binding ? terminalPaneBindingKey(pane.binding) : null;
   return [
     {
       disabled: true,
-      group: "会话",
-      label: "选择终端",
+      group: t("terminal.split.group"),
+      label: t("terminal.split.choose"),
       value: emptyPaneValue(pane.id),
     },
     ...sessionOptions

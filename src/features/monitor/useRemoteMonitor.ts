@@ -1,3 +1,4 @@
+import { t } from "../../shared/i18n";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
@@ -172,7 +173,7 @@ export function useRemoteMonitor({ active, connectionId, view }: UseRemoteMonito
   const signalProcess = useCallback(
     async (pid: number, signal: RemoteProcessSignal): Promise<RemoteProcessActionResult> => {
       if (!connectionId) {
-        throw new Error("没有活动 SSH 连接。");
+        throw new Error(t("monitor.error.noSsh"));
       }
 
       if (!hasTauriRuntime()) {
@@ -180,7 +181,7 @@ export function useRemoteMonitor({ active, connectionId, view }: UseRemoteMonito
           ok: true,
           pid,
           signal,
-          message: `预览模式已模拟发送 ${signal.toUpperCase()}`,
+          message: t("monitor.preview.signal", { signal: signal.toUpperCase() }),
         };
       }
 

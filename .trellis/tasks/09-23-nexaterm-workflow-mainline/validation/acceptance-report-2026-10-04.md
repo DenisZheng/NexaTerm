@@ -81,6 +81,10 @@
 
 WF-08E 的 validator 要求上述全部为 `pass`，否则不得把 A15 / v1 sign-off 标记为通过。
 
+### A15 i18n 补验（2026-10-06）
+
+维护者在 macOS 上对 PR #42 `fix/a15-english-coverage` @ `66ae2dfcefaeb0a1898c616c8a8d85abd45459e1` 进行了 English/i18n 人工复验并确认 **PASS**：未发现中文残留。该结果用于确认本轮 English 覆盖修复的跨平台共用 UI 文案，不等同于 macOS 打包版 install / Developer ID / notarization / upgrade / rollback 等 A15 项已完成；A15 总状态继续保持 **进行中**。
+
 ## 记录边界与后续动作
 
 - 本次集中验收在 Codex 会话中进行，结果未在会话中断前落盘（`01a1053e` 于 2026-10-04 13:56 被中止）；本报告为其恢复记录。

@@ -10,6 +10,7 @@ import {
   type AppUpdateCheckResult,
 } from "../../shared/tauri/appUpdate";
 import type { AppRuntimeInfo } from "../../shared/tauri/commands";
+import { useI18n } from "../../shared/i18n";
 import {
   mcpPrepareForUpdate,
   mcpRemoteServiceStart,
@@ -54,6 +55,7 @@ export function useAppUpdate({
 }: {
   autoCheckEnabled: boolean;
 }): UseAppUpdateResult {
+  const { locale } = useI18n();
   const [runtimeInfo, setRuntimeInfo] = useState<AppRuntimeInfo | null>(null);
   const [status, setStatus] = useState<AppUpdateStatus>("idle");
   const [message, setMessage] = useState<string | null>(null);
@@ -75,7 +77,7 @@ export function useAppUpdate({
           return;
         }
         setRuntimeInfo(nextRuntimeInfo);
-        const unsupportedMessage = getUnsupportedUpdateMessage(nextRuntimeInfo);
+        const unsupportedMessage = getUnsupportedUpdateMessage(nextRuntimeInfo, locale);
         if (unsupportedMessage) {
           setStatus("unsupported");
           setMessage(unsupportedMessage);
@@ -86,7 +88,7 @@ export function useAppUpdate({
       } catch (error) {
         if (!disposed) {
           setStatus("failed");
-          setMessage(formatError(error, "运行时信息读取失败。"));
+          setMessage(formatError(error, localized(locale, "Could not read runtime information.", "运行时信息读取失败。")));
         }
       }
     }
@@ -95,7 +97,7 @@ export function useAppUpdate({
     return () => {
       disposed = true;
     };
-  }, []);
+  }, [locale]);
 
   const applyCheckResult = useCallback((result: AppUpdateCheckResult) => {
     setRuntimeInfo(result.runtimeInfo);
@@ -117,10 +119,10 @@ export function useAppUpdate({
   const runCheck = useCallback(
     async (silent: boolean) => {
       setStatus("checking");
-      setMessage(silent ? null : "正在检查 GitHub Release...");
+      setMessage(silent ? null : localized(locale, "Checking GitHub Releases…", "正在检查 GitHub Release..."));
       setInstallProgress(null);
 
-      const result = await checkForAppUpdate({ silent });
+      const result = await checkForAppUpdate({ silent, locale });
       if (result) {
         applyCheckResult(result);
         return;
@@ -128,21 +130,21 @@ export function useAppUpdate({
 
       if (!silent) {
         setStatus("failed");
-        setMessage("检查更新失败，请稍后重试。");
+        setMessage(localized(locale, "Update check failed. Try again later.", "检查更新失败，请稍后重试。"));
       } else if (runtimeInfo) {
-        const unsupportedMessage = getUnsupportedUpdateMessage(runtimeInfo);
+        const unsupportedMessage = getUnsupportedUpdateMessage(runtimeInfo, locale);
         setStatus(unsupportedMessage ? "unsupported" : "idle");
         setMessage(unsupportedMessage);
       }
     },
-    [applyCheckResult, runtimeInfo],
+    [applyCheckResult, locale, runtimeInfo],
   );
 
   useEffect(() => {
     if (!autoCheckEnabled || !runtimeInfo) {
       return;
     }
-    if (getUnsupportedUpdateMessage(runtimeInfo)) {
+    if (getUnsupportedUpdateMessage(runtimeInfo, locale)) {
       return;
     }
     if (lastAutoCheckVersionRef.current === runtimeInfo.version) {
@@ -160,34 +162,34 @@ export function useAppUpdate({
   const performInstall = useCallback(async (stopMcpProcesses: boolean) => {
     if (!update) {
       setStatus("failed");
-      setMessage("没有可安装的更新，请先检查更新。");
+      setMessage(localized(locale, "No installable update is available. Check for updates first.", "没有可安装的更新，请先检查更新。"));
       return;
     }
 
     setStatus("installing");
-    setInstallProgress("正在准备更新...");
+    setInstallProgress(localized(locale, "Preparing update…", "正在准备更新..."));
     setMessage(null);
     let mcpStopped = false;
     try {
       if (stopMcpProcesses) {
-        setInstallProgress("正在关闭 MCP 服务...");
+        setInstallProgress(localized(locale, "Stopping MCP service…", "正在关闭 MCP 服务..."));
         await mcpPrepareForUpdate();
         mcpStopped = true;
       }
-      await installAppUpdate(update, setInstallProgress);
+      await installAppUpdate(update, setInstallProgress, locale);
     } catch (error) {
       if (mcpStopped) {
         await mcpRemoteServiceStart().catch(() => undefined);
       }
       setStatus("failed");
-      setMessage(formatError(error, "安装更新失败，请到 GitHub Release 手动下载。"));
+      setMessage(formatError(error, localized(locale, "Update installation failed. Download it manually from GitHub Releases.", "安装更新失败，请到 GitHub Release 手动下载。")));
     }
-  }, [update]);
+  }, [locale, update]);
 
   const installNow = useCallback(async () => {
     if (!update) {
       setStatus("failed");
-      setMessage("没有可安装的更新，请先检查更新。");
+      setMessage(localized(locale, "No installable update is available. Check for updates first.", "没有可安装的更新，请先检查更新。"));
       return;
     }
     try {
@@ -200,9 +202,9 @@ export function useAppUpdate({
       await performInstall(false);
     } catch (error) {
       setStatus("failed");
-      setMessage(formatError(error, "MCP 进程检查失败，暂时无法安装更新。"));
+      setMessage(formatError(error, localized(locale, "Could not inspect MCP processes, so the update cannot be installed yet.", "MCP 进程检查失败，暂时无法安装更新。")));
     }
-  }, [performInstall, update]);
+  }, [locale, performInstall, update]);
 
   const confirmInstallAfterMcpStop = useCallback(async () => {
     setMcpStopConfirmationOpen(false);
@@ -223,14 +225,20 @@ export function useAppUpdate({
     status === "available" && Boolean(updateVersion) && dismissedVersion !== updateVersion;
 
   const statusLabel = useMemo(() => {
-    if (status === "checking") return "检查中";
-    if (status === "latest") return "已是最新";
-    if (status === "available") return updateVersion ? `发现 ${updateVersion}` : "发现新版本";
-    if (status === "installing") return "安装中";
-    if (status === "failed") return "检查失败";
-    if (status === "unsupported") return "不支持自动更新";
-    return autoCheckEnabled ? "自动检查已开启" : "自动检查已关闭";
-  }, [autoCheckEnabled, status, updateVersion]);
+    if (status === "checking") return localized(locale, "Checking", "检查中");
+    if (status === "latest") return localized(locale, "Up to date", "已是最新");
+    if (status === "available") {
+      return updateVersion
+        ? localized(locale, `Found ${updateVersion}`, `发现 ${updateVersion}`)
+        : localized(locale, "Update available", "发现新版本");
+    }
+    if (status === "installing") return localized(locale, "Installing", "安装中");
+    if (status === "failed") return localized(locale, "Check failed", "检查失败");
+    if (status === "unsupported") return localized(locale, "Automatic updates unsupported", "不支持自动更新");
+    return autoCheckEnabled
+      ? localized(locale, "Automatic checks enabled", "自动检查已开启")
+      : localized(locale, "Automatic checks disabled", "自动检查已关闭");
+  }, [autoCheckEnabled, locale, status, updateVersion]);
 
   return {
     canInstall: status === "available" && Boolean(update),
@@ -239,8 +247,8 @@ export function useAppUpdate({
     currentVersion: runtimeInfo?.version || "--",
     dismissWorkspaceNotice,
     distributionLabel: runtimeInfo
-      ? formatAppDistributionMode(runtimeInfo.distributionMode)
-      : "读取中",
+      ? formatAppDistributionMode(runtimeInfo.distributionMode, locale)
+      : localized(locale, "Loading", "读取中"),
     installNow,
     confirmInstallAfterMcpStop,
     cancelInstallAfterMcpStop,
@@ -255,7 +263,11 @@ export function useAppUpdate({
     statusLabel,
     updateVersion,
     workspaceNoticeLabel:
-      status === "available" ? (updateVersion ? `发现新版本 ${updateVersion}` : "有可用更新") : null,
+      status === "available"
+        ? updateVersion
+          ? localized(locale, `New version ${updateVersion}`, `发现新版本 ${updateVersion}`)
+          : localized(locale, "Update available", "有可用更新")
+        : null,
     workspaceNoticeVisible,
   };
 }
@@ -268,4 +280,9 @@ function formatError(error: unknown, fallback: string) {
     return error;
   }
   return fallback;
+}
+
+
+function localized(locale: "en" | "zh-CN", en: string, zhCN: string) {
+  return locale === "zh-CN" ? zhCN : en;
 }

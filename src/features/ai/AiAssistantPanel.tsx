@@ -20,6 +20,7 @@ import {
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 
 import { copyTextToClipboard } from "../../shared/clipboard";
+import { useI18n, t as currentT } from "../../shared/i18n";
 import {
   aiChatSessionClear,
   aiChatSessionDelete,
@@ -90,6 +91,7 @@ export function AiAssistantPanel({
   onSaveCommand,
   onSendCommand,
 }: AiAssistantPanelProps) {
+  const { t, locale } = useI18n();
   const runtimeAvailable = hasTauriRuntime();
   const [providerConfigs, setProviderConfigs] = useState<AiProviderConfig[]>([]);
   const [selectedProviderId, setSelectedProviderId] = useState(() =>
@@ -122,7 +124,7 @@ export function AiAssistantPanel({
         label: `${config.name} · ${config.model}`,
         value: config.id,
       }))
-    : [{ disabled: true, label: "未配置", value: "" }];
+    : [{ disabled: true, label: t("ai.panel.unconfigured"), value: "" }];
   const sendDisabled =
     Boolean(streamState) || loading || !selectedProvider || input.trim().length === 0;
   const lastUserMessage = useMemo(
@@ -222,9 +224,9 @@ export function AiAssistantPanel({
         );
         setCurrentStreamState(null);
         if (event.kind === "error") {
-          setError(event.error || "AI 回复失败。");
+          setError(event.error || currentT("ai.panel.error.reply"));
         } else if (event.kind === "stopped") {
-          setNotice("已停止生成，当前内容已保留。");
+          setNotice(currentT("ai.panel.notice.stopped"));
         }
         void reloadSessions();
       }
@@ -321,7 +323,7 @@ export function AiAssistantPanel({
     setError(null);
     setHistoryOpen(false);
     setPendingDangerousCommand(null);
-    setNotice("已切换到新对话。");
+    setNotice(t("ai.panel.notice.newChat"));
   }
 
   async function submit(event?: FormEvent<HTMLFormElement>) {
@@ -342,15 +344,15 @@ export function AiAssistantPanel({
     }
     const normalizedContent = content.trim();
     if (!runtimeAvailable) {
-      setError("桌面端才能调用 AI 服务。");
+      setError(t("ai.panel.error.desktop"));
       return;
     }
     if (!selectedProvider) {
-      setError("请先在设置中添加 AI 配置。");
+      setError(t("ai.panel.error.noConfig"));
       return;
     }
     if (!normalizedContent) {
-      setError("请输入问题。");
+      setError(t("ai.panel.error.empty"));
       return;
     }
     loadingRef.current = true;
@@ -438,7 +440,7 @@ export function AiAssistantPanel({
       }
       setPendingDeleteSession(null);
       await reloadSessions();
-      setNotice("AI 会话已删除。");
+      setNotice(t("ai.panel.notice.deleted"));
     } catch (nextError) {
       setError(formatAiError(nextError));
     }
@@ -449,7 +451,7 @@ export function AiAssistantPanel({
       return;
     }
     if (streamStateRef.current) {
-      setError("请先停止生成，再清空当前会话。");
+      setError(t("ai.panel.error.stopFirst"));
       setClearSessionOpen(false);
       return;
     }
@@ -460,7 +462,7 @@ export function AiAssistantPanel({
       setPendingDangerousCommand(null);
       setClearSessionOpen(false);
       await reloadSessions();
-      setNotice("当前 AI 会话已清空。");
+      setNotice(t("ai.panel.notice.cleared"));
     } catch (nextError) {
       setError(formatAiError(nextError));
     }
@@ -469,9 +471,9 @@ export function AiAssistantPanel({
   async function copyCommand(command: string) {
     try {
       await copyTextToClipboard(command);
-      setNotice("命令已复制。");
+      setNotice(t("ai.panel.notice.copied"));
     } catch {
-      setError("复制命令失败。");
+      setError(t("ai.panel.error.copy"));
     }
   }
 
@@ -490,7 +492,7 @@ export function AiAssistantPanel({
   async function runSendCommand(command: string) {
     try {
       await onSendCommand(command);
-      setNotice("命令已发送到终端。");
+      setNotice(t("ai.panel.notice.sent"));
     } catch (nextError) {
       setError(formatAiError(nextError));
     }
@@ -518,8 +520,8 @@ export function AiAssistantPanel({
     setError(null);
     setNotice(
       hasSensitiveContext
-        ? "已加入上下文，其中可能包含敏感信息；发送前可移除。"
-        : "已加入上下文，发送前可移除。",
+        ? t("ai.panel.notice.contextSensitive")
+        : t("ai.panel.notice.contextAdded"),
     );
   }
 
@@ -531,8 +533,8 @@ export function AiAssistantPanel({
     appendContextBlocks([
       buildContextBlock({
         kind: "terminal_output",
-        title: "最近终端输出",
-        source: terminalTitle || "当前终端",
+        title: t("ai.context.recentOutput.title"),
+        source: terminalTitle || t("ai.context.currentTerminal"),
         content: tailByChars(content, 8000),
       }),
     ]);
@@ -543,17 +545,17 @@ export function AiAssistantPanel({
       return;
     }
     const lines = [
-      `连接名称: ${connection.name}`,
-      `目标: ${connection.username}@${connection.host}:${connection.port.toString()}`,
-      connection.group ? `分组: ${connection.group}` : null,
-      connection.remote_os_name ? `系统: ${connection.remote_os_name}` : null,
-      terminalDirectory ? `当前目录: ${terminalDirectory}` : null,
+      t("ai.context.connection.name", { value: connection.name }),
+      t("ai.context.connection.target", { value: `${connection.username}@${connection.host}:${connection.port.toString()}` }),
+      connection.group ? t("ai.context.connection.group", { value: connection.group }) : null,
+      connection.remote_os_name ? t("ai.context.connection.system", { value: connection.remote_os_name }) : null,
+      terminalDirectory ? t("ai.context.connection.cwd", { value: terminalDirectory }) : null,
     ].filter(Boolean);
     appendContextBlocks([
       buildContextBlock({
         kind: "connection",
-        title: "当前连接信息",
-        source: "已脱敏连接元数据",
+        title: t("ai.context.connection.title"),
+        source: t("ai.context.connection.source"),
         content: lines.join("\n"),
       }),
     ]);
@@ -567,7 +569,7 @@ export function AiAssistantPanel({
     appendContextBlocks([
       buildContextBlock({
         kind: "command_draft",
-        title: "命令草稿",
+        title: t("ai.context.commandDraft"),
         source: "Command Sender",
         content,
       }),
@@ -585,8 +587,8 @@ export function AiAssistantPanel({
     appendContextBlocks([
       buildContextBlock({
         kind: "recent_commands",
-        title: "最近命令",
-        source: "命令历史",
+        title: t("ai.context.recentCommands"),
+        source: t("ai.context.commandHistory"),
         content,
       }),
     ]);
@@ -599,21 +601,21 @@ export function AiAssistantPanel({
           <Bot className="ui-icon" aria-hidden="true" />
           <span>
             <strong>AI</strong>
-            <small>终端排障与命令生成</small>
+            <small>{t("ai.panel.subtitle")}</small>
           </span>
         </div>
         <div className="ai-assistant-head-actions">
-          <Tooltip label="新对话">
-            <button type="button" aria-label="新对话" onClick={startNewSession}>
+          <Tooltip label={t("ai.panel.newChat")}>
+            <button type="button" aria-label={t("ai.panel.newChat")} onClick={startNewSession}>
               <Plus className="ui-icon" aria-hidden="true" />
             </button>
           </Tooltip>
-          <Tooltip label="历史会话">
+          <Tooltip label={t("ai.panel.history")}>
             <button
               ref={historyTriggerRef}
               className={historyOpen ? "active" : ""}
               type="button"
-              aria-label="历史会话"
+              aria-label={t("ai.panel.history")}
               aria-expanded={historyOpen}
               aria-haspopup="menu"
               onClick={() => setHistoryOpen((open) => !open)}
@@ -621,8 +623,8 @@ export function AiAssistantPanel({
               <History className="ui-icon" aria-hidden="true" />
             </button>
           </Tooltip>
-          <Tooltip label="AI 设置">
-            <button type="button" aria-label="AI 设置" onClick={onOpenSettings}>
+          <Tooltip label={t("ai.panel.settings")}>
+            <button type="button" aria-label={t("ai.panel.settings")} onClick={onOpenSettings}>
               <Settings className="ui-icon" aria-hidden="true" />
             </button>
           </Tooltip>
@@ -632,7 +634,7 @@ export function AiAssistantPanel({
       <AnchoredSurfacePortal
         align="end"
         anchorRef={historyTriggerRef}
-        ariaLabel="AI 历史会话"
+        ariaLabel={t("ai.panel.historyAria")}
         className="ai-history-menu popover-content"
         desiredHeight={260}
         minHeight={96}
@@ -642,11 +644,11 @@ export function AiAssistantPanel({
         onOpenChange={setHistoryOpen}
       >
         <div className="ai-history-menu-header">
-          <strong>历史会话</strong>
-          <span>{sessions.length.toString()} 条</span>
+          <strong>{t("ai.panel.history")}</strong>
+          <span>{t("ai.panel.historyCount", { count: sessions.length })}</span>
         </div>
         {sessions.length === 0 ? (
-          <p className="ai-history-empty">暂无历史会话。</p>
+          <p className="ai-history-empty">{t("ai.panel.historyEmpty")}</p>
         ) : (
           <div className="ai-history-menu-list">
             {sessions.map((session) => (
@@ -661,12 +663,12 @@ export function AiAssistantPanel({
                   onClick={() => void openSession(session.id)}
                 >
                   <strong>{session.title}</strong>
-                  <small>{session.last_message_preview || `${session.message_count.toString()} 条消息`}</small>
+                  <small>{session.last_message_preview || t("ai.panel.messageCount", { count: session.message_count })}</small>
                 </button>
                 <button
                   className="ai-history-menu-item-delete"
                   type="button"
-                  aria-label={`删除会话 ${session.title}`}
+                  aria-label={t("ai.panel.deleteSessionAria", { name: session.title })}
                   onClick={(event) => {
                     event.preventDefault();
                     event.stopPropagation();
@@ -684,7 +686,7 @@ export function AiAssistantPanel({
 
       <div className="ai-provider-row">
         <AppSelect
-          ariaLabel="AI 配置"
+          ariaLabel={t("ai.panel.configAria")}
           className="ai-provider-select"
           disabled={!providerConfigs.length || Boolean(streamState)}
           menuMinWidth={220}
@@ -697,36 +699,36 @@ export function AiAssistantPanel({
         />
         <button className="ai-mini-button" type="button" onClick={() => void reloadProviderConfigs()}>
           <RefreshCw className="ui-icon" aria-hidden="true" />
-          <span>刷新</span>
+          <span>{t("ai.panel.refresh")}</span>
         </button>
       </div>
 
       {!runtimeAvailable ? (
-        <p className="ai-inline-notice">桌面端才能保存配置和调用模型。</p>
+        <p className="ai-inline-notice">{t("ai.panel.desktopNotice")}</p>
       ) : null}
       {providerConfigs.length === 0 ? (
         <div className="ai-config-empty">
-          <strong>还没有 AI 配置</strong>
-          <span>添加配置名称、接入模式、API Key、请求地址和模型后即可开始对话。</span>
+          <strong>{t("ai.panel.noConfig.title")}</strong>
+          <span>{t("ai.panel.noConfig.description")}</span>
           <button className="primary-button" type="button" onClick={onOpenSettings}>
             <Settings className="ui-icon" aria-hidden="true" />
-            <span>打开 AI 设置</span>
+            <span>{t("ai.panel.noConfig.open")}</span>
           </button>
         </div>
       ) : null}
 
-      <section className="ai-message-list" aria-label="AI 对话" ref={messageListRef}>
+      <section className="ai-message-list" aria-label={t("ai.panel.chatAria")} ref={messageListRef}>
         {messages.length === 0 ? (
           <div className="ai-welcome">
             <Terminal className="ui-icon" aria-hidden="true" />
-            <strong>描述现象，或把终端输出放进上下文。</strong>
-            <span>AI 会给出排查思路、命令建议和风险提示，不会自动执行命令。</span>
+            <strong>{t("ai.panel.welcome.title")}</strong>
+            <span>{t("ai.panel.welcome.description")}</span>
           </div>
         ) : (
           messages.map((message) => (
             <article className={`ai-message ${message.role}`} key={message.id}>
               <header>
-                <strong>{message.role === "user" ? "你" : "AI"}</strong>
+                <strong>{message.role === "user" ? t("ai.panel.you") : "AI"}</strong>
                 <span>{formatMessageStatus(message.status)}</span>
               </header>
               {message.contexts.length > 0 ? (
@@ -745,27 +747,27 @@ export function AiAssistantPanel({
         )}
       </section>
 
-      <section className="ai-context-panel" aria-label="AI 上下文">
+      <section className="ai-context-panel" aria-label={t("ai.panel.contextAria")}>
         <div className="ai-context-head">
-          <strong>上下文</strong>
-          <span>{contextBlocks.length.toString()} 个片段</span>
+          <strong>{t("ai.panel.context")}</strong>
+          <span>{t("ai.panel.contextCount", { count: contextBlocks.length })}</span>
         </div>
         <div className="ai-context-actions">
           <button type="button" disabled={!recentTerminalOutput?.trim()} onClick={addRecentTerminalOutputContext}>
             <Terminal className="ui-icon" aria-hidden="true" />
-            <span>最近输出</span>
+            <span>{t("ai.panel.context.recentOutput")}</span>
           </button>
           <button type="button" disabled={!connection} onClick={addConnectionContext}>
             <ListPlus className="ui-icon" aria-hidden="true" />
-            <span>连接</span>
+            <span>{t("ai.panel.context.connection")}</span>
           </button>
           <button type="button" disabled={!commandDraft.trim()} onClick={addCommandDraftContext}>
             <CornerDownLeft className="ui-icon" aria-hidden="true" />
-            <span>草稿</span>
+            <span>{t("ai.panel.context.draft")}</span>
           </button>
           <button type="button" disabled={recentCommands.length === 0} onClick={addRecentCommandsContext}>
             <Clock3 className="ui-icon" aria-hidden="true" />
-            <span>最近命令</span>
+            <span>{t("ai.panel.context.recentCommands")}</span>
           </button>
         </div>
         {contextBlocks.length > 0 ? (
@@ -777,19 +779,19 @@ export function AiAssistantPanel({
                   <span>
                     <strong>{block.title}</strong>
                     <small>
-                      {block.source} · {block.line_count.toString()} 行 · {block.char_count.toString()} 字
+                      {t("ai.panel.contextMeta", { source: block.source, lines: block.line_count, chars: block.char_count })}
                     </small>
                   </span>
                   <p>{truncateText(block.content, contextPreviewLimit)}</p>
                   {sensitive ? (
                     <small className="ai-context-warning">
                       <ShieldAlert className="ui-icon" aria-hidden="true" />
-                      可能包含敏感信息
+                      {t("ai.panel.contextSensitive")}
                     </small>
                   ) : null}
                   <button
                     type="button"
-                    aria-label={`移除上下文 ${block.title}`}
+                    aria-label={t("ai.panel.removeContextAria", { name: block.title })}
                     onClick={() =>
                       setContextBlocks((blocks) => blocks.filter((item) => item.id !== block.id))
                     }
@@ -809,7 +811,7 @@ export function AiAssistantPanel({
       <form className="ai-compose" onSubmit={(event) => void submit(event)}>
         <textarea
           value={input}
-          placeholder="输入问题，例如：解释这段报错，或生成排查命令"
+          placeholder={t("ai.panel.inputPlaceholder")}
           spellCheck={false}
           onChange={(event) => setInput(event.currentTarget.value)}
           onKeyDown={(event) => {
@@ -839,7 +841,7 @@ export function AiAssistantPanel({
             onClick={() => setClearSessionOpen(true)}
           >
             <Trash2 className="ui-icon" aria-hidden="true" />
-            <span>清空</span>
+            <span>{t("ai.panel.clear")}</span>
           </button>
           <button
             className="ai-mini-button"
@@ -848,17 +850,17 @@ export function AiAssistantPanel({
             onClick={() => void retryLastUserMessage()}
           >
             <RefreshCw className="ui-icon" aria-hidden="true" />
-            <span>重试</span>
+            <span>{t("ai.panel.retry")}</span>
           </button>
           {streamState ? (
             <button className="ai-stop-button" type="button" onClick={() => void stopStreaming()}>
               <Square className="ui-icon" aria-hidden="true" />
-              <span>停止</span>
+              <span>{t("ai.panel.stop")}</span>
             </button>
           ) : (
             <button className="primary-button" type="submit" disabled={sendDisabled}>
               <Send className="ui-icon" aria-hidden="true" />
-              <span>{loading ? "准备中" : "发送"}</span>
+              <span>{loading ? t("ai.panel.preparing") : t("ai.panel.send")}</span>
             </button>
           )}
         </footer>
@@ -866,9 +868,9 @@ export function AiAssistantPanel({
 
       <ConfirmDialog
         open={Boolean(pendingDeleteSession)}
-        title="删除 AI 会话"
-        description={`确认删除“${pendingDeleteSession?.title || "该会话"}”吗？此操作不会影响终端。`}
-        confirmLabel="删除"
+        title={t("ai.panel.delete.title")}
+        description={t("ai.panel.delete.description", { name: pendingDeleteSession?.title || t("ai.panel.delete.fallback") })}
+        confirmLabel={t("ai.panel.delete.confirm")}
         onConfirm={confirmDeleteSession}
         onOpenChange={(open) => {
           if (!open) {
@@ -878,21 +880,21 @@ export function AiAssistantPanel({
       />
       <ConfirmDialog
         open={clearSessionOpen}
-        title="清空当前 AI 会话"
-        description="会删除当前会话内的消息记录，但保留会话入口。"
-        confirmLabel="清空"
+        title={t("ai.panel.clear.title")}
+        description={t("ai.panel.clear.description")}
+        confirmLabel={t("ai.panel.clear.confirm")}
         onConfirm={clearCurrentSession}
         onOpenChange={setClearSessionOpen}
       />
       <ConfirmDialog
         open={Boolean(pendingDangerousCommand)}
-        title="确认发送危险命令"
+        title={t("ai.panel.danger.title")}
         description={
           pendingDangerousCommand
-            ? pendingDangerousCommand.reasons.join("；") || "该命令可能影响系统或数据。"
-            : "该命令可能影响系统或数据。"
+            ? pendingDangerousCommand.reasons.join(locale === "zh-CN" ? "；" : "; ") || t("ai.panel.danger.fallback")
+            : t("ai.panel.danger.fallback")
         }
-        confirmLabel="发送"
+        confirmLabel={t("ai.panel.danger.confirm")}
         onConfirm={async () => {
           const command = pendingDangerousCommand?.command;
           setPendingDangerousCommand(null);
@@ -922,53 +924,53 @@ export function AiAssistantPanel({
             key={`${message.id}-${index.toString()}`}
           >
             <header>
-              <strong>命令建议</strong>
+              <strong>{t("ai.command.title")}</strong>
               {suggestion.risk === "dangerous" ? (
                 <span>
                   <ShieldAlert className="ui-icon" aria-hidden="true" />
-                  高风险
+                  {t("ai.command.highRisk")}
                 </span>
               ) : null}
             </header>
             <code>{suggestion.command}</code>
             {suggestion.reasons.length > 0 ? (
-              <p>{suggestion.reasons.join("；")}</p>
+              <p>{suggestion.reasons.join(locale === "zh-CN" ? "；" : "; ")}</p>
             ) : null}
             <footer>
-              <Tooltip label="复制命令">
-                <button type="button" aria-label="复制命令" onClick={() => void copyCommand(suggestion.command)}>
+              <Tooltip label={t("ai.command.copy")}>
+                <button type="button" aria-label={t("ai.command.copy")} onClick={() => void copyCommand(suggestion.command)}>
                   <Copy className="ui-icon" aria-hidden="true" />
                 </button>
               </Tooltip>
-              <Tooltip label="插入到命令操作台">
+              <Tooltip label={t("ai.command.insert")}>
                 <button
                   type="button"
-                  aria-label="插入到命令操作台"
+                  aria-label={t("ai.command.insert")}
                   onClick={() => {
                     onInsertCommand(suggestion.command);
-                    setNotice("命令已插入命令操作台。");
+                    setNotice(t("ai.command.notice.inserted"));
                   }}
                 >
                   <CornerDownLeft className="ui-icon" aria-hidden="true" />
                 </button>
               </Tooltip>
-              <Tooltip label="保存为命令片段">
+              <Tooltip label={t("ai.command.save")}>
                 <button
                   type="button"
-                  aria-label="保存为命令片段"
+                  aria-label={t("ai.command.save")}
                   onClick={() => {
                     onSaveCommand(suggestion.command);
-                    setNotice("已打开命令片段保存窗口。");
+                    setNotice(t("ai.command.notice.save"));
                   }}
                 >
                   <Save className="ui-icon" aria-hidden="true" />
                 </button>
               </Tooltip>
-              <Tooltip label="发送到终端">
+              <Tooltip label={t("ai.command.send")}>
                 <button
                   className="primary"
                   type="button"
-                  aria-label="发送到终端"
+                  aria-label={t("ai.command.send")}
                   onClick={() => void requestSendCommand(suggestion.command)}
                 >
                   <Play className="ui-icon" aria-hidden="true" />
@@ -1416,16 +1418,16 @@ function assessCommandLocally(command: string): AiCommandAssessment {
   const lower = command.toLowerCase();
   const reasons: string[] = [];
   if (/\brm\s+-[^\n\r]*r[^\n\r]*f/i.test(command)) {
-    reasons.push("包含递归强制删除。");
+    reasons.push(currentT("ai.command.reason.rm"));
   }
   if (/\b(?:mkfs|fdisk|parted|wipefs|shutdown|reboot|halt|poweroff)\b/i.test(command)) {
-    reasons.push("可能修改磁盘或重启主机。");
+    reasons.push(currentT("ai.command.reason.system"));
   }
   if (/\bdd\b/i.test(command) && /\bof=/.test(command)) {
-    reasons.push("包含 dd 写入目标。");
+    reasons.push(currentT("ai.command.reason.dd"));
   }
   if (/\b(?:curl|wget)\b[^\n\r|]*\|\s*(?:sh|bash)\b/i.test(command)) {
-    reasons.push("包含下载脚本后直接执行。");
+    reasons.push(currentT("ai.command.reason.pipe"));
   }
   if (
     lower.includes("iptables") ||
@@ -1437,7 +1439,7 @@ function assessCommandLocally(command: string): AiCommandAssessment {
     lower.includes("systemctl stop") ||
     (lower.includes("service ") && lower.includes(" stop"))
   ) {
-    reasons.push("可能影响网络或服务状态。");
+    reasons.push(currentT("ai.command.reason.network"));
   }
   if (
     lower.includes("chmod -r 777") ||
@@ -1446,10 +1448,10 @@ function assessCommandLocally(command: string): AiCommandAssessment {
     lower.includes("passwd ") ||
     (lower.includes("/etc/ssh") && (lower.includes(">") || lower.includes("tee ")))
   ) {
-    reasons.push("可能改变权限、用户、认证或 SSH 配置。");
+    reasons.push(currentT("ai.command.reason.permissions"));
   }
   if (containsSensitiveCommandText(lower)) {
-    reasons.push("包含凭据、密钥或 token 明文。");
+    reasons.push(currentT("ai.command.reason.secret"));
   }
   return {
     command,
@@ -1645,18 +1647,18 @@ function contextLooksSensitive(content: string) {
 
 function formatMessageStatus(status: string) {
   if (status === "streaming") {
-    return "生成中";
+    return currentT("ai.status.streaming");
   }
   if (status === "complete") {
-    return "完成";
+    return currentT("ai.status.complete");
   }
   if (status === "stopped") {
-    return "已停止";
+    return currentT("ai.status.stopped");
   }
   if (status === "error") {
-    return "失败";
+    return currentT("ai.status.error");
   }
-  return status || "完成";
+  return status || currentT("ai.status.complete");
 }
 
 function tailByChars(content: string, maxChars: number) {
@@ -1671,7 +1673,7 @@ function truncateText(content: string, maxChars: number) {
 
 function formatAiError(error: unknown) {
   if (typeof error === "object" && error && "message" in error) {
-    return String((error as { message?: unknown }).message || "AI 操作失败。");
+    return String((error as { message?: unknown }).message || currentT("ai.error.generic"));
   }
-  return error instanceof Error ? error.message : "AI 操作失败。";
+  return error instanceof Error ? error.message : currentT("ai.error.generic");
 }

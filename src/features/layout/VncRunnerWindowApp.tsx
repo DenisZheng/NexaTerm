@@ -17,6 +17,7 @@ import {
   X,
 } from "lucide-react";
 
+import { t as tr, useI18n } from "../../shared/i18n";
 import type {
   VncRunnerWindowMessageEvent,
   VncRunnerWindowPayload,
@@ -51,6 +52,7 @@ interface VncRunnerHostSession {
 }
 
 export function VncRunnerWindowApp() {
+  useI18n();
   const { settings } = useSettings();
   const [windowLabel, setWindowLabel] = useState("vnc-runner-host");
   const [sessions, setSessions] = useState<VncRunnerHostSession[]>([]);
@@ -213,7 +215,7 @@ export function VncRunnerWindowApp() {
               const nextSession: VncRunnerHostSession = {
                 createdAt: Date.now(),
                 error: null,
-                message: "VNC 画面准备连接。",
+                message: tr("vnc.runner.preparing"),
                 payload,
               };
               const exists = current.some(
@@ -226,7 +228,7 @@ export function VncRunnerWindowApp() {
                       ? {
                           ...session,
                           error: null,
-                          message: "VNC 画面准备连接。",
+                          message: tr("vnc.runner.preparing"),
                           payload,
                         }
                       : session,
@@ -365,7 +367,7 @@ export function VncRunnerWindowApp() {
         onDoubleClick={() => void runWindowAction("toggleMaximize")}
         onPointerDown={handleTitlebarPointerDown}
       >
-        <nav className="vnc-runner-tabs" aria-label="VNC 会话标签">
+        <nav className="vnc-runner-tabs" aria-label={tr("vnc.runner.tabs")}>
           {sessions.length === 0 ? (
             <div className="vnc-runner-tab active">
               <MonitorPlay className="ui-icon" aria-hidden="true" />
@@ -392,7 +394,7 @@ export function VncRunnerWindowApp() {
                   <button
                     className="vnc-runner-tab-close"
                     type="button"
-                    aria-label={`关闭 ${session.payload.connection.name || "VNC"}`}
+                    aria-label={tr("vnc.runner.closeSession", { name: session.payload.connection.name || "VNC" })}
                     onClick={() => closeSession(workspaceSessionId)}
                   >
                     <X className="ui-icon" aria-hidden="true" />
@@ -403,28 +405,28 @@ export function VncRunnerWindowApp() {
           )}
         </nav>
         <div className="vnc-runner-window-controls">
-          <button type="button" aria-label="最小化" onClick={() => void runWindowAction("minimize")}>
+          <button type="button" aria-label={tr("vnc.runner.minimize")} onClick={() => void runWindowAction("minimize")}>
             <Minus className="ui-icon" aria-hidden="true" />
           </button>
           <button
             type="button"
-            aria-label="最大化或还原"
+            aria-label={tr("vnc.runner.maximize")}
             onClick={() => void runWindowAction("toggleMaximize")}
           >
             <Square className="ui-icon" aria-hidden="true" />
           </button>
-          <button className="danger" type="button" aria-label="关闭窗口" onClick={closeWholeWindow}>
+          <button className="danger" type="button" aria-label={tr("vnc.runner.closeWindow")} onClick={closeWholeWindow}>
             <X className="ui-icon" aria-hidden="true" />
           </button>
         </div>
       </header>
 
-      <section className="vnc-runner-content" aria-label="VNC 画面">
+      <section className="vnc-runner-content" aria-label={tr("vnc.runner.content")}>
         {sessions.length === 0 ? (
           <div className="vnc-runner-empty" role="status">
             <Loader2 className="ui-icon spin" aria-hidden="true" />
-            <strong>等待 VNC 会话</strong>
-            <span>从主窗口打开 VNC 连接后会显示在这里。</span>
+            <strong>{tr("vnc.runner.waiting")}</strong>
+            <span>{tr("vnc.runner.waitingHint")}</span>
           </div>
         ) : (
           sessions.map((session) => {
@@ -439,10 +441,10 @@ export function VncRunnerWindowApp() {
                 {session.error ? (
                   <div className="vnc-runner-error" role="alert">
                     <CircleAlert className="ui-icon" aria-hidden="true" />
-                    <strong>VNC 连接失败</strong>
+                    <strong>{tr("vnc.runner.failed")}</strong>
                     <pre>{session.error}</pre>
                     <button type="button" onClick={() => closeSession(workspaceSessionId)}>
-                      关闭
+                      {tr("vnc.runner.close")}
                     </button>
                   </div>
                 ) : (

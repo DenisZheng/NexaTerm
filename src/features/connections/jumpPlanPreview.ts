@@ -1,3 +1,4 @@
+import { t as tr } from "../../shared/i18n";
 import type { ConnectionProfile, ConnectionProfileInput } from "./connectionTypes";
 
 export interface JumpPlanIssue {
@@ -40,8 +41,8 @@ export function buildJumpPlanPreview(
       return {
         issue: {
           code: "connection_jump_cycle",
-          detail: "所选跳板链会回到当前连接或形成循环，请改用其他跳板机。",
-          title: "跳板链存在循环",
+          detail: tr("jump.issue.cycle.detail"),
+          title: tr("jump.issue.cycle.title"),
         },
         labels: [...jumps.map(labelForConnection).reverse(), target],
       };
@@ -50,8 +51,8 @@ export function buildJumpPlanPreview(
       return {
         issue: {
           code: "connection_jump_depth_exceeded",
-          detail: "当前最多支持两级 SSH 跳板，请缩短已保存连接的跳板链。",
-          title: "跳板层级超过上限",
+          detail: tr("jump.issue.depth.detail"),
+          title: tr("jump.issue.depth.title"),
         },
         labels: [...jumps.map(labelForConnection).reverse(), target],
       };
@@ -62,8 +63,8 @@ export function buildJumpPlanPreview(
       return {
         issue: {
           code: "connection_jump_missing",
-          detail: "跳板链引用的已保存连接不存在，请重新选择跳板机。",
-          title: "跳板机连接不存在",
+          detail: tr("jump.issue.missing.detail"),
+          title: tr("jump.issue.missing.title"),
         },
         labels: [...jumps.map(labelForConnection).reverse(), target],
       };

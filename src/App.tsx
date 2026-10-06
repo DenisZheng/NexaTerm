@@ -4,6 +4,7 @@ import "./styles/app.css";
 import { LegacyAppDataMigrationGate } from "./features/migration/LegacyAppDataMigrationGate";
 import { LegacySettingsProbeWindow } from "./features/migration/LegacySettingsProbeWindow";
 import { performanceProbeMarkInteractive } from "./shared/tauri/commands";
+import { t } from "./shared/i18n";
 
 const VncRunnerWindowApp = lazy(async () => {
   const module = await import("./features/layout/VncRunnerWindowApp");
@@ -43,7 +44,7 @@ export default function App() {
   const isVncRunner = view === "vnc-runner";
   if (isVncRunner) {
     return (
-      <Suspense fallback={<StartupFallback label="正在加载 VNC 窗口..." />}>
+      <Suspense fallback={<StartupFallback label={t("startup.vnc")} />}>
         <VncRunnerWindowApp />
       </Suspense>
     );
@@ -51,7 +52,7 @@ export default function App() {
 
   return (
     <LegacyAppDataMigrationGate>
-      <Suspense fallback={<StartupFallback label="正在加载工作区..." />}>
+      <Suspense fallback={<StartupFallback label={t("startup.workspace")} />}>
         <WorkspaceShell />
         <WorkspaceInteractiveMarker />
       </Suspense>

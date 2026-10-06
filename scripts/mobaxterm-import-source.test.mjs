@@ -19,8 +19,13 @@ test("MobaXterm import keeps preview and apply wired end-to-end", () => {
     assert.match(commands, new RegExp(command));
   }
 
+  const en = JSON.parse(read("src/shared/i18n/locales/en.json"));
+  const zh = JSON.parse(read("src/shared/i18n/locales/zh-CN.json"));
+
   assert.match(dialog, /MobaXtermImportPanel/);
-  assert.match(dialog, /\.mxtsessions/);
+  assert.match(dialog, /t\("transfer\.mobaxterm\.open"\)/);
+  assert.match(en["transfer.mobaxterm.open"], /\.mxtsessions/);
+  assert.match(zh["transfer.mobaxterm.open"], /\.mxtsessions/);
   assert.match(panel, /preview\.fingerprint/);
   assert.match(panel, /defaultUsername/);
   assert.match(panel, /selected\.size/);

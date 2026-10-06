@@ -1,3 +1,4 @@
+import { t } from "../../shared/i18n";
 import { terminalPaneBindingKey, type TerminalPaneBinding } from "../terminal/terminalSplitLayout";
 
 /** 同步菜单的目标行（TerminalSplitSyncMenu 的 panes 输入）。 */
@@ -39,8 +40,8 @@ export function buildTerminalSplitSyncPaneOptions(input: {
       {
         disabled: !input.sessionIdForBinding(pane.binding),
         key,
-        label: `${option?.label || `终端 ${(index + 1).toString()}`}${
-          input.syncEnabled && key === focusedKey ? " · 主输入" : ""
+        label: `${option?.label || t("terminal.split.defaultLabel", { index: index + 1 })}${
+          input.syncEnabled && key === focusedKey ? t("terminal.split.primarySuffix") : ""
         }`,
         locked: false,
       },

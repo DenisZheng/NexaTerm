@@ -1,4 +1,4 @@
-import { useI18n } from "../../shared/i18n";
+import { useI18n, type Translate } from "../../shared/i18n";
 import { AppSelect } from "../../shared/ui/AppSelect";
 import {
   BatchConnectPreviewDialog,
@@ -102,8 +102,8 @@ type DeleteRequest =
   | { type: "group"; group: CustomGroup };
 
 const systemFolders: SystemFolder[] = [
-  { id: "favorites", color: "#64748b", icon: Star, label: "收藏" },
-  { id: "recent", color: "#64748b", icon: Clock3, label: "最近" },
+  { id: "favorites", color: "#64748b", icon: Star, label: "" },
+  { id: "recent", color: "#64748b", icon: Clock3, label: "" },
 ];
 
 const LegacyGroupMigrationNotice = lazy(() => import("./LegacyGroupMigrationNotice"));
@@ -251,13 +251,13 @@ export function ConnectionPane({
 
   return (
     <>
-      <aside className="connection-pane app-sidebar" aria-label="连接仓库">
-        <section className="pane-scroll connection-tree" aria-label="连接树">
-          {loading ? <p className="pane-note">加载连接中...</p> : null}
+      <aside className="connection-pane app-sidebar" aria-label={t("connectionPane.aria")}>
+        <section className="pane-scroll connection-tree" aria-label={t("connectionPane.treeAria")}>
+          {loading ? <p className="pane-note">{t("connectionPane.loading")}</p> : null}
           {migration && onResolveMigration ? <Suspense fallback={null}><LegacyGroupMigrationNotice report={migration} groups={customGroups} onResolve={onResolveMigration} /></Suspense> : null}
           {error || groupError ? <p className="pane-error" role="alert">{groupError || error}</p> : null}
 
-          <div className="tree-block" aria-label="固定分组">
+          <div className="tree-block" aria-label={t("connectionPane.systemGroups")}>
             {systemFolders.map((folder) => (
               <TreeFolder
                 color={folder.color}
@@ -265,7 +265,7 @@ export function ConnectionPane({
                 expanded={expandedFolders[folder.id]}
                 icon={folder.icon}
                 key={folder.id}
-                label={folder.label}
+                label={folder.id === "favorites" ? t("connectionPane.favorites") : t("connectionPane.recent")}
                 onDuplicate={onDuplicate}
                 onEdit={onEdit}
                 onOpen={onOpen}
@@ -285,33 +285,33 @@ export function ConnectionPane({
           </div>
 
           <div className="tree-section-head">
-            <span>连接</span>
+            <span>{t("connectionPane.connections")}</span>
             <div className="toolbar-actions">
-              <Tooltip label="搜索连接">
-                <button className="mini-action" type="button" aria-label="搜索连接" onClick={onOpenSearch}>
+              <Tooltip label={t("connectionPane.search")}>
+                <button className="mini-action" type="button" aria-label={t("connectionPane.search")} onClick={onOpenSearch}>
                   <Search className="ui-icon" aria-hidden="true" />
                 </button>
               </Tooltip>
-              <Tooltip label="刷新连接">
-                <button className="mini-action" type="button" aria-label="刷新连接" onClick={onRefresh}>
+              <Tooltip label={t("connectionPane.refresh")}>
+                <button className="mini-action" type="button" aria-label={t("connectionPane.refresh")} onClick={onRefresh}>
                   <RefreshCw className="ui-icon" aria-hidden="true" />
                 </button>
               </Tooltip>
-              <Tooltip label="新增分组">
+              <Tooltip label={t("connectionPane.addGroup")}>
                 <button
                   className="mini-action"
                   type="button"
-                  aria-label="新增分组"
+                  aria-label={t("connectionPane.addGroup")}
                   onClick={() => beginCreateGroup(null)}
                 >
                   <FolderPlus className="ui-icon" aria-hidden="true" />
                 </button>
               </Tooltip>
-              <Tooltip label="新增连接">
+              <Tooltip label={t("connectionPane.addConnection")}>
                 <button
                   className="mini-action"
                   type="button"
-                  aria-label="新增连接"
+                  aria-label={t("connectionPane.addConnection")}
                   onFocus={onPreloadCreate}
                   onClick={() => onCreate()}
                   onPointerDown={onPreloadCreate}
@@ -323,13 +323,13 @@ export function ConnectionPane({
             </div>
           </div>
 
-          <div className="tree-block" aria-label="自定义分组">
+          <div className="tree-block" aria-label={t("connectionPane.customGroups")}>
             {topLevelCustomGroups.map((group) => renderCustomGroup(group))}
           </div>
 
           <div
             className={`tree-block root-connections ${dropTargetId === "root" ? "drop-target" : ""}`}
-            aria-label="未分组连接"
+            aria-label={t("connectionPane.ungrouped")}
             data-drop-target-id="root"
             onDragLeave={clearDropTarget}
             onDragOver={(event) => activateDropTarget(event, "root")}
@@ -354,7 +354,7 @@ export function ConnectionPane({
               />
             ))}
             {ungroupedConnections.length === 0 && draggingConnectionId ? (
-              <div className="drop-empty">拖到这里取消分组</div>
+              <div className="drop-empty">{t("connectionPane.dropRoot")}</div>
             ) : null}
           </div>
         </section>
@@ -366,15 +366,15 @@ export function ConnectionPane({
         />
 
         <footer className="settings-foot">
-          <Tooltip label="设置">
+          <Tooltip label={t("connectionPane.settings")}>
             <button
               className="icon-button settings-entry-button"
               type="button"
-              aria-label="设置"
+              aria-label={t("connectionPane.settings")}
               onClick={onOpenSettings}
             >
               <Settings className="ui-icon" aria-hidden="true" />
-              <span>设置</span>
+              <span>{t("connectionPane.settings")}</span>
             </button>
           </Tooltip>
         </footer>
@@ -390,7 +390,7 @@ export function ConnectionPane({
             <ConnectionSystemLogo connection={draggedConnection} compact decorative />
             <span>
               <strong>{draggedConnection.name}</strong>
-              <small>{formatAddress(draggedConnection)}</small>
+              <small>{formatAddress(draggedConnection, t)}</small>
             </span>
           </div>
         ) : null}
@@ -435,14 +435,14 @@ export function ConnectionPane({
               <header className="dialog-head">
                 <div className="dialog-title-group">
                   <Dialog.Title asChild>
-                    <strong>{editingGroupId ? "编辑分组" : "新增分组"}</strong>
+                    <strong>{editingGroupId ? t("connectionPane.group.edit") : t("connectionPane.group.new")}</strong>
                   </Dialog.Title>
                   <Dialog.Description className={parentGroup ? "dialog-subtitle" : "sr-only"}>
-                    {parentGroup ? `归入“${parentGroup.name}”` : "创建连接分组"}
+                    {parentGroup ? t("connectionPane.group.parenting", { name: parentGroup.name }) : t("connectionPane.group.create")}
                   </Dialog.Description>
                 </div>
                 <Dialog.Close asChild>
-                  <button className="icon-button dialog-close-button" type="button" aria-label="关闭">
+                  <button className="icon-button dialog-close-button" type="button" aria-label={t("connectionPane.close")}>
                     <X className="ui-icon" aria-hidden="true" />
                   </button>
                 </Dialog.Close>
@@ -450,32 +450,32 @@ export function ConnectionPane({
 
               <div className="dialog-body group-dialog-body">
                 <label>
-                  <span>名称</span>
+                  <span>{t("connectionPane.group.name")}</span>
                   <input
-                    aria-label="分组名称"
+                    aria-label={t("connectionPane.group.nameAria")}
                     autoFocus
-                    placeholder="分组名称"
+                    placeholder={t("connectionPane.group.namePlaceholder")}
                     value={groupDraft}
                     onChange={(event) => setGroupDraft(event.target.value)}
                   />
                 </label>
                 <label>
-                  <span>父分组</span>
-                  <AppSelect ariaLabel="父分组" value={creatingGroupParentId || ""}
-                    options={[{ value: "", label: "根目录" }, ...groupOptions(customGroups.filter((group) => !editingGroupId || !groupDescendants(customGroups, editingGroupId).has(group.id)))]}
+                  <span>{t("connectionPane.group.parent")}</span>
+                  <AppSelect ariaLabel={t("connectionPane.group.parent")} value={creatingGroupParentId || ""}
+                    options={[{ value: "", label: t("connectionPane.group.root") }, ...groupOptions(customGroups.filter((group) => !editingGroupId || !groupDescendants(customGroups, editingGroupId).has(group.id)))]}
                     onChange={(id) => setCreatingGroupParentId(id || null)} />
                 </label>
                 {groupError ? <p className="pane-error" role="alert">{groupError}</p> : null}
                 <div className="group-dialog-colors">
-                  <span>颜色</span>
-                  <div className="group-color-row" aria-label="分组颜色">
+                  <span>{t("connectionPane.group.color")}</span>
+                  <div className="group-color-row" aria-label={t("connectionPane.group.colorAria")}>
                     {groupPalette.map((color) => (
                       <button
                         className={`color-swatch ${groupColorDraft === color ? "active" : ""}`}
                         key={color}
                         style={{ "--group-color": color } as CSSProperties}
                         type="button"
-                        aria-label={`选择颜色 ${color}`}
+                        aria-label={t("connectionPane.group.chooseColor", { color })}
                         onClick={() => setGroupColorDraft(color)}
                       />
                     ))}
@@ -488,12 +488,12 @@ export function ConnectionPane({
                 <Dialog.Close asChild>
                   <button type="button">
                     <X className="ui-icon" aria-hidden="true" />
-                    <span>取消</span>
+                    <span>{t("connectionPane.cancel")}</span>
                   </button>
                 </Dialog.Close>
                 <button className="primary-button" type="submit" disabled={!groupReady || groupBusy}>
                   <Check className="ui-icon" aria-hidden="true" />
-                  <span>{editingGroupId ? "更新" : "保存"}</span>
+                  <span>{editingGroupId ? t("connectionPane.update") : t("connectionPane.save")}</span>
                 </button>
               </footer>
             </form>
@@ -506,10 +506,10 @@ export function ConnectionPane({
   function renderDeleteConfirmDialog() {
     return (
       <ConfirmDialog
-        confirmLabel="删除"
-        description={deleteRequestDescription(deleteRequest, customGroups)}
+        confirmLabel={t("connectionPane.delete")}
+        description={deleteRequestDescription(deleteRequest, customGroups, t)}
         open={Boolean(deleteRequest)}
-        title={deleteRequestTitle(deleteRequest)}
+        title={deleteRequestTitle(deleteRequest, t)}
         onConfirm={confirmDeleteRequest}
         onOpenChange={(open) => {
           if (!open) {
@@ -809,6 +809,7 @@ function TreeFolder({
   selectedId: string | null;
   nestedContent?: ReactNode;
 }) {
+  const { t } = useI18n();
   const dropTarget = Boolean(folderDropTargetId && dropTargetId === folderDropTargetId);
 
   return (
@@ -843,7 +844,7 @@ function TreeFolder({
           <ContextMenu.Content className="context-menu-content">
             <ContextMenu.Item className="context-menu-item" onSelect={onToggle}>
               <Folder className="ui-icon" aria-hidden="true" />
-              <span>{expanded ? "收起分组" : "展开分组"}</span>
+              <span>{expanded ? t("connectionPane.group.collapse") : t("connectionPane.group.expand")}</span>
             </ContextMenu.Item>
             {onConnectAll && connectAllLabel ? (
               <ContextMenu.Item className="context-menu-item" onSelect={onConnectAll}>
@@ -853,11 +854,11 @@ function TreeFolder({
             ) : null}
             <ContextMenu.Item className="context-menu-item" onSelect={onCreateConnection}>
               <Plus className="ui-icon" aria-hidden="true" />
-              <span>新建连接</span>
+              <span>{t("connectionPane.addConnection")}</span>
             </ContextMenu.Item>
             <ContextMenu.Item className="context-menu-item" onSelect={onCreateGroup}>
               <FolderPlus className="ui-icon" aria-hidden="true" />
-              <span>新建分组</span>
+              <span>{t("connectionPane.group.new")}</span>
             </ContextMenu.Item>
             {onEditGroup || onDeleteGroup ? (
               <ContextMenu.Separator className="context-menu-separator" />
@@ -865,13 +866,13 @@ function TreeFolder({
             {onEditGroup ? (
               <ContextMenu.Item className="context-menu-item" onSelect={onEditGroup}>
                 <Pencil className="ui-icon" aria-hidden="true" />
-                <span>编辑分组</span>
+                <span>{t("connectionPane.group.edit")}</span>
               </ContextMenu.Item>
             ) : null}
             {onDeleteGroup ? (
               <ContextMenu.Item className="context-menu-item danger" onSelect={onDeleteGroup}>
                 <Trash2 className="ui-icon" aria-hidden="true" />
-                <span>删除分组</span>
+                <span>{t("connectionPane.group.delete")}</span>
               </ContextMenu.Item>
             ) : null}
           </ContextMenu.Content>
@@ -956,7 +957,10 @@ function ConnectionTreeLeaf({
   onToggleFavorite: (connection: ConnectionProfile) => void | Promise<void>;
   selected: boolean;
 }) {
-  const favoriteLabel = connection.is_favorite ? "取消收藏" : "加入收藏";
+  const { t } = useI18n();
+  const favoriteLabel = connection.is_favorite
+    ? t("connectionPane.favorite.remove")
+    : t("connectionPane.favorite.add");
 
   return (
     <ContextMenu.Root>
@@ -974,7 +978,7 @@ function ConnectionTreeLeaf({
             <ConnectionSystemLogo connection={connection} compact decorative />
             <span>
               <strong>{connection.name}</strong>
-              <small>{formatAddress(connection)}</small>
+              <small>{formatAddress(connection, t)}</small>
             </span>
           </button>
           <Tooltip label={favoriteLabel}>
@@ -999,23 +1003,23 @@ function ConnectionTreeLeaf({
             <Play className="ui-icon" aria-hidden="true" />
             <span>
               {connection.protocol === "rdp"
-                ? "打开 RDP"
+                ? t("connectionPane.open.rdp")
                 : connection.protocol === "vnc"
-                  ? "打开 VNC"
+                  ? t("connectionPane.open.vnc")
                   : connection.protocol === "telnet"
-                    ? "打开 Telnet"
+                    ? t("connectionPane.open.telnet")
                     : connection.protocol === "serial"
-                      ? "打开串口"
-                      : "打开终端"}
+                      ? t("connectionPane.open.serial")
+                      : t("connectionPane.open.terminal")}
             </span>
           </ContextMenu.Item>
           <ContextMenu.Item className="context-menu-item" onSelect={() => onEdit(connection)}>
             <Pencil className="ui-icon" aria-hidden="true" />
-            <span>编辑连接</span>
+            <span>{t("connectionPane.editConnection")}</span>
           </ContextMenu.Item>
           <ContextMenu.Item className="context-menu-item" onSelect={() => onDuplicate(connection)}>
             <Copy className="ui-icon" aria-hidden="true" />
-            <span>复制连接</span>
+            <span>{t("connectionPane.duplicateConnection")}</span>
           </ContextMenu.Item>
           <ContextMenu.Item className="context-menu-item" onSelect={() => void onToggleFavorite(connection)}>
             <Star className="ui-icon" aria-hidden="true" />
@@ -1024,7 +1028,7 @@ function ConnectionTreeLeaf({
           <ContextMenu.Separator className="context-menu-separator" />
           <ContextMenu.Item className="context-menu-item danger" onSelect={requestDelete}>
             <Trash2 className="ui-icon" aria-hidden="true" />
-            <span>删除连接</span>
+            <span>{t("connectionPane.deleteConnection")}</span>
           </ContextMenu.Item>
         </ContextMenu.Content>
       </ContextMenu.Portal>
@@ -1036,7 +1040,7 @@ function ConnectionTreeLeaf({
   }
 }
 
-function formatAddress(connection: ConnectionProfile) {
+function formatAddress(connection: ConnectionProfile, t?: Translate) {
   if (connection.protocol === "rdp") {
     return `RDP · ${connection.username}@${connection.host}:${connection.port.toString()}`;
   }
@@ -1047,29 +1051,35 @@ function formatAddress(connection: ConnectionProfile) {
     return `Telnet · ${connection.host}:${connection.port.toString()}`;
   }
   if (connection.protocol === "serial") {
-    return `串口 · ${connection.serial?.port_name || connection.host}`;
+    return `${t ? t("connectionPane.serial") : "Serial"} · ${connection.serial?.port_name || connection.host}`;
   }
   return `${connection.username}@${connection.host}:${connection.port.toString()}`;
 }
 
-function deleteRequestTitle(request: DeleteRequest | null) {
+function deleteRequestTitle(request: DeleteRequest | null, t: Translate) {
   if (!request) {
-    return "确认删除";
+    return t("connectionPane.delete.confirm");
   }
-
-  return request.type === "group" ? "删除分组" : "删除连接";
+  return request.type === "group"
+    ? t("connectionPane.delete.groupTitle")
+    : t("connectionPane.delete.connectionTitle");
 }
 
-function deleteRequestDescription(request: DeleteRequest | null, groups: CustomGroup[]) {
+function deleteRequestDescription(
+  request: DeleteRequest | null,
+  groups: CustomGroup[],
+  t: Translate,
+) {
   if (!request) {
     return "";
   }
-
   if (request.type === "group") {
-    return `确认删除“${request.group.name}”及其 ${groupDescendants(groups, request.group.id).size - 1} 个子组吗？整棵子树中的连接保留并回到未分组。`;
+    return t("connectionPane.delete.groupDescription", {
+      name: request.group.name,
+      count: groupDescendants(groups, request.group.id).size - 1,
+    });
   }
-
-  return `确认删除连接“${request.connection.name}”吗？这个操作无法撤销。`;
+  return t("connectionPane.delete.connectionDescription", { name: request.connection.name });
 }
 
 function buildCatalog(connections: ConnectionProfile[], recentConnectionLimit: number) {

@@ -1,3 +1,4 @@
+import { t as tr } from "../../shared/i18n";
 import type { ConnectionProfileInput } from "./connectionTypes";
 
 export type ConnectionSaveIntent = "save" | "save-and-connect";
@@ -17,12 +18,12 @@ export function connectionDialogSubmitPolicy(
 ): ConnectionDialogSubmitPolicy {
   return editingExisting
     ? {
-        primary: { intent: "save", label: "保存连接" },
-        secondary: { intent: "save-and-connect", label: "保存并新建连接" },
+        primary: { intent: "save", label: tr("connection.submit.save") },
+        secondary: { intent: "save-and-connect", label: tr("connection.submit.saveNew") },
       }
     : {
-        primary: { intent: "save-and-connect", label: "保存并连接" },
-        secondary: { intent: "save", label: "仅保存" },
+        primary: { intent: "save-and-connect", label: tr("connection.submit.saveConnect") },
+        secondary: { intent: "save", label: tr("connection.submit.saveOnly") },
       };
 }
 
@@ -33,7 +34,7 @@ export function validateConnectionNetworkPath(
     return null;
   }
   return {
-    detail: "SSH 跳板机模式需要选择一条已保存连接。",
-    title: "请选择跳板机连接",
+    detail: tr("connection.jump.required.detail"),
+    title: tr("connection.jump.required.title"),
   };
 }

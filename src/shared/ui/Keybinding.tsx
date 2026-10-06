@@ -1,4 +1,5 @@
 import { formatShortcutBinding, normalizeShortcutBinding } from "../../features/shortcuts/shortcutKeys";
+import { useI18n } from "../i18n";
 
 interface KeybindingProps {
   className?: string;
@@ -10,9 +11,11 @@ interface KeybindingProps {
 export function Keybinding({
   className,
   compact = false,
-  emptyLabel = "未设置",
+  emptyLabel,
   value,
 }: KeybindingProps) {
+  const { t } = useI18n();
+  const resolvedEmptyLabel = emptyLabel ?? t("common.notSet");
   const normalized = normalizeShortcutBinding(value);
   const rootClassName = [
     "keybinding",
@@ -24,11 +27,11 @@ export function Keybinding({
     .join(" ");
 
   if (compact) {
-    return <kbd className={rootClassName}>{normalized || emptyLabel}</kbd>;
+    return <kbd className={rootClassName}>{normalized || resolvedEmptyLabel}</kbd>;
   }
 
   if (!normalized) {
-    return <span className={rootClassName}>{emptyLabel}</span>;
+    return <span className={rootClassName}>{resolvedEmptyLabel}</span>;
   }
 
   return (

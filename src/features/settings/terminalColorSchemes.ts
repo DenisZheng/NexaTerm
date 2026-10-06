@@ -6,7 +6,7 @@ export type TerminalColorSchemeTone = "dark" | "light";
 export interface TerminalColorScheme {
   id: TerminalColorSchemeId;
   name: string;
-  source: "MXterm" | "iTerm2-Color-Schemes";
+  source: "NexaTerm" | "iTerm2-Color-Schemes";
   theme: Required<Pick<
     ITheme,
     | "background"
@@ -41,8 +41,8 @@ export const defaultTerminalColorSchemeId: TerminalColorSchemeId = "mxterm-defau
 // 一份脱离数组的 fallback，保证 getTerminalColorScheme 始终能同步返回有效主题。
 const defaultTerminalColorScheme: TerminalColorScheme = {
   id: defaultTerminalColorSchemeId,
-  name: "MXterm Default",
-  source: "MXterm",
+  name: "NexaTerm Default",
+  source: "NexaTerm",
   theme: {
     background: "#111827",
     foreground: "#D1D5DB",

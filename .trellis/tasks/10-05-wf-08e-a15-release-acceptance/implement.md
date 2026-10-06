@@ -15,6 +15,7 @@
 ## Real release evidence
 - [ ] Windows x64 install / launch / Authenticode / upgrade / rollback / locale / theme / brand.
 - [ ] macOS ARM64 install / launch / Developer ID / notarization / upgrade / rollback / locale / theme / brand.
+  - 2026-10-06 partial UI evidence: maintainer manually revalidated i18n on macOS at PR #42 `fix/a15-english-coverage` @ `66ae2dfcefaeb0a1898c616c8a8d85abd45459e1`; English mode showed no remaining Chinese text. This is source/dev UI regression evidence only and does not satisfy packaged install/signing/upgrade/rollback A15 blockers.
 - [ ] Linux x64 install / launch / upgrade / rollback / locale / theme / brand.
 - [ ] SHA256/updater signatures reconciled to candidate artifacts.
 - [ ] mXterm → NexaTerm migration + rollback.

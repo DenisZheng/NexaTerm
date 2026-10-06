@@ -31,7 +31,7 @@ import {
   resolveDesktopPlatform,
 } from "../../shared/tauri/platformCapabilities";
 import { hasTauriRuntime } from "../../shared/tauri/runtime";
-import { useI18n } from "../../shared/i18n";
+import { t as tr, useI18n } from "../../shared/i18n";
 import { selectLocalPrivateKeyFile } from "../../shared/tauri/dialog";
 import type {
   ConnectionAuthKind,
@@ -171,101 +171,99 @@ const protocolDefaultPorts = {
   serial: 1,
 } as const;
 
-const protocolOptions: Array<{
-  icon: typeof Terminal;
-  label: string;
-  value: ConnectionProtocol;
-}> = [
-  { icon: Terminal, label: "SSH", value: "ssh" },
-  { icon: Monitor, label: "RDP", value: "rdp" },
-  { icon: MonitorPlay, label: "VNC", value: "vnc" },
-  { icon: TerminalSquare, label: "Telnet", value: "telnet" },
-  { icon: Cable, label: "串口", value: "serial" },
-];
+function protocolOptions(): Array<{ icon: typeof Terminal; label: string; value: ConnectionProtocol }> {
+  return [
+    { icon: Terminal, label: "SSH", value: "ssh" },
+    { icon: Monitor, label: "RDP", value: "rdp" },
+    { icon: MonitorPlay, label: "VNC", value: "vnc" },
+    { icon: TerminalSquare, label: "Telnet", value: "telnet" },
+    { icon: Cable, label: tr("connectionDialog.protocol.serial"), value: "serial" },
+  ];
+}
+function credentialModeOptions(): Array<{ label: string; value: ConnectionCredentialMode }> {
+  return [
+    { label: tr("connectionDialog.credential.saved"), value: "saved" },
+    { label: tr("connectionDialog.credential.inline"), value: "inline" },
+    { label: tr("connectionDialog.credential.prompt"), value: "prompt" },
+  ];
+}
+function authKindOptions(): Array<{ label: string; value: ConnectionAuthKind }> {
+  return [
+    { label: tr("connectionDialog.auth.password"), value: "password" },
+    { label: tr("connectionDialog.auth.privateKey"), value: "private_key" },
+  ];
+}
+function networkPathOptions(): Array<{ label: string; value: ConnectionNetworkPathMode }> {
+  return [
+    { label: tr("connectionDialog.network.direct"), value: "direct" },
+    { label: tr("connectionDialog.network.proxy"), value: "proxy" },
+    { label: tr("connectionDialog.network.jump"), value: "ssh_jump" },
+  ];
+}
 
-const credentialModeOptions: Array<{
-  label: string;
-  value: ConnectionCredentialMode;
-}> = [
-  { label: "使用保存的账号", value: "saved" },
-  { label: "在此连接中保存", value: "inline" },
-  { label: "每次询问", value: "prompt" },
-];
-
-const authKindOptions: Array<{
-  label: string;
-  value: ConnectionAuthKind;
-}> = [
-  { label: "密码", value: "password" },
-  { label: "私钥", value: "private_key" },
-];
-
-const networkPathOptions: Array<{
-  label: string;
-  value: ConnectionNetworkPathMode;
-}> = [
-  { label: "直连", value: "direct" },
-  { label: "网络代理", value: "proxy" },
-  { label: "SSH 跳板机", value: "ssh_jump" },
-];
-
-const proxyKindOptions: Array<{
-  label: string;
-  value: Exclude<ConnectionProxyKind, "none">;
-}> = [
+const proxyKindOptions: Array<{ label: string; value: Exclude<ConnectionProxyKind, "none"> }> = [
   { label: "HTTP CONNECT", value: "http_connect" },
   { label: "SOCKS5", value: "socks5" },
 ];
 
-const rdpDisplayOptions: Array<{ label: string; value: RdpDisplayMode }> = [
-  { label: "禁用", value: "embedded" },
-  { label: "允许（单显示器）", value: "fullscreen" },
-  { label: "允许（所有显示器）", value: "all_monitors" },
-];
-
-const rdpResolutionModeOptions: Array<{ label: string; value: "adaptive" | "fixed" }> = [
-  { label: "适应窗口大小", value: "adaptive" },
-  { label: "固定分辨率", value: "fixed" },
-];
-
-const rdpAudioOptions: Array<{ label: string; value: RdpAudioMode }> = [
-  { label: "本机播放", value: "local" },
-  { label: "远端播放", value: "remote" },
-  { label: "禁用", value: "disabled" },
-];
-
-const rdpGatewayOptions: Array<{ label: string; value: RdpGatewayMode }> = [
-  { label: "关闭", value: "disabled" },
-  { label: "自动", value: "auto" },
-  { label: "指定网关", value: "explicit" },
-];
-
-const rdpPerformanceOptions: Array<{ label: string; value: RdpPerformancePreset }> = [
-  { label: "自动", value: "auto" },
-  { label: "局域网", value: "lan" },
-  { label: "均衡", value: "balanced" },
-  { label: "低带宽", value: "low_bandwidth" },
-];
-
-const vncRunnerModeOptions: Array<{ label: string; value: VncRenderMode }> = [
-  { label: "内嵌 noVNC", value: "embedded" },
-  { label: "RDP 窗口 noVNC", value: "windowed" },
-  { label: "外部 Viewer", value: "external" },
-  { label: "自定义客户端", value: "custom" },
-];
-
-const vncScaleModeOptions: Array<{ label: string; value: VncScaleMode }> = [
-  { label: "适应窗口", value: "fit" },
-  { label: "拉伸填满", value: "stretch" },
-  { label: "原始尺寸", value: "actual" },
-];
-
-const vncPerformanceOptions: Array<{ label: string; value: VncPerformancePreset }> = [
-  { label: "自动", value: "auto" },
-  { label: "画质优先", value: "quality" },
-  { label: "均衡", value: "balanced" },
-  { label: "低带宽", value: "low_bandwidth" },
-];
+function rdpDisplayOptions(): Array<{ label: string; value: RdpDisplayMode }> {
+  return [
+    { label: tr("connectionDialog.rdp.fullscreen.embedded"), value: "embedded" },
+    { label: tr("connectionDialog.rdp.fullscreen.single"), value: "fullscreen" },
+    { label: tr("connectionDialog.rdp.fullscreen.all"), value: "all_monitors" },
+  ];
+}
+function rdpResolutionModeOptions(): Array<{ label: string; value: "adaptive" | "fixed" }> {
+  return [
+    { label: tr("connectionDialog.rdp.resolution.adaptive"), value: "adaptive" },
+    { label: tr("connectionDialog.rdp.resolution.fixed"), value: "fixed" },
+  ];
+}
+function rdpAudioOptions(): Array<{ label: string; value: RdpAudioMode }> {
+  return [
+    { label: tr("connectionDialog.rdp.audio.local"), value: "local" },
+    { label: tr("connectionDialog.rdp.audio.remote"), value: "remote" },
+    { label: tr("connectionDialog.option.disabled"), value: "disabled" },
+  ];
+}
+function rdpGatewayOptions(): Array<{ label: string; value: RdpGatewayMode }> {
+  return [
+    { label: tr("connectionDialog.option.disabled"), value: "disabled" },
+    { label: tr("connectionDialog.option.auto"), value: "auto" },
+    { label: tr("connectionDialog.rdp.gateway.explicit"), value: "explicit" },
+  ];
+}
+function rdpPerformanceOptions(): Array<{ label: string; value: RdpPerformancePreset }> {
+  return [
+    { label: tr("connectionDialog.option.auto"), value: "auto" },
+    { label: tr("connectionDialog.performance.lan"), value: "lan" },
+    { label: tr("connectionDialog.performance.balanced"), value: "balanced" },
+    { label: tr("connectionDialog.performance.lowBandwidth"), value: "low_bandwidth" },
+  ];
+}
+function vncRunnerModeOptions(): Array<{ label: string; value: VncRenderMode }> {
+  return [
+    { label: tr("connectionDialog.vnc.runner.embedded"), value: "embedded" },
+    { label: tr("connectionDialog.vnc.runner.windowed"), value: "windowed" },
+    { label: tr("connectionDialog.vnc.runner.external"), value: "external" },
+    { label: tr("connectionDialog.vnc.runner.custom"), value: "custom" },
+  ];
+}
+function vncScaleModeOptions(): Array<{ label: string; value: VncScaleMode }> {
+  return [
+    { label: tr("connectionDialog.vnc.scale.fit"), value: "fit" },
+    { label: tr("connectionDialog.vnc.scale.stretch"), value: "stretch" },
+    { label: tr("connectionDialog.vnc.scale.actual"), value: "actual" },
+  ];
+}
+function vncPerformanceOptions(): Array<{ label: string; value: VncPerformancePreset }> {
+  return [
+    { label: tr("connectionDialog.option.auto"), value: "auto" },
+    { label: tr("connectionDialog.performance.quality"), value: "quality" },
+    { label: tr("connectionDialog.performance.balanced"), value: "balanced" },
+    { label: tr("connectionDialog.performance.lowBandwidth"), value: "low_bandwidth" },
+  ];
+}
 
 const telnetEnterModeOptions: Array<{ label: string; value: TelnetEnterMode }> = [
   { label: "CRLF", value: "crlf" },
@@ -296,23 +294,27 @@ const serialStopBitsOptions: Array<{ label: string; value: SerialStopBits }> = [
   { label: "2", value: "two" },
 ];
 
-const serialFlowControlOptions: Array<{ label: string; value: SerialFlowControl }> = [
-  { label: "无", value: "none" },
-  { label: "软件", value: "software" },
-  { label: "硬件", value: "hardware" },
-];
-
-const rdpNlaOptions: Array<{ label: string; value: RdpNetworkLevelAuthentication }> = [
-  { label: "自动", value: "auto" },
-  { label: "启用", value: "enabled" },
-  { label: "禁用", value: "disabled" },
-];
-
-const rdpCertificateOptions: Array<{ label: string; value: RdpCertificatePolicy }> = [
-  { label: "警告后可继续", value: "prompt" },
-  { label: "信任证书错误", value: "trust" },
-  { label: "严格校验", value: "strict" },
-];
+function serialFlowControlOptions(): Array<{ label: string; value: SerialFlowControl }> {
+  return [
+    { label: tr("connectionDialog.option.none"), value: "none" },
+    { label: tr("connectionDialog.option.software"), value: "software" },
+    { label: tr("connectionDialog.option.hardware"), value: "hardware" },
+  ];
+}
+function rdpNlaOptions(): Array<{ label: string; value: RdpNetworkLevelAuthentication }> {
+  return [
+    { label: tr("connectionDialog.option.auto"), value: "auto" },
+    { label: tr("connectionDialog.option.enabled"), value: "enabled" },
+    { label: tr("connectionDialog.option.disabled"), value: "disabled" },
+  ];
+}
+function rdpCertificateOptions(): Array<{ label: string; value: RdpCertificatePolicy }> {
+  return [
+    { label: tr("connectionDialog.rdp.nla.prompt"), value: "prompt" },
+    { label: tr("connectionDialog.rdp.cert.trust"), value: "trust" },
+    { label: tr("connectionDialog.rdp.cert.strict"), value: "strict" },
+  ];
+}
 
 export function ConnectionDialog({
   connection,
@@ -371,7 +373,7 @@ export function ConnectionDialog({
     () => {
       const options: Array<{ label: string; value: RdpRenderMode }> = [];
       if (platformCapabilities.supportsEmbeddedRdp) {
-        options.push({ label: "内置宿主", value: "embedded" });
+        options.push({ label: t("connectionDialog.rdp.runner.embedded"), value: "embedded" });
       }
       options.push({
         label: rdpExternalModeLabelForPlatform(desktopPlatform),
@@ -379,7 +381,7 @@ export function ConnectionDialog({
       });
       return options;
     },
-    [desktopPlatform, platformCapabilities.supportsEmbeddedRdp],
+    [desktopPlatform, platformCapabilities.supportsEmbeddedRdp, t],
   );
   const rdpExternalModeNote = useMemo(
     () => rdpExternalModeNoteForPlatform(desktopPlatform),
@@ -395,22 +397,22 @@ export function ConnectionDialog({
   const currentConnectionId = connection && !duplicate ? connection.id : form.id || "";
   const dialogTabs: Array<[ConnectionDialogTab, string]> = isRdp
     ? [
-        ["basic", "基本"],
+        ["basic", t("connectionDialog.tab.basic")],
         ["rdp", "RDP"],
-        ["advanced", "高级"],
+        ["advanced", t("connectionDialog.tab.advanced")],
       ]
     : isVnc
       ? [
-          ["basic", "基本"],
+          ["basic", t("connectionDialog.tab.basic")],
           ["vnc", "VNC"],
-          ["advanced", "高级"],
+          ["advanced", t("connectionDialog.tab.advanced")],
         ]
       : isCharacterProtocol
-        ? [["basic", "基本"]]
+        ? [["basic", t("connectionDialog.tab.basic")]]
     : [
-        ["basic", "基本"],
-        ["proxy", "网络路径"],
-        ["advanced", "高级"],
+        ["basic", t("connectionDialog.tab.basic")],
+        ["proxy", t("connectionDialog.tab.network")],
+        ["advanced", t("connectionDialog.tab.advanced")],
       ];
   const [serialPorts, setSerialPorts] = useState<SerialPortEntry[]>([]);
   const [serialPortsLoading, setSerialPortsLoading] = useState(false);
@@ -498,8 +500,8 @@ export function ConnectionDialog({
     if (isCharacterProtocol) {
       setTestState("success");
       setFeedback({
-        detail: "Telnet 和串口会在打开标签页时建立运行时会话；当前表单会先保存为连接配置。",
-        title: "配置可保存",
+        detail: t("connectionDialog.test.characterDetail"),
+        title: t("connectionDialog.test.characterTitle"),
       });
       return;
     }
@@ -520,38 +522,39 @@ export function ConnectionDialog({
     setBusy(true);
     setTestState("running");
     setFeedback({
-      detail: "正在检查本机 RDP runner 能力，不会发起远程登录。",
-      title: "正在检查 RDP runner",
+      detail: t("connectionDialog.test.rdpCheckingDetail"),
+      title: t("connectionDialog.test.rdpCheckingTitle"),
     });
 
     try {
       if (!hasTauriRuntime()) {
         setTestState("success");
         setFeedback({
-          detail: "浏览器预览模式使用静态 runner 状态，桌面运行时会执行真实探测。",
-          title: "RDP runner 预览可用",
+          detail: t("connectionDialog.test.previewDetail"),
+          title: t("connectionDialog.test.rdpPreviewTitle"),
         });
         return;
       }
       const result = await rdpTestRunner((form.rdp || defaultRdpConfig).runner);
       if (result.default_runner) {
-        const availabilityDetail = `${formatRdpRunnerKind(result.default_runner)} 可用。${
-          result.supports_embedded
-            ? "当前平台支持嵌入式会话。"
-            : "嵌入式 host 暂不可用时会自动外部启动。"
-        }`;
+        const availabilityDetail = t("connectionDialog.test.runnerAvailable", {
+          runner: formatRdpRunnerKind(result.default_runner),
+          detail: result.supports_embedded
+            ? t("connectionDialog.test.rdpEmbedded")
+            : t("connectionDialog.test.rdpExternal"),
+        });
         setTestState("success");
         setFeedback({
           detail: result.setup_hint
             ? `${availabilityDetail}${result.setup_hint}`
             : availabilityDetail,
-          title: "RDP runner 检查通过",
+          title: t("connectionDialog.test.rdpPass"),
         });
       } else {
         setTestState("error");
         setFeedback({
-          detail: result.setup_hint || "未找到可用 RDP runner，请确认系统远程桌面组件可用。",
-          title: "未找到可用 RDP runner",
+          detail: result.setup_hint || t("connectionDialog.test.rdpMissing"),
+          title: t("connectionDialog.test.rdpMissingTitle"),
         });
       }
     } catch (nextError) {
@@ -568,16 +571,16 @@ export function ConnectionDialog({
     setBusy(true);
     setTestState("running");
     setFeedback({
-      detail: "正在检查本机 VNC runner 能力，不会发起远程登录。",
-      title: "正在检查 VNC runner",
+      detail: t("connectionDialog.test.vncCheckingDetail"),
+      title: t("connectionDialog.test.vncCheckingTitle"),
     });
 
     try {
       if (!hasTauriRuntime()) {
         setTestState("success");
         setFeedback({
-          detail: "浏览器预览模式使用静态 runner 状态，桌面运行时会执行真实探测。",
-          title: "VNC runner 预览可用",
+          detail: t("connectionDialog.test.previewDetail"),
+          title: t("connectionDialog.test.vncPreviewTitle"),
         });
         return;
       }
@@ -585,16 +588,19 @@ export function ConnectionDialog({
       if (result.default_runner) {
         setTestState("success");
         setFeedback({
-          detail: `${formatVncRunnerKind(result.default_runner)} 可用。${
-            result.supports_embedded ? "当前平台支持内嵌 noVNC 会话。" : "可使用外部 viewer。"
-          }`,
-          title: "VNC runner 检查通过",
+          detail: t("connectionDialog.test.runnerAvailable", {
+            runner: formatVncRunnerKind(result.default_runner),
+            detail: result.supports_embedded
+              ? t("connectionDialog.test.vncEmbedded")
+              : t("connectionDialog.test.vncExternal"),
+          }),
+          title: t("connectionDialog.test.vncPass"),
         });
       } else {
         setTestState("error");
         setFeedback({
-          detail: result.setup_hint || "未找到可用 VNC runner，请确认 noVNC 或外部 viewer 配置可用。",
-          title: "未找到可用 VNC runner",
+          detail: result.setup_hint || t("connectionDialog.test.vncMissing"),
+          title: t("connectionDialog.test.vncMissingTitle"),
         });
       }
     } catch (nextError) {
@@ -617,9 +623,9 @@ export function ConnectionDialog({
     setFeedback({
       detail:
         feedback.hostKeyDecision === "changed"
-          ? "正在更新本机保存的主机密钥信任，然后继续测试。"
-          : "正在保存本机主机密钥信任，然后继续测试。",
-      title: "正在确认主机密钥",
+          ? t("connectionDialog.hostKey.updating")
+          : t("connectionDialog.hostKey.saving"),
+      title: t("connectionDialog.hostKey.confirming"),
     });
     setTestState("running");
 
@@ -642,8 +648,8 @@ export function ConnectionDialog({
     busyRef.current = true;
     setBusy(true);
     setFeedback({
-      detail: "测试会复用当前表单配置，不会打开终端。",
-      title: `${formatAddress(input)} 正在检查`,
+      detail: t("connectionDialog.test.detail"),
+      title: t("connectionDialog.test.checking", { address: formatAddress(input) }),
     });
     setTestState("running");
 
@@ -651,8 +657,8 @@ export function ConnectionDialog({
       await onTest(input);
       setTestState("success");
       setFeedback({
-        detail: "当前配置可以继续保存。",
-        title: "连接测试通过",
+        detail: t("connectionDialog.test.successDetail"),
+        title: t("connectionDialog.test.success"),
       });
     } catch (nextError) {
       setActiveTab(tabForError(nextError));
@@ -771,31 +777,31 @@ export function ConnectionDialog({
               <header className="dialog-head">
                 <div className="dialog-title-group">
                   <Dialog.Title asChild>
-                    <strong>{duplicate ? "复制连接" : connection ? "编辑连接" : "新增连接"}</strong>
+                    <strong>{duplicate ? t("connectionDialog.title.duplicate") : connection ? t("connectionDialog.title.edit") : t("connectionDialog.title.new")}</strong>
                   </Dialog.Title>
                   <Dialog.Description className="dialog-subtitle">
                     {form.host
                       ? formatAddress(form)
                       : isRdp
-                        ? "保存一条可跨平台启动的 RDP 连接配置。"
+                        ? t("connectionDialog.description.rdp")
                         : isVnc
-                          ? "保存一条 noVNC 或外部 viewer VNC 连接配置。"
+                          ? t("connectionDialog.description.vnc")
                           : isTelnet
-                            ? "保存一条 Telnet 字符终端连接配置。"
+                            ? t("connectionDialog.description.telnet")
                             : isSerial
-                              ? "保存一条串口字符终端连接配置。"
-                              : "保存一条可维护的 SSH 连接配置。"}
+                              ? t("connectionDialog.description.serial")
+                              : t("connectionDialog.description.ssh")}
                   </Dialog.Description>
                 </div>
                 <Dialog.Close asChild>
-                  <button className="icon-button dialog-close-button" type="button" aria-label="关闭">
+                  <button className="icon-button dialog-close-button" type="button" aria-label={t("connectionDialog.close")}>
                     <X className="ui-icon" aria-hidden="true" />
                   </button>
                 </Dialog.Close>
               </header>
 
-              <div className="protocol-switch" aria-label="连接协议">
-                {protocolOptions.map((item) => {
+              <div className="protocol-switch" aria-label={t("connectionDialog.protocolAria")}>
+                {protocolOptions().map((item) => {
                   const Icon = item.icon;
                   const active = protocol === item.value;
                   return (
@@ -813,7 +819,7 @@ export function ConnectionDialog({
                 })}
               </div>
 
-              <nav className="connection-dialog-tabs" aria-label="连接配置页签">
+              <nav className="connection-dialog-tabs" aria-label={t("connectionDialog.tabsAria")}>
                 {dialogTabs.map(([id, label]) => (
                   <button
                     className={activeTab === id ? "active" : ""}
@@ -856,29 +862,29 @@ export function ConnectionDialog({
                       {feedback.rawMessage && testState !== "host-key" ? (
                         <>
                           {" "}
-                          原因：<code>{feedback.rawMessage}</code>
+                          {t("connectionDialog.feedback.reason", { reason: feedback.rawMessage })}
                         </>
                       ) : null}
                     </span>
                     {feedback.hostKey ? (
                       <dl className="fb-host-key">
                         <div>
-                          <dt>主机</dt>
+                          <dt>{t("connectionDialog.hostKey.host")}</dt>
                           <dd>{feedback.hostKey.host}:{feedback.hostKey.port.toString()}</dd>
                         </div>
                         <div>
-                          <dt>算法</dt>
+                          <dt>{t("connectionDialog.hostKey.algorithm")}</dt>
                           <dd>{feedback.hostKey.key_algorithm}</dd>
                         </div>
                         {feedback.oldHostKeyFingerprint ? (
                           <div>
-                            <dt>已保存指纹</dt>
+                            <dt>{t("connectionDialog.hostKey.savedFingerprint")}</dt>
                             <dd>{feedback.oldHostKeyFingerprint}</dd>
                           </div>
                         ) : null}
                         <div>
                           <dt>
-                            {feedback.oldHostKeyFingerprint ? "当前指纹" : "SHA256 指纹"}
+                            {feedback.oldHostKeyFingerprint ? t("connectionDialog.hostKey.currentFingerprint") : t("connectionDialog.hostKey.sha256")}
                           </dt>
                           <dd>{feedback.hostKey.fingerprint_sha256}</dd>
                         </div>
@@ -893,7 +899,7 @@ export function ConnectionDialog({
                           onClick={testConnection}
                         >
                           <RefreshCw className="ui-icon" aria-hidden="true" />
-                          <span>重试</span>
+                          <span>{t("connectionDialog.retry")}</span>
                         </button>
                       </div>
                     ) : null}
@@ -908,8 +914,8 @@ export function ConnectionDialog({
                           <RefreshCw className="ui-icon" aria-hidden="true" />
                           <span>
                             {feedback.hostKeyDecision === "changed"
-                              ? "更新信任并继续测试"
-                              : "信任并继续测试"}
+                              ? t("connectionDialog.hostKey.updateTrust")
+                              : t("connectionDialog.hostKey.trust")}
                           </span>
                         </button>
                       </div>
@@ -927,7 +933,7 @@ export function ConnectionDialog({
                       type="button"
                       onClick={() => setDeleteConfirmOpen(true)}
                     >
-                      删除
+                      {t("connectionDialog.delete")}
                     </button>
                   ) : null}
                   <button
@@ -936,13 +942,13 @@ export function ConnectionDialog({
                     type="button"
                     onClick={testConnection}
                   >
-                    {isRdp || isVnc ? "检查 Runner" : isCharacterProtocol ? "检查配置" : "测试连接"}
+                    {isRdp || isVnc ? t("connectionDialog.checkRunner") : isCharacterProtocol ? t("connectionDialog.checkConfig") : t("connectionDialog.testConnection")}
                   </button>
                 </div>
                 <div className="dialog-action-right">
                   <Dialog.Close asChild>
                     <button disabled={busy} type="button">
-                      取消
+                      {t("connectionDialog.cancel")}
                     </button>
                   </Dialog.Close>
                   <button disabled={busy} type="button" onClick={submitSecondary}>{submitPolicy.secondary.label}</button>
@@ -958,10 +964,10 @@ export function ConnectionDialog({
 
       {connection && !duplicate ? (
         <ConfirmDialog
-          confirmLabel="删除"
-          description={`确认删除连接“${connection.name}”吗？这个操作无法撤销。`}
+          confirmLabel={t("connectionDialog.delete")}
+          description={t("connectionDialog.deleteDescription", { name: connection.name })}
           open={deleteConfirmOpen}
-          title="删除连接"
+          title={t("connectionDialog.deleteTitle")}
           onConfirm={remove}
           onOpenChange={setDeleteConfirmOpen}
         />
@@ -984,21 +990,21 @@ export function ConnectionDialog({
         <div className="connection-dialog-fields">
           <div className={`form-grid ${showGroupField ? "form-grid-wide" : "form-grid-single"}`}>
             <label>
-              <span>名称（可以为空）</span>
+              <span>{t("connectionDialog.field.nameOptional")}</span>
               <input
                 value={form.name || ""}
                 onChange={(event) => setForm({ ...form, name: event.target.value })}
-                placeholder="例如：交换机 Telnet"
+                placeholder={t("connectionDialog.telnet.namePlaceholder")}
               />
             </label>
             {showGroupField ? (
               <label>
-                <span>分组</span>
+                <span>{t("connectionDialog.field.group")}</span>
                 <AppSelect
-                  ariaLabel="分组"
+                  ariaLabel={t("connectionDialog.field.group")}
                   value={form.group_id || ""}
                   options={[
-                    { label: "不分组", value: "" },
+                    { label: t("connectionDialog.group.none"), value: "" },
                     ...groupOptions.map((group) => ({
                       label: group.label,
                       value: group.value,
@@ -1011,16 +1017,16 @@ export function ConnectionDialog({
           </div>
           <div className="form-grid">
             <label>
-              <span>主机</span>
+              <span>{t("connectionDialog.field.host")}</span>
               <input
                 required
                 value={form.host}
                 onChange={(event) => setForm({ ...form, host: event.target.value })}
-                placeholder="请输入主机地址"
+                placeholder={t("connectionDialog.hostPlaceholder")}
               />
             </label>
             <label>
-              <span>端口</span>
+              <span>{t("connectionDialog.field.port")}</span>
               <input
                 inputMode="numeric"
                 required
@@ -1033,9 +1039,9 @@ export function ConnectionDialog({
           </div>
           <div className="form-grid form-grid-wide">
             <label>
-              <span>回车模式</span>
+              <span>{t("connectionDialog.field.enterMode")}</span>
               <AppSelect
-                ariaLabel="回车模式"
+                ariaLabel={t("connectionDialog.field.enterMode")}
                 value={telnet.enter_mode}
                 options={telnetEnterModeOptions}
                 onChange={(enterMode) =>
@@ -1047,9 +1053,9 @@ export function ConnectionDialog({
               />
             </label>
             <label>
-              <span>退格模式</span>
+              <span>{t("connectionDialog.field.backspaceMode")}</span>
               <AppSelect
-                ariaLabel="退格模式"
+                ariaLabel={t("connectionDialog.field.backspaceMode")}
                 value={telnet.backspace_mode}
                 options={backspaceModeOptions}
                 onChange={(backspaceMode) =>
@@ -1062,12 +1068,12 @@ export function ConnectionDialog({
             </label>
           </div>
           <label>
-            <span>说明</span>
+            <span>{t("connectionDialog.field.notes")}</span>
             <textarea
               rows={3}
               value={form.notes || ""}
               onChange={(event) => setForm({ ...form, notes: event.target.value })}
-              placeholder="可记录设备型号、网络区域、登录提示等。"
+              placeholder={t("connectionDialog.notes.characterPlaceholder")}
             />
           </label>
         </div>
@@ -1083,12 +1089,12 @@ export function ConnectionDialog({
       });
       const serialAvailabilityMessage =
         serialAvailability.status === "loading"
-          ? "正在读取串口设备…"
+          ? t("connectionDialog.serial.loading")
           : serialAvailability.status === "list_failed"
-            ? `串口列表读取失败：${serialAvailability.error || "未知错误"}`
+            ? t("connectionDialog.serial.error", { message: serialAvailability.error || t("connectionDialog.serial.unknownError") })
             : serialAvailability.status === "no_ports"
-              ? "未检测到可用串口设备。连接设备后可点击刷新重试。"
-              : `已检测到 ${serialAvailability.count.toString()} 个串口设备。`;
+              ? t("connectionDialog.serial.none")
+              : t("connectionDialog.serial.count", { count: serialAvailability.count });
       const serialPortOptions =
         serialPorts.length > 0
           ? serialPorts.map((port) => ({
@@ -1100,10 +1106,10 @@ export function ConnectionDialog({
                 disabled: true,
                 label:
                   serialAvailability.status === "loading"
-                    ? "正在读取串口"
+                    ? t("connectionDialog.serial.loadingShort")
                     : serialAvailability.status === "list_failed"
-                      ? "串口读取失败"
-                      : "暂无可用串口",
+                      ? t("connectionDialog.serial.errorShort")
+                      : t("connectionDialog.serial.noneShort"),
                 value: "",
               },
             ];
@@ -1111,21 +1117,21 @@ export function ConnectionDialog({
         <div className="connection-dialog-fields">
           <div className={`form-grid ${showGroupField ? "form-grid-wide" : "form-grid-single"}`}>
             <label>
-              <span>名称（可以为空）</span>
+              <span>{t("connectionDialog.field.nameOptional")}</span>
               <input
                 value={form.name || ""}
                 onChange={(event) => setForm({ ...form, name: event.target.value })}
-                placeholder="例如：开发板 Console"
+                placeholder={t("connectionDialog.serial.namePlaceholder")}
               />
             </label>
             {showGroupField ? (
               <label>
-                <span>分组</span>
+                <span>{t("connectionDialog.field.group")}</span>
                 <AppSelect
-                  ariaLabel="分组"
+                  ariaLabel={t("connectionDialog.field.group")}
                   value={form.group_id || ""}
                   options={[
-                    { label: "不分组", value: "" },
+                    { label: t("connectionDialog.group.none"), value: "" },
                     ...groupOptions.map((group) => ({
                       label: group.label,
                       value: group.value,
@@ -1138,9 +1144,9 @@ export function ConnectionDialog({
           </div>
           <div className="credential-select-row">
             <label>
-              <span>串口</span>
+              <span>{t("connectionDialog.field.serial")}</span>
               <AppSelect
-                ariaLabel="串口"
+                ariaLabel={t("connectionDialog.field.serial")}
                 disabled={serialAvailability.status !== "available"}
                 value={serial.port_name}
                 options={serialPortOptions}
@@ -1161,12 +1167,12 @@ export function ConnectionDialog({
               onClick={() => void refreshSerialPorts()}
             >
               <RefreshCw className={`ui-icon ${serialPortsLoading ? "spin" : ""}`} aria-hidden="true" />
-              刷新
+              {t("connectionDialog.refresh")}
             </button>
           </div>
           <div className="form-grid form-grid-wide">
             <label>
-              <span>波特率</span>
+              <span>{t("connectionDialog.field.baudRate")}</span>
               <input
                 inputMode="numeric"
                 required
@@ -1183,9 +1189,9 @@ export function ConnectionDialog({
               />
             </label>
             <label>
-              <span>退格模式</span>
+              <span>{t("connectionDialog.field.backspaceMode")}</span>
               <AppSelect
-                ariaLabel="退格模式"
+                ariaLabel={t("connectionDialog.field.backspaceMode")}
                 value={serial.backspace_mode}
                 options={backspaceModeOptions}
                 onChange={(backspaceMode) =>
@@ -1199,9 +1205,9 @@ export function ConnectionDialog({
           </div>
           <div className="form-grid form-grid-wide">
             <label>
-              <span>数据位</span>
+              <span>{t("connectionDialog.field.dataBits")}</span>
               <AppSelect
-                ariaLabel="数据位"
+                ariaLabel={t("connectionDialog.field.dataBits")}
                 value={serial.data_bits}
                 options={serialDataBitsOptions}
                 onChange={(dataBits) =>
@@ -1210,9 +1216,9 @@ export function ConnectionDialog({
               />
             </label>
             <label>
-              <span>校验位</span>
+              <span>{t("connectionDialog.field.parity")}</span>
               <AppSelect
-                ariaLabel="校验位"
+                ariaLabel={t("connectionDialog.field.parity")}
                 value={serial.parity}
                 options={serialParityOptions}
                 onChange={(parity) =>
@@ -1223,9 +1229,9 @@ export function ConnectionDialog({
           </div>
           <div className="form-grid form-grid-wide">
             <label>
-              <span>停止位</span>
+              <span>{t("connectionDialog.field.stopBits")}</span>
               <AppSelect
-                ariaLabel="停止位"
+                ariaLabel={t("connectionDialog.field.stopBits")}
                 value={serial.stop_bits}
                 options={serialStopBitsOptions}
                 onChange={(stopBits) =>
@@ -1234,11 +1240,11 @@ export function ConnectionDialog({
               />
             </label>
             <label>
-              <span>流控</span>
+              <span>{t("connectionDialog.field.flowControl")}</span>
               <AppSelect
-                ariaLabel="流控"
+                ariaLabel={t("connectionDialog.field.flowControl")}
                 value={serial.flow_control}
-                options={serialFlowControlOptions}
+                options={serialFlowControlOptions()}
                 onChange={(flowControl) =>
                   setForm({ ...form, serial: { ...serial, flow_control: flowControl } })
                 }
@@ -1252,12 +1258,12 @@ export function ConnectionDialog({
             {serialAvailabilityMessage}
           </p>
           <label>
-            <span>说明</span>
+            <span>{t("connectionDialog.field.notes")}</span>
             <textarea
               rows={3}
               value={form.notes || ""}
               onChange={(event) => setForm({ ...form, notes: event.target.value })}
-              placeholder="可记录设备型号、线缆、调试用途等。"
+              placeholder={t("connectionDialog.serial.notesPlaceholder")}
             />
           </label>
         </div>
@@ -1269,21 +1275,21 @@ export function ConnectionDialog({
         <div className="connection-dialog-fields">
           <div className={`form-grid ${showGroupField ? "form-grid-wide" : "form-grid-single"}`}>
             <label>
-              <span>名称（可以为空）</span>
+              <span>{t("connectionDialog.field.nameOptional")}</span>
               <input
               value={form.name || ""}
               onChange={(event) => setForm({ ...form, name: event.target.value })}
-              placeholder={isRdp ? "例如：办公 Windows" : "例如：Linux 图形桌面"}
+              placeholder={isRdp ? t("connectionDialog.desktop.rdpNamePlaceholder") : t("connectionDialog.desktop.vncNamePlaceholder")}
             />
             </label>
             {showGroupField ? (
               <label>
-                <span>分组</span>
+                <span>{t("connectionDialog.field.group")}</span>
                 <AppSelect
-                  ariaLabel="分组"
+                  ariaLabel={t("connectionDialog.field.group")}
                   value={form.group_id || ""}
                   options={[
-                    { label: "不分组", value: "" },
+                    { label: t("connectionDialog.group.none"), value: "" },
                     ...groupOptions.map((group) => ({
                       label: group.label,
                       value: group.value,
@@ -1297,16 +1303,16 @@ export function ConnectionDialog({
 
           <div className="form-grid">
             <label>
-              <span>主机</span>
+              <span>{t("connectionDialog.field.host")}</span>
               <input
                 required
                 value={form.host}
                 onChange={(event) => setForm({ ...form, host: event.target.value })}
-                placeholder="请输入主机地址"
+                placeholder={t("connectionDialog.hostPlaceholder")}
               />
             </label>
             <label>
-              <span>端口</span>
+              <span>{t("connectionDialog.field.port")}</span>
               <input
                 inputMode="numeric"
                 required
@@ -1320,11 +1326,11 @@ export function ConnectionDialog({
 
           <div className="form-grid form-grid-wide">
             <label>
-              <span>账号来源</span>
+              <span>{t("connectionDialog.field.credentialSource")}</span>
               <AppSelect
-                ariaLabel="账号来源"
+                ariaLabel={t("connectionDialog.field.credentialSource")}
                 value={credentialMode}
-                options={credentialModeOptions}
+                options={credentialModeOptions()}
                 onChange={(credentialMode) =>
                   setForm({
                     ...form,
@@ -1344,12 +1350,12 @@ export function ConnectionDialog({
               />
             </label>
             <label>
-              <span>{isRdp ? "域" : "用户名"}</span>
+              <span>{isRdp ? t("connectionDialog.field.domain") : t("connectionDialog.field.username")}</span>
               {isRdp ? (
                 <input
                   value={rdp.domain || ""}
                   onChange={(event) => updateRdp({ domain: event.target.value })}
-                  placeholder="可选"
+                  placeholder={t("connectionDialog.optional")}
                 />
               ) : (
                 <input
@@ -1366,14 +1372,14 @@ export function ConnectionDialog({
           {credentialMode === "saved" ? (
             <div className="credential-select-row">
               <label>
-                <span>选择账号</span>
+                <span>{t("connectionDialog.field.savedAccount")}</span>
                 <AppSelect
-                  ariaLabel="选择账号"
+                  ariaLabel={t("connectionDialog.field.savedAccount")}
                   value={form.credential_id || ""}
                   options={[
-                    { label: "选择密码账号", value: "" },
+                    { label: t("connectionDialog.savedPasswordAccount"), value: "" },
                     ...passwordCredentials.map((credential) => ({
-                      label: `${credential.name}${credential.username ? `（${credential.username}）` : ""} · 密码`,
+                      label: `${credential.name}${credential.username ? ` (${credential.username})` : ""}${t("connectionDialog.account.passwordSuffix")}`,
                       value: credential.id,
                     })),
                   ]}
@@ -1393,7 +1399,7 @@ export function ConnectionDialog({
                 type="button"
                 onClick={onManageCredentials}
               >
-                管理
+                {t("connectionDialog.manage")}
               </button>
             </div>
           ) : null}
@@ -1402,19 +1408,19 @@ export function ConnectionDialog({
             <div className="form-grid form-grid-wide">
               {isRdp ? (
                 <label>
-                  <span>用户名</span>
+                  <span>{t("connectionDialog.field.username")}</span>
                   <input
                     required
                     {...usernameInputAttributes}
                     value={form.username}
                     onChange={(event) => setForm({ ...form, username: event.target.value })}
-                    placeholder="请输入用户名"
+                    placeholder={t("connectionDialog.usernamePlaceholder")}
                   />
                 </label>
               ) : null}
               {credentialMode === "inline" ? (
                 <label>
-                  <span>密码</span>
+                  <span>{t("connectionDialog.field.password")}</span>
                   <div className="input-with-toggle">
                     <input
                       type={showPassword ? "text" : "password"}
@@ -1429,8 +1435,8 @@ export function ConnectionDialog({
                       }
                       placeholder={
                         connection?.id && !form.inline_password
-                          ? "已保存，留空保留"
-                          : `输入 ${desktopProtocolName} 密码`
+                          ? t("connectionDialog.password.savedKeep")
+                          : t("connectionDialog.password.input", { protocol: desktopProtocolName })
                       }
                     />
                     {allowPasswordReveal ? (
@@ -1438,7 +1444,7 @@ export function ConnectionDialog({
                         className="field-toggle"
                         type="button"
                         disabled={revealBusy}
-                        aria-label={showPassword ? "隐藏密码" : "显示密码"}
+                        aria-label={showPassword ? t("connectionDialog.password.hide") : t("connectionDialog.password.show")}
                         onClick={() => void toggleInlinePasswordVisibility()}
                       >
                         {showPassword ? (
@@ -1457,24 +1463,24 @@ export function ConnectionDialog({
           {credentialMode === "prompt" ? (
             <p className="connection-dialog-note">
               {isRdp
-                ? "连接时由系统 RDP 客户端提示凭据；内嵌模式也会保留这个安全兜底。"
-                : "连接时由 noVNC 安全提示凭据；保存连接本身不会写入密码。"}
+                ? t("connectionDialog.rdp.promptNote")
+                : t("connectionDialog.vnc.promptNote")}
             </p>
           ) : (
             <p className="connection-dialog-note">
               {isRdp
-                ? "保存的 RDP 密码只进入 MXterm vault，并且仅在 Windows 内嵌 ActiveX 模式中内存注入；外部 runner 仍会提示凭据。"
-                : "保存的 VNC 密码只进入 MXterm vault，并且仅在 noVNC 内嵌或 RDP 窗口模式中以内存字段传入；外部 viewer 仍会提示凭据。"}
+                ? t("connectionDialog.rdp.savedPasswordNote")
+                : t("connectionDialog.vnc.savedPasswordNote")}
             </p>
           )}
 
           <label>
-            <span>说明</span>
+            <span>{t("connectionDialog.field.notes")}</span>
             <textarea
               rows={3}
               value={form.notes || ""}
               onChange={(event) => setForm({ ...form, notes: event.target.value })}
-              placeholder="可记录用途、环境、连接注意事项。"
+              placeholder={t("connectionDialog.notes.desktopPlaceholder")}
             />
           </label>
         </div>
@@ -1486,21 +1492,21 @@ export function ConnectionDialog({
         {/* 目标：名称/分组、主机/端口 平铺，无分组标题 */}
         <div className={`form-grid ${showGroupField ? "form-grid-wide" : "form-grid-single"}`}>
           <label>
-            <span>名称（可以为空）</span>
+            <span>{t("connectionDialog.field.nameOptional")}</span>
             <input
               value={form.name || ""}
               onChange={(event) => setForm({ ...form, name: event.target.value })}
-              placeholder="例如：生产跳板"
+              placeholder={t("connectionDialog.ssh.namePlaceholder")}
             />
           </label>
           {showGroupField ? (
             <label>
-              <span>分组</span>
+              <span>{t("connectionDialog.field.group")}</span>
               <AppSelect
-                ariaLabel="分组"
+                ariaLabel={t("connectionDialog.field.group")}
                 value={form.group_id || ""}
                 options={[
-                  { label: "不分组", value: "" },
+                  { label: t("connectionDialog.group.none"), value: "" },
                   ...groupOptions.map((group) => ({
                     label: group.label,
                     value: group.value,
@@ -1514,16 +1520,16 @@ export function ConnectionDialog({
 
         <div className="form-grid">
           <label>
-            <span>主机</span>
+            <span>{t("connectionDialog.field.host")}</span>
             <input
               required
               value={form.host}
               onChange={(event) => setForm({ ...form, host: event.target.value })}
-              placeholder="请输入主机地址"
+              placeholder={t("connectionDialog.hostPlaceholder")}
             />
           </label>
           <label>
-            <span>端口</span>
+            <span>{t("connectionDialog.field.port")}</span>
             <input
               inputMode="numeric"
               required
@@ -1541,11 +1547,11 @@ export function ConnectionDialog({
             {/* 账号来源 + 认证方式 并排 */}
             <div className="form-grid form-grid-wide">
               <label>
-                <span>账号来源</span>
+                <span>{t("connectionDialog.field.credentialSource")}</span>
                 <AppSelect
-                  ariaLabel="账号来源"
+                  ariaLabel={t("connectionDialog.field.credentialSource")}
                   value={credentialMode}
-                  options={credentialModeOptions}
+                  options={credentialModeOptions()}
                   onChange={(credentialMode) =>
                     setForm({
                       ...form,
@@ -1555,11 +1561,11 @@ export function ConnectionDialog({
                 />
               </label>
               <label>
-                <span>认证方式</span>
+                <span>{t("connectionDialog.field.authMethod")}</span>
                 <AppSelect
-                  ariaLabel="认证方式"
+                  ariaLabel={t("connectionDialog.field.authMethod")}
                   value={inlineAuthKind}
-                  options={authKindOptions}
+                  options={authKindOptions()}
                   onChange={changeInlineAuthKind}
                 />
               </label>
@@ -1569,17 +1575,17 @@ export function ConnectionDialog({
             {inlineAuthKind === "password" ? (
               <div className="form-grid form-grid-wide">
                 <label>
-                  <span>用户名</span>
+                  <span>{t("connectionDialog.field.username")}</span>
                   <input
                     required
                     {...usernameInputAttributes}
                     value={form.username}
                     onChange={(event) => setForm({ ...form, username: event.target.value })}
-                    placeholder="请输入用户名"
+                    placeholder={t("connectionDialog.usernamePlaceholder")}
                   />
                 </label>
                 <label>
-                  <span>密码</span>
+                  <span>{t("connectionDialog.field.password")}</span>
                   <div className="input-with-toggle">
                     <input
                       type={showPassword ? "text" : "password"}
@@ -1593,8 +1599,8 @@ export function ConnectionDialog({
                       }
                       placeholder={
                         connection?.id && !form.inline_password
-                          ? "已保存，留空保留"
-                          : "输入密码"
+                          ? t("connectionDialog.password.savedKeep")
+                          : t("connectionDialog.password.input", { protocol: "SSH" })
                       }
                     />
                     {allowPasswordReveal ? (
@@ -1602,7 +1608,7 @@ export function ConnectionDialog({
                         className="field-toggle"
                         type="button"
                         disabled={revealBusy}
-                        aria-label={showPassword ? "隐藏密码" : "显示密码"}
+                        aria-label={showPassword ? t("connectionDialog.password.hide") : t("connectionDialog.password.show")}
                         onClick={() => void toggleInlinePasswordVisibility()}
                       >
                         {showPassword ? (
@@ -1617,13 +1623,13 @@ export function ConnectionDialog({
               </div>
             ) : (
               <label>
-                <span>用户名</span>
+                <span>{t("connectionDialog.field.username")}</span>
                 <input
                   required
                   {...usernameInputAttributes}
                   value={form.username}
                   onChange={(event) => setForm({ ...form, username: event.target.value })}
-                  placeholder="请输入用户名"
+                  placeholder={t("connectionDialog.usernamePlaceholder")}
                 />
               </label>
             )}
@@ -1632,7 +1638,7 @@ export function ConnectionDialog({
             {inlineAuthKind === "private_key" ? (
               <>
                 <label>
-                  <span>私钥路径</span>
+                  <span>{t("connectionDialog.privateKey.path")}</span>
                   <div className="settings-path-picker credential-private-key-picker">
                     <input
                       className="settings-path-input"
@@ -1640,21 +1646,21 @@ export function ConnectionDialog({
                       onChange={(event) =>
                         setForm({ ...form, inline_private_key_path: event.target.value })
                       }
-                      placeholder="~/.ssh/id_ed25519 或 PuTTY .ppk"
+                      placeholder={t("connectionDialog.privateKey.placeholder")}
                     />
                     <button
                       className="settings-action-button settings-path-button"
                       type="button"
-                      aria-label="选择私钥文件"
+                      aria-label={t("connectionDialog.privateKey.choose")}
                       onClick={choosePrivateKeyPath}
                     >
                       <FolderOpen className="ui-icon" aria-hidden="true" />
-                      <span>选择</span>
+                      <span>{t("connectionDialog.choose")}</span>
                     </button>
                   </div>
                 </label>
                 <label>
-                  <span>私钥口令</span>
+                  <span>{t("connectionDialog.privateKey.passphrase")}</span>
                   <div className="input-with-toggle">
                     <input
                       type={showPassphrase ? "text" : "password"}
@@ -1668,8 +1674,8 @@ export function ConnectionDialog({
                       }
                       placeholder={
                         connection?.id && !form.inline_private_key_passphrase
-                          ? "已保存，留空保留"
-                          : "输入私钥口令"
+                          ? t("connectionDialog.password.savedKeep")
+                          : t("connectionDialog.privateKey.passphrasePlaceholder")
                       }
                     />
                     {allowPasswordReveal ? (
@@ -1677,7 +1683,7 @@ export function ConnectionDialog({
                         className="field-toggle"
                         type="button"
                         disabled={revealBusy}
-                        aria-label={showPassphrase ? "隐藏私钥口令" : "显示私钥口令"}
+                        aria-label={showPassphrase ? t("connectionDialog.privateKey.hidePassphrase") : t("connectionDialog.privateKey.showPassphrase")}
                         onClick={() => void toggleInlinePassphraseVisibility()}
                       >
                         {showPassphrase ? (
@@ -1697,11 +1703,11 @@ export function ConnectionDialog({
         {credentialMode === "saved" ? (
           <>
             <label>
-              <span>账号来源</span>
+              <span>{t("connectionDialog.field.credentialSource")}</span>
               <AppSelect
-                ariaLabel="账号来源"
+                ariaLabel={t("connectionDialog.field.credentialSource")}
                 value={credentialMode}
-                options={credentialModeOptions}
+                options={credentialModeOptions()}
                 onChange={(credentialMode) =>
                   setForm({
                     ...form,
@@ -1712,15 +1718,15 @@ export function ConnectionDialog({
             </label>
             <div className="credential-select-row">
               <label>
-                <span>选择账号</span>
+                <span>{t("connectionDialog.field.savedAccount")}</span>
                 <AppSelect
-                  ariaLabel="选择账号"
+                  ariaLabel={t("connectionDialog.field.savedAccount")}
                   value={form.credential_id || ""}
                   options={[
-                    { label: "选择账号", value: "" },
+                    { label: t("connectionDialog.account.choose"), value: "" },
                     ...credentials.map((credential) => ({
                       label: `${credential.name}${credential.username ? `（${credential.username}）` : ""} · ${
-                        credential.kind === "password" ? "密码" : "私钥"
+                        credential.kind === "password" ? t("connectionDialog.account.passwordSuffix").trim().replace("· ", "") : t("connectionDialog.account.privateKeySuffix").trim().replace("· ", "")
                       }`,
                       value: credential.id,
                     })),
@@ -1733,7 +1739,7 @@ export function ConnectionDialog({
                 type="button"
                 onClick={onManageCredentials}
               >
-                管理
+                {t("connectionDialog.manage")}
               </button>
             </div>
           </>
@@ -1742,11 +1748,11 @@ export function ConnectionDialog({
         {credentialMode === "prompt" ? (
           <>
             <label>
-              <span>账号来源</span>
+              <span>{t("connectionDialog.field.credentialSource")}</span>
               <AppSelect
-                ariaLabel="账号来源"
+                ariaLabel={t("connectionDialog.field.credentialSource")}
                 value={credentialMode}
-                options={credentialModeOptions}
+                options={credentialModeOptions()}
                 onChange={(credentialMode) =>
                   setForm({
                     ...form,
@@ -1756,19 +1762,19 @@ export function ConnectionDialog({
               />
             </label>
             <p className="connection-dialog-note">
-              连接时弹出密码或私钥输入，不在本机保存认证材料。
+              {t("connectionDialog.promptAuthNote")}
             </p>
           </>
         ) : null}
 
         {/* 备注 */}
         <label>
-          <span>说明</span>
+          <span>{t("connectionDialog.field.notes")}</span>
           <textarea
             rows={3}
             value={form.notes || ""}
             onChange={(event) => setForm({ ...form, notes: event.target.value })}
-            placeholder="可记录用途、环境、连接注意事项。"
+            placeholder={t("connectionDialog.notes.desktopPlaceholder")}
           />
         </label>
       </div>
@@ -1785,14 +1791,14 @@ export function ConnectionDialog({
 
     return (
       <section className="dialog-section dialog-section-last">
-        <div className="dialog-section-title">网络路径</div>
+        <div className="dialog-section-title">{t("connectionDialog.tab.network")}</div>
 
         <label>
-          <span>连接方式</span>
+          <span>{t("connectionDialog.field.connectionMethod")}</span>
           <AppSelect
-            ariaLabel="连接方式"
+            ariaLabel={t("connectionDialog.field.connectionMethod")}
             value={networkPathMode}
-            options={networkPathOptions}
+            options={networkPathOptions()}
             onChange={(mode) => {
               setForm({
                 ...form,
@@ -1818,9 +1824,9 @@ export function ConnectionDialog({
         {networkPathMode === "proxy" ? (
           <>
             <label>
-              <span>代理类型</span>
+              <span>{t("connectionDialog.field.proxyType")}</span>
               <AppSelect
-                ariaLabel="代理类型"
+                ariaLabel={t("connectionDialog.field.proxyType")}
                 value={proxy.kind === "none" ? "http_connect" : proxy.kind}
                 options={proxyKindOptions}
                 onChange={(proxyKind) =>
@@ -1838,7 +1844,7 @@ export function ConnectionDialog({
 
             <div className="form-grid">
               <label>
-                <span>代理主机</span>
+                <span>{t("connectionDialog.field.proxyHost")}</span>
                 <input
                   value={proxy.host || ""}
                   onChange={(event) =>
@@ -1852,7 +1858,7 @@ export function ConnectionDialog({
                 />
               </label>
               <label>
-                <span>代理端口</span>
+                <span>{t("connectionDialog.field.proxyPort")}</span>
                 <input
                   inputMode="numeric"
                   value={(proxy.port || "").toString()}
@@ -1870,7 +1876,7 @@ export function ConnectionDialog({
 
             <div className="form-grid form-grid-wide">
               <label>
-                <span>代理用户名</span>
+                <span>{t("connectionDialog.field.proxyUsername")}</span>
                 <input
                   {...usernameInputAttributes}
                   value={proxy.username || ""}
@@ -1884,7 +1890,7 @@ export function ConnectionDialog({
                 />
               </label>
               <label>
-                <span>代理密码</span>
+                <span>{t("connectionDialog.field.proxyPassword")}</span>
                 <div className="input-with-toggle">
                   <input
                     type={showProxyPassword ? "text" : "password"}
@@ -1900,7 +1906,7 @@ export function ConnectionDialog({
                   <button
                     className="field-toggle"
                     type="button"
-                    aria-label={showProxyPassword ? "隐藏代理密码" : "显示代理密码"}
+                    aria-label={showProxyPassword ? t("connectionDialog.proxy.hidePassword") : t("connectionDialog.proxy.showPassword")}
                     onClick={() => setShowProxyPassword((value) => !value)}
                   >
                     {showProxyPassword ? (
@@ -1918,12 +1924,12 @@ export function ConnectionDialog({
         {networkPathMode === "ssh_jump" ? (
           <>
             <label>
-              <span>跳板机连接</span>
+              <span>{t("connectionDialog.field.jumpConnection")}</span>
               <AppSelect
-                ariaLabel="跳板机连接"
+                ariaLabel={t("connectionDialog.field.jumpConnection")}
                 value={jump.jump_connection_id || ""}
                 options={[
-                  { label: "选择跳板机", value: "" },
+                  { label: t("connectionDialog.jump.choose"), value: "" },
                   ...jumpCandidates.map((item) => ({
                     label: `${item.name} · ${item.username}@${item.host}:${item.port.toString()}`,
                     value: item.id,
@@ -1943,13 +1949,13 @@ export function ConnectionDialog({
               />
             </label>
             <p className={`connection-dialog-note ${jumpPlan.issue ? "form-error" : ""}`}>
-              {jumpPlan.issue ? jumpPlan.issue.detail : `实际连接路径：${jumpPlan.labels.join(" → ")}`}
+              {jumpPlan.issue ? jumpPlan.issue.detail : t("connectionDialog.jump.path", { path: jumpPlan.labels.join(" → ") })}
             </p>
           </>
         ) : null}
 
         {networkPathMode === "direct" ? (
-          <p className="connection-dialog-note">当前连接将直接访问 SSH 主机。</p>
+          <p className="connection-dialog-note">{t("connectionDialog.directNote")}</p>
         ) : null}
       </section>
     );
@@ -1970,12 +1976,12 @@ export function ConnectionDialog({
     return (
       <div className="connection-dialog-fields">
         <section className="dialog-section">
-          <div className="dialog-section-title">显示</div>
+          <div className="dialog-section-title">{t("connectionDialog.section.display")}</div>
           <div className="form-grid form-grid-wide">
             <label>
-              <span>打开方式</span>
+              <span>{t("connectionDialog.field.openMode")}</span>
               <AppSelect
-                ariaLabel="RDP 打开方式"
+                ariaLabel={t("connectionDialog.field.openMode")}
                 value={runnerRenderMode}
                 options={rdpRunnerModeOptions}
                 onChange={(renderMode) =>
@@ -1993,11 +1999,11 @@ export function ConnectionDialog({
               />
             </label>
             <label>
-              <span>全屏模式</span>
+              <span>{t("connectionDialog.field.fullscreen")}</span>
               <AppSelect
-                ariaLabel="RDP 全屏模式"
+                ariaLabel={t("connectionDialog.field.fullscreen")}
                 value={fullScreenMode}
-                options={rdpDisplayOptions}
+                options={rdpDisplayOptions()}
                 onChange={(mode) =>
                   updateRdp({
                     display: {
@@ -2012,11 +2018,11 @@ export function ConnectionDialog({
           </div>
           <div className="form-grid form-grid-wide">
             <label>
-              <span>分辨率</span>
+              <span>{t("connectionDialog.field.resolution")}</span>
               <AppSelect
-                ariaLabel="RDP 分辨率"
+                ariaLabel={t("connectionDialog.field.resolution")}
                 value={resolutionMode}
-                options={rdpResolutionModeOptions}
+                options={rdpResolutionModeOptions()}
                 onChange={(mode) =>
                   updateRdp({
                     display: {
@@ -2030,7 +2036,7 @@ export function ConnectionDialog({
             {fixedResolution ? (
               <>
                 <label>
-                  <span>宽度</span>
+                  <span>{t("connectionDialog.field.width")}</span>
                   <input
                     inputMode="numeric"
                     value={(rdp.display.width || "").toString()}
@@ -2045,7 +2051,7 @@ export function ConnectionDialog({
                   />
                 </label>
                 <label>
-                  <span>高度</span>
+                  <span>{t("connectionDialog.field.height")}</span>
                   <input
                     inputMode="numeric"
                     value={(rdp.display.height || "").toString()}
@@ -2062,10 +2068,10 @@ export function ConnectionDialog({
               </>
             ) : null}
             <label>
-              <span>缩放</span>
+              <span>{t("connectionDialog.field.scale")}</span>
               <span className="connection-dialog-scale-check">
                 <input type="checkbox" checked readOnly />
-                <span>跟随系统</span>
+                <span>{t("connectionDialog.followSystem")}</span>
               </span>
             </label>
           </div>
@@ -2077,14 +2083,14 @@ export function ConnectionDialog({
         </section>
 
         <section className="dialog-section">
-          <div className="dialog-section-title">资源重定向</div>
+          <div className="dialog-section-title">{t("connectionDialog.section.resources")}</div>
           <div className="form-grid form-grid-wide">
             <label>
-              <span>音频</span>
+              <span>{t("connectionDialog.field.audio")}</span>
               <AppSelect
-                ariaLabel="RDP 音频"
+                ariaLabel={t("connectionDialog.field.audio")}
                 value={rdp.resources.audio}
-                options={rdpAudioOptions}
+                options={rdpAudioOptions()}
                 onChange={(audio) =>
                   updateRdp({
                     resources: {
@@ -2098,10 +2104,10 @@ export function ConnectionDialog({
           </div>
           <div className="connection-dialog-checks">
             {[
-              ["clipboard", "剪贴板"],
-              ["drives", "磁盘"],
-              ["printers", "打印机"],
-              ["smart_cards", "智能卡"],
+              ["clipboard", t("connectionDialog.resource.clipboard")],
+              ["drives", t("connectionDialog.resource.drives")],
+              ["printers", t("connectionDialog.resource.printers")],
+              ["smart_cards", t("connectionDialog.resource.smartCards")],
             ].map(([key, label]) => (
               <label key={key}>
                 <input
@@ -2123,14 +2129,14 @@ export function ConnectionDialog({
         </section>
 
         <section className="dialog-section">
-          <div className="dialog-section-title">网关与 RemoteApp</div>
+          <div className="dialog-section-title">{t("connectionDialog.section.gatewayRemoteApp")}</div>
           <div className="form-grid form-grid-wide">
             <label>
-              <span>网关</span>
+              <span>{t("connectionDialog.field.gateway")}</span>
               <AppSelect
-                ariaLabel="RDP 网关"
+                ariaLabel={t("connectionDialog.field.gateway")}
                 value={gatewayMode}
-                options={rdpGatewayOptions}
+                options={rdpGatewayOptions()}
                 onChange={(mode) =>
                   updateRdp({
                     gateway:
@@ -2145,7 +2151,7 @@ export function ConnectionDialog({
               />
             </label>
             <label>
-              <span>网关主机</span>
+              <span>{t("connectionDialog.field.gatewayHost")}</span>
               <input
                 disabled={gatewayMode === "disabled"}
                 value={rdp.gateway?.host || ""}
@@ -2183,7 +2189,7 @@ export function ConnectionDialog({
           {rdp.remote_app.enabled ? (
             <div className="form-grid form-grid-wide">
               <label>
-                <span>程序</span>
+                <span>{t("connectionDialog.field.program")}</span>
                 <input
                   value={rdp.remote_app.program || ""}
                   onChange={(event) =>
@@ -2194,11 +2200,11 @@ export function ConnectionDialog({
                       },
                     })
                   }
-                  placeholder="RemoteApp 名称或程序路径"
+                  placeholder={t("connectionDialog.remoteAppPlaceholder")}
                 />
               </label>
               <label>
-                <span>参数</span>
+                <span>{t("connectionDialog.field.args")}</span>
                 <input
                   value={rdp.remote_app.args || ""}
                   onChange={(event) =>
@@ -2226,14 +2232,14 @@ export function ConnectionDialog({
     return (
       <div className="connection-dialog-fields">
         <section className="dialog-section">
-          <div className="dialog-section-title">显示</div>
+          <div className="dialog-section-title">{t("connectionDialog.section.display")}</div>
           <div className="form-grid form-grid-wide">
             <label>
-              <span>打开方式</span>
+              <span>{t("connectionDialog.field.openMode")}</span>
               <AppSelect
-                ariaLabel="VNC 打开方式"
+                ariaLabel={t("connectionDialog.field.openMode")}
                 value={renderMode}
-                options={vncRunnerModeOptions}
+                options={vncRunnerModeOptions()}
                 onChange={(nextRenderMode) =>
                   updateVnc({
                     runner: {
@@ -2253,11 +2259,11 @@ export function ConnectionDialog({
               />
             </label>
             <label>
-              <span>缩放模式</span>
+              <span>{t("connectionDialog.field.scaleMode")}</span>
               <AppSelect
-                ariaLabel="VNC 缩放模式"
+                ariaLabel={t("connectionDialog.field.scaleMode")}
                 value={vnc.display.scale_mode}
-                options={vncScaleModeOptions}
+                options={vncScaleModeOptions()}
                 onChange={(scaleMode) =>
                   updateVnc({
                     display: {
@@ -2283,7 +2289,7 @@ export function ConnectionDialog({
                   })
                 }
               />
-              <span>请求远端分辨率跟随窗口</span>
+              <span>{t("connectionDialog.vnc.resize")}</span>
             </label>
             <label>
               <input
@@ -2298,13 +2304,13 @@ export function ConnectionDialog({
                   })
                 }
               />
-              <span>裁剪视口</span>
+              <span>{t("connectionDialog.vnc.clipViewport")}</span>
             </label>
           </div>
         </section>
 
         <section className="dialog-section">
-          <div className="dialog-section-title">输入</div>
+          <div className="dialog-section-title">{t("connectionDialog.section.input")}</div>
           <div className="connection-dialog-checks">
             <label>
               <input
@@ -2319,7 +2325,7 @@ export function ConnectionDialog({
                   })
                 }
               />
-              <span>共享会话</span>
+              <span>{t("connectionDialog.vnc.shared")}</span>
             </label>
             <label>
               <input
@@ -2334,7 +2340,7 @@ export function ConnectionDialog({
                   })
                 }
               />
-              <span>剪贴板</span>
+              <span>{t("connectionDialog.vnc.clipboard")}</span>
             </label>
             <label>
               <input
@@ -2349,20 +2355,20 @@ export function ConnectionDialog({
                   })
                 }
               />
-              <span>只看不控</span>
+              <span>{t("connectionDialog.vnc.viewOnly")}</span>
             </label>
           </div>
         </section>
 
         <section className="dialog-section">
-          <div className="dialog-section-title">性能</div>
+          <div className="dialog-section-title">{t("connectionDialog.section.performance")}</div>
           <div className="form-grid form-grid-wide">
             <label>
-              <span>预设</span>
+              <span>{t("connectionDialog.field.preset")}</span>
               <AppSelect
-                ariaLabel="VNC 性能预设"
+                ariaLabel={t("connectionDialog.field.preset")}
                 value={vnc.performance.preset}
-                options={vncPerformanceOptions}
+                options={vncPerformanceOptions()}
                 onChange={(preset) => {
                   const presetDefaults = vncPerformancePresetDefaults[preset];
                   updateVnc({
@@ -2377,7 +2383,7 @@ export function ConnectionDialog({
               />
             </label>
             <label>
-              <span>质量等级</span>
+              <span>{t("connectionDialog.field.quality")}</span>
               <input
                 inputMode="numeric"
                 min={0}
@@ -2397,7 +2403,7 @@ export function ConnectionDialog({
               />
             </label>
             <label>
-              <span>压缩等级</span>
+              <span>{t("connectionDialog.field.compression")}</span>
               <input
                 inputMode="numeric"
                 min={0}
@@ -2424,7 +2430,7 @@ export function ConnectionDialog({
           {renderMode === "custom" ? (
             <div className="form-grid form-grid-wide">
               <label>
-                <span>客户端路径</span>
+                <span>{t("connectionDialog.field.clientPath")}</span>
                 <input
                   value={vnc.runner.custom_executable || ""}
                   onChange={(event) =>
@@ -2439,7 +2445,7 @@ export function ConnectionDialog({
                 />
               </label>
               <label>
-                <span>参数模板</span>
+                <span>{t("connectionDialog.field.argsTemplate")}</span>
                 <input
                   value={vnc.runner.custom_args_template || ""}
                   onChange={(event) =>
@@ -2456,16 +2462,16 @@ export function ConnectionDialog({
             </div>
           ) : null}
           <label>
-            <span>附加 runner 参数</span>
+            <span>{t("connectionDialog.field.extraRunnerArgs")}</span>
             <textarea
               rows={3}
               value={vnc.raw_runner_args || ""}
               onChange={(event) => updateVnc({ raw_runner_args: event.target.value })}
-              placeholder="仅用于外部 viewer，不要写入 password/passwd 参数"
+              placeholder={t("connectionDialog.vnc.extraArgsPlaceholder")}
             />
           </label>
           <p className="connection-dialog-note">
-            内嵌和 RDP 窗口模式使用 noVNC 与 MXterm 本地桥接；外部 viewer 不会接收保存的密码。
+            {t("connectionDialog.vnc.bridgeNote")}
           </p>
         </section>
       </div>
@@ -2476,9 +2482,9 @@ export function ConnectionDialog({
     if (isVnc) {
       return (
         <section className="dialog-section dialog-section-last">
-          <div className="dialog-section-title">高级</div>
+          <div className="dialog-section-title">{t("connectionDialog.tab.advanced")}</div>
           <p className="connection-dialog-note">
-            VNC v1 不使用 SSH 代理、跳板机或终端编码；显示、输入、性能和 runner 设置请在 VNC 页调整。
+            {t("connectionDialog.vnc.advancedNote")}
           </p>
         </section>
       );
@@ -2488,14 +2494,14 @@ export function ConnectionDialog({
       const rdp = withDefaultRdpConfig(form.rdp);
       return (
         <section className="dialog-section dialog-section-last">
-          <div className="dialog-section-title">性能与安全</div>
+          <div className="dialog-section-title">{t("connectionDialog.section.performanceSecurity")}</div>
           <div className="form-grid form-grid-wide">
             <label>
-              <span>性能预设</span>
+              <span>{t("connectionDialog.field.performancePreset")}</span>
               <AppSelect
-                ariaLabel="RDP 性能预设"
+                ariaLabel={t("connectionDialog.field.performancePreset")}
                 value={rdp.performance.preset}
-                options={rdpPerformanceOptions}
+                options={rdpPerformanceOptions()}
                 onChange={(preset) =>
                   updateRdp({
                     performance: {
@@ -2508,7 +2514,7 @@ export function ConnectionDialog({
             </label>
           </div>
           <p className="connection-dialog-note">
-            RDP 登录账号与密码在基础页配置；高级安全项只控制 NLA 与证书策略。
+            {t("connectionDialog.rdp.securityNote")}
           </p>
           <div className="form-grid form-grid-wide">
             <label>
@@ -2516,7 +2522,7 @@ export function ConnectionDialog({
               <AppSelect
                 ariaLabel="RDP NLA"
                 value={rdp.security.nla}
-                options={rdpNlaOptions}
+                options={rdpNlaOptions()}
                 onChange={(nla) =>
                   updateRdp({
                     security: {
@@ -2528,11 +2534,11 @@ export function ConnectionDialog({
               />
             </label>
             <label>
-              <span>证书策略</span>
+              <span>{t("connectionDialog.field.certificatePolicy")}</span>
               <AppSelect
-                ariaLabel="RDP 证书策略"
+                ariaLabel={t("connectionDialog.field.certificatePolicy")}
                 value={rdp.security.certificate_policy}
-                options={rdpCertificateOptions}
+                options={rdpCertificateOptions()}
                 onChange={(certificatePolicy) =>
                   updateRdp({
                     security: {
@@ -2546,9 +2552,9 @@ export function ConnectionDialog({
           </div>
           <div className="connection-dialog-checks">
             {[
-              ["desktop_background", "桌面背景"],
-              ["font_smoothing", "字体平滑"],
-              ["visual_styles", "视觉样式"],
+              ["desktop_background", t("connectionDialog.rdp.performance.desktopBackground")],
+              ["font_smoothing", t("connectionDialog.rdp.performance.fontSmoothing")],
+              ["visual_styles", t("connectionDialog.rdp.performance.visualStyles")],
             ].map(([key, label]) => (
               <label key={key}>
                 <input
@@ -2568,12 +2574,12 @@ export function ConnectionDialog({
             ))}
           </div>
           <label>
-            <span>原始 .rdp 设置</span>
+            <span>{t("connectionDialog.rdp.rawSettings")}</span>
             <textarea
               rows={4}
               value={rdp.raw_rdp_settings || ""}
               onChange={(event) => updateRdp({ raw_rdp_settings: event.target.value })}
-              placeholder="每行形如 key:type:value，不要写入 password 字段"
+              placeholder={t("connectionDialog.rdp.rawSettingsPlaceholder")}
             />
           </label>
         </section>
@@ -2583,10 +2589,10 @@ export function ConnectionDialog({
     const advanced = form.advanced || defaultAdvancedConfig;
     return (
       <section className="dialog-section dialog-section-last">
-        <div className="dialog-section-title">高级</div>
+        <div className="dialog-section-title">{t("connectionDialog.tab.advanced")}</div>
         <div className="form-grid form-grid-wide">
           <label>
-            <span>连接超时（毫秒）</span>
+            <span>{t("connectionDialog.advanced.connectTimeout")}</span>
             <input
               inputMode="numeric"
               value={advanced.connect_timeout_ms.toString()}
@@ -2602,7 +2608,7 @@ export function ConnectionDialog({
             />
           </label>
           <label>
-            <span>认证超时（毫秒）</span>
+            <span>{t("connectionDialog.advanced.authTimeout")}</span>
             <input
               inputMode="numeric"
               value={advanced.auth_timeout_ms.toString()}
@@ -2620,7 +2626,7 @@ export function ConnectionDialog({
         </div>
         <div className="form-grid form-grid-wide">
           <label>
-            <span>心跳间隔（毫秒）</span>
+            <span>{t("connectionDialog.advanced.keepalive")}</span>
             <input
               inputMode="numeric"
               value={advanced.keepalive_interval_ms.toString()}
@@ -2636,9 +2642,9 @@ export function ConnectionDialog({
             />
           </label>
           <label>
-            <span>终端显示编码</span>
+            <span>{t("connectionDialog.advanced.encoding")}</span>
             <AppSelect
-              ariaLabel="终端显示编码"
+              ariaLabel={t("connectionDialog.advanced.encoding")}
               value={normalizeTerminalEncoding(advanced.terminal_encoding)}
               options={terminalEncodingOptions}
               onChange={(terminalEncoding) =>
@@ -2931,7 +2937,6 @@ export function ConnectionDialog({
     }
   }
 }
-
 function formFromConnection(
   connection: ConnectionProfile,
   _groups: ConnectionDialogGroup[] = [],
@@ -2981,7 +2986,6 @@ function formFromConnection(
     remote_os_version: connection.remote_os_version || "",
   };
 }
-
 function duplicateFormFromConnection(
   connection: ConnectionProfile,
   connections: ConnectionProfile[],
@@ -2999,10 +3003,9 @@ function duplicateFormFromConnection(
     remote_os_version: undefined,
   };
 }
-
 function nextDuplicateConnectionName(name: string, connections: ConnectionProfile[]) {
   const names = new Set(connections.map((connection) => connection.name.trim().toLocaleLowerCase()));
-  const baseName = `${name.trim()} - 副本`;
+  const baseName = tr("connectionDialog.duplicateSuffix", { name: name.trim() });
   if (!names.has(baseName.toLocaleLowerCase())) {
     return baseName;
   }
@@ -3012,7 +3015,6 @@ function nextDuplicateConnectionName(name: string, connections: ConnectionProfil
   }
   return `${baseName} (${suffix.toString()})`;
 }
-
 function normalizeForSubmit(
   form: ConnectionProfileInput,
   credentials: CredentialProfile[],
@@ -3185,11 +3187,9 @@ function normalizeForSubmit(
     serial: undefined,
   };
 }
-
 function buildGroupOptions(groups: ConnectionDialogGroup[], _currentGroup: string): GroupOption[] {
   return canonicalGroupOptions(groups.map((group) => ({ ...group, parentId: group.parentId || null })));
 }
-
 function withDefaultRdpConfig(value?: RdpConnectionConfig | null): RdpConnectionConfig {
   return {
     ...defaultRdpConfig,
@@ -3224,7 +3224,6 @@ function withDefaultRdpConfig(value?: RdpConnectionConfig | null): RdpConnection
     },
   };
 }
-
 function withDefaultVncConfig(value?: VncConnectionConfig | null): VncConnectionConfig {
   return {
     ...defaultVncConfig,
@@ -3251,14 +3250,12 @@ function withDefaultVncConfig(value?: VncConnectionConfig | null): VncConnection
     },
   };
 }
-
 function withDefaultTelnetConfig(value?: ConnectionProfileInput["telnet"]): NonNullable<ConnectionProfileInput["telnet"]> {
   return {
     ...defaultTelnetConfig,
     ...value,
   };
 }
-
 function withDefaultSerialConfig(value?: SerialConnectionConfig | null): SerialConnectionConfig {
   return {
     ...defaultSerialConfig,
@@ -3267,7 +3264,6 @@ function withDefaultSerialConfig(value?: SerialConnectionConfig | null): SerialC
     port_name: value?.port_name || "",
   };
 }
-
 function usesSerialEndpoint(form: ConnectionProfileInput): boolean {
   const serial = withDefaultSerialConfig(form.serial);
   return (
@@ -3275,7 +3271,6 @@ function usesSerialEndpoint(form: ConnectionProfileInput): boolean {
     (form.port === protocolDefaultPorts.serial && Boolean(serial.port_name) && form.host === serial.port_name)
   );
 }
-
 function tabForError(error: unknown): ConnectionDialogTab {
   const code =
     typeof error === "object" && error !== null && "code" in error
@@ -3303,27 +3298,25 @@ function tabForError(error: unknown): ConnectionDialogTab {
   }
   return "basic";
 }
-
 function describeHostKeyFeedback(error: ParsedHostKeyError): DialogFeedback {
   if (error.decision === "changed") {
     return {
-      detail: "检测到主机 SSH 指纹已变化。若非预期的重装或换密钥，请谨慎处理。",
+      detail: tr("connectionDialog.error.hostKeyChanged.detail"),
       hostKey: error.hostKey,
       hostKeyDecision: error.decision,
       oldHostKeyFingerprint: error.oldFingerprint,
-      title: "主机密钥已变化，连接已阻断",
+      title: tr("connectionDialog.error.hostKeyChanged.title"),
     };
   }
 
   return {
-    detail: "首次连接该主机，需要确认主机密钥。核对指纹无误后再信任并继续测试。",
+    detail: tr("connectionDialog.error.hostKeyUnknown.detail"),
     hostKey: error.hostKey,
     hostKeyDecision: error.decision,
     oldHostKeyFingerprint: null,
-    title: "首次连接该主机，需要确认主机密钥",
+    title: tr("connectionDialog.error.hostKeyUnknown.title"),
   };
 }
-
 function describeDialogError(error: unknown): DialogFeedback {
   const code = errorCode(error);
   // raw_message 仅作展示用的底层原因，不参与判定；缺失时退回诊断 ID。
@@ -3332,59 +3325,58 @@ function describeDialogError(error: unknown): DialogFeedback {
 
   if (networkKind === "timeout") {
     return {
-      title: "连接超时",
-      detail: "在限定时间内无法连接到目标主机，请检查 IP、端口、防火墙、代理或网络连通性。",
+      title: tr("connectionDialog.error.timeout.title"),
+      detail: tr("connectionDialog.error.timeout.detail"),
       rawMessage,
     };
   }
 
   if (networkKind === "refused") {
     return {
-      title: "端口无法连接",
-      detail: "目标主机拒绝了连接，请确认 SSH 服务已启动、端口正确，或安全组允许访问。",
+      title: tr("connectionDialog.error.refused.title"),
+      detail: tr("connectionDialog.error.refused.detail"),
       rawMessage,
     };
   }
 
   if (networkKind === "unreachable") {
     return {
-      title: "主机不可达",
-      detail: "本机到目标主机没有可用路由，请检查 VPN、网段、网关或代理配置。",
+      title: tr("connectionDialog.error.unreachable.title"),
+      detail: tr("connectionDialog.error.unreachable.detail"),
       rawMessage,
     };
   }
 
   if (networkKind === "reset") {
     return {
-      title: "连接被重置",
-      detail: "连接被对端重置，请检查 SSH 服务策略、代理链路或中间防火墙。",
+      title: tr("connectionDialog.error.reset.title"),
+      detail: tr("connectionDialog.error.reset.detail"),
       rawMessage,
     };
   }
 
   if (code.includes("auth")) {
     return {
-      title: "认证失败",
-      detail: "请检查账号的用户名、密码或私钥是否匹配服务器配置。",
+      title: tr("connectionDialog.error.auth.title"),
+      detail: tr("connectionDialog.error.auth.detail"),
       rawMessage,
     };
   }
 
   if (code.startsWith("proxy_") || code.includes("proxy")) {
     return {
-      title: "代理连接失败",
-      detail: "请检查代理类型、代理地址端口以及代理用户名密码。",
+      title: tr("connectionDialog.error.proxy.title"),
+      detail: tr("connectionDialog.error.proxy.detail"),
       rawMessage,
     };
   }
 
   return {
     title: formatError(error),
-    detail: "请根据提示调整配置后重试。",
+    detail: tr("connectionDialog.error.generic.detail"),
     rawMessage,
   };
 }
-
 function formatAddress(connection: ConnectionProfileInput) {
   const username = connection.username || "user";
   const host = connection.host || "host";
@@ -3399,11 +3391,10 @@ function formatAddress(connection: ConnectionProfileInput) {
     return `Telnet ${host}:${connection.port.toString()}`;
   }
   if (protocol === "serial") {
-    return `串口 ${connection.serial?.port_name || host}`;
+    return tr("connectionDialog.address.serial", { port: connection.serial?.port_name || host });
   }
   return `${username}@${host}:${connection.port.toString()}`;
 }
-
 function formatError(error: unknown) {
   if (typeof error === "object" && error !== null && "message" in error) {
     return String((error as { message: unknown }).message);
@@ -3411,13 +3402,11 @@ function formatError(error: unknown) {
 
   return String(error);
 }
-
 function errorCode(error: unknown) {
   return typeof error === "object" && error !== null && "code" in error
     ? String((error as { code: unknown }).code)
     : "";
 }
-
 function errorRawMessage(error: unknown) {
   return typeof error === "object" && error !== null && "raw_message" in error
     ? normalizeErrorText((error as { raw_message: unknown }).raw_message)
@@ -3427,9 +3416,8 @@ function errorRawMessage(error: unknown) {
 /** raw_message 缺失时的兜底线索：诊断 ID 能对上内部日志，比丢掉全部上下文好。 */
 function diagnosticHint(error: unknown) {
   const diagnosticId = errorDiagnosticId(error);
-  return diagnosticId ? `诊断 ID：${diagnosticId}` : "";
+  return diagnosticId ? tr("connectionDialog.diagnostic", { id: diagnosticId }) : "";
 }
-
 function normalizeErrorText(value: unknown) {
   return String(value ?? "")
     .replace(/^Error:\s*/i, "")

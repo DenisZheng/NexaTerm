@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { getLocale, setLocalePreference, type Locale } from "../../shared/i18n";
 import { defaultAdvancedConfig, defaultJumpConfig, defaultProxyConfig, type ConnectionProfile } from "../connections/connectionTypes";
 import { seedWorkspaceRemoteFileDirectories, workspaceRemoteFileDirectories } from "../workspace/restore/remoteFileSnapshotBridge";
 
@@ -16,7 +17,9 @@ const connection: ConnectionProfile = {
   advanced: defaultAdvancedConfig, is_favorite: false, created_at: "fixture", updated_at: "fixture",
 };
 
-afterEach(() => { cleanup(); vi.clearAllMocks(); });
+let previousLocale: Locale;
+beforeEach(() => { previousLocale = getLocale(); setLocalePreference("zh-CN"); });
+afterEach(() => { cleanup(); vi.clearAllMocks(); setLocalePreference(previousLocale); });
 
 describe("WF-07 Files 目录恢复", () => {
   it("保存浏览目录而不是树根，并在冷启动后加载祖先目录", async () => {

@@ -1,3 +1,4 @@
+import { t as tr } from "../../../shared/i18n";
 import type { LocalTerminalTab } from "../../terminal/localTerminalTypes";
 import type { TerminalPaneBinding, TerminalSplitNode } from "../../terminal/terminalSplitLayout";
 import type {
@@ -142,23 +143,23 @@ export function applyWorkspaceRestorePlanToHydration(
 }
 
 function terminalRestoreState(item: WorkspaceRestoreItem | undefined) {
-  if (!item) return { error: "工作区恢复项缺失。", status: "连接失败" };
+  if (!item) return { error: tr("workspace.restore.missing"), status: tr("workspace.connection.failed") };
   if (item.status === "missing-profile") {
-    return { error: "保存的连接或终端配置已不存在，可修复配置后重试。", status: "连接失败" };
+    return { error: tr("workspace.restore.profileMissing"), status: tr("workspace.connection.failed") };
   }
   if (item.status === "temporary-auth-required") {
-    return { error: "临时连接凭据不会持久化，请重新建立或认证该连接。", status: "连接失败" };
+    return { error: tr("workspace.restore.temporaryCredentials"), status: tr("workspace.connection.failed") };
   }
   return item.autoReconnect
-    ? { error: undefined, status: "正在恢复" }
-    : { error: "工作区已恢复；自动重连未开启，可手动重试。", status: "连接失败" };
+    ? { error: undefined, status: tr("workspace.restore.restoring") }
+    : { error: tr("workspace.restore.manualRetry"), status: tr("workspace.connection.failed") };
 }
 
 function desktopRestoreState(item: WorkspaceRestoreItem | undefined) {
   const state = terminalRestoreState(item);
   return {
     error: state.error || null,
-    message: state.error ? null : "工作区已恢复；桌面会话保持停止，可手动重试。",
+    message: state.error ? null : tr("workspace.restore.desktopStopped"),
     status: "error" as const,
   };
 }

@@ -1,4 +1,5 @@
 import { open, save } from "@tauri-apps/plugin-dialog";
+import { t } from "../i18n";
 
 function normalizeSelectedPaths(selected: string | string[] | null) {
   if (!selected) {
@@ -10,7 +11,7 @@ function normalizeSelectedPaths(selected: string | string[] | null) {
 export async function selectLocalUploadFiles() {
   const selected = await open({
     multiple: true,
-    title: "选择上传文件",
+    title: t("dialog.uploadFiles"),
   });
   return normalizeSelectedPaths(selected);
 }
@@ -20,7 +21,7 @@ export async function selectLocalUploadDirectories() {
     directory: true,
     multiple: true,
     recursive: true,
-    title: "选择上传文件夹",
+    title: t("dialog.uploadFolders"),
   });
   return normalizeSelectedPaths(selected);
 }
@@ -29,7 +30,7 @@ export async function selectLocalDownloadDirectory() {
   const selected = await open({
     directory: true,
     multiple: false,
-    title: "选择下载目录",
+    title: t("dialog.downloadFolder"),
   });
   return normalizeSelectedPaths(selected)[0] || null;
 }
@@ -37,7 +38,7 @@ export async function selectLocalDownloadDirectory() {
 export async function selectLocalPrivateKeyFile() {
   const selected = await open({
     multiple: false,
-    title: "选择私钥文件",
+    title: t("dialog.privateKey"),
   });
   return normalizeSelectedPaths(selected)[0] || null;
 }
@@ -48,10 +49,10 @@ export async function selectDockerLogSavePath(defaultName: string) {
     filters: [
       {
         extensions: ["log", "txt"],
-        name: "日志文件",
+        name: t("dialog.logFile"),
       },
     ],
-    title: "保存容器日志",
+    title: t("dialog.saveContainerLog"),
   });
 }
 
@@ -61,10 +62,10 @@ export async function selectConnectionTransferImportPath() {
     filters: [
       {
         extensions: ["json"],
-        name: "mXterm 连接迁移文件",
+        name: t("dialog.connectionTransferFile"),
       },
     ],
-    title: "选择连接迁移文件",
+    title: t("dialog.connectionImport"),
   });
   return normalizeSelectedPaths(selected)[0] || null;
 }
@@ -75,10 +76,10 @@ export async function selectConnectionTransferExportPath() {
     filters: [
       {
         extensions: ["json"],
-        name: "mXterm 连接迁移文件",
+        name: t("dialog.connectionTransferFile"),
       },
     ],
-    title: "导出连接",
+    title: t("dialog.connectionExport"),
   });
 }
 
@@ -88,10 +89,10 @@ export async function selectMobaXtermSessionsImportPath() {
     filters: [
       {
         extensions: ["mxtsessions"],
-        name: "MobaXterm 会话导出",
+        name: t("dialog.mobaxtermExport"),
       },
     ],
-    title: "选择 MobaXterm 会话文件",
+    title: t("dialog.mobaxtermImport"),
   });
   return normalizeSelectedPaths(selected)[0] || null;
 }

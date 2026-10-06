@@ -1,4 +1,5 @@
 import type { WindowMaterialMode } from "../../features/settings/settingsTypes";
+import { t as tr } from "../i18n";
 import {
   getPlatformCapabilities,
   getPlatformWindowMaterials,
@@ -31,7 +32,7 @@ const windowMaterialById: Record<number, WindowMaterialMode | undefined> = {
 };
 
 const windowMaterialLabels: Record<WindowMaterialMode, string> = {
-  auto: "默认",
+  auto: "",
   mica: "Mica",
   acrylic: "Acrylic",
   micaAlt: "Mica Alt",
@@ -50,7 +51,7 @@ export function normalizeWindowMaterial(
 }
 
 export function getWindowMaterialLabel(material: WindowMaterialMode) {
-  return windowMaterialLabels[material];
+  return material === "auto" ? tr("window.material.auto") : windowMaterialLabels[material];
 }
 
 export async function getSupportedWindowMaterials(): Promise<WindowMaterialMode[]> {

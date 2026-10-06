@@ -9,6 +9,7 @@ import TsWorker from "monaco-editor/esm/vs/language/typescript/ts.worker?worker"
 
 import type { ThemeMode } from "../settings/settingsTypes";
 import type { DesktopPlatform } from "../../shared/tauri/platformCapabilities";
+import { useI18n, type Translate } from "../../shared/i18n";
 import { Tooltip } from "../../shared/ui/Tooltip";
 import {
   registerRemoteFileEditorLanguages,
@@ -69,6 +70,7 @@ export function RemoteFileEditor({
   tab,
   themeMode,
 }: RemoteFileEditorProps) {
+  const { t } = useI18n();
   const hostRef = useRef<HTMLDivElement | null>(null);
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const modelRef = useRef<monaco.editor.ITextModel | null>(null);
@@ -220,7 +222,7 @@ export function RemoteFileEditor({
   return (
     <section
       className={`remote-file-editor ${active ? "" : "is-hidden"}`}
-      aria-label={`${tab.name} 文件编辑器`}
+      aria-label={t("files.editor.aria", { name: tab.name })}
     >
       <header className="remote-file-editor-compactbar" data-state={tab.saveState}>
         <div className="remote-file-editor-path" title={tab.path}>
@@ -232,25 +234,25 @@ export function RemoteFileEditor({
             {tab.saveState === "error" || tab.saveState === "conflict" ? (
               <AlertTriangle className="ui-icon" aria-hidden="true" />
             ) : null}
-            <span>{remoteFileStatusLabel(tab)}</span>
+            <span>{remoteFileStatusLabel(tab, t)}</span>
           </span>
         </div>
-        <div className="remote-file-editor-toolbar" aria-label="文件编辑器工具栏">
-          <Tooltip label="定位所在文件夹">
+        <div className="remote-file-editor-toolbar" aria-label={t("files.editor.toolbar")}>
+          <Tooltip label={t("files.editor.locate")}>
             <button
               className="mini-action"
               type="button"
-              aria-label="定位所在文件夹"
+              aria-label={t("files.editor.locate")}
               onClick={() => onLocateFolder(tab.id)}
             >
               <FolderOpen className="ui-icon" aria-hidden="true" />
             </button>
           </Tooltip>
-          <Tooltip label="保存">
+          <Tooltip label={t("files.editor.save")}>
             <button
               className="mini-action"
               type="button"
-              aria-label="保存"
+              aria-label={t("files.editor.save")}
               disabled={tab.saveState === "loading" || tab.saveState === "saving" || !tab.dirty}
               onClick={() => onSave(tab.id)}
             >
@@ -261,40 +263,40 @@ export function RemoteFileEditor({
               )}
             </button>
           </Tooltip>
-          <Tooltip label="重新加载">
+          <Tooltip label={t("files.editor.reload")}>
             <button
               className="mini-action"
               type="button"
-              aria-label="重新加载"
+              aria-label={t("files.editor.reload")}
               disabled={tab.saveState === "loading" || tab.saveState === "saving"}
               onClick={() => onReload(tab.id)}
             >
               <RefreshCw className="ui-icon" aria-hidden="true" />
             </button>
           </Tooltip>
-          <Tooltip label="放弃更改">
+          <Tooltip label={t("files.editor.discard")}>
             <button
               className="mini-action"
               type="button"
-              aria-label="放弃更改"
+              aria-label={t("files.editor.discard")}
               disabled={!tab.dirty || tab.saveState === "saving"}
               onClick={() => onDiscard(tab.id)}
             >
               <RotateCcw className="ui-icon" aria-hidden="true" />
             </button>
           </Tooltip>
-          <Tooltip label="查找">
+          <Tooltip label={t("files.editor.find")}>
             <button
               className="mini-action"
               type="button"
-              aria-label="查找"
+              aria-label={t("files.editor.find")}
               onClick={() => void editorRef.current?.getAction("actions.find")?.run()}
             >
               <Search className="ui-icon" aria-hidden="true" />
             </button>
           </Tooltip>
-          <Tooltip label="关闭文件">
-            <button className="mini-action" type="button" aria-label="关闭文件" onClick={() => onClose(tab.id)}>
+          <Tooltip label={t("files.editor.close")}>
+            <button className="mini-action" type="button" aria-label={t("files.editor.close")} onClick={() => onClose(tab.id)}>
               <X className="ui-icon" aria-hidden="true" />
             </button>
           </Tooltip>
@@ -305,17 +307,17 @@ export function RemoteFileEditor({
   );
 }
 
-function remoteFileStatusLabel(tab: RemoteFileEditorTab) {
+function remoteFileStatusLabel(tab: RemoteFileEditorTab, t: Translate) {
   if (tab.statusMessage) {
     return tab.statusMessage;
   }
-  if (tab.saveState === "loading") return "读取中";
-  if (tab.saveState === "saving") return "保存中";
-  if (tab.saveState === "saved") return "已保存";
-  if (tab.saveState === "dirty" || tab.dirty) return "已修改";
-  if (tab.saveState === "conflict") return "远端已变化";
-  if (tab.saveState === "error") return tab.error || "操作失败";
-  return "就绪";
+  if (tab.saveState === "loading") return t("files.editor.status.loading");
+  if (tab.saveState === "saving") return t("files.editor.status.saving");
+  if (tab.saveState === "saved") return t("files.editor.status.saved");
+  if (tab.saveState === "dirty" || tab.dirty) return t("files.editor.status.dirty");
+  if (tab.saveState === "conflict") return t("files.editor.status.conflict");
+  if (tab.saveState === "error") return tab.error || t("files.editor.status.error");
+  return t("files.editor.status.ready");
 }
 
 function readSystemPrefersDark() {

@@ -9,15 +9,15 @@ import { defaultAdvancedConfig, defaultProxyConfig } from "./connectionTypes";
 describe("WF-02A connection dialog submit policy", () => {
   it("makes save-and-connect the primary action for a new or duplicated profile", () => {
     expect(connectionDialogSubmitPolicy(false)).toStrictEqual({
-      primary: { intent: "save-and-connect", label: "保存并连接" },
-      secondary: { intent: "save", label: "仅保存" },
+      primary: { intent: "save-and-connect", label: "Save and connect" },
+      secondary: { intent: "save", label: "Save only" },
     });
   });
 
   it("keeps edit-save non-disruptive and makes a new connection explicit", () => {
     expect(connectionDialogSubmitPolicy(true)).toStrictEqual({
-      primary: { intent: "save", label: "保存连接" },
-      secondary: { intent: "save-and-connect", label: "保存并新建连接" },
+      primary: { intent: "save", label: "Save connection" },
+      secondary: { intent: "save-and-connect", label: "Save and open new connection" },
     });
   });
 
@@ -33,8 +33,8 @@ describe("WF-02A connection dialog submit policy", () => {
       advanced: defaultAdvancedConfig,
     };
     expect(validateConnectionNetworkPath(input)).toStrictEqual({
-      detail: "SSH 跳板机模式需要选择一条已保存连接。",
-      title: "请选择跳板机连接",
+      detail: "SSH jump-host mode requires a saved connection.",
+      title: "Choose a jump-host connection",
     });
     expect(
       validateConnectionNetworkPath({

@@ -81,7 +81,7 @@ for (const needle of [
 ]) {
   if (!jumpPreview.includes(needle)) throw new Error(`WF-06B dialog jump-plan contract missing: ${needle}`);
 }
-if (!dialog.includes("实际连接路径：") || !dialog.includes("validateJumpPlanSelection")) {
+if (!dialog.includes('t("connectionDialog.jump.path"') || !dialog.includes("validateJumpPlanSelection")) {
   throw new Error("WF-06B ConnectionDialog must preview and validate the actual two-hop path.");
 }
 for (const needle of ["ssh-jump-outer", "ssh-jump-inner", "ssh-multihop-target", "wf06b-edge", "wf06b-target"]) {

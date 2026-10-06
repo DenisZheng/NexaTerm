@@ -12,6 +12,7 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
+import { useI18n } from "../i18n";
 
 export interface AppSelectOption<T extends string> {
   disabled?: boolean;
@@ -59,13 +60,16 @@ export function AppSelect<T extends string>({
   menuMinWidth,
   openRequestKey = 0,
   options,
-  placeholder = "请选择",
+  placeholder,
   searchable = false,
-  searchPlaceholder = "搜索",
+  searchPlaceholder,
   value,
   onChange,
   onOpenChange,
 }: AppSelectProps<T>) {
+  const { t } = useI18n();
+  const resolvedPlaceholder = placeholder ?? t("common.select");
+  const resolvedSearchPlaceholder = searchPlaceholder ?? t("common.search");
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
@@ -82,7 +86,7 @@ export function AppSelect<T extends string>({
     displayedOptions.findIndex((option) => option.value === value),
   );
   const [highlightedIndex, setHighlightedIndex] = useState(selectedIndex);
-  const selectLabel = selectedOption?.label || placeholder;
+  const selectLabel = selectedOption?.label || resolvedPlaceholder;
   const groupCount = countOptionGroups(displayedOptions);
 
   function setSelectOpen(nextOpen: boolean) {
@@ -283,8 +287,8 @@ export function AppSelect<T extends string>({
                       ref={searchInputRef}
                       className="app-select-search-input"
                       type="search"
-                      aria-label={searchPlaceholder}
-                      placeholder={searchPlaceholder}
+                      aria-label={resolvedSearchPlaceholder}
+                      placeholder={resolvedSearchPlaceholder}
                       value={searchQuery}
                       onChange={(event) => setSearchQuery(event.currentTarget.value)}
                       onKeyDown={(event) => {
@@ -351,7 +355,7 @@ export function AppSelect<T extends string>({
                   );
                 })}
                 {searchable && displayedOptions.length === 0 ? (
-                  <div className="app-select-empty">没有匹配项</div>
+                  <div className="app-select-empty">{t("common.noMatches")}</div>
                 ) : null}
               </div>
             </DismissableLayerBranch>,
