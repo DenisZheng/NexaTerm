@@ -237,9 +237,7 @@ function localizeRuntimePayloadValue(value: unknown, command: string, key = ""):
     return Object.fromEntries(
       Object.entries(value).map(([entryKey, entryValue]) => [
         entryKey,
-        runtimePresentationKeys.has(entryKey)
-          ? localizeRuntimePayloadValue(entryValue, command, entryKey)
-          : entryValue,
+        localizeRuntimePayloadValue(entryValue, command, entryKey),
       ]),
     );
   }
