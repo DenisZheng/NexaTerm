@@ -4,7 +4,13 @@ const dialog = readFileSync(new URL("../src/features/connections/ConnectionDialo
 const shell = readFileSync(new URL("../src/features/layout/WorkspaceShell.tsx", import.meta.url), "utf8");
 const policy = readFileSync(new URL("../src/features/connections/connectionDialogSubmit.ts", import.meta.url), "utf8");
 
-for (const needle of ['"save-and-connect"', '"保存并连接"', '"仅保存"', '"保存并新建连接"']) {
+for (const needle of [
+  '"save-and-connect"',
+  'tr("connection.submit.saveConnect")',
+  'tr("connection.submit.saveOnly")',
+  'tr("connection.submit.save")',
+  'tr("connection.submit.saveNew")',
+]) {
   if (!policy.includes(needle)) throw new Error(`WF-02A submit policy missing: ${needle}`);
 }
 for (const needle of [

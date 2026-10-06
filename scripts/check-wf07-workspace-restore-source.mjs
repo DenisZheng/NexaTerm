@@ -126,7 +126,7 @@ for (const needle of [
   '"ssh:ssh-broken"',
   '"local:wsl-a"',
   'multiExecMode).toBe("off")',
-  "自动重连未开启",
+  "automatic reconnect is disabled",
 ]) {
   if (!a14Acceptance.includes(needle)) throw new Error(`WF-07 A14 acceptance evidence missing: ${needle}`);
 }

@@ -77,7 +77,7 @@ for (const needle of [
 }
 for (const needle of [
   "resolveTunnelRuleConnection",
-  'label: "连接不存在"',
+  'label: tr("tunnel.connectionMissing")',
   "canStart: false",
 ]) {
   if (!association.includes(needle)) throw new Error(`WF-06A rule/connection association missing: ${needle}`);
