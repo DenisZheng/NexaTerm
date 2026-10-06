@@ -28,6 +28,7 @@ function runtime() {
   const handoffs = [];
   const context = {
     Date: { now: () => 1000 }, crypto: { randomUUID }, window: { setTimeout: () => 0 },
+    tr: (key) => key,
     terminalTabsRef: tabs,
     isRdpConnection: () => false, isVncConnection: () => false,
     formatConnectionAddress: () => "example.invalid:22",
