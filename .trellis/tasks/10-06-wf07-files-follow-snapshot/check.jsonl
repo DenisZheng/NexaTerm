@@ -1,0 +1,4 @@
+{"file":"docs/WORKFLOW_SPEC.md","reason":"WS-F02 / WS-R01 与待确认行为边界"}
+{"file":".trellis/spec/frontend/workspace-restore.md","reason":"快照字段、通知、解码与恢复契约"}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"运行测试、source gates 与人工证据分开"}
+{"file":".trellis/tasks/10-06-wf07-files-follow-snapshot/design.md","reason":"基线兼容性与最小移植范围"}
