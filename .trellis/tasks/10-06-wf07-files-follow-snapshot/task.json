@@ -2,7 +2,7 @@
   "id": "wf07-files-follow-snapshot",
   "name": "wf07-files-follow-snapshot",
   "title": "WF-07 Files follow snapshot 修复",
-  "description": "将 aef55f8 移植到 main 17a4365，修复实例级 Files follow 的快照保存与恢复；CI 通过后等待 macOS 冷启动验收。",
+  "description": "将 aef55f8 移植到 main 17a4365，修复实例级 Files follow 的快照保存与恢复；维护者已确认 macOS A/B 冷启动验收通过。",
   "status": "in_progress",
   "dev_type": "frontend",
   "scope": "workspace-restore",
@@ -21,6 +21,6 @@
   "children": [],
   "parent": "09-23-nexaterm-workflow-mainline",
   "relatedFiles": [],
-  "notes": "基于 main 17a4365f 无冲突移植 aef55f8 为 6bfb3a7，保留 #42/#43。560 前端测试、107 脚本测试、类型检查、构建及 6 项 source gates 通过；1 原有 TODO、3 原有 SKIP。后续按用户授权推送独立 PR，最终 HEAD 的 CI 绿色后停止；Mac A=OFF/B=ON 退出冷启动仍待人工验收。PR/CI 最终证据记于 PR 描述，不开启 secret_missing 或其它任务。",
+  "notes": "基于 main 17a4365f 无冲突移植 aef55f8 为 6bfb3a7，保留 #42/#43。560 前端测试、107 脚本测试、类型检查、构建及 6 项 source gates 通过；1 原有 TODO、3 原有 SKIP。后续按用户授权推送独立 PR，最终 HEAD 的 CI 绿色后停止；Mac A=OFF/B=ON 退出冷启动仍待人工验收。PR/CI 最终证据记于 PR 描述，不开启 secret_missing 或其它任务。\n2026-10-06 后续验收：维护者反馈 AB我测完了，OK，WF-07 A/B 冷启动记为 PASS，取代前述待验收状态。Home 关闭回归不包含在该反馈内；未自动合并 PR。",
   "meta": {}
 }

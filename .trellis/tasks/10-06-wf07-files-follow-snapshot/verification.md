@@ -36,11 +36,15 @@ TerminalPanel、RemoteFilePanel、SettingsView、Docker、RemoteFileEditor 继�
 
 本地未运行 Rust 编译、未安装 gitleaks；对应检查由当前 PR CI 提供，不声明本地通过。
 
-## Mac 冷启动人工验收：PENDING
+## Mac 冷启动人工验收：PASS（维护者确认，2026-10-06）
+
+维护者反馈：“AB我测完了，OK”。按本任务约定的 A=OFF、B=ON，完全退出后冷启动验收记录为通过；证据来源为维护者真实 Mac 自测，不是自动测试替代或代理再次复测。
+
+此结果归属 WF-07 A/B 验收。随后启动的独立 Home 修复版本不包含 PR #44，本次反馈不用于证明该版本包含 Files follow 补丁，也不代替 Home 关闭回归。
 
 1. 在本 PR 对应候选运行真实 NexaTerm，启用已有工作区恢复设置；同一 SSH profile 打开 A、B 两个实例。
 2. A 的“跟随终端目录”为 **OFF**，B 为 **ON**。保持目录不变切换 B 的开关并最终设为 ON，等待至少 1 秒完成现有 500ms debounce。
 3. 完全退出应用后冷启动，分别检查 A=OFF、B=ON；不能只关闭窗口或依赖进程内 cache。
 4. 如启用自动重连，B 收到正常终端目录事件时可跟随；A 不应被 B 的开关或事件改变。
 
-本次不启动 GUI、不修改用户数据库/凭据。维护者确认前不把此项写为 PASS，也不宣布 9-23 已确认范围的运行时开发全部完成。原 A14 历史 PASS 保留；`secret_missing` 及其它暂缓/待产品决策事项不在本 PR 中处理。
+WF-07 A/B 人工验收已通过；原 A14 历史 PASS 保留。Home 空白修复的真实关闭回归单独记录，尚不据本条反馈宣布所有待验收项完成。`secret_missing` 及其它暂缓/待产品决策事项不在本 PR 中处理。
