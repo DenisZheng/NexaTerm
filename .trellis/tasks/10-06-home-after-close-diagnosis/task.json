@@ -1,0 +1,30 @@
+{
+  "id": "home-after-close-diagnosis",
+  "name": "home-after-close-diagnosis",
+  "title": "关闭所有终端后 Home 空白修复",
+  "description": "修正 SSH 类型守卫对空对象的误判，补充关闭切换渲染回归并编译启动验收。",
+  "status": "in_progress",
+  "dev_type": "frontend",
+  "scope": "layout",
+  "package": null,
+  "priority": "P1",
+  "creator": "codex",
+  "assignee": "codex",
+  "createdAt": "2026-10-06",
+  "completedAt": null,
+  "branch": "fix/home-after-close-null-connection",
+  "base_branch": "main",
+  "worktree_path": "/private/tmp/nexaterm-home-after-close-fix",
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": "09-23-nexaterm-workflow-mainline",
+  "relatedFiles": [
+    "src/features/layout/WorkspaceShell.tsx",
+    "scripts/workspace-home-close.test.mjs",
+    ".trellis/spec/frontend/state-management.md"
+  ],
+  "notes": "维护者已确认实施并于 2026-10-06 授权本地提交。修复、回归、类型检查、前端构建与原生启动完成；Home 显示正常。待维护者真实关闭回归，不推送或合并。验证见 verification.md。",
+  "meta": {}
+}
