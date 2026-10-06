@@ -171,11 +171,7 @@ const protocolDefaultPorts = {
   serial: 1,
 } as const;
 
-function protocolOptions(): Array<{
-  icon: typeof Terminal;
-  label: string;
-  value: ConnectionProtocol;
-}> {
+function protocolOptions(): Array<{ icon: typeof Terminal; label: string; value: ConnectionProtocol }> {
   return [
     { icon: Terminal, label: "SSH", value: "ssh" },
     { icon: Monitor, label: "RDP", value: "rdp" },
@@ -184,32 +180,20 @@ function protocolOptions(): Array<{
     { icon: Cable, label: tr("connectionDialog.protocol.serial"), value: "serial" },
   ];
 }
-
-function credentialModeOptions(): Array<{
-  label: string;
-  value: ConnectionCredentialMode;
-}> {
+function credentialModeOptions(): Array<{ label: string; value: ConnectionCredentialMode }> {
   return [
     { label: tr("connectionDialog.credential.saved"), value: "saved" },
     { label: tr("connectionDialog.credential.inline"), value: "inline" },
     { label: tr("connectionDialog.credential.prompt"), value: "prompt" },
   ];
 }
-
-function authKindOptions(): Array<{
-  label: string;
-  value: ConnectionAuthKind;
-}> {
+function authKindOptions(): Array<{ label: string; value: ConnectionAuthKind }> {
   return [
     { label: tr("connectionDialog.auth.password"), value: "password" },
     { label: tr("connectionDialog.auth.privateKey"), value: "private_key" },
   ];
 }
-
-function networkPathOptions(): Array<{
-  label: string;
-  value: ConnectionNetworkPathMode;
-}> {
+function networkPathOptions(): Array<{ label: string; value: ConnectionNetworkPathMode }> {
   return [
     { label: tr("connectionDialog.network.direct"), value: "direct" },
     { label: tr("connectionDialog.network.proxy"), value: "proxy" },
@@ -217,10 +201,7 @@ function networkPathOptions(): Array<{
   ];
 }
 
-const proxyKindOptions: Array<{
-  label: string;
-  value: Exclude<ConnectionProxyKind, "none">;
-}> = [
+const proxyKindOptions: Array<{ label: string; value: Exclude<ConnectionProxyKind, "none"> }> = [
   { label: "HTTP CONNECT", value: "http_connect" },
   { label: "SOCKS5", value: "socks5" },
 ];
@@ -232,14 +213,12 @@ function rdpDisplayOptions(): Array<{ label: string; value: RdpDisplayMode }> {
     { label: tr("connectionDialog.rdp.fullscreen.all"), value: "all_monitors" },
   ];
 }
-
 function rdpResolutionModeOptions(): Array<{ label: string; value: "adaptive" | "fixed" }> {
   return [
     { label: tr("connectionDialog.rdp.resolution.adaptive"), value: "adaptive" },
     { label: tr("connectionDialog.rdp.resolution.fixed"), value: "fixed" },
   ];
 }
-
 function rdpAudioOptions(): Array<{ label: string; value: RdpAudioMode }> {
   return [
     { label: tr("connectionDialog.rdp.audio.local"), value: "local" },
@@ -247,7 +226,6 @@ function rdpAudioOptions(): Array<{ label: string; value: RdpAudioMode }> {
     { label: tr("connectionDialog.option.disabled"), value: "disabled" },
   ];
 }
-
 function rdpGatewayOptions(): Array<{ label: string; value: RdpGatewayMode }> {
   return [
     { label: tr("connectionDialog.option.disabled"), value: "disabled" },
@@ -255,7 +233,6 @@ function rdpGatewayOptions(): Array<{ label: string; value: RdpGatewayMode }> {
     { label: tr("connectionDialog.rdp.gateway.explicit"), value: "explicit" },
   ];
 }
-
 function rdpPerformanceOptions(): Array<{ label: string; value: RdpPerformancePreset }> {
   return [
     { label: tr("connectionDialog.option.auto"), value: "auto" },
@@ -264,7 +241,6 @@ function rdpPerformanceOptions(): Array<{ label: string; value: RdpPerformancePr
     { label: tr("connectionDialog.performance.lowBandwidth"), value: "low_bandwidth" },
   ];
 }
-
 function vncRunnerModeOptions(): Array<{ label: string; value: VncRenderMode }> {
   return [
     { label: tr("connectionDialog.vnc.runner.embedded"), value: "embedded" },
@@ -273,7 +249,6 @@ function vncRunnerModeOptions(): Array<{ label: string; value: VncRenderMode }> 
     { label: tr("connectionDialog.vnc.runner.custom"), value: "custom" },
   ];
 }
-
 function vncScaleModeOptions(): Array<{ label: string; value: VncScaleMode }> {
   return [
     { label: tr("connectionDialog.vnc.scale.fit"), value: "fit" },
@@ -281,7 +256,6 @@ function vncScaleModeOptions(): Array<{ label: string; value: VncScaleMode }> {
     { label: tr("connectionDialog.vnc.scale.actual"), value: "actual" },
   ];
 }
-
 function vncPerformanceOptions(): Array<{ label: string; value: VncPerformancePreset }> {
   return [
     { label: tr("connectionDialog.option.auto"), value: "auto" },
@@ -327,7 +301,6 @@ function serialFlowControlOptions(): Array<{ label: string; value: SerialFlowCon
     { label: tr("connectionDialog.option.hardware"), value: "hardware" },
   ];
 }
-
 function rdpNlaOptions(): Array<{ label: string; value: RdpNetworkLevelAuthentication }> {
   return [
     { label: tr("connectionDialog.option.auto"), value: "auto" },
@@ -335,7 +308,6 @@ function rdpNlaOptions(): Array<{ label: string; value: RdpNetworkLevelAuthentic
     { label: tr("connectionDialog.option.disabled"), value: "disabled" },
   ];
 }
-
 function rdpCertificateOptions(): Array<{ label: string; value: RdpCertificatePolicy }> {
   return [
     { label: tr("connectionDialog.rdp.nla.prompt"), value: "prompt" },
@@ -2965,7 +2937,6 @@ export function ConnectionDialog({
     }
   }
 }
-
 function formFromConnection(
   connection: ConnectionProfile,
   _groups: ConnectionDialogGroup[] = [],
@@ -3015,7 +2986,6 @@ function formFromConnection(
     remote_os_version: connection.remote_os_version || "",
   };
 }
-
 function duplicateFormFromConnection(
   connection: ConnectionProfile,
   connections: ConnectionProfile[],
@@ -3033,7 +3003,6 @@ function duplicateFormFromConnection(
     remote_os_version: undefined,
   };
 }
-
 function nextDuplicateConnectionName(name: string, connections: ConnectionProfile[]) {
   const names = new Set(connections.map((connection) => connection.name.trim().toLocaleLowerCase()));
   const baseName = tr("connectionDialog.duplicateSuffix", { name: name.trim() });
@@ -3046,7 +3015,6 @@ function nextDuplicateConnectionName(name: string, connections: ConnectionProfil
   }
   return `${baseName} (${suffix.toString()})`;
 }
-
 function normalizeForSubmit(
   form: ConnectionProfileInput,
   credentials: CredentialProfile[],
@@ -3219,11 +3187,9 @@ function normalizeForSubmit(
     serial: undefined,
   };
 }
-
 function buildGroupOptions(groups: ConnectionDialogGroup[], _currentGroup: string): GroupOption[] {
   return canonicalGroupOptions(groups.map((group) => ({ ...group, parentId: group.parentId || null })));
 }
-
 function withDefaultRdpConfig(value?: RdpConnectionConfig | null): RdpConnectionConfig {
   return {
     ...defaultRdpConfig,
@@ -3258,7 +3224,6 @@ function withDefaultRdpConfig(value?: RdpConnectionConfig | null): RdpConnection
     },
   };
 }
-
 function withDefaultVncConfig(value?: VncConnectionConfig | null): VncConnectionConfig {
   return {
     ...defaultVncConfig,
@@ -3285,14 +3250,12 @@ function withDefaultVncConfig(value?: VncConnectionConfig | null): VncConnection
     },
   };
 }
-
 function withDefaultTelnetConfig(value?: ConnectionProfileInput["telnet"]): NonNullable<ConnectionProfileInput["telnet"]> {
   return {
     ...defaultTelnetConfig,
     ...value,
   };
 }
-
 function withDefaultSerialConfig(value?: SerialConnectionConfig | null): SerialConnectionConfig {
   return {
     ...defaultSerialConfig,
@@ -3301,7 +3264,6 @@ function withDefaultSerialConfig(value?: SerialConnectionConfig | null): SerialC
     port_name: value?.port_name || "",
   };
 }
-
 function usesSerialEndpoint(form: ConnectionProfileInput): boolean {
   const serial = withDefaultSerialConfig(form.serial);
   return (
@@ -3309,7 +3271,6 @@ function usesSerialEndpoint(form: ConnectionProfileInput): boolean {
     (form.port === protocolDefaultPorts.serial && Boolean(serial.port_name) && form.host === serial.port_name)
   );
 }
-
 function tabForError(error: unknown): ConnectionDialogTab {
   const code =
     typeof error === "object" && error !== null && "code" in error
@@ -3337,7 +3298,6 @@ function tabForError(error: unknown): ConnectionDialogTab {
   }
   return "basic";
 }
-
 function describeHostKeyFeedback(error: ParsedHostKeyError): DialogFeedback {
   if (error.decision === "changed") {
     return {
@@ -3357,7 +3317,6 @@ function describeHostKeyFeedback(error: ParsedHostKeyError): DialogFeedback {
     title: tr("connectionDialog.error.hostKeyUnknown.title"),
   };
 }
-
 function describeDialogError(error: unknown): DialogFeedback {
   const code = errorCode(error);
   // raw_message 仅作展示用的底层原因，不参与判定；缺失时退回诊断 ID。
@@ -3418,7 +3377,6 @@ function describeDialogError(error: unknown): DialogFeedback {
     rawMessage,
   };
 }
-
 function formatAddress(connection: ConnectionProfileInput) {
   const username = connection.username || "user";
   const host = connection.host || "host";
@@ -3437,7 +3395,6 @@ function formatAddress(connection: ConnectionProfileInput) {
   }
   return `${username}@${host}:${connection.port.toString()}`;
 }
-
 function formatError(error: unknown) {
   if (typeof error === "object" && error !== null && "message" in error) {
     return String((error as { message: unknown }).message);
@@ -3445,13 +3402,11 @@ function formatError(error: unknown) {
 
   return String(error);
 }
-
 function errorCode(error: unknown) {
   return typeof error === "object" && error !== null && "code" in error
     ? String((error as { code: unknown }).code)
     : "";
 }
-
 function errorRawMessage(error: unknown) {
   return typeof error === "object" && error !== null && "raw_message" in error
     ? normalizeErrorText((error as { raw_message: unknown }).raw_message)
@@ -3463,7 +3418,6 @@ function diagnosticHint(error: unknown) {
   const diagnosticId = errorDiagnosticId(error);
   return diagnosticId ? tr("connectionDialog.diagnostic", { id: diagnosticId }) : "";
 }
-
 function normalizeErrorText(value: unknown) {
   return String(value ?? "")
     .replace(/^Error:\s*/i, "")
