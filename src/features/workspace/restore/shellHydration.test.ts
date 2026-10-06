@@ -84,13 +84,13 @@ it("isolates a missing profile while keeping ready terminal siblings reconnectab
     plan,
   );
   expect(hydration.terminalTabs[0]).toMatchObject({
-    error: expect.stringContaining("已不存在"),
+    error: expect.stringContaining("no longer exists"),
     id: "ssh-a",
-    status: "连接失败",
+    status: "Connection failed",
   });
   expect(hydration.localTerminalTabs[0]).toMatchObject({
     id: "local-a",
-    status: "正在恢复",
+    status: "Restoring",
   });
   expect(hydration.rdpSessions[0]?.status).toBe("error");
   expect(plan.multiExecMode).toBe("off");

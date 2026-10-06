@@ -40,7 +40,7 @@ describe("WF-06A tunnel rule connection association", () => {
     expect(resolveTunnelRuleConnection(rule, [])).toEqual({
       canStart: false,
       connection: null,
-      label: "连接不存在",
+      label: "The linked SSH connection no longer exists",
     });
   });
 

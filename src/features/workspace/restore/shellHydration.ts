@@ -143,16 +143,16 @@ export function applyWorkspaceRestorePlanToHydration(
 }
 
 function terminalRestoreState(item: WorkspaceRestoreItem | undefined) {
-  if (!item) return { error: tr("workspace.restore.missing"), status: "连接失败" };
+  if (!item) return { error: tr("workspace.restore.missing"), status: tr("workspace.connection.failed") };
   if (item.status === "missing-profile") {
-    return { error: tr("workspace.restore.profileMissing"), status: "连接失败" };
+    return { error: tr("workspace.restore.profileMissing"), status: tr("workspace.connection.failed") };
   }
   if (item.status === "temporary-auth-required") {
-    return { error: tr("workspace.restore.temporaryCredentials"), status: "连接失败" };
+    return { error: tr("workspace.restore.temporaryCredentials"), status: tr("workspace.connection.failed") };
   }
   return item.autoReconnect
     ? { error: undefined, status: tr("workspace.restore.restoring") }
-    : { error: tr("workspace.restore.manualRetry"), status: "连接失败" };
+    : { error: tr("workspace.restore.manualRetry"), status: tr("workspace.connection.failed") };
 }
 
 function desktopRestoreState(item: WorkspaceRestoreItem | undefined) {
