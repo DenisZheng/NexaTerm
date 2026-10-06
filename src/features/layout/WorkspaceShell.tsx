@@ -10,6 +10,7 @@ import {
   useState,
   type CSSProperties,
   type FormEvent,
+  type ReactNode,
   type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
@@ -54,6 +55,9 @@ import {
   Upload,
   X,
 } from "lucide-react";
+import { ConnectionOpenSessions } from "../connections/ConnectionOpenSessions";
+import { HomeSessionStart } from "./HomeSessionStart";
+import { buildOpenSessionEntries } from "./sessionNavigation";
 import { ConnectionPane } from "../connections/ConnectionPane";
 import { useBatchConnectController } from "../connections/useBatchConnectController";
 import { batchWorkspaceClosePlan, batchWorkspaceItemId, collectBatchOpenConnectionIds, waitForBatchWorkspaceHandle, type BatchWorkspaceHandle } from "../connections/batchConnectWorkspaceRuntime";
@@ -63,7 +67,7 @@ import {
   writeStoredWorkspaceSidebarView,
   type WorkspaceSidebarView,
 } from "./WorkspaceSidebar";
-import { resolveWorkspaceSidebarFileContext } from "./workspaceSidebarContext";
+import { describeWorkspaceSidebarFiles, resolveWorkspaceSidebarFileContext } from "./workspaceSidebarContext";
 import { ConnectionSystemLogo } from "../connections/ConnectionSystemLogo";
 import type {
   ConnectionAuthKind,
@@ -1812,22 +1816,25 @@ export function WorkspaceShell() {
     onOpenLocalProfile: (profile: LocalTerminalProfile) => void openLocalTerminalByProfile(profile),
     onQuickOpen: () => setConnectionSearchOpen(true),
   };
+  const navigationItems = useMemo(
+    () => selectWorkspaceItems({ localTerminalTabs, rdpSessions, terminalTabs, vncSessions }, workspaceItemOrder, null),
+    [localTerminalTabs, rdpSessions, terminalTabs, vncSessions, workspaceItemOrder],
+  );
+  const titlebarLookups = useMemo(() => ({
+    connectionAddress: (id: string) => {
+      const connection = connectionById.get(id);
+      return connection ? formatConnectionAddress(connection) : null;
+    },
+    connectionName: (id: string) => connectionById.get(id)?.name || null,
+    localProfileName: (id: string) => localTerminalProfiles.find((profile) => profile.id === id)?.name || null,
+  }), [connectionById, localTerminalProfiles]);
+  const openSessionEntries = useMemo(
+    () => buildOpenSessionEntries(navigationItems, titlebarLookups, t),
+    [navigationItems, titlebarLookups, t],
+  );
   const titlebarItems = useMemo(
-    () =>
-      buildTitlebarItems(
-        workspaceItems,
-        {
-          connectionAddress: (connectionId) => {
-            const connection = connectionById.get(connectionId);
-            return connection ? formatConnectionAddress(connection) : null;
-          },
-          connectionName: (connectionId) => connectionById.get(connectionId)?.name || null,
-          localProfileName: (profileId) =>
-            localTerminalProfiles.find((profile) => profile.id === profileId)?.name ?? null,
-        },
-        t,
-      ),
-    [connectionById, localTerminalProfiles, t, workspaceItems],
+    () => buildTitlebarItems(workspaceItems, titlebarLookups, t),
+    [workspaceItems, titlebarLookups, t],
   );
   const showSessionWorkspace = !showingHome && activeWorkspaceMode === "ssh" && hasSessionWorkspace;
   const showTerminalSplitSurface =
@@ -1929,13 +1936,10 @@ export function WorkspaceShell() {
     terminalDirectories,
     terminalTabs,
   });
-  const workspaceSidebarFileContext = workspaceSidebarFileBinding
-    ? {
-        ...workspaceSidebarFileBinding,
-        connectionName:
-          connectionById.get(workspaceSidebarFileBinding.connectionId)?.name || null,
-      }
-    : null;
+  const workspaceSidebarFileContext = describeWorkspaceSidebarFiles(
+    workspaceSidebarFileBinding, openSessionEntries, terminalTabs,
+    terminalSplitActive ? terminalSplitPanes.findIndex((pane) => pane.id === focusedTerminalPaneId) + 1 : null, t,
+  );
   const remoteFileConnection =
     showSessionWorkspace && activeConnectedTerminalTab ? activeConnection : null;
   const remoteFilePanelKey = showingRdp
@@ -7245,7 +7249,8 @@ export function WorkspaceShell() {
 
   /** 顶栏实例标签点击（WF-01 切片 3）：按项类型走现有 activate*；分屏组回到分屏面。 */
   function selectWorkspaceItem(itemId: string) {
-    const item = workspaceItems.find((candidate) => candidate.id === itemId);
+    const item = workspaceItems.find((candidate) => candidate.id === itemId)
+      || navigationItems.find((candidate) => candidate.id === itemId);
     switch (item?.kind) {
       case "home":
         openHome();
@@ -8345,7 +8350,12 @@ export function WorkspaceShell() {
         onSelectItem={selectWorkspaceItem}
         onToggleLeftPane={() => setLeftPaneCollapsed((collapsed) => !collapsed)}
       />
-      <AppActionBar executor={actionExecutor} newSession={newSessionEntry} />
+      <AppActionBar executor={actionExecutor} newSession={newSessionEntry} activeActions={{
+        split: terminalSplitActive,
+        "terminal.multiExec": showMultiExecBar,
+        "tools.tunnels": showWorkspaceToolPane && !rightPaneCollapsed && rightTool === "tunnels",
+        "settings.open": activeView === "settings",
+      }} />
 
       <main className="workspace-shell" ref={workspaceShellRef} hidden={activeView === "settings"}>
         <WorkspaceSidebar
@@ -8383,6 +8393,9 @@ export function WorkspaceShell() {
               onDeleteGroup={connectionGroupCatalog.remove}
               onMoveConnectionToGroup={moveConnectionToGroup}
               onOpen={openTerminal}
+              renderOpenSessions={(connection) => <ConnectionOpenSessions connectionName={connection.name}
+                entries={openSessionEntries.filter((entry) => entry.connectionId === connection.id)}
+                onSelect={selectWorkspaceItem} />}
               onOpenSearch={() => setConnectionSearchOpen(true)}
               onOpenSettings={() => openSettingsSection()}
               onPreloadCreate={preloadCreateConnectionDialog}
@@ -8418,14 +8431,13 @@ export function WorkspaceShell() {
             groups={connectionGroupCatalog}
             loading={loading}
             onConnect={openConnectionSession}
-            onCreateConnection={() => createConnection()}
             onDelete={deleteConnection}
             onEdit={editConnection}
             onExportConnections={() => setConnectionTransferMode("export")}
             onImportConnections={() => setConnectionTransferMode("import")}
-            onPreloadCreateConnection={preloadCreateConnectionDialog}
             onRefresh={reload}
             hidden={!showingHome}
+            start={<HomeSessionStart newSession={newSessionEntry} onQuickConnect={openQuickConnect} />}
           />
 
           {hasSessionWorkspace ? (
@@ -11341,32 +11353,30 @@ function RemoteFilePropertiesTable({ metadata }: { metadata: RemoteFileEntryMeta
 }
 
 function ConnectionHome({
+  start,
   connections,
   error,
   groups,
   hidden = false,
   loading,
   onConnect,
-  onCreateConnection,
   onDelete,
   onEdit,
   onExportConnections,
   onImportConnections,
-  onPreloadCreateConnection,
   onRefresh,
 }: {
+  start: ReactNode;
   connections: ConnectionProfile[];
   error: string | null;
   groups: ConnectionGroupCatalog;
   hidden?: boolean;
   loading: boolean;
   onConnect: (connection: ConnectionProfile) => void;
-  onCreateConnection: () => void;
   onDelete: (connection: ConnectionProfile) => void | Promise<void>;
   onEdit: (connection: ConnectionProfile) => void;
   onExportConnections: () => void;
   onImportConnections: () => void;
-  onPreloadCreateConnection?: () => void;
   onRefresh: () => void | Promise<void>;
 }) {
   const { t } = useI18n();
@@ -11468,6 +11478,7 @@ function ConnectionHome({
 
   return (
     <section className={`connection-home ${hidden ? "is-hidden" : ""}`} aria-label={t("connectionHome.aria")} aria-hidden={hidden}>
+      {start}
       <header className="repository-toolbar">
         <div className="toolbar-left">
           <div className="filter-tabs" aria-label={t("connectionHome.filterAria")}>
@@ -11519,17 +11530,6 @@ function ConnectionHome({
               <RefreshCw className={`ui-icon ${loading || isProbingLatency ? "spin" : ""}`} aria-hidden="true" />
             </button>
           </Tooltip>
-          <button
-            className="repository-primary-button"
-            type="button"
-            onFocus={onPreloadCreateConnection}
-            onClick={onCreateConnection}
-            onPointerDown={onPreloadCreateConnection}
-            onPointerEnter={onPreloadCreateConnection}
-          >
-            <Plus className="ui-icon" aria-hidden="true" />
-            <span>{t("connectionHome.newConnection")}</span>
-          </button>
         </div>
       </header>
 

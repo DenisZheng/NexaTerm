@@ -27,7 +27,7 @@ export function MultiExecBar({
   const canStartLive = selectedCount > 0;
 
   return (
-    <section className="multi-exec-bar" aria-label={t("multiExec.title")}>
+    <section className="multi-exec-bar" data-live={live} aria-label={t("multiExec.title")}>
       <div className="multi-exec-bar-head">
         <span className="multi-exec-bar-title">{t("multiExec.title")}</span>
         <div className="multi-exec-bar-modes" role="group" aria-label={t("multiExec.title")}>
@@ -59,13 +59,15 @@ export function MultiExecBar({
               {t("multiExec.stop")}
             </button>
           </>
-        ) : null}
+        ) : <span className="multi-exec-bar-status" role="status">{t("multiExec.selectedCount", { count: selectedCount })}</span>}
         <Tooltip label={t("multiExec.close")}>
           <button className="icon-button multi-exec-bar-close" type="button" aria-label={t("multiExec.close")} onClick={onClose}>
             <X className="ui-icon" aria-hidden="true" />
           </button>
         </Tooltip>
       </div>
+      <p className="multi-exec-bar-hint">{t(live ? "multiExec.fixedTargets" : mode === "send" ? "multiExec.sendHint" : "multiExec.selectionHint")}</p>
+      <p className="multi-exec-bar-hint">{t("multiExec.disconnectHint")}</p>
       <div className="multi-exec-bar-targets" role="group" aria-label={t("multiExec.targets")}>
         {targets.length === 0 ? (
           <span className="multi-exec-bar-empty" role="status">{t("multiExec.empty")}</span>
@@ -83,6 +85,7 @@ export function MultiExecBar({
                   {selected ? <Check className="ui-icon" /> : null}
                 </span>
                 <span className="multi-exec-bar-target-label">{target.title}</span>
+                {live && selected ? <span className="multi-exec-receiving">{t("multiExec.receiving")}</span> : null}
               </button></Tooltip>
             );
           })

@@ -8,6 +8,10 @@ export type WorkspaceSidebarView = "sessions" | "files";
 export interface WorkspaceSidebarFileContext {
   connectionId: string;
   connectionName: string | null;
+  instanceTitle?: string | null;
+  address?: string | null;
+  status?: string;
+  paneNumber?: number | null;
   path: string | null;
   tabId: string;
 }
@@ -153,7 +157,21 @@ function WorkspaceSidebarFiles({
       id="workspace-sidebar-panel-files"
       role="tabpanel"
     >
-      {live ? files : (
+      {live ? (
+        <>
+          <header className="workspace-sidebar-instance" aria-label={t("sidebar.filesContext")}>
+            <strong title={fileContext?.instanceTitle || fileContext?.connectionName || undefined}>
+              {fileContext?.instanceTitle || fileContext?.connectionName}
+            </strong>
+            {fileContext?.address ? <span title={fileContext.address}>{fileContext.address}</span> : null}
+            <small>
+              {fileContext?.paneNumber ? t("sidebar.filesPane", { n: fileContext.paneNumber }) : t("kind.ssh")}
+              {fileContext?.status ? ` · ${fileContext.status}` : ""}
+            </small>
+          </header>
+          {files}
+        </>
+      ) : (
         <>
           <header className="workspace-sidebar-files-head">
             <FileText className="ui-icon" aria-hidden="true" />

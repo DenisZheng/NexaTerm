@@ -9,7 +9,9 @@ import { actionPresentation, actionReasonKeys, partitionToolbar, splitActionIds 
 import type { ActionEntryProps } from "./actionEntryProps";
 import { NewSessionMenu, NewSessionSubMenu } from "./NewSessionMenu";
 
-export function AppToolbar({ newSession, resolveAction, onRunAction }: ActionEntryProps) {
+export function AppToolbar({ newSession, resolveAction, onRunAction, activeActions = {} }: ActionEntryProps & {
+  activeActions?: Readonly<Record<string, boolean>>;
+}) {
   const { t } = useI18n();
   const measureRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
@@ -28,7 +30,7 @@ export function AppToolbar({ newSession, resolveAction, onRunAction }: ActionEnt
     observer.observe(element);
     return () => observer.disconnect();
   }, []);
-  const layout = partitionToolbar(width);
+  const layout = partitionToolbar(width, resolveAction({ actionId: "tools.x11", source: "toolbar" }).enabled);
   const showLabel = layout.mode === "labels";
 
   function actionItem(actionId: string) {
@@ -57,7 +59,8 @@ export function AppToolbar({ newSession, resolveAction, onRunAction }: ActionEnt
     if (id === "split") return (
       <DropdownMenu.Root key={id} modal={false}>
         <Tooltip label={t("actionBar.split")}><DropdownMenu.Trigger asChild>
-          <button type="button" data-toolbar-control className="app-toolbar-button" aria-label={t("actionBar.split")}>
+          <button type="button" data-toolbar-control className="app-toolbar-button" aria-label={t("actionBar.split")}
+            aria-pressed={Boolean(activeActions.split)}>
             <Columns2 className="ui-icon" aria-hidden="true" />{showLabel ? <span>{t("actionBar.split")}</span> : null}
           </button>
         </DropdownMenu.Trigger></Tooltip>
@@ -74,6 +77,7 @@ export function AppToolbar({ newSession, resolveAction, onRunAction }: ActionEnt
     return (
       <Tooltip key={id} label={state.binding ? `${description} (${state.binding})` : description}>
         <button type="button" data-toolbar-control className="app-toolbar-button" aria-label={label}
+          aria-pressed={id in activeActions ? activeActions[id] : undefined}
           aria-disabled={!state.enabled} title={description}
           onClick={() => { if (state.enabled) onRunAction(request); }}>
           <ActionIcon name={entry.icon} />{showLabel ? <span>{label}</span> : null}
@@ -82,7 +86,7 @@ export function AppToolbar({ newSession, resolveAction, onRunAction }: ActionEnt
     );
   }
   return (
-    <div ref={measureRef} className="app-toolbar-slot">
+    <div ref={measureRef} className="app-toolbar-slot" data-toolbar-mode={layout.mode}>
       <RovingToolbar className="app-toolbar" label={t("actionBar.toolbar")}>
         {layout.visible.map(({ id }) => visibleItem(id))}
         {layout.overflow.length ? (

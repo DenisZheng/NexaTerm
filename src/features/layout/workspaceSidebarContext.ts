@@ -1,8 +1,32 @@
 import type { WorkspaceMode } from "../workspace/sessionTabs/types";
+import type { Translate } from "../../shared/i18n";
+import type { WorkspaceSidebarFileContext } from "./WorkspaceSidebar";
+import type { OpenSessionEntry } from "./sessionNavigation";
 
 export interface WorkspaceSidebarTerminal {
   connectionId: string;
   id: string;
+}
+
+/** 归属文案与 resolver 的绑定共用同一实例 ID，不另选最近/同 profile 的实例。 */
+export function describeWorkspaceSidebarFiles(
+  binding: WorkspaceSidebarResolvedFileContext | null,
+  entries: readonly OpenSessionEntry[],
+  terminals: readonly (WorkspaceSidebarTerminal & { type: string; sessionId?: string | null })[],
+  paneNumber: number | null,
+  t: Translate,
+): WorkspaceSidebarFileContext | null {
+  if (!binding) return null;
+  const entry = entries.find((item) => item.id === `ssh:${binding.tabId}`);
+  const terminal = terminals.find((item) => item.id === binding.tabId);
+  return {
+    ...binding,
+    connectionName: entry?.label || null,
+    instanceTitle: entry?.label || null,
+    address: entry?.detail || null,
+    status: t(terminal?.type === "terminal" && terminal.sessionId ? "sidebar.filesConnected" : "sidebar.filesNotConnected"),
+    paneNumber,
+  };
 }
 
 export interface WorkspaceSidebarBinding {
