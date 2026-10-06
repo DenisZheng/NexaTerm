@@ -153,29 +153,17 @@ interface DockerToolPanelProps {
 }
 
 function toolboxViews(): Array<{ icon: LucideIcon; label: string; value: ToolboxView }> {
-  return [
-    { icon: Box, label: "Docker", value: "docker" },
-    { icon: Route, label: tr("docker.toolbox.tunnels"), value: "tunnels" },
-    { icon: Network, label: tr("docker.toolbox.network"), value: "network" },
-    { icon: Timer, label: tr("docker.toolbox.schedule"), value: "schedule" },
-  ];
+  return [{ icon: Box, label: "Docker", value: "docker" }, { icon: Route, label: tr("docker.toolbox.tunnels"), value: "tunnels" },
+    { icon: Network, label: tr("docker.toolbox.network"), value: "network" }, { icon: Timer, label: tr("docker.toolbox.schedule"), value: "schedule" }];
 }
 
 const containerAutoRefreshMs = 10_000;
 const imageAutoRefreshMs = 30_000;
 const engineAutoRefreshMs = 30_000;
-function networkDiagnosticOptions(): Array<{
-  icon: LucideIcon;
-  label: string;
-  value: NetworkDiagnosticKind;
-}> {
-  return [
-    { icon: RadioTower, label: "Ping", value: "ping" },
-    { icon: Network, label: "TCP", value: "tcp" },
-    { icon: Globe2, label: "DNS", value: "dns" },
-    { icon: Route, label: tr("docker.network.trace"), value: "trace" },
-    { icon: ScrollText, label: "HTTP", value: "http" },
-  ];
+function networkDiagnosticOptions(): Array<{ icon: LucideIcon; label: string; value: NetworkDiagnosticKind }> {
+  return [{ icon: RadioTower, label: "Ping", value: "ping" }, { icon: Network, label: "TCP", value: "tcp" },
+    { icon: Globe2, label: "DNS", value: "dns" }, { icon: Route, label: tr("docker.network.trace"), value: "trace" },
+    { icon: ScrollText, label: "HTTP", value: "http" }];
 }
 const dockerRestartPolicyOptions: Array<{ label: string; value: DockerRestartPolicyKind }> = [
   { label: "No", value: "no" },
