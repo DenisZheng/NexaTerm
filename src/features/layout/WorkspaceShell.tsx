@@ -7796,7 +7796,7 @@ export function WorkspaceShell() {
       const retryProfile = nodeFailure?.stage === "auth" ? connectionById.get(nodeFailure.connectionId) : step.connection.credential_mode === "prompt" && connectionStepErrorIndex(errorDetail.code) === 3 ? step.connection : null;
       if (retryProfile?.credential_mode === "prompt") {
         const promptTarget = credentialPromptTargetFromConnection(retryProfile);
-        updateConnectingTabStep(tabId, { ...runningStep, authKind: promptTarget.authKind, error: errorDetail.message, errorDetail, promptTarget, password: "", privateKeyPassphrase: "", privateKeyPath: "", logs: [...runningStep.logs, tr("workspace.connection.authRetry", { name: promptTarget.name })], status: "prompt" });
+        updateConnectingTabStep(tabId, { ...runningStep, authKind: promptTarget.authKind, error: errorDetail.message, errorDetail, promptTarget, password: "", privateKeyPassphrase: "", privateKeyPath: "", logs: [...runningStep.logs, tr("workspace.connection.authRetry", { name: promptTarget.name || promptTarget.connectionId })], status: "prompt" });
         return;
       }
       const nodeLabel = nodeFailure ? connectionById.get(nodeFailure.connectionId)?.name || nodeFailure.connectionId : "";
