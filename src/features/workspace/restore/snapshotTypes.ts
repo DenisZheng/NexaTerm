@@ -67,6 +67,8 @@ export interface WorkspaceSnapshotV1 {
     /** Last known directory by logical SSH instance id. */
     directories: Record<string, string>;
     followActivePane: boolean;
+    /** 按逻辑 SSH 实例保存；旧 V1 快照缺省时由 Files 采用关闭跟随。 */
+    followTerminalDirectories?: Record<string, boolean>;
   };
   instances: WorkspaceSnapshotInstance[];
   /**
@@ -88,6 +90,7 @@ export interface WorkspaceSnapshotPointers {
     /** Input keys are logical instance ids (for example ssh:<tabId>). */
     directories: Readonly<Record<string, string | null | undefined>>;
     followActivePane: boolean;
+    followTerminalDirectories?: Readonly<Record<string, boolean>>;
   };
   order: readonly string[];
   sidebar: {
@@ -158,6 +161,11 @@ export function toSnapshot(
     files: {
       directories: snapshotDirectories(pointers.files.directories, sshIds),
       followActivePane: pointers.files.followActivePane,
+      ...(pointers.files.followTerminalDirectories ? {
+        followTerminalDirectories: Object.fromEntries(
+          Object.entries(pointers.files.followTerminalDirectories).filter(([id]) => sshIds.has(id)),
+        ),
+      } : {}),
     },
     instances,
     order: snapshotOrder(pointers.order, instances),

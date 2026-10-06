@@ -119,3 +119,18 @@ Local validation after the review fixes: type check/build, WF-07/startup/line-bu
 ## Completion rule
 
 A14 is not marked fully PASS from mocks/unit tests alone. The automated evidence is the regression gate; the final checkbox requires one real Windows Tauri exit/relaunch run following the checklist above. After that run, replace `PENDING` with `PASS`, record the tested commit/CI and environment, and commit the evidence record.
+
+## 2026-10-06 对账补充：实例跟随设置（待人工复验）
+
+对账发现 `main @ f3f92dc` 的快照未保存实例级“跟随终端目录”开关，违反 WS-F02 / WS-R01。上面的 A14-09 PASS 是历史人工记录，不证明这一具体组合已测，也不证明当前 main 已满足完整 Files 恢复契约。该遗漏没有被后续回退引入：原快照只保存目录和全局 Files 绑定开关。
+
+本次补丁已接通该字段的保存与恢复，并通过组件、序列化/解码/冷模块组合和全量前端回归；未把自动化结果记作人工 PASS。待补丁进入验收候选后复验：
+
+1. 同一 SSH 配置打开两个实例 A/B，分别浏览不同目录；按本轮维护者清单，A 保持“跟随终端目录”关闭，B 开启。
+2. 保持目录不变，切换 B 的开关并最终为开启；等待至少 1 秒，让既有 500 ms debounce 保存。
+3. 完全退出并冷启动 NexaTerm，切换 A/B：A=OFF、B=ON，目录和跟随开关分别恢复，不能按 profile 串用；如自动重连后收到真实终端目录事件，开启跟随的 B 按正常规则定位，A 不应受影响。
+4. 对缺少新增字段的旧 V1 快照，仍正常恢复，实例跟随默认关闭。
+
+人工结果：**PENDING**。记录实际候选 commit、平台与维护者反馈后才可更新。本项不包含 WS-F03 手动浏览自动暂停/恢复入口，也不改变 WS-R03 待确认草稿恢复范围。
+
+基于 main `17a4365f` 的独立移植与最新自动化证据见 `../10-06-wf07-files-follow-snapshot/verification.md`；本轮不沿用旧补丁的 CI 或人工结论。

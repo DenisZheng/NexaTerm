@@ -29,7 +29,8 @@
     "10-05-wf-08c-release-surface-audit",
     "10-05-wf-08d-performance-stability-baseline",
     "10-05-wf-08e-a15-release-acceptance",
-    "10-06-workstation-ux-polish"
+    "10-06-workstation-ux-polish",
+    "10-06-wf07-files-follow-snapshot"
   ],
   "parent": null,
   "relatedFiles": [],

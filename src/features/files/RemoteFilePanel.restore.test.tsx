@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { getLocale, setLocalePreference, type Locale } from "../../shared/i18n";
 import { defaultAdvancedConfig, defaultJumpConfig, defaultProxyConfig, type ConnectionProfile } from "../connections/connectionTypes";
-import { seedWorkspaceRemoteFileDirectories, workspaceRemoteFileDirectories } from "../workspace/restore/remoteFileSnapshotBridge";
+import { getWorkspaceRemoteFileNavigation, getWorkspaceRemoteFileRevision, seedWorkspaceRemoteFileDirectories, workspaceRemoteFileDirectories } from "../workspace/restore/remoteFileSnapshotBridge";
 
 const mocks = vi.hoisted(() => ({ list: vi.fn() }));
 vi.mock("../../shared/tauri/runtime", () => ({ hasTauriRuntime: () => true }));
@@ -22,6 +22,32 @@ beforeEach(() => { previousLocale = getLocale(); setLocalePreference("zh-CN"); }
 afterEach(() => { cleanup(); vi.clearAllMocks(); setLocalePreference(previousLocale); });
 
 describe("WF-07 Files 目录恢复", () => {
+  it("只切换跟随开关也会发布实例状态并触发快照更新", async () => {
+    mocks.list.mockResolvedValue([]);
+    render(<RemoteFilesView active connection={connection} stateKey="ssh-file-panel:follow-toggle" />);
+    const toggle = await screen.findByRole("button", { name: "跟随终端目录" });
+    expect(toggle.getAttribute("aria-pressed")).toBe("false");
+    const revision = getWorkspaceRemoteFileRevision();
+    fireEvent.click(toggle);
+    await waitFor(() => expect(getWorkspaceRemoteFileNavigation("ssh-file-panel:follow-toggle"))
+      .toMatchObject({ followTerminalDirectory: true }));
+    expect(getWorkspaceRemoteFileRevision()).toBeGreaterThan(revision);
+  });
+
+  it("冷启动按实例恢复跟随开关，旧快照继续默认关闭", async () => {
+    mocks.list.mockResolvedValue([]);
+    seedWorkspaceRemoteFileDirectories(
+      { "ssh:cold-follow-on": "/", "ssh:cold-follow-off": "/", "ssh:cold-follow-legacy": "/" },
+      { "ssh:cold-follow-on": true, "ssh:cold-follow-off": false },
+    );
+    for (const [id, expected] of [["cold-follow-on", "true"], ["cold-follow-off", "false"], ["cold-follow-legacy", "false"]]) {
+      const view = render(<RemoteFilesView active connection={connection} stateKey={`ssh-file-panel:${id}`} />);
+      const toggle = await screen.findByRole("button", { name: "跟随终端目录" });
+      expect(toggle.getAttribute("aria-pressed")).toBe(expected);
+      view.unmount();
+    }
+  });
+
   it("保存浏览目录而不是树根，并在冷启动后加载祖先目录", async () => {
     mocks.list.mockImplementation(async (_id: string, path: string) => {
       if (path === "/") return [{ name: "srv", path: "/srv", type: "directory" }];
