@@ -15,6 +15,18 @@ const context: WorkspaceActionContext = {
 };
 
 describe("WF-01 4C: entry presentation", () => {
+  it("uses available icon space gradually and reserves More without exceeding the width", () => {
+    for (const width of [34, 80, 120, 160, 200, 240, 360]) {
+      const { visible, overflow } = partitionToolbar(width, false);
+      const controls = visible.length + (overflow.length ? 1 : 0);
+      expect(controls * 32 + Math.max(0, controls - 1) * 2).toBeLessThanOrEqual(width);
+      expect(visible.some((entry) => entry.id === "tools.x11")).toBe(false);
+      expect(overflow.some((entry) => entry.id === "tools.x11")).toBe(true);
+    }
+    expect(partitionToolbar(200, false).visible.map((entry) => entry.id)).toContain("tools.tunnels");
+    expect(toolbarEntries.some((entry) => entry.id === "connection.quickOpen")).toBe(true);
+    expect(toolbarEntries.some((entry) => entry.id === "commandSender.toggle")).toBe(false);
+  });
   it("keeps the six confirmed groups in order", () => {
     expect(menuGroups.map(({ id }) => id)).toStrictEqual(["session", "view", "terminal", "tools", "settings", "help"]);
   });
@@ -62,19 +74,19 @@ describe("WF-01 4C: entry presentation", () => {
     }
   });
   it("retains the highest priority controls before lower priority tools", () => {
-    const layout = partitionToolbar(200);
+    const layout = partitionToolbar(150);
     expect(layout.visible.map(({ id }) => id)).toStrictEqual(["new-session", "split", "terminal.multiExec"]);
     expect(layout.overflow.some(({ id }) => id === "tools.tunnels")).toBe(true);
   });
   it("puts everything in overflow when only a single control can fit", () => {
-    expect(partitionToolbar(80).visible.length).toBe(0);
-    expect(partitionToolbar(80).overflow.length).toBe(toolbarEntries.length);
+    expect(partitionToolbar(40).visible.length).toBe(0);
+    expect(partitionToolbar(40).overflow.length).toBe(toolbarEntries.length);
   });
   it("selects text, icons and reduced layouts without losing entries", () => {
     expect(partitionToolbar(1000).mode).toBe("labels");
     expect(partitionToolbar(600).mode).toBe("icons");
-    expect(partitionToolbar(200).mode).toBe("reduced");
-    expect(partitionToolbar(80).mode).toBe("overflow");
+    expect(partitionToolbar(150).mode).toBe("reduced");
+    expect(partitionToolbar(40).mode).toBe("overflow");
   });
   it("fails compactly for invalid measurements and never mutates the metadata", () => {
     const before = JSON.stringify(toolbarEntries);

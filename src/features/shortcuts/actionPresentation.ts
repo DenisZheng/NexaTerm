@@ -67,16 +67,21 @@ export const splitActionIds = ["terminal.splitRight", "terminal.splitDown", "ter
 export interface ToolbarEntry { readonly id: string; readonly priority: number }
 export const toolbarEntries: readonly ToolbarEntry[] = [
   { id: "new-session", priority: 0 }, { id: "split", priority: 1 },
-  { id: "terminal.multiExec", priority: 2 }, { id: "commandSender.toggle", priority: 3 },
+  { id: "terminal.multiExec", priority: 2 },
   { id: "tools.tunnels", priority: 4 }, { id: "tools.x11", priority: 5 },
-  { id: "terminal.search.toggle", priority: 6 }, { id: "settings.open", priority: 7 },
+  { id: "connection.quickOpen", priority: 6 }, { id: "settings.open", priority: 7 },
 ];
 
 /** Width is the toolbar's available space AFTER the menubar, not the viewport width. */
-export function partitionToolbar(availableWidth: number) {
+export function partitionToolbar(availableWidth: number, x11Available = true) {
   const width = Number.isFinite(availableWidth) ? Math.max(0, availableWidth) : 0;
-  const mode = width >= 840 ? "labels" : width >= 360 ? "icons" : width >= 160 ? "reduced" : "overflow";
-  const count = mode === "labels" || mode === "icons" ? toolbarEntries.length : mode === "reduced" ? 3 : 0;
   const ordered = [...toolbarEntries].sort((a, b) => a.priority - b.priority);
-  return { mode, visible: ordered.slice(0, count), overflow: ordered.slice(count) };
+  const candidates = ordered.filter(({ id }) => id !== "tools.x11" || x11Available);
+  // 图标 32px + 间隙 2px；有溢出时预留 More 的完整位置。
+  const allFit = candidates.length === ordered.length && width >= candidates.length * 34 - 2;
+  const count = Math.min(candidates.length, Math.max(0, Math.floor((width - (allFit ? 0 : 34) + 2) / 34)));
+  const visible = candidates.slice(0, count);
+  const visibleIds = new Set(visible.map(({ id }) => id));
+  const mode = width >= 840 ? "labels" : count === 0 ? "overflow" : count === candidates.length ? "icons" : "reduced";
+  return { mode, visible, overflow: ordered.filter(({ id }) => !visibleIds.has(id)) };
 }

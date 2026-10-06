@@ -10,9 +10,10 @@ import { AppToolbar } from "./AppToolbar";
 import "../../styles/actionbar.css";
 
 /** 4C presentation boundary. The shell injects its stable executor in 4D. */
-export function AppActionBar({ executor, newSession }: {
+export function AppActionBar({ executor, newSession, activeActions }: {
   executor: ReturnType<typeof createWorkspaceActionExecutor>;
   newSession: NewSessionMenuProps;
+  activeActions?: Readonly<Record<string, boolean>>;
 }) {
   const { t } = useI18n();
   const [message, setMessage] = useState<MessageKey | null>(null);
@@ -40,7 +41,7 @@ export function AppActionBar({ executor, newSession }: {
     <div className="app-actionbar-container">
       <div className="app-actionbar">
         <AppMenuBar {...props} />
-        <AppToolbar {...props} />
+        <AppToolbar {...props} activeActions={activeActions} />
       </div>
       {message ? (
         <div className="app-action-feedback" role="alert">

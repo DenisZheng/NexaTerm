@@ -1,0 +1,8 @@
+{"file": "NEXATERM_REQUIREMENTS.md", "reason": "产品与 v1 范围"}
+{"file": "docs/WORKFLOW_SPEC.md", "reason": "v0.6 已确认 WS 规则与待确认边界"}
+{"file": "ROADMAP.md", "reason": "当前执行状态"}
+{"file": "NEXATERM_WORKFLOW_DELIVERY_PLAN.md", "reason": "9-23 历史交付与 A01–A15"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "token、Radix、i18n、lazy 与 UI 边界"}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "只读投影与 reducer owner"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "运行测试与 source gate 分离"}
+{"file": ".trellis/tasks/10-06-workstation-ux-polish/design.md", "reason": "官方来源、差距表与本轮收口范围"}

@@ -23,6 +23,7 @@ import {
 } from "react";
 import {
   Check,
+  ChevronRight,
   Clock3,
   Copy,
   Folder,
@@ -64,6 +65,7 @@ interface ConnectionPaneProps {
   onDeleteGroup: (id: string) => Promise<unknown>;
   onMoveConnectionToGroup: (connection: ConnectionProfile, groupId: string | null) => Promise<unknown>;
   onOpen: (connection: ConnectionProfile) => void;
+  renderOpenSessions?: (connection: ConnectionProfile) => ReactNode;
   onOpenSearch: () => void;
   onOpenSettings: () => void;
   onPreloadCreate?: () => void;
@@ -130,6 +132,7 @@ export function ConnectionPane({
   onDeleteGroup,
   onMoveConnectionToGroup,
   onOpen,
+  renderOpenSessions,
   onOpenSearch,
   onOpenSettings,
   onPreloadCreate,
@@ -269,6 +272,7 @@ export function ConnectionPane({
                 onDuplicate={onDuplicate}
                 onEdit={onEdit}
                 onOpen={onOpen}
+                renderOpenSessions={renderOpenSessions}
                 onSelect={selectQuickConnection}
                 onToggleFavorite={onToggleFavorite}
                 onCreateConnection={() => onCreate()}
@@ -348,6 +352,7 @@ export function ConnectionPane({
                 onDuplicate={onDuplicate}
                 onEdit={onEdit}
                 onOpen={onOpen}
+                renderOpenSessions={renderOpenSessions}
                 onSelect={selectTreeConnection}
                 onToggleFavorite={onToggleFavorite}
                 selected={connection.id === selectedId}
@@ -537,6 +542,7 @@ export function ConnectionPane({
         onDuplicate={onDuplicate}
         onEdit={onEdit}
         onOpen={onOpen}
+        renderOpenSessions={renderOpenSessions}
         onSelect={selectTreeConnection}
         onToggleFavorite={onToggleFavorite}
         onCreateConnection={() => onCreate(group.id)}
@@ -755,6 +761,7 @@ function TreeFolder({
   onDuplicate,
   onEdit,
   onOpen,
+  renderOpenSessions,
   onSelect,
   onToggleFavorite,
   onCreateConnection,
@@ -786,6 +793,7 @@ function TreeFolder({
   onDuplicate: (connection: ConnectionProfile) => void;
   onEdit: (connection: ConnectionProfile) => void;
   onOpen: (connection: ConnectionProfile) => void;
+  renderOpenSessions?: (connection: ConnectionProfile) => ReactNode;
   onSelect: (connection: ConnectionProfile) => void;
   onToggleFavorite: (connection: ConnectionProfile) => void | Promise<void>;
   onCreateConnection: () => void;
@@ -830,14 +838,23 @@ function TreeFolder({
               className="tree-folder-main"
               type="button"
               onClick={onToggle}
+              aria-expanded={expanded}
               onDragLeave={onDragLeave}
               onDragOver={onDragOver}
               onDrop={dropConnection}
             >
+              <ChevronRight className={`ui-icon tree-expand-icon ${expanded ? "expanded" : ""}`} aria-hidden="true" />
               <Icon className="ui-icon group-folder-icon" aria-hidden="true" />
-              <span>{label}</span>
+              <span className="tree-folder-label">{label}</span>
               <span className="count">{connections.length.toString()}</span>
             </button>
+            {onConnectAll ? (
+              <Tooltip label={connectAllLabel || t("batchConnect.menu")}>
+                <button className="tree-group-connect" type="button" aria-label={`${connectAllLabel || t("batchConnect.menu")} ${label}`} onClick={onConnectAll}>
+                  <Play className="ui-icon" aria-hidden="true" />
+                </button>
+              </Tooltip>
+            ) : null}
           </div>
         </ContextMenu.Trigger>
         <ContextMenu.Portal>
@@ -896,6 +913,7 @@ function TreeFolder({
               onDuplicate={onDuplicate}
               onEdit={onEdit}
               onOpen={onOpen}
+              renderOpenSessions={renderOpenSessions}
               onSelect={onSelect}
               onToggleFavorite={onToggleFavorite}
               selected={connection.id === selectedId}
@@ -935,6 +953,7 @@ function ConnectionTreeLeaf({
   onDuplicate,
   onEdit,
   onOpen,
+  renderOpenSessions,
   onSelect,
   onToggleFavorite,
   selected,
@@ -953,6 +972,7 @@ function ConnectionTreeLeaf({
   onDuplicate: (connection: ConnectionProfile) => void;
   onEdit: (connection: ConnectionProfile) => void;
   onOpen: (connection: ConnectionProfile) => void;
+  renderOpenSessions?: (connection: ConnectionProfile) => ReactNode;
   onSelect: (connection: ConnectionProfile) => void;
   onToggleFavorite: (connection: ConnectionProfile) => void | Promise<void>;
   selected: boolean;
@@ -981,6 +1001,7 @@ function ConnectionTreeLeaf({
               <small>{formatAddress(connection, t)}</small>
             </span>
           </button>
+          {renderOpenSessions?.(connection)}
           <Tooltip label={favoriteLabel}>
             <button
               className={`tree-connection-favorite ${connection.is_favorite ? "active" : ""}`}

@@ -1577,6 +1577,83 @@ function FilePanelShell({
         </div>
         <div className="file-panel-actions" aria-label={t("files.panel.toolbar.aria")}>
           <div className="file-panel-action-group">
+            <Tooltip label={t("files.panel.toolbar.refresh")}>
+              <button className="mini-action" type="button" aria-label={t("files.panel.toolbar.refresh")} disabled={disabled} onClick={onRefresh}>
+                <RefreshCw className={`ui-icon ${loading ? "spin" : ""}`} aria-hidden="true" />
+              </button>
+            </Tooltip>
+            <div className="upload-action-wrap">
+              <Tooltip label={t("files.panel.toolbar.upload")}>
+                <button
+                  className={`mini-action upload-trigger ${uploadMenuOpen ? "active" : ""}`}
+                  type="button"
+                  aria-label={t("files.panel.toolbar.upload")}
+                  aria-expanded={uploadMenuOpen}
+                  disabled={disabled}
+                  onClick={onToggleUploadMenu}
+                >
+                  <Upload className="ui-icon" aria-hidden="true" />
+                  <ChevronDown className="ui-icon chevron" aria-hidden="true" />
+                </button>
+              </Tooltip>
+              {uploadMenuOpen ? (
+                <div className="upload-menu" role="menu" aria-label={t("files.panel.toolbar.uploadOptions")}>
+                  <button
+                    className="upload-menu-item"
+                    type="button"
+                    disabled={disabled || !onUploadFile}
+                    role="menuitem"
+                    onClick={() => {
+                      onUploadFile?.(path);
+                      onToggleUploadMenu();
+                    }}
+                  >
+                    {t("files.panel.action.uploadFile")}
+                  </button>
+                  <button
+                    className="upload-menu-item"
+                    type="button"
+                    disabled={disabled || !onUploadDirectory}
+                    role="menuitem"
+                    onClick={() => {
+                      onUploadDirectory?.(path);
+                      onToggleUploadMenu();
+                    }}
+                  >
+                    {t("files.panel.action.uploadFolder")}
+                  </button>
+                </div>
+              ) : null}
+            </div>
+            <Tooltip label={t("files.panel.toolbar.newFolder")}>
+              <button
+                className="mini-action"
+                type="button"
+                aria-label={t("files.panel.toolbar.newFolder")}
+                disabled={disabled || !onCreateDirectory}
+                onClick={() => onCreateDirectory?.(path)}
+              >
+                <FolderPlus className="ui-icon" aria-hidden="true" />
+              </button>
+            </Tooltip>
+            <Tooltip label={t("files.panel.toolbar.newFile")}>
+              <button
+                className="mini-action"
+                type="button"
+                aria-label={t("files.panel.toolbar.newFile")}
+                disabled={disabled || !onCreateFile}
+                onClick={() => onCreateFile?.(path)}
+              >
+                <FilePlus className="ui-icon" aria-hidden="true" />
+              </button>
+            </Tooltip>
+            <Tooltip label={t("files.panel.toolbar.copyPath")}>
+              <button className="mini-action" type="button" aria-label={t("files.panel.toolbar.copyPath")} disabled={disabled} onClick={onCopyCurrentPath}>
+                <Clipboard className="ui-icon" aria-hidden="true" />
+              </button>
+            </Tooltip>
+          </div>
+          <div className="file-panel-action-group">
             <Tooltip label={terminalLocateLabel}>
               <button
                 className={`mini-action ${isAtTerminalPath ? "active" : ""}`}
@@ -1628,83 +1705,6 @@ function FilePanelShell({
                 <ChevronUp className="ui-icon" aria-hidden="true" />
               </button>
             </Tooltip>
-          </div>
-          <div className="file-panel-action-group">
-            <Tooltip label={t("files.panel.toolbar.copyPath")}>
-              <button className="mini-action" type="button" aria-label={t("files.panel.toolbar.copyPath")} disabled={disabled} onClick={onCopyCurrentPath}>
-                <Clipboard className="ui-icon" aria-hidden="true" />
-              </button>
-            </Tooltip>
-            <Tooltip label={t("files.panel.toolbar.newFile")}>
-              <button
-                className="mini-action"
-                type="button"
-                aria-label={t("files.panel.toolbar.newFile")}
-                disabled={disabled || !onCreateFile}
-                onClick={() => onCreateFile?.(path)}
-              >
-                <FilePlus className="ui-icon" aria-hidden="true" />
-              </button>
-            </Tooltip>
-            <Tooltip label={t("files.panel.toolbar.newFolder")}>
-              <button
-                className="mini-action"
-                type="button"
-                aria-label={t("files.panel.toolbar.newFolder")}
-                disabled={disabled || !onCreateDirectory}
-                onClick={() => onCreateDirectory?.(path)}
-              >
-                <FolderPlus className="ui-icon" aria-hidden="true" />
-              </button>
-            </Tooltip>
-            <Tooltip label={t("files.panel.toolbar.refresh")}>
-              <button className="mini-action" type="button" aria-label={t("files.panel.toolbar.refresh")} disabled={disabled} onClick={onRefresh}>
-                <RefreshCw className={`ui-icon ${loading ? "spin" : ""}`} aria-hidden="true" />
-              </button>
-            </Tooltip>
-            <div className="upload-action-wrap">
-              <Tooltip label={t("files.panel.toolbar.upload")}>
-                <button
-                  className={`mini-action upload-trigger ${uploadMenuOpen ? "active" : ""}`}
-                  type="button"
-                  aria-label={t("files.panel.toolbar.upload")}
-                  aria-expanded={uploadMenuOpen}
-                  disabled={disabled}
-                  onClick={onToggleUploadMenu}
-                >
-                  <Upload className="ui-icon" aria-hidden="true" />
-                  <ChevronDown className="ui-icon chevron" aria-hidden="true" />
-                </button>
-              </Tooltip>
-              {uploadMenuOpen ? (
-                <div className="upload-menu" role="menu" aria-label={t("files.panel.toolbar.uploadOptions")}>
-                  <button
-                    className="upload-menu-item"
-                    type="button"
-                    disabled={disabled || !onUploadFile}
-                    role="menuitem"
-                    onClick={() => {
-                      onUploadFile?.(path);
-                      onToggleUploadMenu();
-                    }}
-                  >
-                    {t("files.panel.action.uploadFile")}
-                  </button>
-                  <button
-                    className="upload-menu-item"
-                    type="button"
-                    disabled={disabled || !onUploadDirectory}
-                    role="menuitem"
-                    onClick={() => {
-                      onUploadDirectory?.(path);
-                      onToggleUploadMenu();
-                    }}
-                  >
-                    {t("files.panel.action.uploadFolder")}
-                  </button>
-                </div>
-              ) : null}
-            </div>
           </div>
         </div>
       </div>

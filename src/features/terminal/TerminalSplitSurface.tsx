@@ -153,7 +153,7 @@ export function TerminalSplitLayout({
         const selectedOption = bindingKey ? sessionOptionByValue.get(bindingKey) : undefined;
         const focused = pane.id === focusedPaneId;
         const syncParticipant = Boolean(bindingKey && syncParticipantKeys.has(bindingKey));
-        const syncRole = syncEnabled && syncParticipant ? (focused ? "source" : "target") : null;
+        const syncRole = syncEnabled && bindingKey ? (focused ? "source" : syncParticipant ? "target" : null) : null;
         const options = buildPaneOptions(pane, sessionOptions, occupiedBindingKeys, t);
 
         return (
@@ -211,6 +211,7 @@ export function TerminalSplitLayout({
                 />
               )}
               <span className="terminal-split-pane-meta">
+                {focused && !syncEnabled ? <span className="terminal-split-focus-label">{t("terminal.split.focused")}</span> : null}
                 {syncRole ? <span className="terminal-split-sync-role">{syncRole === "source" ? t("terminal.split.source") : t("terminal.split.target")}</span> : null}
                 {selectedOption?.status ? (
                   <span className="terminal-split-session-status">{selectedOption.status}</span>

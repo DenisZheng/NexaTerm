@@ -38,12 +38,9 @@ export interface NewSessionMenuProps {
 }
 interface NewSessionItemsProps extends NewSessionMenuProps { variant?: "menubar" | "dropdown" }
 
-/** The titlebar, toolbar and Session submenu share these exact choices and callbacks. */
-export function NewSessionMenuItems({ variant = "dropdown", ...props }: NewSessionItemsProps) {
+export function LocalSessionMenuItems({ variant = "dropdown", ...props }: NewSessionItemsProps) {
   const { t } = useI18n();
   const Menu = variant === "menubar" ? Menubar : DropdownMenu;
-  const remoteCapabilities =
-    props.remoteDesktopEntryCapabilities || unknownRemoteDesktopEntryCapabilities;
   const sections = buildNewSessionTerminalSections({
     platform: props.desktopPlatform || "unknown",
     profiles: props.localProfiles,
@@ -94,6 +91,19 @@ export function NewSessionMenuItems({ variant = "dropdown", ...props }: NewSessi
           )}
         </>
       ) : null}
+    </>
+  );
+}
+
+/** The titlebar, toolbar and Session submenu share these exact choices and callbacks. */
+export function NewSessionMenuItems({ variant = "dropdown", ...props }: NewSessionItemsProps) {
+  const { t } = useI18n();
+  const Menu = variant === "menubar" ? Menubar : DropdownMenu;
+  const remoteCapabilities =
+    props.remoteDesktopEntryCapabilities || unknownRemoteDesktopEntryCapabilities;
+  return (
+    <>
+      <LocalSessionMenuItems {...props} variant={variant} />
       <Menu.Separator className="context-menu-separator" />
       <Menu.Label className="title-new-session-menu-heading">{t("newSession.characterTerminals")}</Menu.Label>
       {newSessionCharacterEntries.map((entry) => (

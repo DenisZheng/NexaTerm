@@ -42,6 +42,8 @@
 .app-toolbar { display: flex; align-items: center; justify-content: flex-end; gap: 2px; }
 .app-toolbar-button[aria-disabled="true"] { color: var(--mx-subtle); cursor: not-allowed; }
 .app-toolbar .app-toolbar-button { flex: 0 0 auto; }
+.app-toolbar-slot:not([data-toolbar-mode="labels"]) .app-toolbar-button { width: 32px; min-width: 32px; padding: 0; }
+.app-toolbar-button[aria-pressed="true"] { color: var(--mx-text); background: var(--mx-chrome-active); }
 .app-entry-menu {
   box-sizing: border-box;
   width: max-content;

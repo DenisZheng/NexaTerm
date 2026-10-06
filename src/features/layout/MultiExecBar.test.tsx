@@ -36,6 +36,17 @@ afterEach(() => {
 });
 
 describe("WF-04C MultiExec bar", () => {
+  it("shows only effective receiving targets and explains disconnect invalidation", () => {
+    const { props, rerender } = setup({ mode: "live", selectedKeys: new Set(["ssh:a", "local:b"]) });
+    expect(screen.getAllByText("Receiving")).toHaveLength(2);
+    expect(screen.getByText(/Focus changes the input source/)).toBeDefined();
+    rerender(<MultiExecBar {...props} targets={targets.slice(1)} />);
+    expect(screen.getAllByText("Receiving")).toHaveLength(1);
+    expect(screen.getByRole("status").textContent).toContain("1");
+    expect(screen.queryByText("prod · Terminal")).toBeNull();
+    expect(screen.getByText(/Reconnecting requires selecting them again/)).toBeDefined();
+    expect(props.onToggleTarget).not.toHaveBeenCalled();
+  });
   it("renders target chips and reports explicit selection changes", () => {
     const { props } = setup();
     expect(screen.getByRole("button", { name: "prod · Terminal" }).getAttribute("aria-pressed")).toBe("true");

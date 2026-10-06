@@ -63,7 +63,7 @@ async function open(name: string, role: "button" | "menuitem" = "menuitem") {
 
 describe("WF-01 4C: real Radix entry interactions", () => {
   it("keeps all six menus while the complete toolbar folds into overflow", () => {
-    setup(); resize(80);
+    setup(); resize(40);
     expect(within(screen.getByRole("menubar")).getAllByRole("menuitem").map((node) => node.textContent))
       .toStrictEqual(["Session", "View", "Terminal", "Tools", "Settings", "Help"]);
     expect(within(screen.getByRole("toolbar")).getAllByRole("button").length).toBe(1);
@@ -109,12 +109,12 @@ describe("WF-01 4C: real Radix entry interactions", () => {
     expect(state.handlers["terminal.multiExec"]).not.toHaveBeenCalled();
   });
   it("dispatches MultiExec from the compact toolbar overflow", async () => {
-    const { handlers } = setup(); resize(80); await open("More tools", "button");
+    const { handlers } = setup(); resize(40); await open("More tools", "button");
     fireEvent.click(screen.getByRole("menuitem", { name: "MultiExec" }));
     await waitFor(() => expect(handlers["terminal.multiExec"]).toHaveBeenCalledExactlyOnceWith({ kind: "application" }));
   });
-  it("keeps Command Sender available independently in overflow", async () => {
-    const { handlers } = setup(); resize(80); await open("More tools", "button");
+  it("keeps Command Sender available independently in the Tools menu", async () => {
+    const { handlers } = setup(); await open("Tools");
     fireEvent.click(screen.getByRole("menuitem", { name: "Command Sender" }));
     await waitFor(() => expect(handlers["commandSender.toggle"]).toHaveBeenCalledTimes(1));
     expect(handlers["terminal.multiExec"]).not.toHaveBeenCalled();

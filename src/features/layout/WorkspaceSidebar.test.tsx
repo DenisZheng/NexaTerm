@@ -46,6 +46,18 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("WF-01 slice 5 workspace sidebar shell", () => {
+  it("shows the bound instance and updates it on pane changes without retaining the previous host", () => {
+    const first = { ...fileContext, instanceTitle: "Fixture · Terminal 2", address: "tester@example.invalid:22", status: "Connected", paneNumber: 2 };
+    const { rerender } = render(<Harness context={first} initialView="files" />);
+    expect(screen.getByText("Fixture · Terminal 2")).toBeDefined();
+    expect(screen.getByText("Pane 2 · Connected")).toBeDefined();
+    rerender(<Harness context={{ ...first, tabId: "another", instanceTitle: "Fixture · Terminal 3", paneNumber: 3 }} initialView="files" />);
+    expect(screen.queryByText("Fixture · Terminal 2")).toBeNull();
+    expect(screen.getByRole("tabpanel").getAttribute("data-terminal-id")).toBe("another");
+    rerender(<Harness context={null} initialView="files" />);
+    expect(screen.queryByText("tester@example.invalid:22")).toBeNull();
+    expect(screen.queryByTestId("live-files")).toBeNull();
+  });
   it("switches Sessions and Files with one accessible tab stop", () => {
     render(<Harness />);
     const sessions = screen.getByRole("tab", { name: "Sessions" });
