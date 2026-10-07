@@ -15,12 +15,12 @@
   "branch": "docs/readme-bilingual-refresh",
   "base_branch": "main",
   "worktree_path": "/private/tmp/nexaterm-readme-bilingual-refresh",
-  "commit": null,
-  "pr_url": null,
+  "commit": "32b6f12dc549635f19b6bf5f0db4e3a93eb02556",
+  "pr_url": "https://github.com/DenisZheng/NexaTerm/pull/47",
   "subtasks": [],
   "children": [],
   "parent": null,
   "relatedFiles": [],
-  "notes": "2026-10-07: 六张截图已齐；本地 Markdown/图片/双语/脚本检查通过，main CI #553 SUCCESS。额外无界面浏览器检查超时，未算通过；待提交与 PR。",
+  "notes": "2026-10-07: README/六图/旧图清理已提交并推送，PR #47 未合并。Markdown/图片/双语/脚本及外链检查通过。额外 headless 版式检查超时，最终页面观感待维护者审阅；CI 状态以 PR 当前 head 为准。",
   "meta": {}
 }
