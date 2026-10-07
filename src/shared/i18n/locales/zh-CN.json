@@ -2660,5 +2660,13 @@
   "multiExec.receiving": "接收中",
   "terminal.split.focused": "当前焦点",
   "sidebar.filesConnected": "终端已连接",
-  "homeStart.failed": "无法打开临时会话，请重试。"
+  "homeStart.failed": "无法打开临时会话，请重试。",
+  "terminal.status.waiting": "待连接",
+  "terminal.status.idle": "空闲",
+  "terminal.status.reconnecting": "重新连接中",
+  "terminal.status.reconnectFailed": "重新连接失败",
+  "terminal.status.listenerFailed": "事件监听失败",
+  "terminal.status.disconnected": "已断开",
+  "workspace.time.minuteAgo": "{count} 分钟前",
+  "workspace.time.hourAgo": "{count} 小时前"
 }

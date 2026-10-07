@@ -98,6 +98,8 @@ import {
   formatVncRunnerKind,
 } from "../connections/connectionTypes";
 import { connectionTimestampOf, sortConnectionsByRecent } from "../connections/connectionSearch";
+import { formatRelativeTime } from "../connections/relativeTime";
+import { terminalStatusLabel } from "../terminal/terminalStatusLabel";
 import { isQuickConnectCredentialError, type QuickConnectTarget } from "../connections/quickConnect";
 import { connectTemporaryQuickTerminal, createTemporaryQuickConnectProfile, prepareTemporaryQuickConnectCredentials, releaseTemporaryQuickConnectRefs, saveTemporaryQuickConnectProfile } from "../connections/quickConnectRuntime";
 import { finalTemporaryContextRefs, rebindConnectionItems, rebindTemporaryTerminalTab } from "../connections/quickConnectSession";
@@ -5263,7 +5265,7 @@ export function WorkspaceShell() {
           <button
             className="subtab local-terminal-subtab"
             type="button"
-            title={`${tab.title} · ${tab.status}`}
+            title={`${tab.title} · ${terminalStatusLabel(tab.status, t)}`}
             onClick={() => activateLocalTerminalTab(tab)}
           >
             <LocalTerminalIcon className="ui-icon" kind={tab.profileKind} title={tab.title} />
@@ -10603,6 +10605,7 @@ function LocalTerminalStatusPanel({
   onOpenSettings: () => void;
   onRetry?: () => void;
 }) {
+  const { t } = useI18n();
   const failed = status === "连接失败";
   const subject = source === "telnet" ? tr("workspace.local.telnetSession") : source === "serial" ? tr("workspace.local.serialSession") : tr("workspace.local.subject");
   const description = profile ? `${profile.name} · ${profile.command}` : title;
@@ -10623,7 +10626,7 @@ function LocalTerminalStatusPanel({
         ) : (
           <Loader2 className="ui-icon spin" aria-hidden="true" />
         )}
-        <strong>{failed ? tr("workspace.local.openFailed", { subject }) : localTerminalStatusLabel(status)}</strong>
+        <strong>{failed ? tr("workspace.local.openFailed", { subject }) : terminalStatusLabel(status, t)}</strong>
         <span>{description}</span>
         {error ? <small>{error}</small> : null}
         {failed && onRetry ? (
@@ -10769,15 +10772,6 @@ function DirectTerminalStatusPanel({
       </div>
     </section>
   );
-}
-
-function localTerminalStatusLabel(status: string) {
-  if (status === "正在打开") return tr("workspace.local.status.opening");
-  if (status === "预览") return tr("workspace.local.status.preview");
-  if (status === "已连接") return tr("workspace.local.status.connected");
-  if (status === "正在连接") return tr("workspace.local.status.connecting");
-  if (status === "连接失败") return tr("workspace.connection.failed");
-  return status;
 }
 
 function ConnectionStepPanel({
@@ -11518,7 +11512,7 @@ function ConnectionHome({
                     <ConnectionSystemLogo connection={connection} />
                   </span>
                   <span className="last-cell">
-                    <strong>{hasLastConnectedAt ? formatRelativeTime(lastConnectedAt) : t("connectionHome.neverConnected")}</strong>
+                    <strong>{hasLastConnectedAt ? formatRelativeTime(lastConnectedAt, t) : t("connectionHome.neverConnected")}</strong>
                     <span>
                       {lastConnectedAt === "demo"
                         ? t("connectionHome.recentUse")
@@ -11637,7 +11631,7 @@ function ConnectionHome({
                     <span className="latency-dot" />
                     <span>
                       <strong>{connection.name}</strong>
-                      <span>{formatRelativeTime(connection.last_connected_at)}</span>
+                      <span>{formatRelativeTime(connection.last_connected_at, t)}</span>
                     </span>
                   </button>
                 ))
@@ -11781,31 +11775,6 @@ function waitForWebviewWindowCreation(
       finish(() => reject(event.payload));
     });
   });
-}
-
-function formatRelativeTime(value?: string | null) {
-  const normalized = value?.trim().toLowerCase();
-
-  if (normalized === "demo" || normalized === "preview") {
-    return tr("workspace.recent");
-  }
-
-  const timestamp = connectionTimestampOf(value);
-
-  if (!timestamp) {
-    return tr("workspace.recent");
-  }
-
-  const diffMs = Date.now() - timestamp;
-  const minute = 60 * 1000;
-  const hour = 60 * minute;
-  const day = 24 * hour;
-
-  if (diffMs < minute) return tr("workspace.time.justNow");
-  if (diffMs < hour) return tr("workspace.time.minutesAgo", { count: Math.floor(diffMs / minute) });
-  if (diffMs < day) return tr("workspace.time.hoursAgo", { count: Math.floor(diffMs / hour) });
-  if (diffMs < 2 * day) return tr("workspace.time.yesterday");
-  return tr("workspace.time.daysAgo", { count: Math.floor(diffMs / day) });
 }
 
 function countConnectedWithinWeek(connections: ConnectionProfile[]) {
