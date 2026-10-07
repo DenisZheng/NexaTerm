@@ -24,3 +24,14 @@
 - [ ] Maintainer A15 signoff after validator reports zero blockers.
 
 Nothing in the real-evidence section may be marked PASS from CI alone.
+
+
+## 2026-10-07 首版预发布执行
+
+- [x] 核对 main@b7afa0d 的 CI #560 SUCCESS，记录缺少 Linux/平台证书/旧数据的真实边界。
+- [x] 实现 release policy、工作流通道与预发布说明。
+- [x] 测试正式/预发布/手动构建/非法 tag/版本不一致；29 项测试、WF-08A/C/E、line-budget、YAML 解析/依赖绑定、Cargo metadata --locked --offline 和 diff 检查全部通过。
+- [ ] 审核后提交独立 PR，CI 通过后准备带预发布版本的候选构建；不得用旧版本号冒充 rc 版本。
+- [ ] 提供 Windows/macOS 安装验收步骤和真实产物 SHA256；维护者确认后公开 Pre-release。
+
+回退：撤回本次 workflow/policy 修改即可恢复原正式签名发布路径；不涉及用户数据变更。

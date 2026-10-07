@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "candidate": {
     "version": "0.1.17",
-    "commit": "4bd88f9060fe089ee6e52a042a5e589c1bb739bd",
+    "commit": "b7afa0d653dc06691b08cc1f20b29278f4920711",
     "tag": "pending-real-release",
-    "timestamp": "2026-10-05"
+    "timestamp": "2026-10-07"
   },
   "predecessor": {
     "A09": "pass",
@@ -23,10 +23,10 @@
       "brand": "pending",
       "locale": "pending",
       "theme": "pending",
-      "upgrade": "pending",
-      "rollback": "pending",
+      "upgrade": "blocked",
+      "rollback": "blocked",
       "artifactHash": "pending",
-      "authenticode": "pending"
+      "authenticode": "blocked"
     },
     "macos-arm64": {
       "build": "pending",
@@ -35,47 +35,47 @@
       "brand": "pending",
       "locale": "pending",
       "theme": "pending",
-      "upgrade": "pending",
-      "rollback": "pending",
+      "upgrade": "blocked",
+      "rollback": "blocked",
       "artifactHash": "pending",
-      "developerId": "pending",
-      "notarization": "pending"
+      "developerId": "blocked",
+      "notarization": "blocked"
     },
     "linux-x64": {
       "build": "pending",
-      "install": "pending",
-      "launch": "pending",
-      "brand": "pending",
-      "locale": "pending",
-      "theme": "pending",
-      "upgrade": "pending",
-      "rollback": "pending",
+      "install": "blocked",
+      "launch": "blocked",
+      "brand": "blocked",
+      "locale": "blocked",
+      "theme": "blocked",
+      "upgrade": "blocked",
+      "rollback": "blocked",
       "artifactHash": "pending"
     }
   },
   "migration": {
-    "coreAppData": "pending",
-    "webviewSettings": "pending",
-    "noSilentOverwrite": "pending",
-    "vault": "pending",
-    "rollback": "pending"
+    "coreAppData": "blocked",
+    "webviewSettings": "blocked",
+    "noSilentOverwrite": "blocked",
+    "vault": "blocked",
+    "rollback": "blocked"
   },
   "performance": {
     "startup": "pending",
     "idleCpu": "pending",
-    "memoryVsMxterm": "pending",
+    "memoryVsMxterm": "blocked",
     "tenSshWorkload": "pending",
     "resourceRelease": "pending",
     "failureIsolation": "pending"
   },
   "updater": {
     "signedMetadata": "pending",
-    "upgrade": "pending",
-    "rollbackRecovery": "pending"
+    "upgrade": "blocked",
+    "rollbackRecovery": "blocked"
   },
   "signoff": {
     "status": "pending",
     "maintainer": "",
-    "notes": "Release-candidate baseline is main @ 4bd88f9060fe089ee6e52a042a5e589c1bb739bd. Main CI #383 passed Frontend, Rust Windows/Linux/macOS, fixtures, Security and License. A09/A10 are PASS. Real platform release/install/signing, migration, performance and updater evidence remains pending."
+    "notes": "2026-10-07 候选提交 main@b7afa0d653dc06691b08cc1f20b29278f4920711，CI #560 / run 37588599585 已 SUCCESS；Security、License jobs 已 success。保留 A09/A10 历史验收，不将其描述为新候选重复验收。真实发布、迁移、性能和 updater 均未完成；详见 RELEASE_PREPARATION_2026-10-07.md。 维护者确认有 Windows、无 Linux 机器，无平台发布证书/Apple 开发者账号，无旧版安装包和数据；相应真实验收标为 blocked，其余待验。"
   }
 }

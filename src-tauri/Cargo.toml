@@ -1,6 +1,6 @@
 [package]
 name = "nexaterm"
-version = "0.1.17"
+version = "0.1.17-rc.1"
 description = "Personal desktop SSH/SFTP client"
 authors = ["MNL"]
 edition = "2021"

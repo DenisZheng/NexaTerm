@@ -1612,6 +1612,9 @@ TAURI_SIGNING_PRIVATE_KEY_PASSWORD=<GitHub Secret, optional>
 - Linux checks the `APPIMAGE` environment variable. A non-empty value returns `desktop-appimage`; otherwise Linux returns `desktop-package`.
 - macOS and ordinary Windows installer builds return `desktop-installer`.
 - Tauri config must include the GitHub latest endpoint `https://github.com/DenisZheng/NexaTerm/releases/latest/download/latest.json` and the updater public key only. Private keys and key passwords must stay in GitHub Secrets or ignored runtime paths.
+- `release-policy.mjs` exports `releasePolicy({ ref, eventName, versions: { package, tauri, cargo } })` and writes `publish/prerelease/platformSigning/draft/makeLatest` to GitHub job outputs. All manifests must match, including prerelease suffixes.
+- Version tags accept only `vX.Y.Z` (platform signing required) or `vX.Y.Z-(alpha|beta|rc).N` (no platform certificate, draft prerelease, never latest). Unknown suffixes/tag-version mismatches fail before builds. Branch `workflow_dispatch` is artifact-only, never publishes a Release.
+- Pre-release candidates retain updater signing, `.sig`, SHA256 and license gates. Their release body comes from `docs/PRERELEASE_NOTES.md`; maintainers must record real Windows/macOS smoke results before publishing the draft. A15 signoff remains independent and pending while blockers exist.
 - GitHub Release workflow may build Windows x64, macOS Apple Silicon, and Linux x64 only. Do not add macOS Intel artifacts or updater metadata without a new task and spec update.
 - Release builds must set `NODE_OPTIONS=--max-old-space-size=4096` so the Vite/TypeScript build does not hit the default Node heap limit on GitHub-hosted macOS Apple Silicon runners.
 - `latest.json` must include only signed updater-installable artifacts: Windows NSIS `.exe`, macOS Apple Silicon `.app.tar.gz`, and Linux `.AppImage`. Windows portable zip, Linux deb, and Linux rpm are manual-download assets only.
@@ -1626,6 +1629,8 @@ TAURI_SIGNING_PRIVATE_KEY_PASSWORD=<GitHub Secret, optional>
 | Linux `APPIMAGE` is non-empty | Return `desktop-appimage`. |
 | Linux `APPIMAGE` is missing or blank | Return `desktop-package`. |
 | macOS build | Return `desktop-installer`. |
+| Unknown tag suffix (for example `-preview.1`) | Policy fails; it must not bypass platform signing. |
+| Pre-release `v0.1.17-rc.1` with matching manifests | Draft prerelease, `make_latest=false`, updater signing required, no platform certificate required. |
 | Tag version differs from `package.json`, `src-tauri/Cargo.toml`, or `src-tauri/tauri.conf.json` | Release workflow fails before publishing. |
 | `TAURI_SIGNING_PRIVATE_KEY` is missing | Release workflow fails before building updater artifacts. |
 | macOS Apple Silicon runner hits Node heap exhaustion during `pnpm build` | Keep or restore `NODE_OPTIONS=--max-old-space-size=4096` in the release workflow. |
@@ -1637,11 +1642,13 @@ TAURI_SIGNING_PRIVATE_KEY_PASSWORD=<GitHub Secret, optional>
 - Good: a Windows portable zip contains `portable.marker`, returns `desktop-portable`, and the UI directs the user to GitHub Release manual download.
 - Good: a Linux AppImage launch has `APPIMAGE=/path/to/NexaTerm.AppImage`, returns `desktop-appimage`, and `latest.json` points to the signed AppImage.
 - Base: a Linux deb/rpm install returns `desktop-package`, so the UI keeps manual update copy visible.
+- Bad: classify any tag containing a hyphen as safe to publish unsigned. Correct: accept only the tested prerelease grammar and keep drafts out of latest; ordinary stable tags retain platform signing.
 - Bad: Rust infers updater support from OS alone, workflow writes portable zip/deb/rpm into `latest.json`, a private updater key is committed, or release URLs point outside GitHub.
 
 ### 6. Tests Required
 
 - Run targeted Rust tests for distribution detection after changing runtime info logic: `cargo test --manifest-path src-tauri/Cargo.toml distribution_mode --lib`.
+- Run `node --test scripts/release-policy.test.mjs scripts/release-signing-source.test.mjs` for channel changes: assert stable signing, prerelease draft/latest isolation, artifact-only dispatch, malformed tags and manifest mismatch rejection.
 - Run `pnpm test:release` after changing platform matrix names, asset naming, GitHub repository URL generation, or `latest.json` target selection.
 - Run `pnpm check` after changing frontend runtime info types or wrappers.
 - Run `git diff --check` and search the working tree for private key material before staging release/updater changes.

@@ -20,8 +20,27 @@ env:
   RUST_BACKTRACE: 1
 
 jobs:
+  policy:
+    name: Validate release version and channel
+    runs-on: ubuntu-22.04
+    outputs:
+      publish: ${{ steps.policy.outputs.publish }}
+      prerelease: ${{ steps.policy.outputs.prerelease }}
+      platformSigning: ${{ steps.policy.outputs.platformSigning }}
+      draft: ${{ steps.policy.outputs.draft }}
+      makeLatest: ${{ steps.policy.outputs.makeLatest }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Validate release version
+        id: policy
+        run: node scripts/release-policy.mjs
+
   build:
     name: Build ${{ matrix.target }}
+    needs: policy
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
@@ -91,31 +110,6 @@ jobs:
       - name: Check third-party licenses
         run: pnpm run check:licenses
 
-      - name: Validate release version
-        if: startsWith(github.ref, 'refs/tags/v')
-        shell: bash
-        run: |
-          set -euo pipefail
-          tag="${GITHUB_REF_NAME#v}"
-          package_version="$(node -p "require('./package.json').version")"
-          tauri_version="$(node -p "require('./src-tauri/tauri.conf.json').version")"
-          cargo_version="$(node -e "const fs=require('fs'); const text=fs.readFileSync('src-tauri/Cargo.toml','utf8'); const head=text.split('\n[lib]')[0]; const match=head.match(/^version\\s*=\\s*\"([^\"]+)\"/m); if (!match) process.exit(2); process.stdout.write(match[1]);")"
-
-          if [ "$tag" != "$package_version" ]; then
-            echo "::error::Tag v$tag does not match package.json version $package_version"
-            exit 1
-          fi
-
-          if [ "$tag" != "$tauri_version" ]; then
-            echo "::error::Tag v$tag does not match src-tauri/tauri.conf.json version $tauri_version"
-            exit 1
-          fi
-
-          if [ "$tag" != "$cargo_version" ]; then
-            echo "::error::Tag v$tag does not match src-tauri/Cargo.toml version $cargo_version"
-            exit 1
-          fi
-
       - name: Validate updater signing secrets
         shell: bash
         env:
@@ -128,7 +122,7 @@ jobs:
           fi
 
       - name: Import Windows Authenticode certificate
-        if: startsWith(github.ref, 'refs/tags/v') && matrix.target == 'windows-x64'
+        if: needs.policy.outputs.platformSigning == 'true' && matrix.target == 'windows-x64'
         shell: pwsh
         env:
           WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
@@ -156,7 +150,7 @@ jobs:
           }
 
       - name: Import macOS Developer ID certificate
-        if: startsWith(github.ref, 'refs/tags/v') && matrix.target == 'macos-arm64'
+        if: needs.policy.outputs.platformSigning == 'true' && matrix.target == 'macos-arm64'
         shell: bash
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
@@ -205,7 +199,7 @@ jobs:
         run: pnpm run ${{ matrix.package_script }}
 
       - name: Verify Windows Authenticode signatures
-        if: startsWith(github.ref, 'refs/tags/v') && matrix.target == 'windows-x64'
+        if: needs.policy.outputs.platformSigning == 'true' && matrix.target == 'windows-x64'
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
@@ -223,7 +217,7 @@ jobs:
           }
 
       - name: Verify macOS Developer ID signature and notarization
-        if: startsWith(github.ref, 'refs/tags/v') && matrix.target == 'macos-arm64'
+        if: needs.policy.outputs.platformSigning == 'true' && matrix.target == 'macos-arm64'
         shell: bash
         run: |
           set -euo pipefail
@@ -353,12 +347,13 @@ jobs:
   publish:
     name: Publish GitHub Release
     runs-on: ubuntu-22.04
-    needs: prepare
-    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [policy, prepare]
+    if: needs.policy.outputs.publish == 'true'
     permissions:
       actions: read
       contents: write
     steps:
+      - uses: actions/checkout@v4
       - name: Download prepared release assets
         uses: actions/download-artifact@v4
         with:
@@ -370,3 +365,8 @@ jobs:
         with:
           files: release-assets/*
           generate_release_notes: true
+          draft: ${{ needs.policy.outputs.draft == 'true' }}
+          prerelease: ${{ needs.policy.outputs.prerelease == 'true' }}
+          make_latest: ${{ needs.policy.outputs.makeLatest }}
+          body_path: ${{ needs.policy.outputs.prerelease == 'true' && 'docs/PRERELEASE_NOTES.md' || '' }}
+          fail_on_unmatched_files: true
