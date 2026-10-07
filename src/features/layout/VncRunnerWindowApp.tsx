@@ -1,7 +1,6 @@
 import {
   useCallback,
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -39,7 +38,7 @@ import {
 import {
   normalizeWindowMaterial,
 } from "../../shared/tauri/windowMaterial";
-import { syncCurrentWebviewBackground } from "../../shared/tauri/webviewBackground";
+import { useDocumentAppearance } from "../settings/useDocumentAppearance";
 import { resolveSettingsStyle } from "../settings/settingsTypes";
 import { useSettings } from "../settings/useSettings";
 import { VncViewerSurface } from "./VncViewerSurface";
@@ -82,50 +81,7 @@ export function VncRunnerWindowApp() {
     };
   }, []);
 
-  useLayoutEffect(() => {
-    const body = document.body;
-    body.dataset.themeMode = settings.appearance.themeMode;
-    body.dataset.windowMaterial = effectiveWindowMaterial;
-    body.dataset.density = settings.appearance.density;
-    body.dataset.platform = desktopPlatform;
-
-    const portalThemeStyle = resolveSettingsStyle(settings);
-    for (const [name, value] of Object.entries(portalThemeStyle)) {
-      body.style.setProperty(name, value);
-    }
-
-    void syncCurrentWebviewBackground();
-
-    // system 主题模式下，监听系统深浅色切换，同步 WebView 背景
-    let mediaQuery: MediaQueryList | null = null;
-    let cleanup: (() => void) | null = null;
-
-    if (settings.appearance.themeMode === "system") {
-      mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-      const handleChange = () => {
-        void syncCurrentWebviewBackground();
-      };
-      mediaQuery.addEventListener("change", handleChange);
-      cleanup = () => mediaQuery?.removeEventListener("change", handleChange);
-    }
-
-    return () => {
-      delete body.dataset.themeMode;
-      delete body.dataset.windowMaterial;
-      delete body.dataset.density;
-      delete body.dataset.platform;
-      for (const name of Object.keys(portalThemeStyle)) {
-        body.style.removeProperty(name);
-      }
-      cleanup?.();
-    };
-  }, [
-    desktopPlatform,
-    effectiveWindowMaterial,
-    settings,
-    settings.appearance.density,
-    settings.appearance.themeMode,
-  ]);
+  useDocumentAppearance(settings, effectiveWindowMaterial);
 
   const reportSessionClosed = useCallback(
     (workspaceSessionId: string, label = windowLabel) => {
