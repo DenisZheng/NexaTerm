@@ -1,5 +1,6 @@
 import ReactDOM from "react-dom/client";
-import { applyStartupTheme, readStartupSettings } from "./features/settings/startupSettings";
+import { applyDocumentAppearance, readStartupSettings } from "./features/settings/startupSettings";
+import { syncCurrentWindowTheme } from "./shared/tauri/windowTheme";
 import { setLocalePreference } from "./shared/i18n";
 import { restoreCurrentWindowState, showCurrentWindow } from "./shared/tauri/windowState";
 
@@ -18,7 +19,8 @@ async function bootstrap() {
   }
 
   const startupSettings = readStartupSettings();
-  applyStartupTheme(startupSettings);
+  applyDocumentAppearance(startupSettings);
+  const appearanceReady = syncCurrentWindowTheme(startupSettings.appearance.themeMode);
   setLocalePreference(startupSettings.basic.locale);
 
   const windowStateReady = Promise.race([
@@ -29,7 +31,7 @@ async function bootstrap() {
   ]);
   const appReady = import("./App");
 
-  const [, { default: App }] = await Promise.all([windowStateReady, appReady]);
+  const [, { default: App }] = await Promise.all([windowStateReady, appReady, appearanceReady]);
   ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
     <App />,
   );

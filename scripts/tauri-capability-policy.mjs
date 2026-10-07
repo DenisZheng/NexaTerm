@@ -11,6 +11,7 @@ export const MAIN_PERMISSIONS = [
   "core:window:allow-available-monitors",
   "core:window:allow-inner-size",
   "core:window:allow-minimize",
+  "core:window:allow-set-theme",
   "core:window:allow-outer-position",
   "core:window:allow-set-position",
   "core:window:allow-set-size",
@@ -35,6 +36,7 @@ export const RUNNER_PERMISSIONS = [
   "core:window:allow-close",
   "core:window:allow-destroy",
   "core:window:allow-minimize",
+  "core:window:allow-set-theme",
   "core:window:allow-start-dragging",
   "core:window:allow-toggle-maximize",
 ];

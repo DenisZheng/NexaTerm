@@ -4,6 +4,10 @@ const monitorCss = readFileSync("src/features/monitor/monitor.css", "utf8");
 const appCss = readFileSync("src/styles/app.css", "utf8");
 const tokenCss = readFileSync("src/styles/tokens.css", "utf8");
 const workspaceShellTsx = readFileSync("src/features/layout/WorkspaceShell.tsx", "utf8");
+const runnerTsx = readFileSync("src/features/layout/VncRunnerWindowApp.tsx", "utf8");
+const documentAppearance = readFileSync("src/features/settings/startupSettings.ts", "utf8");
+const appearanceHook = readFileSync("src/features/settings/useDocumentAppearance.ts", "utf8");
+const nativeTheme = readFileSync("src/shared/tauri/windowTheme.ts", "utf8");
 
 for (const needle of [
   "--monitor-tile-bg",
@@ -60,14 +64,22 @@ for (const needle of [
 }
 
 for (const needle of [
-  'document.body.dataset.themeMode = settings.appearance.themeMode',
-  'document.body.dataset.windowMaterial = effectiveWindowMaterial',
+  'body.dataset.themeMode = settings.appearance.themeMode',
+  'body.dataset.windowMaterial = windowMaterial',
   'body.style.setProperty(name, value)',
-  'body.style.removeProperty(name)',
 ]) {
-  if (!workspaceShellTsx.includes(needle)) {
-    throw new Error(`WorkspaceShell should propagate theme tokens to body portals: ${needle}`);
+  if (!documentAppearance.includes(needle)) {
+    throw new Error(`Shared document appearance should propagate theme tokens to body portals: ${needle}`);
   }
+}
+for (const source of [workspaceShellTsx, runnerTsx]) {
+  if (!source.includes("useDocumentAppearance(settings, effectiveWindowMaterial)")) {
+    throw new Error("Workspace windows must use the shared document/native appearance hook");
+  }
+}
+if (!appearanceHook.includes("syncCurrentWindowTheme(settings.appearance.themeMode)") ||
+    !nativeTheme.includes('setTheme(themeMode === "system" ? null : themeMode)')) {
+  throw new Error("Explicit app themes must reach native appearance; system must remove the override");
 }
 
 for (const needle of [
@@ -208,8 +220,8 @@ if (!systemConnectionRowBlock || !systemConnectionRowBlock.includes("transition:
 const terminalSchemeHoverIndex = appCss.indexOf(".terminal-scheme-card:hover {");
 const terminalSchemeHoverBlock =
   terminalSchemeHoverIndex >= 0 ? appCss.slice(terminalSchemeHoverIndex, appCss.indexOf("\n}", terminalSchemeHoverIndex)) : "";
-if (!terminalSchemeHoverBlock || !terminalSchemeHoverBlock.includes("#fbfcfe")) {
-  throw new Error("terminal scheme card light hover baseline should remain explicit for regression checks");
+if (!terminalSchemeHoverBlock || !terminalSchemeHoverBlock.includes("background: color-mix(in srgb, var(--mx-primary) 4%, var(--mx-panel))")) {
+  throw new Error("terminal scheme card hover should retain the current theme-aware panel baseline");
 }
 
 for (const [label, startNeedle] of [

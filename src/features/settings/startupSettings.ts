@@ -3,6 +3,7 @@ import {
   normalizeSettings,
   resolveSettingsStyle,
   type MxtermSettings,
+  type WindowMaterialMode,
 } from "./settingsTypes";
 import {
   getPlatformWindowMaterials,
@@ -24,14 +25,15 @@ export function readStartupSettings(): MxtermSettings {
   }
 }
 
-export function applyStartupTheme(settings: MxtermSettings) {
+/** 启动与运行时共用的文档外观；body 同时承载 Radix Portal 的主题。 */
+export function applyDocumentAppearance(settings: MxtermSettings, effectiveMaterial?: WindowMaterialMode) {
   if (typeof document === "undefined") {
     return;
   }
 
   const body = document.body;
   const platform = resolveDesktopPlatform();
-  const windowMaterial = normalizeWindowMaterial(
+  const windowMaterial = effectiveMaterial ?? normalizeWindowMaterial(
     settings.appearance.windowMaterial,
     getPlatformWindowMaterials(platform),
   );

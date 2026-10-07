@@ -210,6 +210,11 @@ replacing package has shipped.
   plus token-driven translucent fills. Avoid large-area CSS `backdrop-filter`
   blur on the root chrome, sidebars, or content panels; it can trigger visible
   resampling/shimmer during live window drag on macOS.
+- 显式应用主题必须同时同步 document 与原生窗口：启动使用 `applyDocumentAppearance`
+  和 `syncCurrentWindowTheme`，运行时窗口使用 `useDocumentAppearance`。Light/Dark
+  对应原生 `setTheme("light"/"dark")`，System 必须传 `null`，不能固化当前系统颜色。
+  macOS 原生毛玻璃若仍跟随系统暗色，会把亮色透明面板混成灰色；不能靠调透明度掩盖。
+  body Portal 与 app-shell 必须保持一致；终端独立配色不受应用主题强制覆盖。
 - For the codem-style Windows material effect, prefer transparent chrome
   surfaces over tinted sidebar panels: Mica, Acrylic, and Mica Alt should let
   `.custom-titlebar` and `.app-sidebar` reveal the native/root material layer,
