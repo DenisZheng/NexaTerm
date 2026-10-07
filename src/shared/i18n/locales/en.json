@@ -2660,5 +2660,13 @@
   "multiExec.receiving": "Receiving",
   "terminal.split.focused": "Focused",
   "sidebar.filesConnected": "Terminal connected",
-  "homeStart.failed": "Could not open the temporary session. Please try again."
+  "homeStart.failed": "Could not open the temporary session. Please try again.",
+  "terminal.status.waiting": "Waiting to connect",
+  "terminal.status.idle": "Idle",
+  "terminal.status.reconnecting": "Reconnecting",
+  "terminal.status.reconnectFailed": "Reconnect failed",
+  "terminal.status.listenerFailed": "Event listener failed",
+  "terminal.status.disconnected": "Disconnected",
+  "workspace.time.minuteAgo": "{count} minute ago",
+  "workspace.time.hourAgo": "{count} hour ago"
 }

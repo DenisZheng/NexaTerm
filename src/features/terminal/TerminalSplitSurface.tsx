@@ -12,6 +12,7 @@ import {
 import { useI18n, type Translate } from "../../shared/i18n";
 import { AppSelect } from "../../shared/ui/AppSelect";
 import { Tooltip } from "../../shared/ui/Tooltip";
+import { terminalStatusLabel } from "./terminalStatusLabel";
 import {
   clampTerminalSplitRatio,
   collectTerminalSplitPanes,
@@ -214,7 +215,7 @@ export function TerminalSplitLayout({
                 {focused && !syncEnabled ? <span className="terminal-split-focus-label">{t("terminal.split.focused")}</span> : null}
                 {syncRole ? <span className="terminal-split-sync-role">{syncRole === "source" ? t("terminal.split.source") : t("terminal.split.target")}</span> : null}
                 {selectedOption?.status ? (
-                  <span className="terminal-split-session-status">{selectedOption.status}</span>
+                  <span className="terminal-split-session-status">{terminalStatusLabel(selectedOption.status, t)}</span>
                 ) : null}
               </span>
               <div className="terminal-split-pane-actions">
