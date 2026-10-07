@@ -1,169 +1,186 @@
 # NexaTerm
 
-[![Release](https://img.shields.io/github/v/release/DenisZheng/NexaTerm?label=release)](https://github.com/DenisZheng/NexaTerm/releases)
-[![GitHub Release](https://img.shields.io/github/actions/workflow/status/DenisZheng/NexaTerm/release.yml?label=release)](https://github.com/DenisZheng/NexaTerm/actions/workflows/release.yml)
+[![CI](https://github.com/DenisZheng/NexaTerm/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/DenisZheng/NexaTerm/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-NexaTerm 是一个基于 Tauri v2、React 和 Rust 的本地优先、跨平台终端与远程运维工作区，面向需要同时管理本地 Shell、SSH、RDP、VNC、Telnet、串口和服务器工具的开发者与运维人员。
+English | [简体中文](README.zh-CN.md)
 
-项目把终端、远程桌面、SFTP 文件管理、Docker、端口隧道、主机监控、远程任务、AI 助手和 MCP 能力整合在一个轻量桌面应用中。运行时不依赖 Node/Express 本地服务；前端负责桌面交互，连接协议、本地存储和跨平台能力由 Rust/Tauri 承载。
+**Sessions, terminals, remote files and operations tools in one desktop workspace.**
 
-## Fork 声明
+NexaTerm is a lightweight, cross-platform remote workstation built with Tauri, React and Rust. It brings session management, terminals, remote files, split workspaces, MultiExec, tunnels and remote desktops into a unified desktop app.
 
-NexaTerm 是 [syscryer/mxterm](https://github.com/syscryer/mxterm) 的 **hard fork**（MIT License，版权与许可见 [LICENSE](LICENSE)）。
+![NexaTerm Home with Quick Connect, recent sessions and the Sessions sidebar](docs/assets/readme/home.png)
 
-- 独立演进：不再以合并回上游为目标；上游的安全修复会定期评估 cherry-pick，功能不再跟进。
-- 独立发布：自有 bundle ID（`com.nexaterm.app`）、自有更新签名密钥与更新通道，更新只从本仓库的 GitHub Release 获取。
-- 方向差异：详见 [差异化一页纸](docs/DIFFERENTIATION.md)。
+## Why NexaTerm
 
-## 截图
+- **One session workflow.** Start from Quick Connect or a saved profile; organize profiles with groups, favorites and recent connections.
+- **Independent instances.** Open the same profile more than once, arrange instances in tabs or split panes, and keep each terminal's Files context separate.
+- **Explicit control.** MultiExec sends to the instances you select. Changing focus or reconnecting a host does not silently change the receiving targets.
+- **A connected toolbox.** Files, editing, monitoring, commands, tunnels, Docker and AI assistance stay close to your active session.
 
-### 连接仓库
+## Screenshots
 
-![连接仓库](docs/assets/readme/home-connections.png)
+Native macOS Tauri windows, using fictional profiles and local test servers.
 
-### 终端与 SFTP 文件
+### SSH + Files
 
-![终端与 SFTP 文件](docs/assets/readme/terminal-files.png)
+Files lives in the left sidebar and follows the active SSH instance or split pane. Directory following is an explicit, per-instance setting.
 
-### 终端与主机监控
+![SSH terminal with its instance-bound Files sidebar](docs/assets/readme/ssh-files.png)
 
-![终端与主机监控](docs/assets/readme/terminal-monitor.png)
+### Split workspace + MultiExec
 
-### AI 终端助手
+Choose two or four panes, then explicitly select the instances that receive live input or a submitted command.
 
-![AI 终端助手](docs/assets/readme/ai-assistant.png)
+![Split workspace with active MultiExec and selected receiver instances](docs/assets/readme/split-multiexec.png)
 
-### 外观设置
+### Sessions and groups
 
-![外观设置](docs/assets/readme/appearance-settings.png)
+Browse saved profiles, favorites and groups, see open instances, and preview a group batch before opening connections.
 
-## 当前发布范围
+![Session manager with groups, favorites and open instance indicators](docs/assets/readme/session-manager.png)
 
-NexaTerm 当前按 **SSH/SFTP 优先**推进 v1。
+### Operations tools
 
-- **首个公开 Preview**：先打通 SSH + Host Key + SFTP/Files + Session/Quick Connect 的完整日常流。
-- **v1 核心**：SSH、SFTP、Local Shell、WSL、Serial、会话管理、Split、MultiExec、Saved Commands，以及三平台基础可用性。
-- **Experimental**：Telnet、RDP、VNC、X11。现有能力不会删除，但它们的跨平台成熟度不作为 v1 发布门禁。
-- **迁移入口**：MobaXterm 会话导入作为 P1 优先项提前推进，但不作为 v1 发布门禁。
-- 更完整的远程桌面、X11、Workspace Restore 与 Multi-hop 在真实运行证据和用户反馈基础上继续推进。
+Use saved commands and session tools alongside the terminal.
 
-这一区分描述的是发布承诺，不代表 Experimental 功能当前不可用。
+![Operations tools alongside an SSH terminal](docs/assets/readme/tools.png)
 
-## 功能概览
+### Appearance and settings
 
-- 连接管理：统一管理 SSH、RDP、VNC、Telnet 和串口连接，支持分组、最近连接、收藏、搜索、复制配置和快速启动。
-- 终端工作区：支持 SSH、本地 Shell、Telnet 和串口字符会话，以及多标签、横向/纵向/四分屏、xterm.js 渲染、终端配置和断线重连。
-- 远程桌面：支持 RDP 与 VNC 连接；VNC 可使用内嵌 noVNC、独立 runner 窗口或外部 viewer。
-- SFTP 文件：远程目录浏览、上传下载、拖拽上传、重命名、删除和目录操作。
-- 传输队列：上传下载进度、速度、状态、取消、失败重试和完成清理。
-- 远程编辑：面向文本文件的 Monaco 编辑器、未保存提示、保存冲突检查和查找替换。
-- 运维工具：主机监控、SSH 端口隧道、Docker 容器/镜像/日志管理、网络诊断、远端定时任务、命令库、文件工具和传输状态入口。
-- AI 与 MCP：AI 终端助手可结合终端输出、连接信息、命令草稿和最近命令生成建议并提示高风险命令；MCP 可按授权范围向 Agent 工具提供连接信息和 SSH 操作。
-- 数据迁移与同步：支持用密码加密导入导出连接、分组、账号和已保存凭据，并可通过 WebDAV 手动同步连接、账号、隧道和安全快照。
-- 应用设置：外观密度、窗口材质、强调色、字体、快捷键、本地终端、AI、MCP 和同步配置。
-- 自动更新：GitHub Release 上的 Tauri updater metadata，桌面安装版可在应用内检查更新。
+English and Simplified Chinese, light/dark/system appearance, and an independently configurable terminal color scheme.
 
-## 下载
+![NexaTerm appearance settings](docs/assets/readme/settings.png)
 
-正式发布只走 GitHub Release：
+## Core features
 
-- [GitHub Releases](https://github.com/DenisZheng/NexaTerm/releases)
-- [最新版本](https://github.com/DenisZheng/NexaTerm/releases/latest)
+| Area | Capabilities |
+| --- | --- |
+| Sessions | Unified Session Manager, Quick Connect, favorites, nested groups, recent connections, search, multiple instances per saved profile and batch-open preview. |
+| Terminals and desktops | SSH, Local Shell, WSL on Windows, Serial, Telnet, RDP and VNC; protocol availability and desktop rendering mode depend on the platform and installed runners. |
+| Workspace | Instance tabs, two/four-pane splits, adjustable pane ratios and fixed-target MultiExec in live or send mode. Disconnected targets become invalid; reconnecting does not rejoin them automatically. |
+| Files and editing | SSH/SFTP Files bound to the active instance/pane, per-instance directory following, transfer queue, upload/download, file operations and a remote text editor with save-conflict checks. |
+| Networking | SSH Tunnel Manager for local, remote and dynamic SOCKS forwarding; multi-hop Jump Host chains; X11 forwarding with an available local X server. |
+| Operations | Saved Commands and history, host monitoring, Docker containers/images/logs, network diagnostics and remote scheduled tasks. |
+| AI and MCP | AI terminal assistant with selectable session context and command suggestions; configurable model provider. MCP exposes authorized connection/SSH tools; Remote MCP binds to loopback and remote access uses an authenticated tunnel. |
+| Persistence and settings | Workspace Restore, English/zh-CN, Light/Dark/System, encrypted data import/export, WebDAV synchronization and application updater infrastructure. |
 
-当前发布主线：
+Workspace Restore retains layout, instance references and per-instance Files directories/follow settings. Reconnection is configurable; MultiExec always returns **off**. Passwords, private keys, runtime handles and active broadcast state are not stored in the workspace snapshot. Unsaved remote-editor drafts are not restored.
 
-| 平台 | 产物 | 应用内更新 |
-|---|---|---|
-| Windows x64 | NSIS 安装包、绿色版 zip | 仅 NSIS 安装版 |
-| macOS Apple Silicon | Apple Silicon 安装/下载资产 | 支持 |
-| Linux x64 | AppImage、deb、rpm | 仅 AppImage |
+Data migration from **legacy mXterm to NexaTerm app data** is separate from session-file import. A dedicated **MobaXterm `.mxtsessions` importer** is also present: it previews SSH session definitions, reports unsupported entries and requires missing usernames or network settings to be reviewed. It does not import passwords or non-SSH sessions; referenced private-key paths may need adjustment.
 
-首版不发布 macOS Intel。Windows 绿色版和 Linux deb/rpm 作为手动下载资产保留，不写入 `latest.json` 自动更新目标。
+## Protocol and capability matrix
 
-## 开发
+| Capability | Status |
+| --- | --- |
+| SSH / SFTP | Core |
+| Local Shell | Core |
+| WSL | Core / Windows |
+| Serial | Core; additional platform/device validation remains |
+| Session Manager / Quick Connect | Core |
+| Tabs / Split Workspace | Core |
+| Fixed-target MultiExec | Core |
+| Saved Commands / Remote Editor | Core |
+| Tunnels / multi-hop Jump Host | Core |
+| Workspace Restore | Core |
+| Monitoring / Docker tools | Available with a suitable remote environment |
+| AI assistant / MCP | Available; provider/access configuration required |
+| Telnet | Experimental |
+| RDP | Experimental |
+| VNC | Experimental |
+| X11 | Experimental |
+| Application updater | Implemented; final release validation pending |
 
-推荐在 Windows 上开发和验证。需要提前安装 Node.js、pnpm、Rust 和 Tauri 所需系统依赖。
+**Experimental** means the feature is available, but full cross-platform maturity is not part of the current v1 release gate. RDP/VNC modes depend on platform capabilities and detected runners. X11 has Windows GUI acceptance evidence; macOS/Linux GUI validation and X-server distribution decisions remain open. Serial does not yet have a complete real-device matrix. Linux IME acceptance remains deferred ([PR #12](https://github.com/DenisZheng/NexaTerm/pull/12)).
 
-```powershell
+## Current release status
+
+NexaTerm is completing its **final v1 release validation**. Core workflows **A01–A14 have completed acceptance within their documented platform and environment scope**; this is not a claim of complete three-platform release acceptance.
+
+Final **A15** validation still covers:
+
+- Packaged installation and launch.
+- Platform signing and macOS notarization.
+- Updater upgrade, recovery and rollback.
+- Legacy mXterm app-data migration.
+- Packaged performance and stability.
+- Artifact hash reconciliation.
+
+Release signing, notarization and updater pipelines are implemented and undergoing final release validation. See the [roadmap](ROADMAP.md) and [acceptance report](.trellis/tasks/09-23-nexaterm-workflow-mainline/validation/acceptance-report-2026-10-04.md) for evidence and remaining platform boundaries.
+
+## Download
+
+[GitHub Releases](https://github.com/DenisZheng/NexaTerm/releases) · [Latest Release](https://github.com/DenisZheng/NexaTerm/releases/latest)
+
+No public GitHub Release has been published at this documentation update. Available builds will be distributed through GitHub Releases; the Latest Release link currently redirects to the release list and will point to a version after the first publication. Final A15 sign-off is still pending.
+
+## Platform support
+
+| Platform | Status | Release artifacts | In-app updater target |
+| --- | --- | --- | --- |
+| Windows x64 | Supported target | NSIS installer, portable ZIP | NSIS installation |
+| macOS ARM64 / Apple Silicon | Supported target | App / DMG, updater archive | Installed app |
+| Linux x64 | Supported target | AppImage, deb, rpm | AppImage |
+
+These are build and release targets; final packaged acceptance remains under A15. macOS Intel is outside the initial release target set. Windows portable ZIP and Linux deb/rpm remain manual-download formats.
+
+## Development
+
+Install Node.js, the pnpm version specified by [`package.json`](package.json), Rust and the [Tauri platform prerequisites](https://v2.tauri.app/start/prerequisites/).
+
+```sh
 pnpm install
-pnpm tauri:dev
+pnpm run tauri:dev
 ```
 
-常用检查命令：
+Checks and frontend build:
 
-```powershell
-pnpm check
-pnpm test:release
+```sh
+pnpm run check
+pnpm test
+pnpm run test:scripts
+pnpm run build
 ```
 
-平台打包入口：
+Package on the corresponding host platform:
 
-```powershell
-pnpm package:win
-pnpm package:mac-arm64
-pnpm package:linux
-pnpm package:all
+```sh
+pnpm run package:win
+pnpm run package:mac-arm64
+pnpm run package:linux
 ```
 
-## 发布流程
+`pnpm run package:all` selects the current host's supported target; it does not cross-build all three platforms. The development server uses port 5520 by default. Node.js/pnpm are build tools; the desktop runtime uses Rust/Tauri and a native WebView, without a Node/Express service.
 
-本仓库只配置 GitHub Release 发布渠道，目标仓库为 `DenisZheng/NexaTerm`。正式发布由 `v*` tag 触发，`workflow_dispatch` 手动触发只做完整构建、资产整理、`latest.json` 和校验文件验证，不创建 GitHub Release。
+### Contributing
 
-发布前需要保证三个版本号一致：
+Read [AGENTS.md](AGENTS.md) and the [workflow specification](docs/WORKFLOW_SPEC.md) before changing behavior. Development tasks and engineering conventions are maintained with Trellis in [`.trellis/workflow.md`](.trellis/workflow.md) and [`.trellis/spec/`](.trellis/spec/). Real-service fixtures are documented in [`tests/fixtures/README.md`](tests/fixtures/README.md).
 
-- `package.json`
-- `src-tauri/Cargo.toml`
-- `src-tauri/tauri.conf.json`
+## Release and signing overview
 
-GitHub Secrets：
+The [release workflow](.github/workflows/release.yml) builds the three target platforms. A `v*` tag publishes a GitHub Release; manual `workflow_dispatch` performs build and asset validation without publishing.
 
-- `TAURI_SIGNING_PRIVATE_KEY`：必填，Tauri updater 私钥内容。
-- `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`：可选，私钥密码。
+Versions in `package.json`, `src-tauri/Cargo.toml` and `src-tauri/tauri.conf.json` must match. The pipeline prepares platform packages, source archives, updater `latest.json`, third-party notices and `SHA256SUMS.txt`. Tagged releases enforce Windows Authenticode and macOS Developer ID/notarization verification; updater artifacts have a separate signing trust chain. Required credentials and procedures are in [Release Signing and Notarization](docs/RELEASE_SIGNING.md). Pipeline implementation does not constitute completed real-release validation.
 
-发布步骤：
+## Project documentation
 
-```powershell
-git status --short
-git tag vX.Y.Z
-git push github vX.Y.Z
-```
+- [Current roadmap and release boundaries](ROADMAP.md)
+- [Product requirements](NEXATERM_REQUIREMENTS.md)
+- [Workflow specification](docs/WORKFLOW_SPEC.md)
+- [A01–A15 acceptance report](.trellis/tasks/09-23-nexaterm-workflow-mainline/validation/acceptance-report-2026-10-04.md)
+- [Release signing and notarization](docs/RELEASE_SIGNING.md)
+- [Third-party licenses](THIRD_PARTY_LICENSES.md)
 
-Release workflow 会构建 Windows x64、macOS Apple Silicon 和 Linux x64，并生成平台安装包、源码 zip、源码 tar.gz、`latest.json` 和 `SHA256SUMS.txt`。Windows Authenticode、macOS Developer ID 签名与 notarization 已接入 tagged-release workflow 的强制门禁；是否完成真实正式发布仍以带真实凭据的 tag run 验证结果为准。
+## Project lineage
 
-## 项目文档
+NexaTerm is a **hard fork of [syscryer/mxterm](https://github.com/syscryer/mxterm)**, originally released under the MIT License. NexaTerm develops independently, with its own bundle ID (`com.nexaterm.app`) and release/update channel. Upstream security fixes may be reviewed selectively.
 
-- [当前路线图与评审整改状态](ROADMAP.md)
+mXterm and MobaXterm are distinct projects. NexaTerm is not a MobaXterm fork and is not officially affiliated with MobaXterm.
 
-- [需求文档](docs/requirements/m-xterm-requirements.md)
-- [宽松协议开源项目参考](docs/research/permissive-open-source-references.md)
-- [MVP 工程基座与 SSH Spike 计划](docs/plans/2026-06-05-mxterm-mvp-foundation-and-ssh-spike.md)
-- [Storage / Security / Sync Foundation 计划](docs/plans/2026-06-20-storage-security-sync-foundation.md)
+## License
 
-## Trellis
+[MIT License](LICENSE). See [third-party notices](THIRD_PARTY_LICENSES.md) for dependencies and bundled components.
 
-后续项目开发使用 [Trellis](https://docs.trytrellis.app/zh) 管理。
+## Acknowledgements
 
-当前仓库已通过 `trellis init --codex -u MNL --yes --skip-existing --workflow native` 初始化：
-
-- `.trellis/`：共享工作流、规范、任务和项目记忆。
-- `.codex/`：Codex hooks 和 Trellis agent 配置。
-- `.agents/skills/`：Trellis 技能说明，供 Codex、Cursor、Gemini CLI 等工具读取。
-
-常用命令：
-
-```powershell
-trellis --version
-python ./.trellis/scripts/task.py list
-python ./.trellis/scripts/task.py current --source
-python ./.trellis/scripts/get_context.py --mode packages
-```
-
-Codex hooks 需要用户级 `~/.codex/config.toml` 启用 `features.hooks = true`，并将本项目设置为 trusted。
-
-## 许可
-
-本项目采用 [MIT License](LICENSE) 开源。
-
-## 致谢
-
-感谢 [LINUX DO](https://linux.do/) 社区的支持与反馈。
+Thanks to the original mXterm contributors and the Tauri, React and Rust ecosystems.
