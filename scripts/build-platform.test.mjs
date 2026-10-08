@@ -96,3 +96,49 @@ test("Windows pnpm invocation uses the package manager entry point when availabl
     },
   );
 });
+
+
+test("Windows GitHub runner resolves pnpm/action-setup JS entry point", () => {
+  const pnpmHome = "C:\\Users\\runneradmin\\setup-pnpm\\node_modules\\.bin";
+  assert.deepEqual(
+    resolveSpawnInvocation(
+      "pnpm",
+      ["tauri", "build"],
+      {
+        execPath: "C:\\Program Files\\nodejs\\node.exe",
+        platform: "win32",
+        env: { PNPM_HOME: pnpmHome },
+      },
+      (candidate) =>
+        candidate ===
+        "C:\\Users\\runneradmin\\setup-pnpm\\node_modules\\pnpm\\bin\\pnpm.cjs",
+    ),
+    {
+      command: "C:\\Program Files\\nodejs\\node.exe",
+      args: [
+        "C:\\Users\\runneradmin\\setup-pnpm\\node_modules\\pnpm\\bin\\pnpm.cjs",
+        "tauri",
+        "build",
+      ],
+    },
+  );
+});
+
+test("Windows pnpm.cmd is only the final fallback and is never passed to node", () => {
+  assert.deepEqual(
+    resolveSpawnInvocation(
+      "pnpm",
+      ["tauri", "build"],
+      {
+        execPath: "C:\\Program Files\\nodejs\\node.exe",
+        platform: "win32",
+        env: { npm_execpath: "C:\\pnpm\\pnpm.cmd" },
+      },
+      () => false,
+    ),
+    {
+      command: "pnpm.cmd",
+      args: ["tauri", "build"],
+    },
+  );
+});

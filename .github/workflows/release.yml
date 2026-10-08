@@ -110,16 +110,10 @@ jobs:
       - name: Check third-party licenses
         run: pnpm run check:licenses
 
-      - name: Validate updater signing secrets
-        shell: bash
+      - name: Validate and normalize updater signing secret
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-        run: |
-          set -euo pipefail
-          if [ -z "${TAURI_SIGNING_PRIVATE_KEY}" ]; then
-            echo "::error::Missing TAURI_SIGNING_PRIVATE_KEY secret. GitHub Release updater artifacts must be signed."
-            exit 1
-          fi
+        run: node scripts/prepare-tauri-signing-key.mjs
 
       - name: Import Windows Authenticode certificate
         if: needs.policy.outputs.platformSigning == 'true' && matrix.target == 'windows-x64'
@@ -194,7 +188,6 @@ jobs:
       - name: Build platform bundle
         env:
           NEXATERM_CREATE_UPDATER_ARTIFACTS: "1"
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: pnpm run ${{ matrix.package_script }}
 
