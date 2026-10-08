@@ -105,6 +105,8 @@ pub struct MobaXtermImportPreviewRequest {
 pub struct MobaXtermImportSelection {
     pub source_index: usize,
     pub name: String,
+    #[serde(default)]
+    pub username: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -608,17 +610,20 @@ fn import_from_file(
         request.default_username.as_deref(),
     );
     let selection_count = request.selections.len();
-    let selections: BTreeMap<usize, String> = request
+    let selections: BTreeMap<usize, MobaXtermImportSelection> = request
         .selections
         .into_iter()
-        .map(|selection| (selection.source_index, selection.name.trim().to_string()))
+        .map(|selection| (selection.source_index, selection))
         .collect();
     if selections.len() != selection_count {
         return Err(mobaxterm_import_invalid_selection(
             "duplicate source indexes in selection",
         ));
     }
-    if selections.values().any(|name| name.is_empty()) {
+    if selections
+        .values()
+        .any(|selection| selection.name.trim().is_empty())
+    {
         return Err(mobaxterm_import_invalid_selection(
             "selected connection name is empty",
         ));
@@ -640,7 +645,8 @@ fn import_from_file(
         let mut used_names: BTreeSet<String> =
             existing.iter().map(|item| item.name.clone()).collect();
 
-        for (source_index, selected_name) in &selections {
+        for (source_index, selection) in &selections {
+            let selected_name = selection.name.trim();
             let Some(item) = items.get(*source_index) else {
                 return Err(mobaxterm_import_invalid_selection(format!(
                     "source index {source_index} is out of range"
@@ -651,20 +657,21 @@ fn import_from_file(
                     "source index {source_index} is not an SSH session"
                 )));
             }
-            if item.conflict == MobaXtermImportConflict::ExactDuplicate {
-                result.skipped_exact_duplicates += 1;
-                continue;
-            }
-            if !item.selectable {
+            if item.missing_fields.iter().any(|field| field == "network_settings_review") {
                 return Err(mobaxterm_import_invalid_selection(format!(
-                    "source index {source_index} is not ready for import"
+                    "source index {source_index} requires SSH gateway/proxy review"
                 )));
             }
 
-            let username = item
-                .effective_username
-                .clone()
-                .ok_or_else(|| mobaxterm_import_invalid_selection("SSH username is missing"))?;
+            // A row-specific username takes precedence over the source and shared fallback.
+            // An explicitly empty override is an error, never a silent fallback.
+            let username = selection
+                .username
+                .as_deref()
+                .or(item.effective_username.as_deref())
+                .and_then(non_empty)
+                .ok_or_else(|| mobaxterm_import_invalid_selection("SSH username is missing"))?
+                .to_string();
             let host = item
                 .host
                 .clone()
@@ -673,21 +680,25 @@ fn import_from_file(
                 .port
                 .ok_or_else(|| mobaxterm_import_invalid_selection("SSH port is invalid"))?;
 
-            if item.conflict == MobaXtermImportConflict::NameConflict
-                && selected_name == &item.name
-            {
+            // Re-evaluate duplicates using the final row name and username. Preview values
+            // may have changed since the user edited an import candidate.
+            let exact_duplicate = existing.iter().any(|candidate| {
+                candidate.protocol == ConnectionProtocol::Ssh
+                    && candidate.name == selected_name
+                    && same_host(&candidate.host, &host)
+                    && candidate.port == port
+                    && candidate.username == username
+            });
+            if exact_duplicate {
+                result.skipped_exact_duplicates += 1;
+                continue;
+            }
+
+            // Do not overwrite an existing connection or create duplicate names within
+            // this transaction, even if rows came from different source folders.
+            if !used_names.insert(selected_name.to_string()) {
                 return Err(mobaxterm_import_name_conflict(selected_name));
             }
-            if used_names.contains(selected_name) && selected_name != &item.name {
-                return Err(mobaxterm_import_name_conflict(selected_name));
-            }
-            if existing
-                .iter()
-                .any(|candidate| candidate.name == *selected_name)
-            {
-                return Err(mobaxterm_import_name_conflict(selected_name));
-            }
-            used_names.insert(selected_name.clone());
 
             let (credential_mode, inline_auth_kind, inline_private_key_path, prompt_auth_kind) =
                 if let Some(private_key_path) = item.private_key_path.clone() {
@@ -711,7 +722,7 @@ fn import_from_file(
                     id: None,
                     source_connection_id: None,
                     protocol: ConnectionProtocol::Ssh,
-                    name: Some(selected_name.clone()),
+                    name: Some(selected_name.to_string()),
                     group: item.folder_path.clone(),
                     group_id: None,
                     host,
@@ -946,6 +957,7 @@ mod tests {
                 selections: vec![MobaXtermImportSelection {
                     source_index: 0,
                     name: "Prod".to_string(),
+                    username: None,
                 }],
             },
         )
@@ -989,6 +1001,7 @@ mod tests {
                 selections: vec![MobaXtermImportSelection {
                     source_index: 0,
                     name: "Prod".to_string(),
+                    username: None,
                 }],
             },
         )
@@ -1030,6 +1043,7 @@ mod tests {
                 selections: vec![MobaXtermImportSelection {
                     source_index: 0,
                     name: "Prod".to_string(),
+                    username: None,
                 }],
             },
         )
@@ -1062,6 +1076,153 @@ mod tests {
         assert_eq!(first.summary.unsupported, 1);
         assert_eq!(first.summary.invalid, 0);
     }
+
+    #[test]
+    fn mixed_users_can_be_imported_in_one_batch_with_row_specific_usernames() {
+        let mut repository = temp_repository("multi-users");
+        let qa = SSH_MISSING_USER
+            .replace("Legacy=", "QA=")
+            .replace("legacy.example.com", "qa.example.com");
+        let db = SSH_MISSING_USER
+            .replace("Legacy=", "Database=")
+            .replace("legacy.example.com", "db.example.com");
+        let path = write_sessions(
+            "multi-users",
+            &format!("[Bookmarks]\r\nSubRep=Production\r\n{SSH_WITH_KEY}\r\n{qa}\r\n{db}\r\n"),
+        );
+        let preview = preview_for_repository(&repository, &path, None).unwrap();
+        assert_eq!(preview.summary.ready, 1);
+        assert_eq!(preview.summary.needs_input, 2);
+        assert!(!preview.items[1].selectable);
+        assert!(!preview.items[2].selectable);
+
+        let result = import_from_file(
+            &mut repository,
+            MobaXtermImportApplyRequest {
+                path: path.to_string_lossy().to_string(),
+                fingerprint: preview.fingerprint,
+                default_username: Some("shared".to_string()),
+                selections: vec![
+                    MobaXtermImportSelection {
+                        source_index: 0,
+                        name: "Prod".to_string(),
+                        username: None,
+                    },
+                    MobaXtermImportSelection {
+                        source_index: 1,
+                        name: "QA".to_string(),
+                        username: Some("qa-user".to_string()),
+                    },
+                    MobaXtermImportSelection {
+                        source_index: 2,
+                        name: "Database".to_string(),
+                        username: Some("db-user".to_string()),
+                    },
+                ],
+            },
+        )
+        .unwrap();
+
+        assert_eq!(result.created, 3);
+        let connections = repository.connection_list().unwrap();
+        for (name, username) in [("Prod", "deploy"), ("QA", "qa-user"), ("Database", "db-user")] {
+            assert_eq!(
+                connections.iter().find(|item| item.name == name).unwrap().username,
+                username,
+            );
+        }
+    }
+
+    #[test]
+    fn row_override_rechecks_exact_duplicate_and_never_overwrites_same_name() {
+        let mut repository = temp_repository("user-override-conflict");
+        let path = write_sessions(
+            "user-override-conflict",
+            &format!("[Bookmarks]\r\nSubRep=\r\n{SSH_WITH_KEY}\r\n"),
+        );
+        let preview = preview_for_repository(&repository, &path, None).unwrap();
+        let make_request = |fingerprint: String, name: &str, username: &str| {
+            MobaXtermImportApplyRequest {
+                path: path.to_string_lossy().to_string(),
+                fingerprint,
+                default_username: None,
+                selections: vec![MobaXtermImportSelection {
+                    source_index: 0,
+                    name: name.to_string(),
+                    username: Some(username.to_string()),
+                }],
+            }
+        };
+
+        let first = import_from_file(
+            &mut repository,
+            make_request(preview.fingerprint.clone(), "Prod", "deploy"),
+        )
+        .unwrap();
+        assert_eq!(first.created, 1);
+        let dup = import_from_file(
+            &mut repository,
+            make_request(preview.fingerprint.clone(), "Prod", "deploy"),
+        )
+        .unwrap();
+        assert_eq!(dup.skipped_exact_duplicates, 1);
+        assert_eq!(dup.created, 0);
+
+        let conflict = import_from_file(
+            &mut repository,
+            make_request(preview.fingerprint.clone(), "Prod", "root"),
+        )
+        .unwrap_err();
+        assert_eq!(conflict.code, "mobaxterm_import_name_conflict");
+        assert_eq!(repository.connection_list().unwrap().len(), 1);
+
+        let renamed = import_from_file(
+            &mut repository,
+            make_request(preview.fingerprint, "Prod (root)", "root"),
+        )
+        .unwrap();
+        assert_eq!(renamed.created, 1);
+        let connections = repository.connection_list().unwrap();
+        assert_eq!(connections.len(), 2);
+        assert_eq!(
+            connections.iter().find(|item| item.name == "Prod (root)").unwrap().username,
+            "root",
+        );
+    }
+
+    #[test]
+    fn empty_row_username_cannot_fall_back_or_partially_import() {
+        let mut repository = temp_repository("empty-user");
+        let path = write_sessions(
+            "empty-user",
+            &format!("[Bookmarks]\r\nSubRep=\r\n{SSH_WITH_KEY}\r\n{SSH_MISSING_USER}\r\n"),
+        );
+        let preview = preview_for_repository(&repository, &path, Some("fallback")).unwrap();
+        let result = import_from_file(
+            &mut repository,
+            MobaXtermImportApplyRequest {
+                path: path.to_string_lossy().to_string(),
+                fingerprint: preview.fingerprint,
+                default_username: Some("fallback".to_string()),
+                selections: vec![
+                    MobaXtermImportSelection {
+                        source_index: 0,
+                        name: "Prod".to_string(),
+                        username: Some("deploy".to_string()),
+                    },
+                    MobaXtermImportSelection {
+                        source_index: 1,
+                        name: "Legacy".to_string(),
+                        username: Some("   ".to_string()),
+                    },
+                ],
+            },
+        )
+        .unwrap_err();
+        assert_eq!(result.code, "mobaxterm_import_invalid_selection");
+        assert!(repository.connection_list().unwrap().is_empty());
+    }
+
     fn temp_repository(name: &str) -> StorageRepository {
         let root = std::env::temp_dir().join(format!(
             "nexaterm-mobaxterm-import-{name}-{}",

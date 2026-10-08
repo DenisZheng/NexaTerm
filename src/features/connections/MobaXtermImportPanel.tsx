@@ -15,6 +15,7 @@ import {
   mobaxtermImportPreview,
 } from "../../shared/tauri/commands";
 import { selectMobaXtermSessionsImportPath } from "../../shared/tauri/dialog";
+import { canSelectMobaXtermRow, isMobaXtermRowEditable } from "./mobaxtermImportModel";
 import type {
   MobaXtermImportApplyResult,
   MobaXtermImportItem,
@@ -39,13 +40,20 @@ export function MobaXtermImportPanel({
   const [preview, setPreview] = useState<MobaXtermImportPreviewResult | null>(null);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [names, setNames] = useState<Record<number, string>>({});
+  const [usernames, setUsernames] = useState<Record<number, string>>({});
   const [result, setResult] = useState<MobaXtermImportApplyResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const importableCount = useMemo(
-    () => preview?.items.filter((item) => item.selectable).length ?? 0,
-    [preview],
+    () => preview?.items.filter((item) =>
+      canSelectMobaXtermRow(
+        item,
+        names[item.source_index] ?? item.suggested_name ?? item.name,
+        usernames[item.source_index] ?? item.effective_username ?? "",
+      ),
+    ).length ?? 0,
+    [preview, names, usernames],
   );
 
   function updateBusy(next: boolean) {
@@ -70,6 +78,7 @@ export function MobaXtermImportPanel({
     setPreview(null);
     setSelected(new Set());
     setNames({});
+    setUsernames({});
     setResult(null);
   }
 
@@ -92,14 +101,17 @@ export function MobaXtermImportPanel({
       setPreview(next);
       const nextSelected = new Set<number>();
       const nextNames: Record<number, string> = {};
+      const nextUsernames: Record<number, string> = {};
       for (const item of next.items) {
         nextNames[item.source_index] = item.suggested_name || item.name;
-        if (item.selectable) {
+        nextUsernames[item.source_index] = item.effective_username ?? "";
+        if (item.selectable && canSelectMobaXtermRow(item, nextNames[item.source_index], nextUsernames[item.source_index])) {
           nextSelected.add(item.source_index);
         }
       }
       setSelected(nextSelected);
       setNames(nextNames);
+      setUsernames(nextUsernames);
     } catch (previewError) {
       resetPreview();
       setError(formatError(previewError, t("mobaxterm.error.preview")));
@@ -108,8 +120,12 @@ export function MobaXtermImportPanel({
     }
   }
 
+  function nameFor(item: MobaXtermImportItem) {
+    return names[item.source_index] ?? item.suggested_name ?? item.name;
+  }
+
   function toggleItem(item: MobaXtermImportItem) {
-    if (!item.selectable || busy) {
+    if (busy || !canSelectMobaXtermRow(item, nameFor(item), usernames[item.source_index] ?? "")) {
       return;
     }
     setSelected((current) => {
@@ -123,6 +139,35 @@ export function MobaXtermImportPanel({
     });
   }
 
+  function changeName(item: MobaXtermImportItem, value: string) {
+    setNames((current) => ({ ...current, [item.source_index]: value }));
+    if (!canSelectMobaXtermRow(item, value, usernames[item.source_index] ?? "")) {
+      setSelected((current) => {
+        const next = new Set(current);
+        next.delete(item.source_index);
+        return next;
+      });
+    }
+    setError(null);
+  }
+
+  function changeUsername(item: MobaXtermImportItem, value: string) {
+    const index = item.source_index;
+    const previousUsername = usernames[index] ?? item.effective_username ?? "";
+    setUsernames((current) => ({ ...current, [index]: value }));
+    setSelected((current) => {
+      const next = new Set(current);
+      if (!canSelectMobaXtermRow(item, nameFor(item), value)) {
+        next.delete(index);
+      } else if (!previousUsername.trim()) {
+        // A newly completed missing-username row becomes selected without extra clicks.
+        next.add(index);
+      }
+      return next;
+    });
+    setError(null);
+  }
+
   async function applyImport() {
     if (!preview || !selected.size) {
       setError(t("mobaxterm.error.selection"));
@@ -132,10 +177,22 @@ export function MobaXtermImportPanel({
       .filter((item) => selected.has(item.source_index))
       .map((item) => ({
         source_index: item.source_index,
-        name: (names[item.source_index] || item.suggested_name || item.name).trim(),
+        name: nameFor(item).trim(),
+        username: (usernames[item.source_index] ?? "").trim(),
       }));
     if (selections.some((item) => !item.name)) {
       setError(t("mobaxterm.error.name"));
+      return;
+    }
+    if (selections.some((item) => !item.username)) {
+      setError(t("mobaxterm.error.username"));
+      return;
+    }
+    if (preview.items.some((item) =>
+      selected.has(item.source_index) &&
+      !canSelectMobaXtermRow(item, nameFor(item), usernames[item.source_index] ?? "")
+    )) {
+      setError(t("mobaxterm.error.selection"));
       return;
     }
 
@@ -225,14 +282,13 @@ export function MobaXtermImportPanel({
         <MobaPreview
           busy={busy}
           names={names}
+          usernames={usernames}
           locale={locale}
           t={t}
           preview={preview}
           selected={selected}
-          onNameChange={(index, name) => {
-            setNames((current) => ({ ...current, [index]: name }));
-            setError(null);
-          }}
+          onNameChange={changeName}
+          onUsernameChange={changeUsername}
           onToggle={toggleItem}
         />
       ) : null}
@@ -288,23 +344,34 @@ export function MobaXtermImportPanel({
 function MobaPreview({
   busy,
   names,
+  usernames,
   locale,
   preview,
   selected,
   onNameChange,
+  onUsernameChange,
   onToggle,
   t,
 }: {
   busy: boolean;
   names: Record<number, string>;
+  usernames: Record<number, string>;
   locale: "en" | "zh-CN";
   t: Translate;
   preview: MobaXtermImportPreviewResult;
   selected: Set<number>;
-  onNameChange: (index: number, name: string) => void;
+  onNameChange: (item: MobaXtermImportItem, name: string) => void;
+  onUsernameChange: (item: MobaXtermImportItem, username: string) => void;
   onToggle: (item: MobaXtermImportItem) => void;
 }) {
-  const blocked = preview.summary.unsupported + preview.summary.invalid + preview.summary.needs_input;
+  const ready = preview.items.filter((item) =>
+    canSelectMobaXtermRow(
+      item,
+      names[item.source_index] ?? item.suggested_name ?? item.name,
+      usernames[item.source_index] ?? item.effective_username ?? "",
+    ),
+  ).length;
+  const blocked = preview.summary.total - ready;
   return (
     <section className="connection-transfer-preview" aria-label={t("mobaxterm.preview.aria")}>
       <div className="connection-transfer-stats">
@@ -314,7 +381,7 @@ function MobaPreview({
           <small>{t("mobaxterm.preview.totalHint")}</small>
         </div>
         <div>
-          <strong>{preview.summary.ready.toString()}</strong>
+          <strong>{ready.toString()}</strong>
           <span>{t("mobaxterm.preview.ready")}</span>
           <small>{t("mobaxterm.preview.readyHint")}</small>
         </div>
@@ -342,32 +409,51 @@ function MobaPreview({
       <div className="mobaxterm-import-list">
         {preview.items.map((item) => {
           const checked = selected.has(item.source_index);
+          const name = names[item.source_index] ?? item.suggested_name ?? item.name;
+          const username = usernames[item.source_index] ?? item.effective_username ?? "";
+          const editable = isMobaXtermRowEditable(item);
+          const importable = canSelectMobaXtermRow(item, name, username);
           return (
             <div
               className="mobaxterm-import-row"
-              data-selectable={item.selectable ? "true" : "false"}
+              data-selectable={importable ? "true" : "false"}
               key={item.source_index}
             >
               <label className="mobaxterm-import-check">
                 <input
                   checked={checked}
-                  disabled={busy || !item.selectable}
+                  disabled={busy || !importable}
                   type="checkbox"
                   onChange={() => onToggle(item)}
                 />
-                <span>{statusLabel(item, t)}</span>
+                <span>{statusLabel(item, name, username, t)}</span>
               </label>
               <div className="mobaxterm-import-detail">
-                <input
-                  aria-label={t("mobaxterm.preview.nameAria", { name: item.name })}
-                  disabled={busy || !item.selectable || !checked}
-                  value={names[item.source_index] || item.suggested_name || item.name}
-                  onChange={(event) => onNameChange(item.source_index, event.target.value)}
-                />
+                <div className="mobaxterm-import-fields">
+                  <label>
+                    <span>{t("mobaxterm.preview.name")}</span>
+                    <input
+                      aria-label={t("mobaxterm.preview.nameAria", { name: item.name })}
+                      disabled={busy || !editable}
+                      value={name}
+                      onChange={(event) => onNameChange(item, event.target.value)}
+                    />
+                  </label>
+                  <label>
+                    <span>{t("mobaxterm.preview.username")}</span>
+                    <input
+                      aria-label={t("mobaxterm.preview.usernameAria", { name: item.name })}
+                      autoComplete="off"
+                      disabled={busy || !editable}
+                      placeholder={t("mobaxterm.preview.usernamePlaceholder")}
+                      value={username}
+                      onChange={(event) => onUsernameChange(item, event.target.value)}
+                    />
+                  </label>
+                </div>
                 <small>
                   {item.kind.toUpperCase()}
                   {item.host ? ` · ${item.host}:${item.port ?? "?"}` : ""}
-                  {item.effective_username ? ` · ${item.effective_username}` : ""}
                   {item.folder_path ? ` · ${item.folder_path}` : ""}
                 </small>
                 {item.private_key_path ? (
@@ -385,16 +471,7 @@ function MobaPreview({
   );
 }
 
-function statusLabel(item: MobaXtermImportItem, t: Translate) {
-  if (item.conflict === "exact_duplicate") {
-    return t("mobaxterm.status.exists");
-  }
-  if (item.conflict === "name_conflict") {
-    return t("mobaxterm.status.nameConflict");
-  }
-  if (item.conflict === "possible_target_duplicate") {
-    return t("mobaxterm.status.targetConflict");
-  }
+function statusLabel(item: MobaXtermImportItem, name: string, username: string, t: Translate) {
   if (item.status === "unsupported") {
     return t("mobaxterm.status.unsupported");
   }
@@ -404,8 +481,22 @@ function statusLabel(item: MobaXtermImportItem, t: Translate) {
   if (item.missing_fields.includes("network_settings_review")) {
     return t("mobaxterm.status.networkReview");
   }
-  if (item.missing_fields.includes("username")) {
+  if (!username.trim()) {
     return t("mobaxterm.status.username");
+  }
+  if (name.trim() === item.name) {
+    if (item.conflict === "exact_duplicate" && username.trim() === (item.effective_username ?? "").trim()) {
+      return t("mobaxterm.status.exists");
+    }
+    if (item.conflict === "name_conflict" || item.conflict === "exact_duplicate") {
+      return t("mobaxterm.status.nameConflict");
+    }
+  }
+  if (
+    (item.conflict === "possible_target_duplicate" || item.conflict === "exact_duplicate") &&
+    username.trim() === (item.effective_username ?? "").trim()
+  ) {
+    return t("mobaxterm.status.targetConflict");
   }
   return t("mobaxterm.status.ready");
 }
