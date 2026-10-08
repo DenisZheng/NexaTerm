@@ -42,3 +42,27 @@ test("MobaXterm apply rechecks the source fingerprint and avoids overwrite-by-na
   assert.match(backend, /mobaxterm_import_name_conflict/);
   assert.doesNotMatch(backend, /id:\s*Some\(/);
 });
+
+test("MobaXterm usernames are editable per row and reapplied with source-file protection", () => {
+  const backend = read("src-tauri/src/mobaxterm_import.rs");
+  const panel = read("src/features/connections/MobaXtermImportPanel.tsx");
+  const model = read("src/features/connections/mobaxtermImportModel.ts");
+  const types = read("src/features/connections/mobaxtermImportTypes.ts");
+  const en = JSON.parse(read("src/shared/i18n/locales/en.json"));
+  const zh = JSON.parse(read("src/shared/i18n/locales/zh-CN.json"));
+
+  assert.match(types, /username: string/);
+  assert.match(panel, /onUsernameChange/);
+  assert.match(panel, /canSelectMobaXtermRow/);
+  assert.match(panel, /usernames\[item\.source_index\]/);
+  assert.match(panel, /username: \(usernames\[item\.source_index\]/);
+  assert.match(model, /network_settings_review/);
+  assert.match(backend, /pub username: Option<String>/);
+  assert.match(backend, /selection\s*\.username/);
+  assert.match(backend, /candidate\.username == username/);
+  assert.match(backend, /mobaxterm_import_file_changed/);
+  assert.match(backend, /BEGIN IMMEDIATE/);
+  assert.match(backend, /ROLLBACK/);
+  assert.ok(en["mobaxterm.preview.usernameAria"]);
+  assert.ok(zh["mobaxterm.preview.usernameAria"]);
+});
