@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { resolve } from "node:path";
+import { win32 } from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
 
@@ -124,7 +124,7 @@ export function resolveSpawnInvocation(
 
   const pnpmHome = runtime.env?.PNPM_HOME;
   if (typeof pnpmHome === "string" && pnpmHome.trim()) {
-    const actionSetupEntrypoint = resolve(
+    const actionSetupEntrypoint = win32.resolve(
       pnpmHome,
       "..",
       "pnpm",
