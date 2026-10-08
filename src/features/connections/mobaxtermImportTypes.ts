@@ -59,6 +59,7 @@ export interface MobaXtermImportPreviewResult {
 export interface MobaXtermImportSelection {
   source_index: number;
   name: string;
+  username: string;
 }
 
 export interface MobaXtermImportApplyResult {
