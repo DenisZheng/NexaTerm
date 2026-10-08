@@ -78,9 +78,12 @@ test("发布工作流复用通道判定并保留 updater 签名硬门禁", () =>
   assert.match(workflow, /prerelease: \$\{\{ needs\.policy\.outputs\.prerelease == 'true' \}\}/);
   assert.match(workflow, /make_latest: \$\{\{ needs\.policy\.outputs\.makeLatest \}\}/);
   assert.match(workflow, /docs\/PRERELEASE_NOTES\.md/);
-  const updaterStep = workflow.split("- name: Validate updater signing secrets")[1].split("- name:")[0];
+  const updaterStep = workflow.split("- name: Validate and normalize updater signing secret")[1].split("- name:")[0];
   assert.doesNotMatch(updaterStep, /\n\s+if:/);
-  assert.match(updaterStep, /exit 1/);
+  assert.match(updaterStep, /node scripts\/prepare-tauri-signing-key\.mjs/);
+  const signingKeyPrep = read("scripts/prepare-tauri-signing-key.mjs");
+  assert.match(signingKeyPrep, /Missing TAURI_SIGNING_PRIVATE_KEY/);
+  assert.match(signingKeyPrep, /process\.exitCode = 1/);
   assert.match(workflow, /NEXATERM_CREATE_UPDATER_ARTIFACTS: "1"/);
   assert.match(workflow, /generate-latest-json\.mjs/);
 });
