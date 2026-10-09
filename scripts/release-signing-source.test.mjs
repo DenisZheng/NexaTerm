@@ -6,13 +6,13 @@ function read(path) {
   return readFileSync(path, "utf8");
 }
 
-test("tagged releases fail closed on Windows Authenticode signing", () => {
+test("stable tagged releases fail closed on Windows Authenticode signing", () => {
   const workflow = read(".github/workflows/release.yml");
   const build = read("scripts/build-platform.mjs");
 
   assert.match(
     workflow,
-    /startsWith\(github\.ref, 'refs\/tags\/v'\) && matrix\.target == 'windows-x64'/,
+    /needs\.policy\.outputs\.platformSigning == 'true' && matrix\.target == 'windows-x64'/,
   );
   assert.match(workflow, /secrets\.WINDOWS_CERTIFICATE/);
   assert.match(workflow, /secrets\.WINDOWS_CERTIFICATE_PASSWORD/);
@@ -26,7 +26,7 @@ test("tagged releases fail closed on Windows Authenticode signing", () => {
   assert.match(build, /timestampUrl/);
 });
 
-test("tagged macOS releases require Developer ID signing and notarization evidence", () => {
+test("stable tagged macOS releases require Developer ID signing and notarization evidence", () => {
   const workflow = read(".github/workflows/release.yml");
 
   for (const name of [
@@ -62,4 +62,28 @@ test("updater identity remains pinned to the NexaTerm release endpoint and publi
   assert.deepEqual(updater?.endpoints, [
     "https://github.com/DenisZheng/NexaTerm/releases/latest/download/latest.json",
   ]);
+});
+
+
+test("发布工作流复用通道判定并保留 updater 签名硬门禁", () => {
+  const workflow = read(".github/workflows/release.yml");
+  assert.match(workflow, /run: node scripts\/release-policy\.mjs/);
+  assert.match(workflow, /needs: \[policy, prepare\]/);
+  assert.match(workflow, /if: needs\.policy\.outputs\.publish == 'true'/);
+  for (const platform of ["windows-x64", "macos-arm64"]) {
+    const condition = `needs.policy.outputs.platformSigning == 'true' && matrix.target == '${platform}'`;
+    assert.equal(workflow.split(condition).length - 1, 2, `${platform} 导入与校验必须同一条件`);
+  }
+  assert.match(workflow, /draft: \$\{\{ needs\.policy\.outputs\.draft == 'true' \}\}/);
+  assert.match(workflow, /prerelease: \$\{\{ needs\.policy\.outputs\.prerelease == 'true' \}\}/);
+  assert.match(workflow, /make_latest: \$\{\{ needs\.policy\.outputs\.makeLatest \}\}/);
+  assert.match(workflow, /docs\/PRERELEASE_NOTES\.md/);
+  const updaterStep = workflow.split("- name: Validate and normalize updater signing secret")[1].split("- name:")[0];
+  assert.doesNotMatch(updaterStep, /\n\s+if:/);
+  assert.match(updaterStep, /node scripts\/prepare-tauri-signing-key\.mjs/);
+  const signingKeyPrep = read("scripts/prepare-tauri-signing-key.mjs");
+  assert.match(signingKeyPrep, /Missing TAURI_SIGNING_PRIVATE_KEY/);
+  assert.match(signingKeyPrep, /process\.exitCode = 1/);
+  assert.match(workflow, /NEXATERM_CREATE_UPDATER_ARTIFACTS: "1"/);
+  assert.match(workflow, /generate-latest-json\.mjs/);
 });

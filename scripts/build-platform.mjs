@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 import { spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
+import { win32 } from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
 
@@ -99,21 +101,46 @@ export function updaterArtifactsArgs(runtime = process, target) {
     : [];
 }
 
-export function resolveSpawnInvocation(command, args, runtime = process) {
-  const npmExecPath = runtime.env?.npm_execpath;
-  const usesPnpmExecPath =
-    typeof npmExecPath === "string" &&
-    /(^|[\\/])pnpm(?:\.c?js|\.cmd)?$/i.test(npmExecPath);
+export function resolveSpawnInvocation(
+  command,
+  args,
+  runtime = process,
+  fileExists = existsSync,
+) {
+  if (runtime.platform !== "win32" || command !== "pnpm") {
+    return { command, args };
+  }
 
-  if (runtime.platform === "win32" && command === "pnpm" && usesPnpmExecPath) {
+  const npmExecPath = runtime.env?.npm_execpath;
+  if (
+    typeof npmExecPath === "string" &&
+    /(^|[\\/])pnpm(?:\.c?js|\.js)$/i.test(npmExecPath)
+  ) {
     return {
       command: runtime.execPath,
       args: [npmExecPath, ...args],
     };
   }
 
+  const pnpmHome = runtime.env?.PNPM_HOME;
+  if (typeof pnpmHome === "string" && pnpmHome.trim()) {
+    const actionSetupEntrypoint = win32.resolve(
+      pnpmHome,
+      "..",
+      "pnpm",
+      "bin",
+      "pnpm.cjs",
+    );
+    if (fileExists(actionSetupEntrypoint)) {
+      return {
+        command: runtime.execPath,
+        args: [actionSetupEntrypoint, ...args],
+      };
+    }
+  }
+
   return {
-    command: runtime.platform === "win32" && command === "pnpm" ? "pnpm.cmd" : command,
+    command: "pnpm.cmd",
     args,
   };
 }
@@ -133,6 +160,12 @@ export function runPlan(target, { runtime = process, spawn = spawnSync } = {}) {
     shell: false,
     stdio: "inherit",
   });
+
+  if (result.error) {
+    console.error(
+      `Failed to start ${invocation.command}: ${result.error.message || String(result.error)}`,
+    );
+  }
 
   if (result.status !== 0) {
     runtime.exit(result.status ?? 1);

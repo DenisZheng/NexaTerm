@@ -31,3 +31,12 @@
 ## No silent downgrade
 
 任何平台/凭据/硬件缺失都保留 pending/blocked，不能用其它平台结果替代。
+
+
+## 首版预发布通道
+
+复用 release.yml，引入集中 release-policy.mjs 分类：精确的 vMAJOR.MINOR.PATCH 是正式 tag，vMAJOR.MINOR.PATCH-(alpha|beta|rc).N 是预发布 tag，其余 tag 拒绝。任何 tag 均须与 package.json / Tauri / Cargo 版本完全一致。非 tag 手动触发仅构建 artifact，不发布。
+
+预发布 tag 跳过平台证书导入/验证，保留 updater 密钥与 .sig、SHA256、许可证检查；创建 draft=true、prerelease=true、make_latest=false 的 GitHub Release，附平台签名限制和验收范围说明。正式 tag 保留原证书门禁与发布行为。发布判定在 policy job 产生输出，build/publish 使用同一输出，不散落不同 tag 判断规则。
+
+不改 updater 稳定端点；只有预发布且没有正式 Release 时，应用内稳定更新检查可能暂不可用，预发布使用 GitHub 手动下载。新通道只提供候选产物，人工安装验收后才能公开草稿。

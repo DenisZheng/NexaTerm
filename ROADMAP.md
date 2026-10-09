@@ -12,6 +12,12 @@ WF-04B/04C/05/06/07 及 WF-08A–08E 已通过 integration PR #40 合入 `main`�
 
 当前执行顺序（2026-10-04 维护者确认并行）：`10-04-wf04c-multiexec-entry` 已提交并进入 WF-08 堆叠；A09/A10 已于 2026-10-05 在最终 WF-08E 分支完成真实 Tauri 验收并 PASS，已不再是 A15 / v1 sign-off blocker。WF-08A 从“发布与迁移基线门禁”开始，证据见 `10-04-wf-08a-release-migration-baseline/A15_BASELINE.md`。 WF-08B 实现已完成并由 CI #343 验证三平台编译/测试，真实旧版本升级留到 WF-08E/A15；WF-08C 已完成代码收口并由 CI #357 验证品牌、English/zh-CN parity、canonical MCP sidecar 与三平台编译/测试。WF-08D 已完成测量工具并由 CI #364 验证三平台编译/测试、sampler 单测与性能/稳定性门禁；WF-08E 自动化证据框架已由 CI #369 验证，并通过 PR #40 合入 main。A09/A10 已于 2026-10-05 由维护者在真实 Tauri 验收中确认 PASS；main CI #383 的 final CI / Security / License 也已 PASS。A15 仍进行中，剩余三平台真实安装/签名/升级回滚、迁移、性能、updater 任一未通过都阻止最终签字。
 
+## 2026-10-07 首版预发布安排
+
+维护者确认先交付无平台证书的 Pre-release，A15 完整验收继续保持未完成。候选版本为 `0.1.17-rc.1`；工作流创建预发布草稿并排除 latest，保留 updater 签名、哈希和许可证门禁。普通正式 tag 仍要求 Windows/macOS 发布签名。公开草稿前完成 Windows/macOS 安装与基本功能验收；Linux 真实桌面、平台签名、公证、旧版迁移及升级回滚等缺口按 WF-08E 记录，不视为已通过。
+
+本次 workflow/版本改动尚待提交和候选构建，不能把旧 main CI 或源码测试视为安装包验收。
+
 ## 当前评审整改状态
 
 | 项目 | 状态 | 边界 |
