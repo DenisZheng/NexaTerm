@@ -144,11 +144,23 @@
 
 | 风险 | 暴露面 | 缓解 | 期限 / 触发解除 | 状态 |
 |---|---|---|---|---|
-| rsa RUSTSEC-2023-0071 Marvin 时序侧信道 | 仅当攻击者可观测网络时序且使用 RSA 私钥操作；客户端签名暴露低于服务端解密 | 优先 Ed25519/ECDSA；绑定 russh P0 升级 | russh 升级到依赖修复版 rsa 后解除 | **已接受**（项目 owner，2026-09-18；复核：rsa 0.9.10 / 0.10.0-rc.18 仍无修复版，advisory `patched = []` 为有意标注） |
+| rsa RUSTSEC-2023-0071 Marvin 时序侧信道 | 当前 SSH 客户端使用 RSA 私钥签名/公钥验签及密钥解析；本次静态核查未找到攻击者可控 RSA PKCS#1 v1.5 密文解密入口，**不能据此判定漏洞已修复或完全不可利用** | 保留 RSA 兼容、优先推荐 Ed25519/ECDSA、审计持续报告 `REVIEW-REQUIRED`；证据见 §7.1 | 上游发布修复版本并经兼容性验证、依赖/调用路径/威胁模型变化或最终发行门禁时复核 | **沿用项目 owner 2026-09-18 已接受记录**；2026-10-10 补充静态证据，不新增安全豁免 |
 | quick-xml RUSTSEC-2026-0194 / 0195（DoS） | 仅由 plist → tauri-utils 引入，且全在 build-dependencies；运行时二进制不含该代码路径 | 无；构建输入为仓库自有 `tauri.conf.json` / Info.plist，非攻击者可控 | tauri 上游把 plist 升到依赖 quick-xml ≥0.41 后解除；2026-09-18 `cargo update --dry-run -p quick-xml` 为 0 包可动，跨 minor 版无法本地强升 | **已解除**：2026-09-19 `cargo update`（`e962596`）后锁文件为 quick-xml 0.41.0 / 0.42.0，`cargo audit` 与 `cargo deny` 均不再报告 |
 | glib RUSTSEC-2024-0429（`VariantStrIter` unsound） | 仅 Linux 目标：gtk → muda → tauri；macOS/Windows 目标不含该 crate | 无运行时可控输入触发该迭代器 | 跟随 tauri 上游升 gtk-rs 0.19+ 解除 | 2026-09-19 `cargo audit` 首次报告（本机安装 cargo-audit 0.22.2 后）；属 tauri 生态自有，同 unic-* 处理；**已接受**（项目 owner，2026-09-19） |
 | unic-* ×5 / proc-macro-error（unmaintained，tauri 生态自有） | 纯构建期 proc-macro 与 Unicode 数据表，运行时无攻击面 | 跟随 tauri 版本升级 | tauri 升级带入替代 crate 后解除 | **已接受**（项目 owner，2026-09-18） |
 | rustls RUSTSEC-2026-0285（TLS 1.3 握手消息跨加密层）| **已修复**：2026-09-18 `cargo update -p rustls --precise 0.23.45`，连带 rustls-webpki 0.103.13→0.103.15、aws-lc-rs 1.17.0→1.18.1、aws-lc-sys 0.41.0→0.45.0（均 semver 兼容补丁位）；`cargo deny check advisories` 由 10 条降至 9 条 | — | 提交 `f3c3c77`，CI 三平台 `cargo check`/`cargo test` 全绿（用户 2026-09-18 确认） | 已修复，CI 验证通过 |
+
+### 7.1 RSA Marvin 可达性及残余风险复核（2026-10-10）
+
+> **范围及性质**：基线为 NexaTerm `main@6e341f0e8ccb457ad53d10efb40e1ca0eb8bdeb9`；本节仅补充已有风险接受的**静态审查证据**，不是动态时序测试、漏洞修复证明或新一轮风险接受授权。原 owner 接受日期仍为 2026-09-18。
+
+- **依赖事实**：`src-tauri/Cargo.lock` 锁定 `rsa 0.10.0-rc.18`，由 `russh 0.61.1` 与 `ssh-key 0.7.0-rc.10` 引入；`src-tauri/Cargo.toml` 分别启用两者的 `rsa` feature。RustSec [RUSTSEC-2023-0071](https://rustsec.org/advisories/RUSTSEC-2023-0071.html) 仍列 `patched = []`，仅升 `russh` 版本不能视为已修复；上游跟踪 [RSA#626](https://github.com/RustCrypto/RSA/issues/626)、[RSA#680](https://github.com/RustCrypto/RSA/pull/680)、[RSA#702](https://github.com/RustCrypto/RSA/pull/702)。
+- **应用入口**：终端、SFTP、跳板及隧道共用 SSH 认证路径；[`terminal/session.rs`](../src-tauri/src/terminal/session.rs) `authenticate()` 读取本地私钥后调用 `russh::client::authenticate_publickey`，按服务器能力选择 RSA 签名哈希。[`terminal/private_key.rs`](../src-tauri/src/terminal/private_key.rs) 负责 OpenSSH/PEM、PuTTY PPK 私钥解析；PPK/私钥口令解密不等于 RSA PKCS#1 v1.5 密文解密。
+- **静态可达性证据**：检查应用 `src-tauri` 73 个 Rust 源文件及当时上游 `russh`（60 个）和 `ssh-key`（38 个）Rust 源文件的 RSA/PKCS#1/解密调用；未观察到 `Pkcs1v15Encrypt` 或 `RsaPrivateKey::decrypt` 组成的攻击者可提交密文解密预言机。应用中其他 `.decrypt()` 调用，例如 [`secure_bundle.rs`](../src-tauri/src/secure_bundle.rs) 和 [`storage_vault.rs`](../src-tauri/src/storage_vault.rs)，使用 AES-256-GCM。上游 `ssh-key` 参考实现的 RSA 路径主要是 PKCS#1 v1.5 **签名/验签**与密钥格式转换。以上属于源码观察，**并不证明所有传递依赖和编译 feature 下绝对不可达**。
+- **独立残余问题**：上游 RSA 签名路径有 `SigningKey::try_sign()` 的非随机调用；`rsa 0.10.0-rc.18` 的该默认接口不提供随机盲化。它与 Marvin 的 PKCS#1 v1.5 **解密预言机**并非同一问题，不能据此声称存在可利用的签名时序攻击，也不能宣称签名路径经侧信道验证。参考 [ssh-key 签名实现](https://github.com/RustCrypto/SSH/blob/7a1c757d2e2fcde32680e373d5226481de6d434e/ssh-key/src/signature.rs#L700-L752) 与 [rsa 签名实现](https://github.com/RustCrypto/RSA/blob/e31a0209de98cce82de44a5efc241912eb38f6ea/src/pkcs1v15/signing_key.rs#L180-L195)；这部分是上游源码参考，尚未逐字节复核 crates.io 发布包及编译后调用图。
+- **限制**：未运行主动选密文测试、网络计时攻击、二进制级调用图分析、密码学外部审计或所有 SSH 服务器的真实兼容性测试。因此结论仅为“**在已审查的客户端路径未发现 Marvin 解密入口**”，不是“漏洞不存在”或“安全测试通过”。
+- **方案 D 决策**：维持现有 RSA 支持和已登记风险接受，不 vendoring / patching `rsa`，不添加 `cargo-deny` ignore，不关闭安全报告。[`security-deny.toml`](../scripts/security-deny.toml) 无忽略项；[`security-check.mjs`](../scripts/security-check.mjs) 将 Rust advisory 作为 report-only `REVIEW-REQUIRED`，该状态**不等于**安全验收或修复。建议优先使用 Ed25519/ECDSA。
+- **复核触发条件**：① `rsa` / `russh` / `ssh-key` 更新或 feature、RSA 加解密调用、SSH 认证及网络输入边界变化；② RustSec 公告、上游修复、可复现攻击或新利用条件出现；③ 正式稳定版 Release Gate。届时重跑依赖图和源码可达性核查，并由项目 owner 复核接受决定；仅在上游发布修复且构建/认证/三平台回归通过后，才将告警标记为已解除。
 
 ## Task 01 · Phase 2 执行结果（截至 2026-09-16）
 
