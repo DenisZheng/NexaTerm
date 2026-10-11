@@ -149,6 +149,7 @@
 | glib RUSTSEC-2024-0429（`VariantStrIter` unsound） | 仅 Linux 目标：gtk → muda → tauri；macOS/Windows 目标不含该 crate | 无运行时可控输入触发该迭代器 | 跟随 tauri 上游升 gtk-rs 0.19+ 解除 | 2026-09-19 `cargo audit` 首次报告（本机安装 cargo-audit 0.22.2 后）；属 tauri 生态自有，同 unic-* 处理；**已接受**（项目 owner，2026-09-19） |
 | unic-* ×5 / proc-macro-error（unmaintained，tauri 生态自有） | 纯构建期 proc-macro 与 Unicode 数据表，运行时无攻击面 | 跟随 tauri 版本升级 | tauri 升级带入替代 crate 后解除 | **已接受**（项目 owner，2026-09-18） |
 | rustls RUSTSEC-2026-0285（TLS 1.3 握手消息跨加密层）| **已修复**：2026-09-18 `cargo update -p rustls --precise 0.23.45`，连带 rustls-webpki 0.103.13→0.103.15、aws-lc-rs 1.17.0→1.18.1、aws-lc-sys 0.41.0→0.45.0（均 semver 兼容补丁位）；`cargo deny check advisories` 由 10 条降至 9 条 | — | 提交 `f3c3c77`，CI 三平台 `cargo check`/`cargo test` 全绿（用户 2026-09-18 确认） | 已修复，CI 验证通过 |
+| source-map-js GHSA-68fv-2mgg-jv7q（indexed source-map section offsets 事件循环 DoS，high，CVSS 7.5） | 仅 dev 链：`vite > postcss > source-map-js`、`jsdom > @asamuzakjp/dom-selector > css-tree > source-map-js`；不进发布产物，影响面为本地/CI 构建与测试进程 | **已修复**：2026-10-11 `pnpm-workspace.yaml` override `source-map-js: "^1.2.2"`（修复版 1.2.2 于 2026-09-30 发布），解析 1.2.2，`pnpm audit` high 1→0；详见下文「Batch A 追加」 | — | 修复 PR 待合并；含修复前的候选（如 `v0.1.17-rc.1`）审计产物仍记 REVIEW-REQUIRED，不追溯改写 |
 
 ### 7.1 RSA Marvin 可达性及残余风险复核（2026-10-10）
 
@@ -182,6 +183,20 @@
 - **验证链**：`pnpm install`（Packages +9 -9）→ `pnpm run check` exit 0 → `pnpm run build` exit 0（3.7MB `RemoteFileEditor`/Monaco chunk 正常产出，dompurify 顶版不破坏构建）→ `pnpm audit`：**high 5→0、moderate 16→0、critical 0**。
 - **残留**：仅 1 条 esbuild low（RUSTSEC 无关；dev-server-on-Windows 任意文件读，dev-only，经 vite 传递）。**有意推迟**：esbuild 与 vite 的 API 强耦合，强升 ≥0.28.1 有破坏 build 风险，且属 low + 仅构建期；留待 vite 升级带入修复版，或作为 dev-only low 显式接受。
 - **回滚**：还原 `pnpm-workspace.yaml` 的 `overrides` 块并 `pnpm install` 即恢复原解析；`package.json` 本批净零变更。
+
+### Batch A 追加：source-map-js override（2026-10-11）
+
+- **触发**：`v0.1.17-rc.1`（`6e341f0e`）CI Security evidence 的 `npm.json` 报告 1 条 high：GHSA-68fv-2mgg-jv7q（source-map-js < 1.2.2，indexed source-map section offsets 导致事件循环 DoS，CVSS 7.5；advisory 2026-09-18 发布，修复版 1.2.2 于 2026-09-30 发布）。
+- **依赖路径与影响面**：`source-map-js@1.2.1` 仅由 dev 链引入——`vite > postcss > source-map-js` 与 `jsdom > @asamuzakjp/dom-selector > css-tree > source-map-js`（`pnpm why source-map-js`，两条路径均 `dev: true`）；不进发布产物，影响面为本地/CI 构建与测试进程。
+- **处理**：按 Batch A 同一模式在 `pnpm-workspace.yaml` 增加 `source-map-js: "^1.2.2"` override（下限即修复版）；不接受风险、不添加 audit 忽略、不降低门禁。
+
+  | 包 | 原解析 | override 下限 | 实际解析 | 清除的 advisory |
+  |---|---|---|---|---|
+  | source-map-js | 1.2.1 | ^1.2.2 | 1.2.2 | 1 high（dev） |
+
+- **验证链（2026-10-11，Windows 11，Node v24.12.0，pnpm 11.22.0）**：`pnpm install`（resolved 269，added 1）→ `pnpm audit`：high 1→0、critical 0，残留 3 条 low（esbuild dev-only、dompurify ×2，均已在上文记录）→ `pnpm run check` exit 0 → `pnpm run build` exit 0 → `pnpm run test:scripts` 125 通过 / 3 既有集成测试按默认跳过 / 0 失败。CI Security evidence job 的 `npm.json` `counts.high` 应为 0。
+- **A15 证据**：`automated.securityCriticalHigh` 对 `v0.1.17-rc.1` 候选保持 `review`；包含本修复的下一候选经 CI 复核后再更新，不追溯改写已发布候选的审计结论。
+- **回滚**：删除该 override 行并 `pnpm install`。
 
 ### Batch D：移除冗余 package-lock.json（已完成）
 
