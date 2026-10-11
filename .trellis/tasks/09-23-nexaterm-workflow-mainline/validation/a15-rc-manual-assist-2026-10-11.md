@@ -86,7 +86,7 @@
 - 失败：`pnpm test` 共 610 项中 7 失败 / 602 通过 / 1 todo。4 个文件：`connectionDialogSubmit.test.ts`（3）、`a14RestartAcceptance.test.ts`（2）、`shellHydration.test.ts`（1）、`tunnelRuleConnectionState.test.ts`（1）。
 - 现象：断言英文文案（如 "Save and connect"、"no longer exists"、"automatic reconnect is disabled"），实际返回中文（"连接失败"、"保存的连接或终端配置已不存在…"等）。
 - 根因（已核实）：本机 Node 24 的 `navigator.language = "zh-CN"` → i18n `resolveLocale("system", …)` 解析为 zh-CN → `t()` 返回中文；这些测试断言英文常量。CI（Ubuntu 英文环境）同一提交 `37933143667` Frontend checks success，故**非 RC 回归，属测试对系统语言敏感**。
-- 处置建议（需维护者决定，本次未改代码）：为受影响测试固定 locale（如测试内显式注入 en），或放宽为断言键而非文案。
+- 处置（第二轮）：已按既有约定在 4 个文件 `beforeEach` 固定 en 并在 `afterEach` 还原，独立分支 PR #56；本机 zh-CN 全量 vitest 609 通过 / 1 todo / 0 失败，CI 7 项检查通过。定性见 §6.3。
 
 ### 2.2 updater 端点 `releases/latest/download/latest.json` 当前 404
 
@@ -99,11 +99,11 @@
 - **GUI 验收**：已由维护者于 2026-10-11 确认通过，详见 §1.7（本会话无 GUI 控制/截图能力，自动化部分只验证进程与窗口存在）。
 - **交互式安装提示**：本次用 `/S` 静默安装，未单独记录 SmartScreen / “未知发布者”提示；预发布无 Authenticode，出现该类提示属预期，不计入验收项。
 - **10 SSH + Split/SFTP/Transfer/Monitoring、资源释放、失败隔离、性能采样**（`tests/performance/wf08d-workload.json`）：需真实 SSH 目标 + GUI 驱动。本机 fixture 未运行（WSL Ubuntu-24.04 stopped；端口 2222/2223/2224/2323 关闭；docker 不在 PATH），且无 GUI 自动化，无法执行。
-- **portable ZIP 内容卫生**：ZIP 共 2707 条目、解压后约 79 MB，其中约 21 MB 为构建残留（`nexaterm.pdb` 15 MB、`mxterm_mcp.pdb` 6 MB、`.d`、`.fingerprint/` 2688 项、`nsis/` staging、`.cargo-*.lock`），且 zip 条目使用反斜杠路径分隔符（部分非 Windows 解压工具兼容性）。功能不受影响；维护者已于 2026-10-11 要求精简该残留，作为后续构建脚本任务处理。
+- **portable ZIP 内容卫生**：ZIP 共 2707 条目、解压后约 79 MB，其中约 21 MB 为构建残留（`nexaterm.pdb` 15 MB、`mxterm_mcp.pdb` 6 MB、`.d`、`.fingerprint/` 2688 项、`nsis/` staging、`.cargo-*.lock`），且 zip 条目使用反斜杠路径分隔符（部分非 Windows 解压工具兼容性）。功能不受影响；维护者已于 2026-10-11 要求精简；已由 PR #55 修复并经真实构建 run 38135174315 核对（9 条目 / 23,485,323 字节 / 正斜杠路径），见 §6.2。
 - **公开 Release 说明**：正文写明“Windows/macOS 安装与基本功能验收结果须在公开草稿前补充到本页”，当前尚未补充；是否引用本报告结论更新由维护者决定。
 - **本机安装状态变更**：原有 0.1.17（10-05 本地构建）安装已被 rc.1 就地覆盖，安装目录 `_up_` 保留 10/5 旧内容；如需恢复旧版需重新安装。
 
-- **安全审计登记（回填证据时发现）**：RC 提交 `6e341f0e` 的 CI 安全产物显示 npm 新增 1 项 dev-only High（`GHSA-68fv-2mgg-jv7q`，source-map-js，经 vite/postcss 与 jsdom 构建/测试链引入，不进发布产物），尚未登记进 `docs/SECURITY_REVIEW.md`；Rust 8 项 cargo-deny advisory（含 `RUSTSEC-2023-0071`）均已在该文档 §7/§7.1 登记接受。按“未修复 High 不得进入 release gate”口径，已把 A15 证据 `automated.securityCriticalHigh` 由 pass 改为 review，待维护者评审后登记接受或升级依赖。
+- **安全审计登记（回填证据时发现）**：RC 提交 `6e341f0e` 的 CI 安全产物显示 npm 新增 1 项 dev-only High（`GHSA-68fv-2mgg-jv7q`，source-map-js，经 vite/postcss 与 jsdom 构建/测试链引入，不进发布产物），尚未登记进 `docs/SECURITY_REVIEW.md`；Rust 8 项 cargo-deny advisory（含 `RUSTSEC-2023-0071`）均已在该文档 §7/§7.1 登记接受。按“未修复 High 不得进入 release gate”口径，已把 A15 证据 `automated.securityCriticalHigh` 由 pass 改为 review，第二轮已核查依赖路径并以 PR #57 升级到 1.2.2（pnpm override），`docs/SECURITY_REVIEW.md` 已登记，CI run 38138584508 的 `npm.json` high=0；rc.1 候选证据保持 review，不追溯改写，见 §6.4。
 
 ## 4. 安装包信息和 SHA256（汇总）
 
@@ -134,8 +134,73 @@
 | mXterm → NexaTerm 迁移（core app data / webview settings / vault / no-silent-overwrite / migration rollback） | BLOCKED | 无旧版安装包与真实旧数据；本机未发现旧数据目录，未执行任何迁移 |
 | 历史版本升级 / 回滚 | BLOCKED | 无历史正式版本可比；本次仅“本地 0.1.17 就地覆盖安装 rc.1”，不构成升级验收 |
 | updater 升级 / rollback-recovery | BLOCKED | 端点 404（§2.2）+ 无旧版安装；updater 元数据本身签名有效 |
-| 打包版性能（startup / idle CPU / 内存对比 mXterm / 10 SSH / 资源释放 / 失败隔离） | MANUAL_REQUIRED | 需 GUI + 真实 SSH + mXterm 基线 |
-| A15 最终签字 | PENDING | `A15_EVIDENCE_CURRENT.json` 已回填 rc.1 候选与 Windows 证据（build/install/launch/brand/locale/theme/artifactHash=pass；securityCriticalHigh=review），剩余 35 项 blocker（12 pending + 22 blocked + 1 review），`check:wf08e` PASS，`validSignoff:false` |
+| 打包版性能 | 部分通过 | startup 与 idle CPU 已于第二轮 PASS（§6.1）；内存对比 mXterm BLOCKED（本机无基线）；10 SSH / 资源释放 / 失败隔离 MANUAL_REQUIRED（需 GUI + 真实 SSH） |
+| A15 最终签字 | PENDING | `A15_EVIDENCE_CURRENT.json` 已回填 rc.1 候选与 Windows 证据（build/install/launch/brand/locale/theme/artifactHash=pass；securityCriticalHigh=review），第二轮回填后剩余 31 项 blocker（8 pending + 22 blocked + 1 review，见 §6.5），`check:wf08e` PASS，`validSignoff:false` |
+
+## 6. 第二轮逐项处理（2026-10-11，blocker 35 → 31）
+
+依据维护者指示重跑 `a15-evidence-check`（PR #54 分支 JSON：35 项 = 1 review + 22 blocked + 12 pending），逐项处理。本节所有 PASS 均附命令、结果、版本/commit、产物哈希与环境；源码测试不计为安装包验收。
+
+### 6.1 本轮新增 PASS（4 项）
+
+| 证据项 | 命令 / 方法 | 结果 | 版本 / commit | 产物哈希 | 环境 |
+| --- | --- | --- | --- | --- | --- |
+| `platforms.macos-arm64.artifactHash` | `gh release download v0.1.17-rc.1`（dmg、app.tar.gz）→ `sha256sum -c SHA256SUMS.txt`；`verify-minisign.mjs` 用配置 pubkey 验证 .sig（Ed25519 / BLAKE2b-512） | dmg、app.tar.gz 均 OK；app.tar.gz 签名 VALID | v0.1.17-rc.1 @ `6e341f0e`，Release run 37933368276 | dmg `a5ffdbf85533bbe8650f58b54e1197871a23c6a9da4e95cac64dcfbc36d89904`（22,944,977 B）；app.tar.gz `9e32a9febd6859762f5c8e273e97a7109ab96bcbacd7162ac5434289b33ca0b0` | Windows 11 下载对账；安装后对账归入 macOS install 项 |
+| `platforms.linux-x64.artifactHash` | 同上（AppImage、deb、rpm 及三份 .sig） | SHA256 全部 OK；AppImage / deb / rpm 签名均 VALID | 同上 | AppImage `99478fd83fceb99160267dcfab13a9d73e2df523aaaf8c3397dd17822bf5cb7b`（103,324,152 B）；deb `964653477b341f872e3e522496f9db33ec1ca16b7842a02eeef4038844c88b77`（27,596,840 B）；rpm `a0abdbc7308eed7811253a5373bd95a1519a5b386ddfd6fcb11d8bf989f526e5`（27,594,585 B） | 同上 |
+| `performance.startup` | `node scripts/perf-runtime-sampler.mjs --executable %LOCALAPPDATA%\NexaTerm\nexaterm.exe --warmup-ms 5000 --duration-ms 30000 --sample-ms 1000 --keep-open` ×5，每轮后 `CloseMainWindow` 优雅关闭；启动时间来自应用自身写出的 `workspace-interactive` 事件（`performance_probe.rs`，`NEXATERM_PERF_EVIDENCE_PATH`） | 5 轮启动 996 / 981 / 997 / 992 / 974 ms；中位数 992 ms，p95 997 ms，目标 ≤ 2000 ms → 通过（第 1 轮为冷启动，其余为重新拉起进程的热缓存启动） | 安装版 0.1.17-rc.1（rc.1 NSIS 静默安装） | `%LOCALAPPDATA%\NexaTerm\nexaterm.exe` `A1B7340AB4D3D190B1278928FA7DEA18476E5A36E349C9100285C1C5F074C656` | Windows 11 10.0.26300 x64，12 逻辑核，Node v24.12.0 采样器；报告 `.trellis/.runtime/a15-rc-2026-10-11/perf/wf08d-run1..5.json` |
+| `performance.idleCpu` | 同上（warmup 5 s 后 30 s 空闲窗口，进程树采样） | 进程树 7 个进程；CPU 平均 0.17–0.82%，p95 最高 9.33%；RSS 中位数 438.45–446.01 MB → 接近空闲、未见持续周期性占用；按工作负载策略 record-near-idle-no-hard-threshold-until-baseline 记录为通过 | 同上 | 同上 | 同上；本机 PowerShell 进程树采样约 20 s/次，30 s 窗口实际得到 12–14 个样本 |
+
+说明：`performance.memoryVsMxterm` 仍 BLOCKED，本机没有 mXterm（未找到安装目录、卸载项或 MobaXterm 文档目录），无同机同窗口基线可比。
+
+### 6.2 已确认缺陷与修复 PR
+
+| 缺陷 | 类型 | 修复 PR | 验证 |
+| --- | --- | --- | --- |
+| portable ZIP 含约 21 MB 构建残留，条目使用反斜杠分隔符 | 打包 | #55 `fix/portable-zip-allowlist`：release.yml 显式 allowlist + bsdtar，wf08c 断言，spec 场景 | 本地模拟 9 条目 / 23,428,669 B；真实 workflow_dispatch run 38135174315 全部 job success，artifact ZIP 9 条目 / 23,485,323 B / 正斜杠，SHA256 `7e496dc227f2b92f31aa54a65081df2d1933fff6f9a0d1b2312a03f9b076f1a7`；PR 7 项检查通过 |
+| 7 项 vitest 英文断言随宿主机语言失败 | 测试 | #56 `fix/vitest-locale-pinning`：4 个文件按既有约定 `beforeEach` 固定 en、`afterEach` 还原 | 本机 zh-CN：定向 11 项通过，全量 609 通过 / 1 todo / 0 失败；tsc、line-budget 通过；PR 7 项检查通过 |
+| npm high GHSA-68fv-2mgg-jv7q（source-map-js 1.2.1） | 依赖 / 安全 | #57 `fix/npm-source-map-js-advisory`：pnpm override `^1.2.2`，SECURITY_REVIEW §7 行 + Batch A 追加 | 本机 `pnpm audit` high 1→0；check / build / test:scripts 通过；CI run 38138584508 Security evidence `npm.json` high 0 / critical 0 / low 3 |
+| updater `releases/latest/download/latest.json` 404 | 产品配置 / 设计 | 未修复：需维护者决定预发布通道端点策略或等待 stable release | 见 §2.2；发布说明已声明该状态 |
+
+### 6.3 7 项 locale 相关 Vitest 失败定性
+
+- 失败均为断言英文文案的纯逻辑测试；被测模块在调用时经 `t()` 取当前 locale 文案，本机 Node `navigator.language = zh-CN` 使 `system` 偏好解析为 zh-CN 并返回中文。
+- 产品行为正确（按系统语言本地化），`resolveLocale` 已由 `i18n.test.ts` 用显式输入覆盖；缺陷在测试环境假设（未固定 locale），不是产品问题。
+- 处理：PR #56 按 11 个既有测试文件的约定补 `beforeEach(setLocalePreference("en"))` 与 `afterEach` 还原；未改断言、未 skip、未改产品代码。
+
+### 6.4 security review 项核查（`automated.securityCriticalHigh`）
+
+- 依赖路径：`source-map-js@1.2.1` 仅经 `vite > postcss > source-map-js` 与 `jsdom > @asamuzakjp/dom-selector > css-tree > source-map-js` 两条 dev 链（`pnpm why`，均 `dev: true`）；影响面为本地/CI 构建与测试进程，不进发布产物。
+- 修复：advisory 修复版 1.2.2（2026-09-30 发布）；PR #57 以 pnpm override 升级，未加 audit 忽略、未接受风险、未降低门禁；`docs/SECURITY_REVIEW.md` 已登记路径、影响面、验证链与回滚。
+- Rust 侧 8 项 cargo-deny advisory（1 vulnerability RUSTSEC-2023-0071、1 unsound、5 unmaintained，另 1 yanked 警告）均已在 SECURITY_REVIEW §7 / §7.1 登记，无 Critical/High 新增。
+- 证据状态：rc.1 候选（`6e341f0e`）审计产物含该 high，`securityCriticalHigh` 保持 review，不追溯改写；包含 PR #57 的下一候选由 CI Security evidence 复核后再更新。
+
+### 6.5 剩余 blocker 分类（31 项 = 1 review + 22 blocked + 8 pending）
+
+本机可以自动验证：本轮已清零（见 6.1）。
+
+| 分类 | 证据项（ID） | 当前状态 | 缺失证据 | 依赖环境 | 处理方式 / 最少需要维护者提供 |
+| --- | --- | --- | --- | --- | --- |
+| 本机需维护者确认 | `performance.tenSshWorkload`、`performance.resourceRelease`、`performance.failureIsolation` | pending ×3 | 10 个真实 SSH 实例 + Split / SFTP / 传输 / 监控、3 轮关闭回收、断连隔离的 GUI 操作与采样数据 | Windows 本机 GUI + SSH 目标（WSL Ubuntu-24.04 sshd fixture 可用 `.trellis/.runtime/acceptance-wsl-up.sh` 拉起，当前未运行） | 维护者安排一次 GUI 会话；助手拉起 fixture、启动 `perf-runtime-sampler --keep-open` 采样并记录 |
+| 本机需维护者确认 | `platforms.windows-x64.upgrade`、`platforms.windows-x64.rollback` | blocked ×2 | 旧版本→rc.1 升级后数据保留；卸载并回装旧版后数据可读 | 隔离的 Windows 用户账户或 VM（当前应用数据目录与 Credential Manager vault 密钥都是维护者日常数据，无法就地隔离） | 提供隔离账户 / VM，或批准备份-还原协议（含 vault 密钥处理），并认可 10-05 本地 0.1.17 包作为“重建基线”（无历史正式版） |
+| 本机需维护者确认 | `migration.coreAppData`、`migration.webviewSettings`、`migration.noSilentOverwrite`、`migration.vault`、`migration.rollback` | blocked ×5 | 真实或认可的 mXterm 旧数据，迁移前后对比与回滚 | 隔离环境 + 旧数据（本机无 mXterm 数据） | 提供旧 mXterm 数据副本或认可合成夹具为“重建基线”，并提供隔离环境 |
+| 本机需维护者确认 | `updater.upgrade`、`updater.rollbackRecovery` | blocked ×2 | 从旧安装经应用内更新到新版本并可恢复 | 可解析的 updater 端点（当前 latest 404）+ 更新目标版本 + 隔离环境 | 决定预发布通道端点策略或发布 stable；提供隔离环境 |
+| 其他平台 / 真实服务器 / 测试数据 | `platforms.macos-arm64.install`、`launch`、`brand`、`locale`、`theme` | pending ×5 | Mac 上安装 rc.1 dmg、启动、品牌、English / zh-CN、Light / Dark 的人工结论 | 维护者的 macOS 机器 | 维护者在 Mac 上执行并反馈逐项结论（dmg SHA256 见 6.1；未签名需右键打开） |
+| 其他平台 / 真实服务器 / 测试数据 | `platforms.macos-arm64.upgrade`、`rollback` | blocked ×2 | 旧版→新版升级与回滚 | Mac + 旧版本 | 同 Windows 升级项的基线与隔离决定 |
+| 其他平台 / 真实服务器 / 测试数据 | `platforms.linux-x64.install`、`launch`、`brand`、`locale`、`theme`、`upgrade`、`rollback` | blocked ×7 | Linux 桌面安装与 GUI 结论 | Linux 机器或 VM | 提供 Linux 桌面环境（deb / rpm / AppImage 哈希与签名已对账） |
+| 其他平台 / 真实服务器 / 测试数据 | `performance.memoryVsMxterm` | blocked | 同机同窗口的 mXterm 空闲 RSS 基线 | mXterm 安装包 / 构建 | 提供 mXterm 基线包，或确认该项在 rc 阶段记 N/A |
+| 证书 / 账号 / 发布操作 | `platforms.windows-x64.authenticode` | blocked | 已签名安装包且 `Get-AuthenticodeSignature` 为 Valid | 代码签名证书（`WINDOWS_CERTIFICATE` / `WINDOWS_CERTIFICATE_PASSWORD`）+ 正式 tag | 提供证书并走 stable tag 发布 |
+| 证书 / 账号 / 发布操作 | `platforms.macos-arm64.developerId`、`notarization` | blocked ×2 | codesign / spctl / stapler 通过 | Apple Developer 账号与证书（`APPLE_*` secrets）+ 正式 tag | 提供账号 / 证书并走 stable tag 发布 |
+| 已发现缺陷 | `automated.securityCriticalHigh` | review | 包含修复的候选其 CI `npm.json` high=0 | PR #57 合并 + 新候选 CI | 合并 PR #57；下一候选 CI 复核后更新为 pass |
+
+### 6.6 下一步仅需维护者完成的操作
+
+1. 评审并合并 PR #54（证据文档）、#55（portable ZIP）、#56（locale 测试）、#57（npm high）；合并由维护者操作。
+2. 在 Mac 上验收 rc.1：下载 dmg 并核对 SHA256（6.1），右键打开绕过 Gatekeeper（未签名），逐项反馈安装 / 启动 / 品牌 / English / zh-CN / Light / Dark。
+3. 安排一次 Windows GUI 会话完成 10 SSH 工作负载、3 轮资源回收与失败隔离；开始前告知助手拉起 WSL sshd fixture 与采样器。
+4. 决定升级 / 迁移 / updater 测试的隔离方式（隔离账户或 VM，或批准备份-还原协议并确认 vault 密钥处理），并认可基线来源（10-05 本地 0.1.17 包、旧 mXterm 数据或合成夹具）。
+5. 决定预发布通道的 updater 端点策略（或规划 stable release）。
+6. 准备 Windows 代码签名证书与 Apple Developer 账号（或明确 v1 前继续 BLOCKED）；提供 Linux 桌面环境与 mXterm 基线包（或确认 N/A）。
+
 
 ## 证据日志索引（`.trellis/.runtime/a15-rc-2026-10-11/`）
 
@@ -143,3 +208,4 @@
 - `logs/cargo-test.log`（Rust 424 项）、`logs/windows-install.log`、`logs/windows-launch.log`、`logs/portable-zip-listing.log`
 - `downloads/`（安装包、portable ZIP、SHA256SUMS.txt、latest.json、.sig、许可证文件）、`portable/`（解包产物）、`licenses/`（本地生成）、`release-policy.out`
 - `verify-minisign.mjs`（updater 签名验证工具，运行时辅助脚本）
+- 第二轮：`perf/wf08d-run1..5.json`（及 `.startup.jsonl`）、`dispatch-artifacts/windows/`（run 38135174315 artifact）、`security-evidence/`（rc.1 CI 审计产物）、`security-evidence-pr57/`（PR #57 CI 审计产物）、`downloads/`（新增 dmg、AppImage、deb、rpm 及 .sig）、`logs/37-evidence-recheck.log`
