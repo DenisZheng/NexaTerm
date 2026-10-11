@@ -24,3 +24,10 @@
 
 - 真实 GitHub Actions 构建尚未执行：需在分支上以 `workflow_dispatch` 运行 release.yml（不创建 Release）或等下一个 rc tag 核对实际 ZIP。
 - 不修改 Tauri 配置、版本、签名；不操作 PR #12、不合并 PR。
+
+## 真实构建核对（2026-10-11，workflow_dispatch run 38135174315）
+
+- 在 `fix/portable-zip-allowlist` @ `3ca0354` 上以 manual 模式触发 release.yml（不创建 Release）：policy、Build linux-x64、Build macos-arm64、Build windows-x64、Prepare release assets 全部 success，Publish 按设计 skipped。
+- artifact `nexaterm-windows-x64` 中的 `NexaTerm-portable-windows-x64.zip`：23,485,323 字节，9 个条目（`nexaterm.exe` 36,647,424、`nexaterm-mcp.exe` 10,104,832、`mxterm-mcp.exe` 10,126,848、`_up_/` 及其 `LICENSE` 与 `THIRD_PARTY_LICENSES.md`、顶层 `LICENSE`、`THIRD_PARTY_LICENSES.md`、`portable.marker`），路径均为正斜杠；SHA256 `7e496dc227f2b92f31aa54a65081df2d1933fff6f9a0d1b2312a03f9b076f1a7`。
+- 对照 rc.1 发布包（29,428,009 字节 / 2707 条目）：体积减少约 5.9 MB，条目从 2707 降到 9，pdb / .d / .fingerprint / nsis / .cargo-* 残留全部排除。
+- 同一 artifact 仍包含 `NexaTerm_0.1.17-rc.1_x64-setup-windows-x64.exe`（17,507,099 字节）、其 `.sig` 与许可证文件，安装包链路未受影响。
