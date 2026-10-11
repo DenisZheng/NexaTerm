@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { getLocale, setLocalePreference, type Locale } from "../../../shared/i18n";
 
 import { applyWorkspaceRestorePlanToHydration, buildWorkspaceShellHydration } from "./shellHydration";
 import { buildWorkspaceRestorePlan } from "./restorePlan";
@@ -25,6 +26,11 @@ const snapshot: WorkspaceSnapshotV1 = {
   sidebar: { collapsed: false, view: "files" },
   version: 1,
 };
+
+// 本文件断言英文文案：固定 locale，避免随宿主机系统语言（如 zh-CN）变化而失败。
+let previousLocale: Locale;
+beforeEach(() => { previousLocale = getLocale(); setLocalePreference("en"); });
+afterEach(() => { setLocalePreference(previousLocale); });
 
 describe("WF-07 workspace shell hydration", () => {
   it("restores logical placeholders and split bindings without runtime session ids", () => {

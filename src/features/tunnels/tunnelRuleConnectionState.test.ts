@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { getLocale, setLocalePreference, type Locale } from "../../shared/i18n";
 
 import type { TunnelRule } from "./tunnelTypes";
 import { resolveTunnelRuleConnection } from "./tunnelRuleConnectionState";
@@ -16,6 +17,11 @@ const rule: TunnelRule = {
   created_at: "2026-10-03",
   updated_at: "2026-10-03",
 };
+
+// 本文件断言英文文案：固定 locale，避免随宿主机系统语言（如 zh-CN）变化而失败。
+let previousLocale: Locale;
+beforeEach(() => { previousLocale = getLocale(); setLocalePreference("en"); });
+afterEach(() => { setLocalePreference(previousLocale); });
 
 describe("WF-06A tunnel rule connection association", () => {
   it("resolves the saved SSH connection used by the rule", () => {

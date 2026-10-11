@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { getLocale, setLocalePreference, type Locale } from "../../../shared/i18n";
 
 import { buildWorkspaceRestorePlan } from "./restorePlan";
 import { applyWorkspaceRestorePlanToHydration, buildWorkspaceShellHydration } from "./shellHydration";
@@ -73,6 +74,11 @@ function hydrate(autoReconnect: boolean) {
   );
   return { hydration, plan };
 }
+
+// 本文件断言英文文案：固定 locale，避免随宿主机系统语言（如 zh-CN）变化而失败。
+let previousLocale: Locale;
+beforeEach(() => { previousLocale = getLocale(); setLocalePreference("en"); });
+afterEach(() => { setLocalePreference(previousLocale); });
 
 describe("WF-07 A14 real restart acceptance", () => {
   it("restores a multi-session split workspace, isolates one deleted profile, and forces MultiExec off", () => {
