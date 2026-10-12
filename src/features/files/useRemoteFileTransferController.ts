@@ -27,12 +27,17 @@ export function useRemoteFileTransferController({
   const transferQueueRef = useRef<string[]>([]);
   const runningTransferIdsRef = useRef<Set<string>>(new Set());
   const transferTasksRef = useRef<Map<string, RemoteFileTransferTask>>(new Map());
+  const mountedRef = useRef(true);
 
   useEffect(() => {
     onTaskErrorRef.current = onTaskError;
   }, [onTaskError]);
 
   const drainTransferQueue = useCallback(() => {
+    if (!mountedRef.current) {
+      return;
+    }
+
     const maxConcurrentTransfers = concurrencyRef.current;
 
     while (
@@ -46,7 +51,7 @@ export function useRemoteFileTransferController({
 
       const task = transferTasksRef.current.get(transferId);
       const item = getRemoteFileTransfer(transferId);
-      if (!task || (item && item.status !== "queued")) {
+      if (!task || !item || item.status !== "queued") {
         transferTasksRef.current.delete(transferId);
         continue;
       }
@@ -57,14 +62,19 @@ export function useRemoteFileTransferController({
         status: "running",
       });
 
-      void task()
+      void Promise.resolve()
+        .then(() => task())
         .catch((error) => {
-          onTaskErrorRef.current(transferId, error);
+          if (mountedRef.current) {
+            onTaskErrorRef.current(transferId, error);
+          }
         })
         .finally(() => {
           runningTransferIdsRef.current.delete(transferId);
           transferTasksRef.current.delete(transferId);
-          drainTransferQueue();
+          if (mountedRef.current) {
+            drainTransferQueue();
+          }
         });
     }
   }, []);
@@ -73,6 +83,30 @@ export function useRemoteFileTransferController({
     concurrencyRef.current = concurrentTransfers;
     drainTransferQueue();
   }, [concurrentTransfers, drainTransferQueue]);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      const ownedTransferIds = new Set([
+        ...transferQueueRef.current,
+        ...runningTransferIdsRef.current,
+      ]);
+      transferQueueRef.current = [];
+      transferTasksRef.current.clear();
+
+      for (const transferId of ownedTransferIds) {
+        const item = getRemoteFileTransfer(transferId);
+        if (!item || (item.status !== "queued" && item.status !== "running")) {
+          continue;
+        }
+        markTransferCanceled(transferId);
+        if (item.status === "running" && hasTauriRuntime()) {
+          void remoteFileCancelTransfer(transferId).catch(() => undefined);
+        }
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!hasTauriRuntime()) {
@@ -106,6 +140,13 @@ export function useRemoteFileTransferController({
   }, []);
 
   const enqueueRemoteFileTransfer = useCallback((transferId: string, task: RemoteFileTransferTask) => {
+    if (!mountedRef.current || transferTasksRef.current.has(transferId) || runningTransferIdsRef.current.has(transferId)) {
+      return;
+    }
+    const item = getRemoteFileTransfer(transferId);
+    if (!item || item.status !== "queued") {
+      return;
+    }
     transferTasksRef.current.set(transferId, task);
     if (
       !transferQueueRef.current.includes(transferId) &&
@@ -151,7 +192,7 @@ export function useRemoteFileTransferController({
 
   const isTransferNoLongerActive = useCallback((transferId: string) => {
     const item = getRemoteFileTransfer(transferId);
-    return Boolean(item && (item.status === "canceled" || item.status === "error"));
+    return !item || item.status === "canceled" || item.status === "error";
   }, []);
 
   return {
