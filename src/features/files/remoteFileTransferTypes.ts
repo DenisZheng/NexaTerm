@@ -51,6 +51,8 @@ export type RemoteFileTransferRetry =
 export interface RemoteFileTransferItem {
   id: string;
   connectionId: string | null;
+  /** 逻辑实例身份，内存专用；旧任务无此字段时沿用连接级清理。 */
+  ownerInstanceId?: string | null;
   createdAt: number;
   direction: TransferDirection;
   error?: string | null;

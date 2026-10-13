@@ -165,7 +165,7 @@ export function planClose(
   const filesByConnection = new Set(context.remoteFileTabs.map((tab) => tab.connectionId));
 
   const connectionIds: string[] = [];
-  // 传输按连接归属，关闭最后一个实例时才释放；是否打开编辑器不影响传输确认。
+  // 旧无实例归属的传输在最后一个实例关闭时释放；新任务在下方独立按实例规划。
   const releasedConnectionIds = new Set<string>();
   for (const tab of closingSsh) {
     if (releasedConnectionIds.has(tab.connectionId)) {
@@ -192,6 +192,7 @@ export function planClose(
     context.remoteFileTransfers ?? [],
     releasedConnectionIds,
     transferClosePolicy,
+    new Set(closingSsh.map((tab) => `ssh:${tab.id}`)),
   );
 
   return {

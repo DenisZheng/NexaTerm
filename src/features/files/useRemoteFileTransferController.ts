@@ -1,5 +1,5 @@
 import { t } from "../../shared/i18n";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { remoteFileCancelTransfer } from "../../shared/tauri/commands";
 import { listenRemoteFileTransferProgress } from "../../shared/tauri/events";
 import { hasTauriRuntime } from "../../shared/tauri/runtime";
@@ -28,13 +28,15 @@ export function useRemoteFileTransferController({
   const runningTransferIdsRef = useRef<Set<string>>(new Set());
   const transferTasksRef = useRef<Map<string, RemoteFileTransferTask>>(new Map());
   const mountedRef = useRef(true);
+  const pausedRef = useRef(false);
+  const [queuePaused, setQueuePaused] = useState(false);
 
   useEffect(() => {
     onTaskErrorRef.current = onTaskError;
   }, [onTaskError]);
 
   const drainTransferQueue = useCallback(() => {
-    if (!mountedRef.current) {
+    if (!mountedRef.current || pausedRef.current) {
       return;
     }
 
@@ -200,10 +202,24 @@ export function useRemoteFileTransferController({
     return !item || item.status === "canceled" || item.status === "error";
   }, []);
 
+  const pauseQueue = useCallback(() => {
+    pausedRef.current = true;
+    setQueuePaused(true);
+  }, []);
+
+  const resumeQueue = useCallback(() => {
+    pausedRef.current = false;
+    setQueuePaused(false);
+    drainTransferQueue();
+  }, [drainTransferQueue]);
+
   return {
     enqueueRemoteFileTransfer,
     isTransferNoLongerActive,
     removeTransfer,
     requestCancelTransfer,
+    queuePaused,
+    pauseQueue,
+    resumeQueue,
   };
 }

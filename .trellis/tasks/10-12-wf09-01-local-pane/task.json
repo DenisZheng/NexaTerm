@@ -3,7 +3,7 @@
   "name": "wf09-01-local-pane",
   "title": "WF-09-01B 本地目录面板与双栏布局",
   "description": "",
-  "status": "in_progress",
+  "status": "review",
   "dev_type": null,
   "scope": null,
   "package": null,
@@ -16,11 +16,11 @@
   "base_branch": "main",
   "worktree_path": null,
   "commit": null,
-  "pr_url": null,
+  "pr_url": "https://github.com/DenisZheng/NexaTerm/pull/58",
   "subtasks": [],
   "children": [],
   "parent": "09-23-nexaterm-workflow-mainline",
   "relatedFiles": [],
-  "notes": "",
+  "notes": "代码和本地自动化就绪；Draft PR #58，真实桌面/SFTP 未 sign-off。集中清单见 10-13-wf09-01-closeout/validation/manual-acceptance.md。",
   "meta": {}
 }

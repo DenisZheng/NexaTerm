@@ -47,7 +47,7 @@ import { Tooltip } from "../../shared/ui/Tooltip";
 import { useI18n, type Translate } from "../../shared/i18n";
 import { RemoteFileIcon } from "./RemoteFileIcon";
 import { RemoteFileInfoTooltip, type RemoteFileInfoState } from "./RemoteFileInfoTooltip";
-import { LOCAL_FILE_DROP_TYPE } from "./LocalFilePanel";
+import { LOCAL_FILE_DROP_TYPE, REMOTE_FILE_DROP_TYPE } from "./remoteFileDrop";
 import {
   isRemotePathStrictDescendant,
   normalizeRemotePath,
@@ -108,6 +108,7 @@ interface RemoteFilePanelProps {
   onUploadFile?: (parentPath: string) => void;
   onUploadItems?: (parentPath: string, items: RemoteFileUploadItem[]) => void;
   onUploadLocalPaths?: (parentPath: string, paths: string[]) => void;
+  transferOwnerInstanceId?: string | null;
   stateKey?: string;
   terminalPath?: string | null;
   toolsPanel?: ReactNode;
@@ -234,6 +235,7 @@ function RemoteFilePanelComponent({
   onUploadFile,
   onUploadItems,
   onUploadLocalPaths,
+  transferOwnerInstanceId,
   stateKey,
   terminalPath,
   toolsPanel,
@@ -1361,7 +1363,7 @@ function RemoteFilePanelComponent({
   function handleRemoteDragStart(event: DragEvent<HTMLElement>, entry: RemoteFileEntry) {
     event.dataTransfer.effectAllowed = "copy";
     event.dataTransfer.setData("text/plain", entry.path);
-    event.dataTransfer.setData("application/x-mxterm-remote-file", JSON.stringify(entry));
+    event.dataTransfer.setData(REMOTE_FILE_DROP_TYPE, JSON.stringify({ entry, connectionId, ownerInstanceId: transferOwnerInstanceId }));
   }
 
   function handleDropUpload(event: DragEvent<HTMLElement>, path: string) {
@@ -1818,7 +1820,7 @@ function hasLocalFileDrop(dataTransfer: DataTransfer) {
   if (types.includes(LOCAL_FILE_DROP_TYPE)) {
     return true;
   }
-  if (types.includes("application/x-mxterm-remote-file")) {
+  if (types.includes(REMOTE_FILE_DROP_TYPE)) {
     return false;
   }
   if (types.includes("files")) {

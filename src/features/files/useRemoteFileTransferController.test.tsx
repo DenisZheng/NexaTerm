@@ -39,6 +39,40 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.clearAllMocks(); remoteFileTransferStore.setState({ items: [] }); });
 
 describe("WF-09-01A transfer scheduling", () => {
+  it("pauses new work and resumes the same FIFO queue within the concurrency limit", async () => {
+    const hook = controller();
+    act(() => hook.result.current.pauseQueue());
+    const first = deferred(), order: string[] = [];
+    hook.result.current.enqueueRemoteFileTransfer(transfer(), () => { order.push("first"); return first.promise; });
+    hook.result.current.enqueueRemoteFileTransfer(transfer(), async () => { order.push("second"); });
+    await flush();
+    expect(hook.result.current.queuePaused).toBe(true);
+    expect(order).toEqual([]);
+    act(() => hook.result.current.resumeQueue());
+    await flush();
+    expect(order).toEqual(["first"]);
+    first.resolve(); await flush();
+    expect(order).toEqual(["first", "second"]);
+  });
+
+  it("lets in-flight work settle while paused and permits canceling queued work", async () => {
+    const hook = controller();
+    const first = deferred(), id = transfer(), nextId = transfer();
+    hook.result.current.enqueueRemoteFileTransfer(id, () => first.promise);
+    await flush();
+    act(() => hook.result.current.pauseQueue());
+    const next = vi.fn(async () => {});
+    hook.result.current.enqueueRemoteFileTransfer(nextId, next);
+    first.resolve(); await flush();
+    expect(mocks.cancel).not.toHaveBeenCalled();
+    expect(next).not.toHaveBeenCalled();
+    hook.result.current.requestCancelTransfer(nextId);
+    act(() => hook.result.current.resumeQueue());
+    await flush();
+    expect(next).not.toHaveBeenCalled();
+    expect(getRemoteFileTransfer(nextId)?.status).toBe("canceled");
+  });
+
   it("bounds concurrency and preserves FIFO when the limit is reduced", async () => {
     const hook = controller(2);
     const jobs = Array.from({ length: 4 }, () => deferred());
