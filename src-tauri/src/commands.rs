@@ -1,3 +1,5 @@
+pub(crate) mod remote_file_save_as;
+
 use serde::{Deserialize, Serialize};
 use std::ffi::OsString;
 use std::fs::{self, OpenOptions};

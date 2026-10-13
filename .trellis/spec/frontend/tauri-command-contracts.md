@@ -462,6 +462,7 @@ onCurrentDirectoryChange?.(tabId, decodedPath);
 ```ts
 remoteFileRead(connectionId: string, path: string): Promise<RemoteFileReadResult>
 remoteFileWrite(input: RemoteFileWriteInput): Promise<RemoteFileWriteResult>
+remoteFileSaveAs(input: RemoteFileSaveAsInput): Promise<RemoteFileWriteResult>
 remoteFileCreateFile(connectionId: string, path: string): Promise<RemoteFileMetadata>
 remoteFileCreateDirectory(connectionId: string, path: string): Promise<void>
 remoteFileRename(input: RemoteFileRenameInput): Promise<void>
@@ -2441,3 +2442,7 @@ const ConnectionTransferDialog = lazy(loadConnectionTransferDialog);
 ```
 
 The visible command opens the real, lazy transfer workflow.
+
+## Scenario: WF-09-02B Save As
+`RemoteFileSaveAsInput = { connectionId: string; content: string; path: string }`.
+The typed wrapper invokes remote_file_save_as with snake-case connection_id and reuses RemoteFileWriteResult. Capture source connection/path/content and check the current source operation token before all UI completion/error effects. No credentials or overwrite flag are supplied. Backend create-only errors stay visible in the naming dialog; original editor state is retained for retry. Metadata failure explicitly reports that the destination was created. See frontend/remote-file-editor.md and backend/tauri-command-contracts.md for lifecycle/publication details.

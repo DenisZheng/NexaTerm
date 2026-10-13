@@ -88,6 +88,7 @@ import type {
   RemoteFileDownloadTargetCheckResult,
   RemoteFileEntry,
   RemoteFileEntryMetadata,
+  RemoteFileSaveAsInput,
   RemoteFileArchiveUploadInput,
   RemoteFileArchiveUploadLocalInput,
   RemoteFileArchiveUploadResult,
@@ -1184,6 +1185,12 @@ export function remoteFileWrite({
       overwrite,
       path,
     },
+  });
+}
+
+export function remoteFileSaveAs({ connectionId, content, path }: RemoteFileSaveAsInput) {
+  return invoke<RemoteFileWriteResult>("remote_file_save_as", {
+    request: { connection_id: connectionId, content, path },
   });
 }
 

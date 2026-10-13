@@ -240,6 +240,7 @@ const WORKSPACE_IDLE_PREWARM_BATCHES: Array<{
   },
 ];
 import type { RemoteFileEditorTab } from "../editor/remoteFileEditorTypes";
+import { canSaveRemoteFileEditor, changeRemoteFileEditorContent, completeRemoteFileEditorRead, completeRemoteFileEditorSave, previewRemoteFileEditorSave, remoteFileTabId } from "../editor/remoteFileEditorState";
 import { LocalFilePanel } from "../files/LocalFilePanel";
 import type { RemoteFileDrop } from "../files/remoteFileDrop";
 import { RemoteFileIcon } from "../files/RemoteFileIcon";
@@ -271,6 +272,7 @@ import {
 } from "../files/remoteFileMetadataPresentation";
 import type { AiContextBlock } from "../ai/aiTypes";
 import {
+  joinRemotePath,
   isRemotePathStrictDescendant,
   normalizeRemotePath,
   remotePathParent,
@@ -506,6 +508,9 @@ import type {
   WorkbenchTabKind,
   WorkspaceMode,
 } from "../workspace/sessionTabs/types";
+import { TextInputDialog } from "../../shared/ui/TextInputDialog";
+import { useRemoteFileSaveAs } from "../editor/useRemoteFileSaveAs";
+import { isValidRemoteBaseName, type RemoteFileTextAction } from "../files/remoteFileTextActions";
 import { useSessionTabsController } from "../workspace/sessionTabs/useSessionTabsController";
 import type { CloseSnapshot, SessionRef } from "../workspace/sessionTabs/closeDecision";
 import { applyWorkspaceRestorePlanToHydration, buildWorkspaceShellHydration } from "../workspace/restore/shellHydration";
@@ -632,10 +637,6 @@ interface RemoteFileLocateRequest {
   id: number;
   path: string;
 }
-type RemoteFileTextAction =
-  | { action: "create-directory"; connectionId: string; parentPath: string }
-  | { action: "create-file"; connectionId: string; parentPath: string }
-  | { action: "rename"; connectionId: string; entry: RemoteFileEntry };
 interface RemoteFileDeleteTarget {
   connectionId: string;
   entries: RemoteFileEntry[];
@@ -879,6 +880,8 @@ export function WorkspaceShell() {
     order: workspaceItemOrder,
     rdpSessions,
     remoteFileTabs,
+    remoteFileTabsRef,
+    remoteFileEditorOperations,
     setActiveRemoteFileTabId,
     setLocalTerminalTabs,
     setRdpSessions,
@@ -1058,7 +1061,7 @@ export function WorkspaceShell() {
   const closeRequestController = useCloseRequest({
     execute: executeClosePlan,
     plan: (request) =>
-      planClose(request, buildCloseContext(localTerminalTabsRef.current, rdpSessionsRef.current, remoteFileTabs, terminalSplitPanes, terminalTabsRef.current, vncSessionsRef.current, getRemoteFileTransfers())),
+      planClose(request, buildCloseContext(localTerminalTabsRef.current, rdpSessionsRef.current, remoteFileTabsRef.current, terminalSplitPanes, terminalTabsRef.current, vncSessionsRef.current, getRemoteFileTransfers())),
   });
   const [pendingRemoteFileConflictId, setPendingRemoteFileConflictId] = useState<string | null>(null);
   const [remoteFileDeleteTarget, setRemoteFileDeleteTarget] =
@@ -1066,6 +1069,12 @@ export function WorkspaceShell() {
   const [remoteFileTextAction, setRemoteFileTextAction] = useState<RemoteFileTextAction | null>(null);
   const [remoteFileTextValue, setRemoteFileTextValue] = useState("");
   const [remoteFileTextError, setRemoteFileTextError] = useState<string | null>(null);
+  const remoteFileSaveAsController = useRemoteFileSaveAs({
+    action: remoteFileTextAction, tabs: remoteFileTabs, tabsRef: remoteFileTabsRef, operations: remoteFileEditorOperations,
+    setTabs: setRemoteFileTabs, setAction: setRemoteFileTextAction, setValue: setRemoteFileTextValue, setError: setRemoteFileTextError,
+    formatError, refresh: triggerRemoteFileRefresh,
+    onRetarget: (connectionId, oldId, newId) => dispatchTabs({ type: "tabs/retargetFile", connectionId, oldId, newId }),
+  });
   const [rightTool, setRightTool] = useState<RemoteFileTool>("commands");
   const [aiAssistantPanelLoaded, setAiAssistantPanelLoaded] = useState(false);
   const [settingsViewLoaded, setSettingsViewLoaded] = useState(false);
@@ -2549,10 +2558,6 @@ export function WorkspaceShell() {
     });
   }, []);
 
-  function remoteFileTabId(connectionId: string, path: string) {
-    return `file:${connectionId}:${normalizeRemotePath(path)}`;
-  }
-
   function updateRemoteFileTab(
     tabId: string,
     updater: (tab: RemoteFileEditorTab) => RemoteFileEditorTab,
@@ -2887,13 +2892,14 @@ export function WorkspaceShell() {
   }
 
   function openRemoteFile(entry: RemoteFileEntry) {
-    if (!activeConnection || entry.type === "directory") {
+    const connection = captureTransferOptions().connection;
+    if (!connection || entry.type === "directory") {
       return;
     }
 
     const path = normalizeRemotePath(entry.path);
-    const existingTab = remoteFileTabs.find(
-      (tab) => tab.connectionId === activeConnection.id && tab.path === path,
+    const existingTab = remoteFileTabsRef.current.find(
+      (tab) => tab.connectionId === connection.id && tab.path === path,
     );
     if (existingTab) {
       activateRemoteFileTab(existingTab);
@@ -2901,12 +2907,12 @@ export function WorkspaceShell() {
     }
 
     const tab: RemoteFileEditorTab = {
-      connectionId: activeConnection.id,
-      connectionName: activeConnection.name,
+      connectionId: connection.id,
+      connectionName: connection.name,
       content: "",
       dirty: false,
       error: null,
-      id: remoteFileTabId(activeConnection.id, path),
+      id: remoteFileTabId(connection.id, path),
       metadata: null,
       name: entry.name,
       path,
@@ -2918,11 +2924,11 @@ export function WorkspaceShell() {
     setRemoteFileTabs((tabs) => [...tabs, tab]);
     activateRemoteFileTab(tab);
 
-    void loadRemoteFileTab(activeConnection, path, tab.id);
+    void loadRemoteFileTab(connection, path, tab.id);
   }
 
   function locateRemoteFileFolder(tabId: string) {
-    const tab = remoteFileTabs.find((item) => item.id === tabId);
+    const tab = remoteFileTabsRef.current.find((item) => item.id === tabId);
     if (!tab) {
       return;
     }
@@ -2934,49 +2940,44 @@ export function WorkspaceShell() {
   }
 
   async function loadRemoteFileTab(connection: ConnectionProfile, path: string, tabId: string) {
+    const operation = remoteFileEditorOperations.begin(tabId, "read");
+    if (!operation) return;
+    const initialContent = remoteFileTabsRef.current.find((tab) => tab.id === tabId)?.content ?? "";
     try {
       const result = hasTauriRuntime()
         ? await remoteFileRead(connection.id, path)
         : previewRemoteFileRead(connection, path);
-      updateRemoteFileTab(tabId, (tab) => ({
-        ...tab,
-        content: result.content,
-        dirty: false,
-        error: null,
-        metadata: result.metadata,
-        name: result.name,
-        path: result.path,
-        savedContent: result.content,
-        saveState: "ready",
-        statusMessage: tr("workspace.editor.ready"),
-      }));
+      if (!remoteFileEditorOperations.isCurrent(operation)) return;
+      updateRemoteFileTab(tabId, (tab) => completeRemoteFileEditorRead(tab, initialContent, result, tr("workspace.editor.ready"), tr("workspace.editor.modified")));
     } catch (error) {
+      if (!remoteFileEditorOperations.isCurrent(operation)) return;
       updateRemoteFileTab(tabId, (tab) => ({
         ...tab,
-        content: "",
-        dirty: false,
+        metadata: null,
         error: formatError(error),
         saveState: "error",
         statusMessage: formatError(error),
       }));
+    } finally {
+      remoteFileEditorOperations.finish(operation);
     }
   }
 
   function handleRemoteFileChange(tabId: string, content: string) {
-    updateRemoteFileTab(tabId, (tab) => ({
-      ...tab,
-      content,
-      dirty: content !== tab.savedContent,
-      saveState: content === tab.savedContent ? "ready" : "dirty",
-      statusMessage: content === tab.savedContent ? tr("workspace.editor.ready") : tr("workspace.editor.modified"),
-    }));
+    updateRemoteFileTab(tabId, (tab) => changeRemoteFileEditorContent(tab, content, tr("workspace.editor.ready"), tr("workspace.editor.modified")));
   }
 
   function saveRemoteFile(tabId: string, overwrite = false) {
-    const tab = remoteFileTabs.find((item) => item.id === tabId);
-    if (!tab || !tab.metadata || tab.saveState === "saving") {
+    const tab = remoteFileTabsRef.current.find((item) => item.id === tabId);
+    if (!canSaveRemoteFileEditor(tab, overwrite)) return;
+
+    if (tab.saveState === "conflict" && !overwrite) {
+      setPendingRemoteFileConflictId(tabId);
       return;
     }
+    const operation = remoteFileEditorOperations.begin(tabId, "save");
+    if (!operation) return;
+    const submittedContent = tab.content;
 
     updateRemoteFileTab(tabId, (item) => ({
       ...item,
@@ -2985,36 +2986,26 @@ export function WorkspaceShell() {
       statusMessage: tr("workspace.editor.saving"),
     }));
 
-    void (hasTauriRuntime()
+    void Promise.resolve().then(() => {
+      if (!remoteFileEditorOperations.isCurrent(operation)) return null;
+      return hasTauriRuntime()
       ? remoteFileWrite({
           connectionId: tab.connectionId,
-          content: tab.content,
+          content: submittedContent,
           expectedMtime: tab.metadata.mtime,
           expectedSize: tab.metadata.size,
           overwrite,
           path: tab.path,
         })
-      : Promise.resolve({
-          conflict: false,
-          metadata: {
-            ...tab.metadata,
-            mtime: Date.now(),
-            size: new TextEncoder().encode(tab.content).length,
-          },
-        }))
+      : previewRemoteFileEditorSave(tab.metadata, submittedContent);
+    })
       .then((result) => {
-        updateRemoteFileTab(tabId, (item) => ({
-          ...item,
-          dirty: false,
-          error: null,
-          metadata: result.metadata,
-          savedContent: item.content,
-          saveState: "saved",
-          statusMessage: tr("workspace.editor.saved"),
-        }));
+        if (!result || !remoteFileEditorOperations.isCurrent(operation)) return;
+        updateRemoteFileTab(tabId, (item) => completeRemoteFileEditorSave(item, submittedContent, result.metadata, tr("workspace.editor.saved"), tr("workspace.editor.modified")));
         triggerRemoteFileRefresh(tab.connectionId, remotePathParent(tab.path));
       })
       .catch((error: unknown) => {
+        if (!remoteFileEditorOperations.isCurrent(operation)) return;
         if (isRemoteFileConflict(error)) {
           updateRemoteFileTab(tabId, (item) => ({
             ...item,
@@ -3032,11 +3023,13 @@ export function WorkspaceShell() {
           saveState: "error",
           statusMessage: formatError(error),
         }));
-      });
+      })
+      .finally(() => remoteFileEditorOperations.finish(operation));
   }
 
   function reloadRemoteFile(tabId: string) {
-    const tab = remoteFileTabs.find((item) => item.id === tabId);
+    if (remoteFileEditorOperations.has(tabId, "save")) return;
+    const tab = remoteFileTabsRef.current.find((item) => item.id === tabId);
     const connection = tab ? connectionById.get(tab.connectionId) : null;
     if (!tab || !connection) {
       return;
@@ -3052,6 +3045,7 @@ export function WorkspaceShell() {
   }
 
   function discardRemoteFileChanges(tabId: string) {
+    if (remoteFileEditorOperations.has(tabId)) return;
     updateRemoteFileTab(tabId, (tab) => ({
       ...tab,
       content: tab.savedContent,
@@ -3063,11 +3057,11 @@ export function WorkspaceShell() {
   }
 
   function clearRemoteFileSessionStateForConnections(closingConnectionIds: Set<string>) {
-    const nextRemoteFileTabs = remoteFileTabs.filter(
+    const nextRemoteFileTabs = remoteFileTabsRef.current.filter(
       (tab) => !closingConnectionIds.has(tab.connectionId),
     );
 
-    if (nextRemoteFileTabs.length !== remoteFileTabs.length) {
+    if (nextRemoteFileTabs.length !== remoteFileTabsRef.current.length) {
       setRemoteFileTabs(nextRemoteFileTabs);
     }
     if (
@@ -3105,7 +3099,7 @@ export function WorkspaceShell() {
   }
 
   function closeRemoteFileTab(tabId: string) {
-    const tab = remoteFileTabs.find((item) => item.id === tabId);
+    const tab = remoteFileTabsRef.current.find((item) => item.id === tabId);
     if (tab?.dirty) {
       setPendingRemoteFileCloseId(tabId);
       return;
@@ -3115,8 +3109,8 @@ export function WorkspaceShell() {
 
   function closeRemoteFileTabs(tabIds: string[]) {
     const closingIds = new Set(tabIds);
-    const dirtyTab = remoteFileTabs.find((tab) => closingIds.has(tab.id) && tab.dirty);
-    const cleanTabIds = remoteFileTabs
+    const dirtyTab = remoteFileTabsRef.current.find((tab) => closingIds.has(tab.id) && tab.dirty);
+    const cleanTabIds = remoteFileTabsRef.current
       .filter((tab) => closingIds.has(tab.id) && !tab.dirty)
       .map((tab) => tab.id);
 
@@ -3135,9 +3129,9 @@ export function WorkspaceShell() {
   function closeRemoteFileTabsNow(tabIds: string[]) {
     const closingIds = new Set(tabIds);
     const closingActiveTab = activeRemoteFileTabId
-      ? remoteFileTabs.find((tab) => tab.id === activeRemoteFileTabId && closingIds.has(tab.id)) || null
+      ? remoteFileTabsRef.current.find((tab) => tab.id === activeRemoteFileTabId && closingIds.has(tab.id)) || null
       : null;
-    const nextTabs = remoteFileTabs.filter((tab) => !closingIds.has(tab.id));
+    const nextTabs = remoteFileTabsRef.current.filter((tab) => !closingIds.has(tab.id));
 
     setRemoteFileTabs(nextTabs);
     if (closingActiveTab) {
@@ -3146,23 +3140,23 @@ export function WorkspaceShell() {
   }
 
   function closeOtherRemoteFileTabs(tabId: string) {
-    const tab = remoteFileTabs.find((item) => item.id === tabId);
+    const tab = remoteFileTabsRef.current.find((item) => item.id === tabId);
     if (!tab) {
       return;
     }
     closeRemoteFileTabs(
-      remoteFileTabs
+      remoteFileTabsRef.current
         .filter((item) => item.connectionId === tab.connectionId && item.id !== tabId)
         .map((item) => item.id),
     );
   }
 
   function closeRemoteFileTabsToRight(tabId: string) {
-    const tab = remoteFileTabs.find((item) => item.id === tabId);
+    const tab = remoteFileTabsRef.current.find((item) => item.id === tabId);
     if (!tab) {
       return;
     }
-    const sameConnectionTabs = remoteFileTabs.filter((item) => item.connectionId === tab.connectionId);
+    const sameConnectionTabs = remoteFileTabsRef.current.filter((item) => item.connectionId === tab.connectionId);
     const index = sameConnectionTabs.findIndex((item) => item.id === tabId);
     if (index < 0) {
       return;
@@ -3172,7 +3166,7 @@ export function WorkspaceShell() {
 
   function closeAllRemoteFileTabsForConnection(connectionId: string) {
     closeRemoteFileTabs(
-      remoteFileTabs
+      remoteFileTabsRef.current
         .filter((tab) => tab.connectionId === connectionId)
         .map((tab) => tab.id),
     );
@@ -3180,7 +3174,7 @@ export function WorkspaceShell() {
 
   function closeSavedRemoteFileTabsForConnection(connectionId: string) {
     closeRemoteFileTabsNow(
-      remoteFileTabs
+      remoteFileTabsRef.current
         .filter((tab) => tab.connectionId === connectionId && isClosableSavedRemoteFileTab(tab))
         .map((tab) => tab.id),
     );
@@ -3246,6 +3240,11 @@ export function WorkspaceShell() {
     const value = remoteFileTextValue.trim();
     if (!isValidRemoteBaseName(value)) {
       setRemoteFileTextError(remoteFileNameValidationMessage(value));
+      return;
+    }
+
+    if (action.action === "save-as") {
+      await remoteFileSaveAsController.submit(action, value);
       return;
     }
 
@@ -4372,14 +4371,14 @@ export function WorkspaceShell() {
   }
 
   /**
-   * WF-00B：关闭/删除决策的集合快照。默认从四个 *Ref 与渲染态 remoteFileTabs 组装；
+   * WF-00B：关闭/删除决策的集合快照。默认从五个当前集合 ref 组装；
    * 调用方把本次已算出的"移除后"列表通过 overrides 传入。
    */
   function snapshotFromRefs(overrides: Partial<CloseSnapshot> = {}): CloseSnapshot {
     return {
       localTerminalTabs: localTerminalTabsRef.current.map((tab) => ({ id: tab.id })),
       rdpSessions: rdpSessionsRef.current.map(sessionRef),
-      remoteFileTabs: remoteFileTabs.map(sessionRef),
+      remoteFileTabs: remoteFileTabsRef.current.map(sessionRef),
       terminalTabs: terminalTabsRef.current.map(sessionRef),
       vncSessions: vncSessionsRef.current.map(sessionRef),
       ...overrides,
@@ -7259,7 +7258,7 @@ export function WorkspaceShell() {
     setTemporaryConnections((items) => items.filter((item) => !finalClosedConnectionIds.has(item.id)));
     terminalTabsRef.current = nextTabs;
     setTerminalTabs(nextTabs);
-    // 文件列表按原实现取渲染态 remoteFileTabs（closeConnectionSessions / deleteConnection 用清理后的列表）。
+    // 文件列表取 controller 当前 ref，包含同事件内的编辑/关闭更新。
     dispatchTabs({
       type: "tabs/closeTerminals",
       closingTabs: closingTabs.map(sessionRef),
@@ -8506,6 +8505,7 @@ export function WorkspaceShell() {
                           onLocateFolder={locateRemoteFileFolder}
                           onReload={reloadRemoteFile}
                           onSave={saveRemoteFile}
+                          onSaveAs={remoteFileSaveAsController.request}
                         />
                       ))}
                     </Suspense>
@@ -8738,6 +8738,7 @@ export function WorkspaceShell() {
                           onLocateFolder={locateRemoteFileFolder}
                           onReload={reloadRemoteFile}
                           onSave={saveRemoteFile}
+                          onSaveAs={remoteFileSaveAsController.request}
                         />
                       ))}
                     </Suspense>
@@ -9829,66 +9830,19 @@ export function WorkspaceShell() {
         </Dialog.Portal>
       </Dialog.Root>
 
-      <Dialog.Root
+      <TextInputDialog
         open={Boolean(remoteFileTextAction)}
-        onOpenChange={(open) => {
-          if (!open) {
-            setRemoteFileTextAction(null);
-            setRemoteFileTextValue("");
-            setRemoteFileTextError(null);
-          }
-        }}
-      >
-        <Dialog.Portal>
-          <Dialog.Overlay className="dialog-backdrop" />
-          <Dialog.Content
-            asChild
-            onInteractOutside={(event) => event.preventDefault()}
-            onPointerDownOutside={(event) => event.preventDefault()}
-          >
-            <form className="remote-file-text-dialog" onSubmit={submitRemoteFileTextAction}>
-              <header className="dialog-head">
-                <div className="dialog-title-group">
-                  <Dialog.Title asChild>
-                    <strong>{remoteFileTextAction ? remoteFileActionTitle(remoteFileTextAction) : tr("workspace.file.dialogFallback")}</strong>
-                  </Dialog.Title>
-                  <Dialog.Description className="dialog-subtitle">
-                    {remoteFileTextAction ? remoteFileActionDescription(remoteFileTextAction) : ""}
-                  </Dialog.Description>
-                </div>
-                <Dialog.Close asChild>
-                  <button className="icon-button dialog-close-button" type="button" aria-label={tr("workspace.file.close")}>
-                    <X className="ui-icon" aria-hidden="true" />
-                  </button>
-                </Dialog.Close>
-              </header>
-              <div className="dialog-body">
-                <label className="remote-file-name-field">
-                  <span>{tr("workspace.file.name")}</span>
-                  <input
-                    autoFocus
-                    spellCheck={false}
-                    value={remoteFileTextValue}
-                    onChange={(event) => setRemoteFileTextValue(event.target.value)}
-                  />
-                </label>
-                {remoteFileTextError ? (
-                  <p className="remote-file-dialog-error">{remoteFileTextError}</p>
-                ) : null}
-              </div>
-              <footer className="dialog-actions remote-file-text-actions">
-                <span />
-                <Dialog.Close asChild>
-                  <button type="button">{tr("workspace.file.cancel")}</button>
-                </Dialog.Close>
-                <button className="primary-button" type="submit">
-                  {tr("workspace.file.confirm")}
-                </button>
-              </footer>
-            </form>
-          </Dialog.Content>
-        </Dialog.Portal>
-      </Dialog.Root>
+        title={remoteFileTextAction ? remoteFileActionTitle(remoteFileTextAction) : tr("workspace.file.dialogFallback")}
+        description={remoteFileTextAction ? remoteFileActionDescription(remoteFileTextAction) : ""}
+        label={tr("workspace.file.name")}
+        value={remoteFileTextValue}
+        error={remoteFileTextError}
+        busy={remoteFileSaveAsController.busy}
+        busyLabel={tr("workspace.editor.saving")}
+        onCancel={remoteFileSaveAsController.cancel}
+        onChange={setRemoteFileTextValue}
+        onSubmit={submitRemoteFileTextAction}
+      />
 
       <Dialog.Root
         open={Boolean(remoteFileProperties)}
@@ -13302,17 +13256,6 @@ function remoteFileDeleteDescription(entries: RemoteFileEntry[], affectedTabs: n
   return base;
 }
 
-function joinRemotePath(parentPath: string, name: string) {
-  const normalizedParent = normalizeRemotePath(parentPath);
-  const cleanName = name.trim().replace(/\\/g, "/").replace(/^\/+/, "");
-  if (!cleanName) {
-    return normalizedParent;
-  }
-  return normalizeRemotePath(
-    normalizedParent === "/" ? `/${cleanName}` : `${normalizedParent}/${cleanName}`,
-  );
-}
-
 function remoteFileName(path: string) {
   const normalizedPath = normalizeRemotePath(path);
   if (normalizedPath === "/") {
@@ -13385,12 +13328,14 @@ function previewRemoteFileContent(path: string, connectionName = "preview") {
 }
 
 function remoteFileActionTitle(action: RemoteFileTextAction) {
+  if (action.action === "save-as") return tr("files.editor.saveAs");
   if (action.action === "create-file") return tr("workspace.file.action.createFile");
   if (action.action === "create-directory") return tr("workspace.file.action.createDirectory");
   return tr("workspace.file.action.rename");
 }
 
 function remoteFileActionDescription(action: RemoteFileTextAction) {
+  if (action.action === "save-as") return tr("files.editor.saveAs.description", { path: action.parentPath });
   if (action.action === "rename") {
     return tr("workspace.file.parent", { path: remotePathParent(action.entry.path) });
   }
@@ -13409,11 +13354,6 @@ function isClosableSavedRemoteFileTab(tab: RemoteFileEditorTab) {
 
 async function copyText(text: string) {
   await copyTextToClipboard(text);
-}
-
-function isValidRemoteBaseName(name: string) {
-  const trimmed = name.trim();
-  return Boolean(trimmed) && trimmed !== "." && trimmed !== ".." && !/[\\/]/.test(trimmed);
 }
 
 function remoteFileNameValidationMessage(name: string) {

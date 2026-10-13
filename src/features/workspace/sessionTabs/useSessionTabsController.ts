@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
-import type { Dispatch } from "react";
+import type { Dispatch, SetStateAction } from "react";
 
 import type { RemoteFileEditorTab } from "../../editor/remoteFileEditorTypes";
+import { createRemoteFileEditorOperations } from "../../editor/remoteFileEditorState";
 import type { RemoteFileOpenMode } from "../../settings/settingsTypes";
 import type { LocalTerminalTab } from "../../terminal/localTerminalTypes";
 
@@ -34,6 +35,7 @@ export interface SessionTabsControllerInputs {
  * 指针、模式、首页记忆位与两张记忆表由 `sessionPointerReducer` 持有；五个会话集合与文件布局记忆
  * 仍是 `useState`（集合与 WorkspaceShell 里的 `*Ref` 同步写入耦合，待 ref 通道消灭后再迁）。
  * reducer 另持有工作区项顺序表 `order`（WF-01 切片 2），切片 3 起对外暴露给顶栏实例标签。
+ * 文件集合 ref 与异步操作身份由本 controller 统一维护，shell 不另建文件状态副本。
  *
  * 对外暴露 `dispatchTabs`（意图型 action）与唯一保留的过渡 setter `setActiveRemoteFileTabId`；
  * 两张记忆表只能经 remember / forget 系列 action 修改。
@@ -51,7 +53,22 @@ export function useSessionTabsController<TTerminalTab extends { connectionId: st
   const [rdpSessions, setRdpSessions] = useState<RdpSessionTab[]>([]);
   const [vncSessions, setVncSessions] = useState<VncSessionTab[]>([]);
   const [localTerminalTabs, setLocalTerminalTabs] = useState<LocalTerminalTab[]>([]);
-  const [remoteFileTabs, setRemoteFileTabs] = useState<RemoteFileEditorTab[]>([]);
+  const [remoteFileTabs, setRemoteFileTabsState] = useState<RemoteFileEditorTab[]>([]);
+  const remoteFileTabsRef = useRef(remoteFileTabs);
+  const [remoteFileEditorOperations] = useState(createRemoteFileEditorOperations);
+  const setRemoteFileTabs = useCallback((update: SetStateAction<RemoteFileEditorTab[]>) => {
+    const previous = remoteFileTabsRef.current;
+    const next = typeof update === "function" ? update(previous) : update;
+    for (const tab of previous) {
+      if (!next.some((item) => item.id === tab.id)) remoteFileEditorOperations.invalidate(tab.id);
+    }
+    remoteFileTabsRef.current = next;
+    setRemoteFileTabsState(next);
+  }, [remoteFileEditorOperations]);
+  useEffect(() => {
+    remoteFileEditorOperations.activate();
+    return () => remoteFileEditorOperations.dispose();
+  }, [remoteFileEditorOperations]);
   const [terminalFileLayoutByConnectionId, setTerminalFileLayoutByConnectionId] =
     useState<Record<string, RemoteFileOpenMode>>({});
 
@@ -135,6 +152,8 @@ export function useSessionTabsController<TTerminalTab extends { connectionId: st
     order: pointers.order,
     rdpSessions,
     remoteFileTabs,
+    remoteFileTabsRef,
+    remoteFileEditorOperations,
     setActiveRemoteFileTabId,
     setLocalTerminalTabs,
     setRdpSessions,
