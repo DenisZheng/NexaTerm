@@ -1,0 +1,6 @@
+{"file": "docs/WORKFLOW_SPEC.md", "reason": "WS-C06/C07/F05/F08"}
+{"file": ".trellis/spec/frontend/tauri-command-contracts.md", "reason": "Vault/主密码/auto-lock 与 secret 排除"}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "现有 hook 为单一状态归属"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "实际 hook/组件测试"}
+{"file": ".trellis/spec/backend/tauri-command-contracts.md", "reason": "复用现有 Vault，不改变加密与持久化"}
+{"file": ".trellis/spec/frontend/secret-vault-lifecycle.md", "reason": "本刀操作队列、锁优先与密码/闲置契约"}

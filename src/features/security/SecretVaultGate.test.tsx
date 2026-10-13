@@ -146,4 +146,17 @@ describe("保险库启动与恢复", () => {
     expect(secretVaultUnlockLocal).not.toHaveBeenCalled();
     expect(screen.queryByRole("form")).toBeNull();
   });
+  it("原样提交带首尾空格的主密码", async () => {
+    render(<VaultHarness masterPasswordEnabled />);
+    fireEvent.change(await screen.findByLabelText("安全密码"), { target: { value: " fixture-password " } });
+    fireEvent.click(screen.getByRole("button", { name: "解锁" }));
+    await screen.findByText("凭据可用");
+    expect(secretVaultUnlock).toHaveBeenCalledWith(" fixture-password ");
+  });
+  it("空白主密码只报本地错误，不发 IPC", async () => {
+    render(<VaultHarness masterPasswordEnabled />);
+    fireEvent.change(await screen.findByLabelText("安全密码"), { target: { value: "   " } });
+    fireEvent.click(screen.getByRole("button", { name: "解锁" }));
+    expect(secretVaultUnlock).not.toHaveBeenCalled(); expect(screen.getByRole("alert")).toBeTruthy();
+  });
 });
