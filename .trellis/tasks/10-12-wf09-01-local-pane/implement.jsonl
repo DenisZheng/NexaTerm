@@ -1,0 +1,5 @@
+{"file":"docs/WORKFLOW_SPEC.md","reason":"WS-F01、WS-F05、WS-F08、WS-F09：活动实例绑定、Files 导航和传输生命周期"}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"双栏面板、共享 token、Radix/Lucide 与可访问性约定"}
+{"file":".trellis/spec/frontend/state-management.md","reason":"导航状态留在组件、传输状态继续由 store/controller 管理"}
+{"file":".trellis/spec/frontend/tauri-command-contracts.md","reason":"本地目录 command 的 typed wrapper、错误和路径边界"}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"组件测试、i18n parity、跨层门禁与真实桌面验收边界"}

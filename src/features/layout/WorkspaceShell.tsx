@@ -240,6 +240,8 @@ const WORKSPACE_IDLE_PREWARM_BATCHES: Array<{
   },
 ];
 import type { RemoteFileEditorTab } from "../editor/remoteFileEditorTypes";
+import { LocalFilePanel } from "../files/LocalFilePanel";
+import type { RemoteFileDrop } from "../files/remoteFileDrop";
 import { RemoteFileIcon } from "../files/RemoteFileIcon";
 import type { RemoteFileTool, RemoteFileUploadItem } from "../files/RemoteFilePanel";
 import { RemoteFileTransferPanel } from "../files/RemoteFileTransferPanel";
@@ -253,6 +255,7 @@ import {
   setTransferProgress,
   updateRemoteFileTransfer,
 } from "../files/remoteFileTransferStore";
+import { createRemoteFileTransferTargets } from "../files/remoteFileTransferOwner";
 import { useRemoteFileTransferController } from "../files/useRemoteFileTransferController";
 import {
   createTransferSpeedTracker,
@@ -663,6 +666,7 @@ interface ArchiveBuildProgress {
   totalBytes: number;
 }
 interface TransferRunOptions {
+  ownerInstanceId?: string | null;
   connection?: ConnectionProfile;
   conflictPolicy?: RemoteFileTransferConflictPolicy;
   transferId?: string;
@@ -671,7 +675,8 @@ interface DirectoryTransferRunOptions extends TransferRunOptions {
   compress?: boolean;
   keepArchive?: boolean;
 }
-interface DownloadTransferRunOptions {
+interface DownloadTransferRunOptions extends TransferRunOptions {
+  downloadRoot?: string;
   input?: Omit<RemoteFileDownloadToLocalInput, "transferId">;
   transferId?: string;
 }
@@ -1077,6 +1082,9 @@ export function WorkspaceShell() {
     isTransferNoLongerActive,
     removeTransfer: removeRemoteFileTransfer,
     requestCancelTransfer,
+    queuePaused,
+    pauseQueue,
+    resumeQueue,
   } = useRemoteFileTransferController({
     concurrentTransfers: settings.fileTransfer.concurrentTransfers,
     onTaskError: handleTransferTaskError,
@@ -1938,6 +1946,11 @@ export function WorkspaceShell() {
     terminalDirectories,
     terminalTabs,
   });
+  const transferTargetContextRef = useRef({ fileContext: workspaceSidebarFileBinding, connections: connectionById });
+  transferTargetContextRef.current = { fileContext: workspaceSidebarFileBinding, connections: connectionById };
+  const { connectionForTransfer, captureTransferOptions, transferOwnerForRun, connectionForTransferOwner, canStartOwnedTransfer } = useMemo(
+    () => createRemoteFileTransferTargets(() => ({ ...transferTargetContextRef.current, tabs: terminalTabsRef.current }), getRemoteFileTransfer), [],
+  );
   const workspaceSidebarFileContext = describeWorkspaceSidebarFiles(
     workspaceSidebarFileBinding, openSessionEntries, terminalTabs,
     terminalSplitActive ? terminalSplitPanes.findIndex((pane) => pane.id === focusedTerminalPaneId) + 1 : null, t,
@@ -2596,8 +2609,12 @@ export function WorkspaceShell() {
     return () => window.clearInterval(timer);
   }
 
-  function connectionForTransfer(connectionId: string) {
-    return connectionById.get(connectionId) || null;
+  function connectionForQueuedTransfer(transferId: string) {
+    const item = getRemoteFileTransfer(transferId);
+    const connection = connectionForTransfer(item?.connectionId || "");
+    if (connection && canStartOwnedTransfer(item?.ownerInstanceId ?? null, connection.id)) return connection;
+    markTransferCanceled(transferId);
+    return null;
   }
 
   function retryRemoteFileTransfer(transferId: string) {
@@ -2606,6 +2623,10 @@ export function WorkspaceShell() {
       return;
     }
 
+    if (!canStartOwnedTransfer(item.ownerInstanceId ?? null, item.connectionId || "")) {
+      failTransfer(transferId, tr("workspace.transfer.retryFailed"), new Error(tr("workspace.transfer.connectionMissing")));
+      return;
+    }
     const retry = item.retry;
     const connection = retry.action === "download" ? null : connectionForTransfer(retry.connectionId);
     if (retry.action !== "download" && !connection) {
@@ -3345,14 +3366,15 @@ export function WorkspaceShell() {
   }
 
   function uploadRemoteFile(parentPath: string) {
-    if (!activeConnection) {
+    const target = captureTransferOptions();
+    if (!target.connection) {
       return;
     }
     if (hasTauriRuntime()) {
       void selectLocalUploadFiles()
         .then((paths) => {
           paths.forEach((path) => {
-            void runLocalFileUpload(parentPath, path);
+            void runLocalFileUpload(parentPath, path, target);
           });
         })
         .catch((error: unknown) => {
@@ -3368,20 +3390,21 @@ export function WorkspaceShell() {
       if (files.length === 0) {
         return;
       }
-      uploadRemoteItems(parentPath, files.map((file) => ({ file, relativePath: file.name })));
+      uploadRemoteItems(parentPath, files.map((file) => ({ file, relativePath: file.name })), target);
     };
     input.click();
   }
 
   function uploadRemoteDirectory(parentPath: string) {
-    if (!activeConnection) {
+    const target = captureTransferOptions();
+    if (!target.connection) {
       return;
     }
     if (hasTauriRuntime()) {
       void selectLocalUploadDirectories()
         .then((paths) => {
           paths.forEach((path) => {
-            void runLocalDirectoryUpload(parentPath, path);
+            void runLocalDirectoryUpload(parentPath, path, target);
           });
         })
         .catch((error: unknown) => {
@@ -3404,13 +3427,14 @@ export function WorkspaceShell() {
           file,
           relativePath: getFileRelativePath(file),
         })),
+        target,
       );
     };
     input.click();
   }
 
-  function uploadRemoteItems(parentPath: string, items: RemoteFileUploadItem[]) {
-    if (!activeConnection || items.length === 0) {
+  function uploadRemoteItems(parentPath: string, items: RemoteFileUploadItem[], target = captureTransferOptions()) {
+    if (!target.connection || items.length === 0) {
       return;
     }
 
@@ -3419,15 +3443,16 @@ export function WorkspaceShell() {
     const directoryGroups = groupUploadDirectories(items);
 
     directFiles.forEach((item) => {
-      void runSingleFileUpload(normalizedParent, item);
+      void runSingleFileUpload(normalizedParent, item, target);
     });
     Array.from(directoryGroups.entries()).forEach(([rootName, groupItems]) => {
-      void runDirectoryUpload(normalizedParent, rootName, groupItems);
+      void runDirectoryUpload(normalizedParent, rootName, groupItems, target);
     });
   }
 
   function handleNativeFileDropEvent(event: DragDropEvent) {
-    if (!remoteFileConnection || rightPaneCollapsed || rightTool !== "files" || !showSessionWorkspace) {
+    const leftFilesActive = !leftPaneCollapsed && workspaceSidebarView === "files" && workspaceSidebarFileBinding;
+    if (!leftFilesActive) {
       setNativeFileDropTargetPath(null);
       return;
     }
@@ -3451,20 +3476,21 @@ export function WorkspaceShell() {
   }
 
   function uploadNativeDroppedPaths(parentPath: string, paths: string[]) {
+    const target = captureTransferOptions();
     paths.forEach((path) => {
-      void uploadNativeDroppedPath(parentPath, path);
+      void uploadNativeDroppedPath(parentPath, path, target);
     });
   }
 
-  async function uploadNativeDroppedPath(parentPath: string, localPath: string) {
+  async function uploadNativeDroppedPath(parentPath: string, localPath: string, target: TransferRunOptions) {
     try {
       const metadata = await localPathMetadata(localPath);
       if (metadata.kind === "directory") {
-        await runLocalDirectoryUpload(parentPath, metadata.path);
+        await runLocalDirectoryUpload(parentPath, metadata.path, target);
         return;
       }
       if (metadata.kind === "file") {
-        await runLocalFileUpload(parentPath, metadata.path);
+        await runLocalFileUpload(parentPath, metadata.path, target);
         return;
       }
       showTransferPickerError("Unsupported local item", parentPath, new Error(`Unsupported local path: ${localPath}`));
@@ -3495,8 +3521,10 @@ export function WorkspaceShell() {
     localPath: string,
     options: TransferRunOptions = {},
   ) {
-    const connection = options.connection ?? activeConnection;
-    if (!connection) {
+    const requestedConnection = options.connection ?? captureTransferOptions().connection;
+    const ownerInstanceId = requestedConnection ? transferOwnerForRun(options, requestedConnection.id) : null;
+    const connection = connectionForTransferOwner(requestedConnection, ownerInstanceId);
+    if (!connection || !canStartOwnedTransfer(ownerInstanceId, connection.id)) {
       if (options.transferId) {
         failTransfer(options.transferId, tr("workspace.transfer.retryFailed"), new Error(tr("workspace.transfer.connectionMissing")));
       }
@@ -3507,6 +3535,7 @@ export function WorkspaceShell() {
     const uploadPath = joinRemotePath(normalizedParentPath, localName);
     const transferId = options.transferId ?? addRemoteFileTransfer({
       connectionId: connection.id,
+      ownerInstanceId,
       direction: "upload",
       kind: "file",
       name: localName,
@@ -3519,6 +3548,8 @@ export function WorkspaceShell() {
     }
 
     enqueueRemoteFileTransfer(transferId, async () => {
+      const connection = connectionForQueuedTransfer(transferId);
+      if (!connection) return;
       try {
         const conflictPolicy = options.conflictPolicy ?? await resolveUploadConflictPolicy(connection, uploadPath, transferId);
         if (conflictPolicy === "failed") {
@@ -3565,8 +3596,10 @@ export function WorkspaceShell() {
     localPath: string,
     options: DirectoryTransferRunOptions = {},
   ) {
-    const connection = options.connection ?? activeConnection;
-    if (!connection) {
+    const requestedConnection = options.connection ?? captureTransferOptions().connection;
+    const ownerInstanceId = requestedConnection ? transferOwnerForRun(options, requestedConnection.id) : null;
+    const connection = connectionForTransferOwner(requestedConnection, ownerInstanceId);
+    if (!connection || !canStartOwnedTransfer(ownerInstanceId, connection.id)) {
       if (options.transferId) {
         failTransfer(options.transferId, tr("workspace.transfer.retryFailed"), new Error(tr("workspace.transfer.connectionMissing")));
       }
@@ -3577,6 +3610,7 @@ export function WorkspaceShell() {
     const remotePath = joinRemotePath(normalizedParentPath, rootName);
     const transferId = options.transferId ?? addRemoteFileTransfer({
       connectionId: connection.id,
+      ownerInstanceId,
       direction: "upload",
       kind: "directory",
       name: rootName,
@@ -3589,6 +3623,8 @@ export function WorkspaceShell() {
     }
 
     enqueueRemoteFileTransfer(transferId, async () => {
+      const connection = connectionForQueuedTransfer(transferId);
+      if (!connection) return;
       try {
         const conflictPolicy = options.conflictPolicy ?? await resolveUploadConflictPolicy(connection, remotePath, transferId);
         if (conflictPolicy === "failed") {
@@ -3642,8 +3678,10 @@ export function WorkspaceShell() {
     item: RemoteFileUploadItem,
     options: TransferRunOptions = {},
   ) {
-    const connection = options.connection ?? activeConnection;
-    if (!connection) {
+    const requestedConnection = options.connection ?? captureTransferOptions().connection;
+    const ownerInstanceId = requestedConnection ? transferOwnerForRun(options, requestedConnection.id) : null;
+    const connection = connectionForTransferOwner(requestedConnection, ownerInstanceId);
+    if (!connection || !canStartOwnedTransfer(ownerInstanceId, connection.id)) {
       if (options.transferId) {
         failTransfer(options.transferId, tr("workspace.transfer.retryFailed"), new Error(tr("workspace.transfer.connectionMissing")));
       }
@@ -3653,6 +3691,7 @@ export function WorkspaceShell() {
     const uploadPath = joinRemotePath(normalizedParentPath, item.file.name);
     const transferId = options.transferId ?? addRemoteFileTransfer({
       connectionId: connection.id,
+      ownerInstanceId,
       direction: "upload",
       kind: "file",
       name: item.file.name,
@@ -3665,6 +3704,8 @@ export function WorkspaceShell() {
     }
 
     enqueueRemoteFileTransfer(transferId, async () => {
+      const connection = connectionForQueuedTransfer(transferId);
+      if (!connection) return;
       if (!hasTauriRuntime()) {
         const stopPulse = startTransferProgressPulse(transferId, {
           cap: 92,
@@ -3749,8 +3790,10 @@ export function WorkspaceShell() {
     items: RemoteFileUploadItem[],
     options: DirectoryTransferRunOptions = {},
   ) {
-    const connection = options.connection ?? activeConnection;
-    if (!connection) {
+    const requestedConnection = options.connection ?? captureTransferOptions().connection;
+    const ownerInstanceId = requestedConnection ? transferOwnerForRun(options, requestedConnection.id) : null;
+    const connection = connectionForTransferOwner(requestedConnection, ownerInstanceId);
+    if (!connection || !canStartOwnedTransfer(ownerInstanceId, connection.id)) {
       if (options.transferId) {
         failTransfer(options.transferId, tr("workspace.transfer.retryFailed"), new Error(tr("workspace.transfer.connectionMissing")));
       }
@@ -3760,6 +3803,7 @@ export function WorkspaceShell() {
     const remotePath = joinRemotePath(normalizedParentPath, rootName);
     const transferId = options.transferId ?? addRemoteFileTransfer({
       connectionId: connection.id,
+      ownerInstanceId,
       direction: "upload",
       kind: "directory",
       name: rootName,
@@ -3772,6 +3816,8 @@ export function WorkspaceShell() {
     }
 
     enqueueRemoteFileTransfer(transferId, async () => {
+      const connection = connectionForQueuedTransfer(transferId);
+      if (!connection) return;
       if (!hasTauriRuntime()) {
         const stopPulse = startTransferProgressPulse(transferId, {
           cap: 92,
@@ -3907,20 +3953,27 @@ export function WorkspaceShell() {
     triggerRemoteFileRefresh(connectionId, remotePathParent(result.path));
   }
 
+  function downloadRemoteFileToDirectory(source: RemoteFileDrop, downloadRoot: string) {
+    const connection = connectionForTransfer(source.connectionId);
+    if (!connection || !canStartOwnedTransfer(source.ownerInstanceId, source.connectionId)) return;
+    void runRemoteFileDownload(source.entry, { connection, ownerInstanceId: source.ownerInstanceId, downloadRoot });
+  }
+
   function downloadRemoteFile(entry: RemoteFileEntry) {
     downloadRemoteFiles([entry]);
   }
 
   function downloadRemoteFiles(entries: RemoteFileEntry[]) {
-    if (!activeConnection) {
+    const target = captureTransferOptions();
+    if (!target.connection) {
       return;
     }
-    void runRemoteFileDownloadQueue(entries);
+    void runRemoteFileDownloadQueue(entries, target);
   }
 
-  async function runRemoteFileDownloadQueue(entries: RemoteFileEntry[]) {
+  async function runRemoteFileDownloadQueue(entries: RemoteFileEntry[], target: DownloadTransferRunOptions) {
     for (const entry of entries) {
-      await runRemoteFileDownload(entry);
+      await runRemoteFileDownload(entry, target);
     }
   }
 
@@ -3928,10 +3981,12 @@ export function WorkspaceShell() {
     entry: RemoteFileEntry,
     options: DownloadTransferRunOptions = {},
   ) {
-    const connection = options.input
+    const requestedConnection = options.input
       ? connectionForTransfer(options.input.connectionId)
-      : activeConnection;
-    if (!connection) {
+      : options.connection ?? captureTransferOptions().connection;
+    const ownerInstanceId = transferOwnerForRun(options, requestedConnection?.id || "");
+    const connection = connectionForTransferOwner(requestedConnection, ownerInstanceId);
+    if (!connection || !canStartOwnedTransfer(ownerInstanceId, connection.id)) {
       if (options.transferId) {
         failTransfer(options.transferId, tr("workspace.transfer.retryFailed"), new Error(tr("workspace.transfer.connectionMissing")));
       }
@@ -3940,6 +3995,7 @@ export function WorkspaceShell() {
     const isDirectory = entry.type === "directory";
     const transferId = options.transferId ?? addRemoteFileTransfer({
       connectionId: connection.id,
+      ownerInstanceId,
       direction: "download",
       kind: isDirectory ? "directory" : "file",
       name: entry.name,
@@ -3952,9 +4008,14 @@ export function WorkspaceShell() {
     }
 
     enqueueRemoteFileTransfer(transferId, async () => {
+      const connection = connectionForQueuedTransfer(transferId);
+      if (!connection) return;
       let stopPulse: (() => void) | null = null;
       try {
-        const downloadOptions = options.input ?? downloadTargetOptions(connection, entry);
+        const downloadOptions = options.input ? { ...options.input, connectionId: connection.id } : {
+          ...downloadTargetOptions(connection, entry),
+          ...(options.downloadRoot ? { downloadRoot: options.downloadRoot, groupBySession: false, timestampDirectory: false } : {}),
+        };
         const conflictPolicy = options.input?.conflictPolicy ?? await resolveDownloadConflictPolicy(downloadOptions, transferId);
         if (conflictPolicy === "failed") {
           return;
@@ -3967,7 +4028,7 @@ export function WorkspaceShell() {
           return;
         }
 
-        const request: Omit<RemoteFileDownloadToLocalInput, "transferId"> = options.input ?? {
+        const request: Omit<RemoteFileDownloadToLocalInput, "transferId"> = options.input ? { ...options.input, connectionId: connection.id } : {
           ...downloadOptions,
           compress: settings.fileTransfer.compressDirectories,
           conflictPolicy,
@@ -8321,15 +8382,20 @@ export function WorkspaceShell() {
           activeView={workspaceSidebarView}
           fileContext={workspaceSidebarFileContext}
           files={workspaceSidebarFileContext ? (
-            <RemoteFilesView key={workspaceSidebarFileContext.tabId} active={!leftPaneCollapsed && workspaceSidebarView === "files"} connection={connectionById.get(workspaceSidebarFileContext.connectionId) || null}
-              locateRequest={remoteFileLocateRequest} refreshRequest={remoteFileRefreshRequest} nativeDropTargetPath={nativeFileDropTargetPath}
-              stateKey={`ssh-file-panel:${workspaceSidebarFileContext.tabId}`} terminalPath={workspaceSidebarFileContext.path}
-              transferPanel={<RemoteFileTransferPanel onCancel={requestCancelTransfer} onCopyPath={copyRemotePath} onRemove={removeRemoteFileTransfer} onRetry={retryRemoteFileTransfer} onOpenLocalPath={openLocalTransferPath} onRevealLocalPath={revealLocalTransferPath} />}
-              onCopyPath={copyRemotePath} onCreateDirectory={requestCreateRemoteDirectory} onCreateFile={requestCreateRemoteFile}
-              onDeleteEntries={requestDeleteRemoteEntries} onDeleteEntry={requestDeleteRemoteEntry} onDownloadEntries={downloadRemoteFiles} onDownloadEntry={downloadRemoteFile}
-              onOpenFile={openRemoteFile} onRenameEntry={requestRenameRemoteEntry} onShowProperties={showRemoteFileProperties}
-              onUploadDirectory={uploadRemoteDirectory} onUploadFile={uploadRemoteFile} onUploadItems={uploadRemoteItems}
-              resolveTerminalPath={() => resolveTerminalLocatePath(workspaceSidebarFileContext.tabId)} />
+            <div className="workspace-sidebar-file-panes">
+              <LocalFilePanel active={!leftPaneCollapsed && workspaceSidebarView === "files"} onDownload={downloadRemoteFileToDirectory} />
+              <RemoteFilesView key={workspaceSidebarFileContext.tabId} active={!leftPaneCollapsed && workspaceSidebarView === "files"} connection={connectionById.get(workspaceSidebarFileContext.connectionId) || null}
+                locateRequest={remoteFileLocateRequest} refreshRequest={remoteFileRefreshRequest} nativeDropTargetPath={nativeFileDropTargetPath}
+                stateKey={`ssh-file-panel:${workspaceSidebarFileContext.tabId}`} terminalPath={workspaceSidebarFileContext.path}
+                transferOwnerInstanceId={`ssh:${workspaceSidebarFileContext.tabId}`}
+                transferPanel={<RemoteFileTransferPanel queuePaused={queuePaused} onPauseQueue={pauseQueue} onResumeQueue={resumeQueue} onCancel={requestCancelTransfer} onCopyPath={copyRemotePath} onRemove={removeRemoteFileTransfer} onRetry={retryRemoteFileTransfer} onOpenLocalPath={openLocalTransferPath} onRevealLocalPath={revealLocalTransferPath} />}
+                onCopyPath={copyRemotePath} onCreateDirectory={requestCreateRemoteDirectory} onCreateFile={requestCreateRemoteFile}
+                onDeleteEntries={requestDeleteRemoteEntries} onDeleteEntry={requestDeleteRemoteEntry} onDownloadEntries={downloadRemoteFiles} onDownloadEntry={downloadRemoteFile}
+                onOpenFile={openRemoteFile} onRenameEntry={requestRenameRemoteEntry} onShowProperties={showRemoteFileProperties}
+                onUploadDirectory={uploadRemoteDirectory} onUploadFile={uploadRemoteFile} onUploadItems={uploadRemoteItems}
+                onUploadLocalPaths={uploadNativeDroppedPaths}
+                resolveTerminalPath={() => resolveTerminalLocatePath(workspaceSidebarFileContext.tabId)} />
+            </div>
           ) : null}
           onViewChange={setWorkspaceSidebarView}
           sessions={

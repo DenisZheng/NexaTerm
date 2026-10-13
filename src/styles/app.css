@@ -3106,7 +3106,17 @@ button {
   padding: 0;
 }
 
-.workspace-sidebar-files.is-live > .remote-files-view {
+.workspace-sidebar-file-panes {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.workspace-sidebar-file-panes > .remote-files-view,
+.workspace-sidebar-file-panes > .local-file-panel {
   flex: 1 1 auto;
   width: 100%;
   min-height: 0;
@@ -3115,12 +3125,100 @@ button {
   background: transparent;
 }
 
+.workspace-sidebar-file-panes > .remote-files-view {
+  border-left: 1px solid var(--mx-line);
+}
+
 .workspace-sidebar-files.is-live .file-panel-toolbar {
   padding: 6px;
 }
 
 .workspace-sidebar-files.is-live .file-panel-actions {
   flex-wrap: wrap;
+}
+
+.local-file-panel {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  color: var(--mx-text);
+  background: var(--mx-panel-soft);
+}
+
+.local-file-panel.is-hidden {
+  display: none;
+}
+
+.local-file-panel-header {
+  flex: 0 0 auto;
+  min-width: 0;
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--mx-line);
+}
+
+.local-file-panel-title {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--mx-text);
+  font-size: 12px;
+}
+
+.local-file-panel-title strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.local-file-choose {
+  min-height: 24px;
+  padding: 0 7px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.local-file-panel-toolbar {
+  flex: 0 0 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px;
+  border-bottom: 1px solid var(--mx-line-soft);
+}
+
+.local-file-path-form {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.local-file-list {
+  padding: 6px;
+}
+
+.local-file-row {
+  grid-template-columns: 16px minmax(0, max-content) auto;
+}
+
+.local-file-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.local-file-kind {
+  color: var(--mx-subtle);
+  font-size: 10px;
+  white-space: nowrap;
 }
 
 .workspace-sidebar-instance {

@@ -190,3 +190,9 @@ export interface LocalPathMetadataResult {
   name: string;
   path: string;
 }
+
+export interface LocalFileEntry {
+  kind: LocalPathKind;
+  name: string;
+  path: string;
+}
