@@ -1,5 +1,10 @@
 import type { RemoteFileMetadata, RemoteFileReadResult, RemoteFileWriteResult } from "../files/remoteFileTypes";
 import type { RemoteFileEditorTab } from "./remoteFileEditorTypes";
+import { normalizeRemotePath } from "../files/remoteFilePaths";
+
+export function remoteFileTabId(connectionId: string, path: string) {
+  return `file:${connectionId}:${normalizeRemotePath(path)}`;
+}
 
 export function remoteFileEditorIsReadOnly(tab: RemoteFileEditorTab) {
   return !tab.metadata || tab.saveState === "loading";
@@ -7,6 +12,16 @@ export function remoteFileEditorIsReadOnly(tab: RemoteFileEditorTab) {
 
 export function canSaveRemoteFileEditor(tab: RemoteFileEditorTab | undefined, overwrite = false): tab is RemoteFileEditorTab & { metadata: RemoteFileMetadata } {
   return Boolean(tab?.metadata && (tab.dirty || overwrite) && tab.saveState !== "loading" && tab.saveState !== "saving");
+}
+
+export function canSaveAsRemoteFileEditor(tab: RemoteFileEditorTab | undefined): tab is RemoteFileEditorTab & { metadata: RemoteFileMetadata } {
+  return canSaveRemoteFileEditor(tab, true);
+}
+
+export function completeRemoteFileEditorSaveAs(
+  tab: RemoteFileEditorTab, submittedContent: string, metadata: RemoteFileMetadata, id: string, saved: string, modified: string,
+): RemoteFileEditorTab {
+  return { ...completeRemoteFileEditorSave(tab, submittedContent, metadata, saved, modified), id, path: metadata.path, name: metadata.name };
 }
 
 export function previewRemoteFileEditorSave(metadata: RemoteFileMetadata, content: string, mtime = Date.now()): RemoteFileWriteResult {
@@ -42,14 +57,14 @@ export function completeRemoteFileEditorSave(
 }
 
 type OperationKind = "read" | "save";
-interface OperationToken { id: string; kind: OperationKind; nonce: symbol }
+export interface RemoteFileEditorOperationToken { id: string; kind: OperationKind; nonce: symbol }
 
 /** 只存异步请求身份，不存文件内容；使关闭/重开同路径和卸载后的回调失效。 */
 export function createRemoteFileEditorOperations() {
-  const operations = new Map<string, OperationToken>();
+  const operations = new Map<string, RemoteFileEditorOperationToken>();
   let active = true;
   return {
-    begin(id: string, kind: OperationKind): OperationToken | null {
+    begin(id: string, kind: OperationKind): RemoteFileEditorOperationToken | null {
       const current = operations.get(id);
       if (!active || (current && (kind === "save" || current.kind === "save"))) return null;
       const token = { id, kind, nonce: Symbol(kind) };
@@ -60,8 +75,8 @@ export function createRemoteFileEditorOperations() {
       const current = operations.get(id);
       return Boolean(current && (!kind || current.kind === kind));
     },
-    isCurrent(token: OperationToken) { return active && operations.get(token.id) === token; },
-    finish(token: OperationToken) { if (operations.get(token.id) === token) operations.delete(token.id); },
+    isCurrent(token: RemoteFileEditorOperationToken) { return active && operations.get(token.id) === token; },
+    finish(token: RemoteFileEditorOperationToken) { if (operations.get(token.id) === token) operations.delete(token.id); },
     invalidate(id: string) { operations.delete(id); },
     activate() { active = true; },
     dispose() { active = false; operations.clear(); },

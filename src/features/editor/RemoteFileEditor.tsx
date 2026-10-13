@@ -1,4 +1,4 @@
-import { AlertTriangle, FolderOpen, Loader2, RefreshCw, RotateCcw, Save, Search, X } from "lucide-react";
+import { AlertTriangle, Copy, FolderOpen, Loader2, RefreshCw, RotateCcw, Save, Search, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as monaco from "monaco-editor";
 import CssWorker from "monaco-editor/esm/vs/language/css/css.worker?worker";
@@ -16,7 +16,7 @@ import {
   remoteFileLanguageForPath,
 } from "./remoteFileLanguages";
 import type { RemoteFileEditorTab } from "./remoteFileEditorTypes";
-import { canSaveRemoteFileEditor, remoteFileEditorIsReadOnly } from "./remoteFileEditorState";
+import { canSaveAsRemoteFileEditor, canSaveRemoteFileEditor, remoteFileEditorIsReadOnly } from "./remoteFileEditorState";
 
 const monacoGlobal = self as unknown as {
   MonacoEnvironment?: monaco.Environment;
@@ -55,6 +55,7 @@ interface RemoteFileEditorProps {
   onLocateFolder: (tabId: string) => void;
   onReload: (tabId: string) => void;
   onSave: (tabId: string) => void;
+  onSaveAs: (tabId: string) => void;
 }
 
 export function RemoteFileEditor({
@@ -68,6 +69,7 @@ export function RemoteFileEditor({
   onLocateFolder,
   onReload,
   onSave,
+  onSaveAs,
   tab,
   themeMode,
 }: RemoteFileEditorProps) {
@@ -77,6 +79,7 @@ export function RemoteFileEditor({
   const modelRef = useRef<monaco.editor.ITextModel | null>(null);
   const onChangeRef = useRef(onChange);
   const onSaveRef = useRef(onSave);
+  const onSaveAsRef = useRef(onSaveAs);
   const applyingContentRef = useRef(false);
   const layoutFrameRef = useRef<number | null>(null);
   const [systemPrefersDark, setSystemPrefersDark] = useState(readSystemPrefersDark);
@@ -85,6 +88,7 @@ export function RemoteFileEditor({
 
   onChangeRef.current = onChange;
   onSaveRef.current = onSave;
+  onSaveAsRef.current = onSaveAs;
   editorThemeRef.current = editorTheme;
 
   const scheduleEditorLayout = useCallback(() => {
@@ -131,6 +135,7 @@ export function RemoteFileEditor({
     modelRef.current = model;
     editorRef.current = editor;
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => onSaveRef.current(tab.id));
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyS, () => onSaveAsRef.current(tab.id));
     const changeDisposable = model.onDidChangeContent(() => {
       if (!applyingContentRef.current) {
         onChangeRef.current(tab.id, model.getValue());
@@ -267,6 +272,11 @@ export function RemoteFileEditor({
               ) : (
                 <Save className="ui-icon" aria-hidden="true" />
               )}
+            </button>
+          </Tooltip>
+          <Tooltip label={t("files.editor.saveAs")}>
+            <button className="mini-action" type="button" aria-label={t("files.editor.saveAs")} disabled={!canSaveAsRemoteFileEditor(tab)} onClick={() => onSaveAs(tab.id)}>
+              <Copy className="ui-icon" aria-hidden="true" />
             </button>
           </Tooltip>
           <Tooltip label={t("files.editor.reload")}>

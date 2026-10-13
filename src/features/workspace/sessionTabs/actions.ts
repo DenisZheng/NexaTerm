@@ -54,6 +54,7 @@ export type SessionTabsAction =
   | { type: "tabs/fallbackHomeKeepPointers" }
   /** 活动文件 tab 被移除且无可回退文件（原 closeRemoteFileTabsNow / activateRemoteFileFallbackAfterRemoval 的置空）。 */
   | { type: "tabs/clearActiveFile" }
+  | { type: "tabs/retargetFile"; connectionId: string; oldId: string; newId: string }
   // ---- 关闭/删除（WF-00B）。snapshot 为移除后的集合；closing* 为被移除的实体。 ----
   | { type: "tabs/closeTerminals"; closingTabs: readonly SessionRef[]; snapshot: CloseSnapshot }
   | {

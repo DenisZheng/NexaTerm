@@ -240,7 +240,7 @@ const WORKSPACE_IDLE_PREWARM_BATCHES: Array<{
   },
 ];
 import type { RemoteFileEditorTab } from "../editor/remoteFileEditorTypes";
-import { canSaveRemoteFileEditor, changeRemoteFileEditorContent, completeRemoteFileEditorRead, completeRemoteFileEditorSave, previewRemoteFileEditorSave } from "../editor/remoteFileEditorState";
+import { canSaveRemoteFileEditor, changeRemoteFileEditorContent, completeRemoteFileEditorRead, completeRemoteFileEditorSave, previewRemoteFileEditorSave, remoteFileTabId } from "../editor/remoteFileEditorState";
 import { LocalFilePanel } from "../files/LocalFilePanel";
 import type { RemoteFileDrop } from "../files/remoteFileDrop";
 import { RemoteFileIcon } from "../files/RemoteFileIcon";
@@ -272,6 +272,7 @@ import {
 } from "../files/remoteFileMetadataPresentation";
 import type { AiContextBlock } from "../ai/aiTypes";
 import {
+  joinRemotePath,
   isRemotePathStrictDescendant,
   normalizeRemotePath,
   remotePathParent,
@@ -507,6 +508,9 @@ import type {
   WorkbenchTabKind,
   WorkspaceMode,
 } from "../workspace/sessionTabs/types";
+import { TextInputDialog } from "../../shared/ui/TextInputDialog";
+import { useRemoteFileSaveAs } from "../editor/useRemoteFileSaveAs";
+import { isValidRemoteBaseName, type RemoteFileTextAction } from "../files/remoteFileTextActions";
 import { useSessionTabsController } from "../workspace/sessionTabs/useSessionTabsController";
 import type { CloseSnapshot, SessionRef } from "../workspace/sessionTabs/closeDecision";
 import { applyWorkspaceRestorePlanToHydration, buildWorkspaceShellHydration } from "../workspace/restore/shellHydration";
@@ -633,10 +637,6 @@ interface RemoteFileLocateRequest {
   id: number;
   path: string;
 }
-type RemoteFileTextAction =
-  | { action: "create-directory"; connectionId: string; parentPath: string }
-  | { action: "create-file"; connectionId: string; parentPath: string }
-  | { action: "rename"; connectionId: string; entry: RemoteFileEntry };
 interface RemoteFileDeleteTarget {
   connectionId: string;
   entries: RemoteFileEntry[];
@@ -1069,6 +1069,12 @@ export function WorkspaceShell() {
   const [remoteFileTextAction, setRemoteFileTextAction] = useState<RemoteFileTextAction | null>(null);
   const [remoteFileTextValue, setRemoteFileTextValue] = useState("");
   const [remoteFileTextError, setRemoteFileTextError] = useState<string | null>(null);
+  const remoteFileSaveAsController = useRemoteFileSaveAs({
+    action: remoteFileTextAction, tabs: remoteFileTabs, tabsRef: remoteFileTabsRef, operations: remoteFileEditorOperations,
+    setTabs: setRemoteFileTabs, setAction: setRemoteFileTextAction, setValue: setRemoteFileTextValue, setError: setRemoteFileTextError,
+    formatError, refresh: triggerRemoteFileRefresh,
+    onRetarget: (connectionId, oldId, newId) => dispatchTabs({ type: "tabs/retargetFile", connectionId, oldId, newId }),
+  });
   const [rightTool, setRightTool] = useState<RemoteFileTool>("commands");
   const [aiAssistantPanelLoaded, setAiAssistantPanelLoaded] = useState(false);
   const [settingsViewLoaded, setSettingsViewLoaded] = useState(false);
@@ -2552,10 +2558,6 @@ export function WorkspaceShell() {
     });
   }, []);
 
-  function remoteFileTabId(connectionId: string, path: string) {
-    return `file:${connectionId}:${normalizeRemotePath(path)}`;
-  }
-
   function updateRemoteFileTab(
     tabId: string,
     updater: (tab: RemoteFileEditorTab) => RemoteFileEditorTab,
@@ -3238,6 +3240,11 @@ export function WorkspaceShell() {
     const value = remoteFileTextValue.trim();
     if (!isValidRemoteBaseName(value)) {
       setRemoteFileTextError(remoteFileNameValidationMessage(value));
+      return;
+    }
+
+    if (action.action === "save-as") {
+      await remoteFileSaveAsController.submit(action, value);
       return;
     }
 
@@ -8498,6 +8505,7 @@ export function WorkspaceShell() {
                           onLocateFolder={locateRemoteFileFolder}
                           onReload={reloadRemoteFile}
                           onSave={saveRemoteFile}
+                          onSaveAs={remoteFileSaveAsController.request}
                         />
                       ))}
                     </Suspense>
@@ -8730,6 +8738,7 @@ export function WorkspaceShell() {
                           onLocateFolder={locateRemoteFileFolder}
                           onReload={reloadRemoteFile}
                           onSave={saveRemoteFile}
+                          onSaveAs={remoteFileSaveAsController.request}
                         />
                       ))}
                     </Suspense>
@@ -9821,66 +9830,19 @@ export function WorkspaceShell() {
         </Dialog.Portal>
       </Dialog.Root>
 
-      <Dialog.Root
+      <TextInputDialog
         open={Boolean(remoteFileTextAction)}
-        onOpenChange={(open) => {
-          if (!open) {
-            setRemoteFileTextAction(null);
-            setRemoteFileTextValue("");
-            setRemoteFileTextError(null);
-          }
-        }}
-      >
-        <Dialog.Portal>
-          <Dialog.Overlay className="dialog-backdrop" />
-          <Dialog.Content
-            asChild
-            onInteractOutside={(event) => event.preventDefault()}
-            onPointerDownOutside={(event) => event.preventDefault()}
-          >
-            <form className="remote-file-text-dialog" onSubmit={submitRemoteFileTextAction}>
-              <header className="dialog-head">
-                <div className="dialog-title-group">
-                  <Dialog.Title asChild>
-                    <strong>{remoteFileTextAction ? remoteFileActionTitle(remoteFileTextAction) : tr("workspace.file.dialogFallback")}</strong>
-                  </Dialog.Title>
-                  <Dialog.Description className="dialog-subtitle">
-                    {remoteFileTextAction ? remoteFileActionDescription(remoteFileTextAction) : ""}
-                  </Dialog.Description>
-                </div>
-                <Dialog.Close asChild>
-                  <button className="icon-button dialog-close-button" type="button" aria-label={tr("workspace.file.close")}>
-                    <X className="ui-icon" aria-hidden="true" />
-                  </button>
-                </Dialog.Close>
-              </header>
-              <div className="dialog-body">
-                <label className="remote-file-name-field">
-                  <span>{tr("workspace.file.name")}</span>
-                  <input
-                    autoFocus
-                    spellCheck={false}
-                    value={remoteFileTextValue}
-                    onChange={(event) => setRemoteFileTextValue(event.target.value)}
-                  />
-                </label>
-                {remoteFileTextError ? (
-                  <p className="remote-file-dialog-error">{remoteFileTextError}</p>
-                ) : null}
-              </div>
-              <footer className="dialog-actions remote-file-text-actions">
-                <span />
-                <Dialog.Close asChild>
-                  <button type="button">{tr("workspace.file.cancel")}</button>
-                </Dialog.Close>
-                <button className="primary-button" type="submit">
-                  {tr("workspace.file.confirm")}
-                </button>
-              </footer>
-            </form>
-          </Dialog.Content>
-        </Dialog.Portal>
-      </Dialog.Root>
+        title={remoteFileTextAction ? remoteFileActionTitle(remoteFileTextAction) : tr("workspace.file.dialogFallback")}
+        description={remoteFileTextAction ? remoteFileActionDescription(remoteFileTextAction) : ""}
+        label={tr("workspace.file.name")}
+        value={remoteFileTextValue}
+        error={remoteFileTextError}
+        busy={remoteFileSaveAsController.busy}
+        busyLabel={tr("workspace.editor.saving")}
+        onCancel={remoteFileSaveAsController.cancel}
+        onChange={setRemoteFileTextValue}
+        onSubmit={submitRemoteFileTextAction}
+      />
 
       <Dialog.Root
         open={Boolean(remoteFileProperties)}
@@ -13294,17 +13256,6 @@ function remoteFileDeleteDescription(entries: RemoteFileEntry[], affectedTabs: n
   return base;
 }
 
-function joinRemotePath(parentPath: string, name: string) {
-  const normalizedParent = normalizeRemotePath(parentPath);
-  const cleanName = name.trim().replace(/\\/g, "/").replace(/^\/+/, "");
-  if (!cleanName) {
-    return normalizedParent;
-  }
-  return normalizeRemotePath(
-    normalizedParent === "/" ? `/${cleanName}` : `${normalizedParent}/${cleanName}`,
-  );
-}
-
 function remoteFileName(path: string) {
   const normalizedPath = normalizeRemotePath(path);
   if (normalizedPath === "/") {
@@ -13377,12 +13328,14 @@ function previewRemoteFileContent(path: string, connectionName = "preview") {
 }
 
 function remoteFileActionTitle(action: RemoteFileTextAction) {
+  if (action.action === "save-as") return tr("files.editor.saveAs");
   if (action.action === "create-file") return tr("workspace.file.action.createFile");
   if (action.action === "create-directory") return tr("workspace.file.action.createDirectory");
   return tr("workspace.file.action.rename");
 }
 
 function remoteFileActionDescription(action: RemoteFileTextAction) {
+  if (action.action === "save-as") return tr("files.editor.saveAs.description", { path: action.parentPath });
   if (action.action === "rename") {
     return tr("workspace.file.parent", { path: remotePathParent(action.entry.path) });
   }
@@ -13401,11 +13354,6 @@ function isClosableSavedRemoteFileTab(tab: RemoteFileEditorTab) {
 
 async function copyText(text: string) {
   await copyTextToClipboard(text);
-}
-
-function isValidRemoteBaseName(name: string) {
-  const trimmed = name.trim();
-  return Boolean(trimmed) && trimmed !== "." && trimmed !== ".." && !/[\\/]/.test(trimmed);
 }
 
 function remoteFileNameValidationMessage(name: string) {

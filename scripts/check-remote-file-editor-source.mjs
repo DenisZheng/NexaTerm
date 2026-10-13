@@ -20,6 +20,7 @@ const remoteFileTransferUtils = readFileSync(new URL("../src/features/files/remo
 const remoteFileTransferController = readFileSync(new URL("../src/features/files/useRemoteFileTransferController.ts", import.meta.url), "utf8");
 const remoteFileTypes = readFileSync(new URL("../src/features/files/remoteFileTypes.ts", import.meta.url), "utf8");
 const workspaceShell = readFileSync(new URL("../src/features/layout/WorkspaceShell.tsx", import.meta.url), "utf8");
+const textInputDialog = readFileSync(new URL("../src/shared/ui/TextInputDialog.tsx", import.meta.url), "utf8");
 const settingsTypes = readFileSync(new URL("../src/features/settings/settingsTypes.ts", import.meta.url), "utf8");
 const settingsView = readFileSync(new URL("../src/features/settings/SettingsView.tsx", import.meta.url), "utf8");
 const styles = readFileSync(new URL("../src/styles/app.css", import.meta.url), "utf8");
@@ -46,6 +47,7 @@ for (const wrapper of [
   "connectionTestProfile",
   "remoteFileRead",
   "remoteFileWrite",
+  "remoteFileSaveAs",
   "remoteFileCreateFile",
   "remoteFileCreateDirectory",
   "remoteFileRename",
@@ -353,13 +355,17 @@ for (const workspaceNeedle of [
   "setRemoteFileTextValue(\"untitled.txt\")",
   "setRemoteFileTextValue(\"new-folder\")",
   "setRemoteFileTextValue(entry.name)",
-  "remote-file-name-field",
+  "TextInputDialog",
   "remoteFileNameValidationMessage",
   "joinRemotePath(action.parentPath, value)",
 ]) {
   if (!workspaceShell.includes(workspaceNeedle)) {
     throw new Error(`WorkspaceShell should include ${workspaceNeedle}`);
   }
+}
+
+if (!textInputDialog.includes("remote-file-name-field") || !textInputDialog.includes("remote-file-text-dialog")) {
+  throw new Error("The shared naming dialog must preserve the remote file field and form styles");
 }
 
 for (const workspaceForbiddenNeedle of [

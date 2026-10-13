@@ -2,7 +2,7 @@
 
 ## 1. Scope / Trigger
 
-WF-09-02A fixes read/save races under WS-F01/F05/F08/F09. Reuse existing Monaco and Rust UTF-8/version-check commands. No new credential, IPC, snapshot or persistence schema is introduced.
+WF-09-02A fixes read/save races under WS-F01/F05/F08/F09; WF-09-02B adds create-only Save As. Reuse existing Monaco, controller and Rust UTF-8/version-check commands. Save As adds a typed IPC but no credential, snapshot or persistence schema.
 
 ## 2. Signatures
 
@@ -12,6 +12,9 @@ changeRemoteFileEditorContent(tab, content, readyCopy, modifiedCopy);
 completeRemoteFileEditorRead(tab, initialContent, result, readyCopy, modifiedCopy);
 completeRemoteFileEditorSave(tab, submittedContent, metadata, savedCopy, modifiedCopy);
 createRemoteFileEditorOperations(); // begin/has/isCurrent/finish/invalidate/activate/dispose
+canSaveAsRemoteFileEditor(tab);
+completeRemoteFileEditorSaveAs(tab, submittedContent, metadata, newId, savedCopy, modifiedCopy);
+useRemoteFileSaveAs(options); // request / submit / cancel / busy
 ```
 
 `useSessionTabsController` owns the existing file tabs, synchronous ref/setter, and operation scope. Shell supplies I/O and confirmation callbacks; Monaco owns presentation only.
@@ -28,6 +31,10 @@ createRemoteFileEditorOperations(); // begin/has/isCurrent/finish/invalidate/act
 - Monaco initializes/updates `readOnly` from `remoteFileEditorIsReadOnly(tab)`: loading or missing editable metadata is protected; verified saves remain editable so later input is preserved.
 - Existing mtime/size conflict checks and explicit overwrite/cancel dialogs stay authoritative. Never use the latest buffer as evidence of what an earlier request wrote.
 - Opening from Files uses its active pane connection, not a different workspace activeConnection. Existing connection/path editor deduplication is preserved.
+- Save As allows clean verified text, reserves the existing save token while the naming dialog is open, and supports cancel before submission. Loading, missing metadata, any active I/O or an existing dialog prevents entry. During submission the shared text dialog locks name/confirm/cancel/Escape; it does not promise backend cancellation.
+- Same-directory filename-only targets reject separators, control characters, dot names, the original path and any already-open target on the same connection. Existing remote entries are rejected by the create-only backend, never overwritten or silently renamed.
+- Success retargets the source tab id/path/name/metadata and acknowledges only submittedContent. `tabs/retargetFile` conditionally retargets the active file pointer and its unified memory without stealing other active pointers. Failure keeps original path/version/content and the naming dialog for retry.
+- Closing/reopening or renaming the source invalidates the token. Late success/failure cannot retarget the new editor or clear another dialog. If the destination was opened during I/O, keep the original editor and explicitly report that the copy was created; do not duplicate the target tab.
 
 ## 4. Validation & Error Matrix
 

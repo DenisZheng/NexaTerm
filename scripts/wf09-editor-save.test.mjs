@@ -11,13 +11,16 @@ const shell = tree.statements.find((node) => ts.isFunctionDeclaration(node) && n
 const names = ["updateRemoteFileTab", "handleRemoteFileChange", "saveRemoteFile", "loadRemoteFileTab", "reloadRemoteFile", "discardRemoteFileChanges", "closeRemoteFileTab", "closeRemoteFileTabs", "sessionRef", "snapshotFromRefs"];
 const functions = names.map((name) => shell.body.statements.find((node) => ts.isFunctionDeclaration(node) && node.name?.text === name).getText(tree));
 const require = createRequire(import.meta.url);
+function loadTsModule(url) {
+  const module = { exports: {} };
+  const compiled = ts.transpile(readFileSync(url, "utf8"), { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS });
+  vm.runInNewContext(compiled, { module, exports: module.exports, require: (id) => id.startsWith(".") ? loadTsModule(new URL(`${id}.ts`, url)) : require(id) });
+  return module.exports;
+}
 const helpersUrl = new URL("../src/features/editor/remoteFileEditorState.ts", import.meta.url);
 let helpers = {};
 if (existsSync(helpersUrl)) {
-  const compiled = ts.transpile(readFileSync(helpersUrl, "utf8"), { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS });
-  const module = { exports: {} };
-  vm.runInNewContext(compiled, { module, exports: module.exports, require });
-  helpers = module.exports;
+  helpers = loadTsModule(helpersUrl);
 }
 
 function deferred() {
