@@ -16,6 +16,7 @@ import {
   remoteFileLanguageForPath,
 } from "./remoteFileLanguages";
 import type { RemoteFileEditorTab } from "./remoteFileEditorTypes";
+import { canSaveRemoteFileEditor, remoteFileEditorIsReadOnly } from "./remoteFileEditorState";
 
 const monacoGlobal = self as unknown as {
   MonacoEnvironment?: monaco.Environment;
@@ -120,6 +121,7 @@ export function RemoteFileEditor({
       model,
       padding: { top: 10, bottom: 10 },
       renderLineHighlight: "line",
+      readOnly: remoteFileEditorIsReadOnly(tab),
       scrollBeyondLastLine: false,
       tabSize: 2,
       theme: editorThemeRef.current,
@@ -151,6 +153,10 @@ export function RemoteFileEditor({
   useEffect(() => {
     monaco.editor.setTheme(editorTheme);
   }, [editorTheme]);
+
+  useEffect(() => {
+    editorRef.current?.updateOptions({ readOnly: remoteFileEditorIsReadOnly(tab) });
+  }, [tab.metadata, tab.saveState]);
 
   useEffect(() => {
     if (desktopPlatform !== "macos" || themeMode !== "system" || typeof window === "undefined") {
@@ -253,7 +259,7 @@ export function RemoteFileEditor({
               className="mini-action"
               type="button"
               aria-label={t("files.editor.save")}
-              disabled={tab.saveState === "loading" || tab.saveState === "saving" || !tab.dirty}
+              disabled={!canSaveRemoteFileEditor(tab)}
               onClick={() => onSave(tab.id)}
             >
               {tab.saveState === "saving" ? (

@@ -1,0 +1,5 @@
+{"file": "docs/WORKFLOW_SPEC.md", "reason": "WS-F01/F05/F08/F09"}
+{"file": ".trellis/spec/frontend/remote-file-editor.md", "reason": "读写与状态可执行契约"}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "复用现有 controller，保持单一事实源"}
+{"file": ".trellis/spec/frontend/tauri-command-contracts.md", "reason": "既有 remote_file_read/write 和 mtime/size"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "真实行为测试和 source gate 分别留证"}

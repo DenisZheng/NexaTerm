@@ -31,6 +31,11 @@ try {
   throw new Error("RemoteFileEditor.tsx should exist and host Monaco");
 }
 
+if (!editorSource.includes("readOnly: remoteFileEditorIsReadOnly(tab)") ||
+    !editorSource.includes("updateOptions({ readOnly: remoteFileEditorIsReadOnly(tab) })")) {
+  throw new Error("Remote editor must initialize and update read-only protection for unread/failed files");
+}
+
 for (const needle of ["monaco-editor", "RemoteFileEditor", "remoteFileLanguageForPath"]) {
   if (!packageJson.includes(needle) && !editorSource.includes(needle) && !workspaceShell.includes(needle)) {
     throw new Error(`Remote file editor should include ${needle}`);
