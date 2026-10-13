@@ -209,7 +209,7 @@ reachable: bool
 - `ConnectionCredentialMode` uses `saved`, `inline`, or `prompt`.
 - `ConnectionProxyKind` uses `none`, `http_connect`, or `socks5`.
 - `ConnectionJumpKind` uses `none` or `ssh_jump`.
-- Empty optional strings are normalized to `None`; non-empty target, credential, proxy, and note fields are trimmed.
+- Empty optional metadata strings are normalized to `None`; non-empty target, credential metadata, proxy, and note fields are trimmed. Account `CredentialProfileInput` passwords/private-key passphrases preserve exact characters and treat only the empty string as absent; see `credential-vault-boundaries.md`.
 - Credential profiles represent reusable login accounts: username plus password or private-key material. They must not store host or port.
 - Blank `name` defaults to `{username}@{host}`.
 - `is_favorite` is the explicit favorite flag. `last_connected_at` stores the last successful terminal connection timestamp. Upserting an existing connection must preserve both values unless the input explicitly supplies them.

@@ -1,281 +1,102 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-
-import {
-  secretVaultDisableMasterPassword,
-  secretVaultEnableMasterPassword,
-  secretVaultLock,
-  secretVaultStatus,
-  secretVaultUnlock,
-  secretVaultUnlockLocal,
-  type SecretVaultStatus,
-} from "../../shared/tauri/commands";
+import { secretVaultDisableMasterPassword, secretVaultEnableMasterPassword, secretVaultLock, secretVaultStatus, secretVaultUnlock, secretVaultUnlockLocal, type SecretVaultStatus } from "../../shared/tauri/commands";
 import { hasTauriRuntime } from "../../shared/tauri/runtime";
+import { createSecretVaultOperations, type VaultOperationKind } from "./secretVaultOperations";
+import { useVaultIdleLock } from "./useVaultIdleLock";
 
-const previewStatus: SecretVaultStatus = {
-  initialized: true,
-  unlocked: true,
-};
+const previewStatus: SecretVaultStatus = { initialized: true, unlocked: true };
 
-export function useSecretVault({
-  autoLockMinutes,
-  masterPasswordEnabled,
-}: {
-  autoLockMinutes: 0 | 5 | 15 | 30 | 60;
-  masterPasswordEnabled: boolean;
-}) {
+export function useSecretVault({ autoLockMinutes, masterPasswordEnabled }: { autoLockMinutes: 0 | 5 | 15 | 30 | 60; masterPasswordEnabled: boolean }) {
   const isTauri = hasTauriRuntime();
   const canAutoUnlockLocal = isTauri && !masterPasswordEnabled;
-  // 未查询成功与确实不存在是两种状态，不能因读取失败提示用户重建保险库。
-  const [status, setStatus] = useState<SecretVaultStatus | null>(
-    isTauri ? null : previewStatus,
-  );
-  const [loading, setLoading] = useState(isTauri);
-  const [unlocking, setUnlocking] = useState(false);
+  const [status, setStatus] = useState<SecretVaultStatus | null>(isTauri ? null : previewStatus);
   const [error, setError] = useState<string | null>(null);
+  const [operations] = useState(createSecretVaultOperations);
+  const [activity, setActivity] = useState({ reading: isTauri, mutation: null as VaultOperationKind | null });
   const localAutoUnlockAttemptedRef = useRef(false);
-  const localUnlockInFlightRef = useRef(false);
+  const failedLockRef = useRef(false);
+  const modeRef = useRef(masterPasswordEnabled);
+  modeRef.current = masterPasswordEnabled;
+  const deferredRefreshRef = useRef(false);
+  const autoUnlockConfigRef = useRef<string | null>(null);
+  const loading = activity.reading || activity.mutation === "local" || activity.mutation === "lock";
+  const unlocking = activity.mutation !== null;
 
-  const refresh = useCallback(async () => {
-    if (!isTauri) {
-      setStatus(previewStatus);
-      setLoading(false);
-      setError(null);
-      return previewStatus;
-    }
+  useEffect(() => {
+    operations.activate();
+    return () => operations.suspend();
+  }, [operations]);
 
-    setLoading(true);
-    setError(null);
+  const execute = useCallback(async (kind: VaultOperationKind, request: (isCurrent: () => boolean) => Promise<SecretVaultStatus | null>) => {
+    if (!isTauri) { setStatus(previewStatus); setError(null); setActivity({ reading: false, mutation: null }); return previewStatus; }
+    const operation = operations.begin(kind);
+    if (!operation) return null;
+    if (kind === "local") localAutoUnlockAttemptedRef.current = true;
+    if (kind === "lock") { setStatus(null); failedLockRef.current = true; }
+    // local 重试成功前保持原错误门禁，避免短暂露出工作区。
+    if (kind !== "local") setError(null);
+    setActivity(operations.activity());
     try {
-      const nextStatus = await secretVaultStatus();
-      setStatus(nextStatus);
-      return nextStatus;
+      const result = await operations.run(operation, () => request(() => operations.isCurrent(operation)));
+      const current = operations.isCurrent(operation) && !(kind === "local" && modeRef.current);
+      if (result && current) { setStatus(result); setError(null); failedLockRef.current = false; }
+      // 已完成的 rekey 必须通知 settings 真实模式；lock 仍优先决定 UI availability。
+      return current || kind === "enable" || kind === "disable" ? result : null;
     } catch (nextError) {
-      setError(formatError(nextError));
+      if (operations.isCurrent(operation)) {
+        if (kind === "refresh") setStatus(null);
+        setError(formatError(nextError));
+      }
       return null;
     } finally {
-      setLoading(false);
+      const finished = operations.finish(operation);
+      if (finished && operations.isActive()) setActivity(operations.activity());
     }
-  }, [isTauri]);
+  }, [isTauri, operations]);
+
+  const refresh = useCallback(() => execute("refresh", () => secretVaultStatus()), [execute]);
+  const unlock = useCallback((password: string) => execute("unlock", () => secretVaultUnlock(password)), [execute]);
+  const unlockLocal = useCallback(() => execute("local", async (isCurrent) => {
+    const current = await secretVaultStatus();
+    if (modeRef.current || !isCurrent()) return null;
+    return current.unlocked ? current : secretVaultUnlockLocal();
+  }), [execute, operations]);
+  const lock = useCallback(() => execute("lock", () => secretVaultLock()), [execute]);
+  const enableMasterPassword = useCallback((password: string) => execute("enable", () => secretVaultEnableMasterPassword(password)), [execute]);
+  const disableMasterPassword = useCallback(() => execute("disable", () => secretVaultDisableMasterPassword()), [execute]);
 
   useEffect(() => {
-    if (canAutoUnlockLocal) {
-      return;
-    }
-    void refresh();
-  }, [canAutoUnlockLocal, refresh]);
-
-  useEffect(() => {
-    localAutoUnlockAttemptedRef.current = false;
+    const config = `${isTauri}:${masterPasswordEnabled}`;
+    if (autoUnlockConfigRef.current !== config) localAutoUnlockAttemptedRef.current = false;
+    autoUnlockConfigRef.current = config;
   }, [isTauri, masterPasswordEnabled]);
-
-  const unlock = useCallback(
-    async (masterPassword: string) => {
-      if (!isTauri) {
-        setStatus(previewStatus);
-        return previewStatus;
-      }
-
-      setUnlocking(true);
-      setError(null);
-      try {
-        const nextStatus = await secretVaultUnlock(masterPassword);
-        setStatus(nextStatus);
-        return nextStatus;
-      } catch (nextError) {
-        setError(formatError(nextError));
-        return null;
-      } finally {
-        setUnlocking(false);
-      }
-    },
-    [isTauri],
-  );
-
-  const unlockLocal = useCallback(async () => {
-    if (!isTauri) {
-      setStatus(previewStatus);
-      return previewStatus;
-    }
-
-    if (localUnlockInFlightRef.current) {
-      return null;
-    }
-    localUnlockInFlightRef.current = true;
-    setUnlocking(true);
-    setLoading(true);
-    // 重试期间保留错误门禁，避免清空 error 后短暂露出未解锁的工作区。
-    try {
-      const currentStatus = await secretVaultStatus();
-      setStatus(currentStatus);
-      const nextStatus = currentStatus.unlocked ? currentStatus : await secretVaultUnlockLocal();
-      setStatus(nextStatus);
-      setError(null);
-      return nextStatus;
-    } catch (nextError) {
-      setError(formatError(nextError));
-      return null;
-    } finally {
-      localUnlockInFlightRef.current = false;
-      setUnlocking(false);
-      setLoading(false);
-    }
-  }, [isTauri]);
-
   useEffect(() => {
-    if (!canAutoUnlockLocal || localAutoUnlockAttemptedRef.current) {
-      return;
-    }
-    localAutoUnlockAttemptedRef.current = true;
-    void unlockLocal();
-  }, [canAutoUnlockLocal, unlockLocal]);
-
-  const lock = useCallback(async () => {
-    if (!isTauri) {
-      setStatus(previewStatus);
-      return previewStatus;
-    }
-
-    setError(null);
-    try {
-      const nextStatus = await secretVaultLock();
-      setStatus(nextStatus);
-      return nextStatus;
-    } catch (nextError) {
-      setError(formatError(nextError));
-      return null;
-    }
-  }, [isTauri]);
-
+    if (canAutoUnlockLocal) { deferredRefreshRef.current = false; return; }
+    if (operations.hasMutation()) { deferredRefreshRef.current = true; return; }
+    deferredRefreshRef.current = false;
+    void refresh();
+  }, [canAutoUnlockLocal, operations, refresh]);
   useEffect(() => {
-    if (
-      !isTauri ||
-      canAutoUnlockLocal ||
-      masterPasswordEnabled ||
-      loading ||
-      unlocking ||
-      status?.unlocked ||
-      localAutoUnlockAttemptedRef.current
-    ) {
-      return;
+    if (deferredRefreshRef.current && !unlocking && !operations.hasMutation()) {
+      deferredRefreshRef.current = false;
+      void refresh();
     }
-    localAutoUnlockAttemptedRef.current = true;
-    void unlockLocal();
-  }, [
-    canAutoUnlockLocal,
-    isTauri,
-    loading,
-    masterPasswordEnabled,
-    status?.unlocked,
-    unlockLocal,
-    unlocking,
-  ]);
-
+  }, [operations, refresh, unlocking]);
   useEffect(() => {
-    if (!isTauri || !masterPasswordEnabled || !status?.unlocked || autoLockMinutes === 0) {
-      return;
-    }
+    if (canAutoUnlockLocal && !localAutoUnlockAttemptedRef.current && !operations.hasMutation()) void unlockLocal();
+  }, [canAutoUnlockLocal, operations, unlockLocal, unlocking]);
 
-    let timer = window.setTimeout(() => {
-      void lock();
-    }, autoLockMinutes * 60 * 1000);
-
-    const resetTimer = () => {
-      window.clearTimeout(timer);
-      timer = window.setTimeout(() => {
-        void lock();
-      }, autoLockMinutes * 60 * 1000);
-    };
-    window.addEventListener("keydown", resetTimer);
-    window.addEventListener("pointerdown", resetTimer);
-    window.addEventListener("wheel", resetTimer);
-    return () => {
-      window.clearTimeout(timer);
-      window.removeEventListener("keydown", resetTimer);
-      window.removeEventListener("pointerdown", resetTimer);
-      window.removeEventListener("wheel", resetTimer);
-    };
-  }, [autoLockMinutes, isTauri, lock, masterPasswordEnabled, status?.unlocked]);
-
-  const enableMasterPassword = useCallback(
-    async (masterPassword: string) => {
-      if (!isTauri) {
-        setStatus(previewStatus);
-        return previewStatus;
-      }
-
-      setUnlocking(true);
-      setError(null);
-      try {
-        const nextStatus = await secretVaultEnableMasterPassword(masterPassword);
-        setStatus(nextStatus);
-        return nextStatus;
-      } catch (nextError) {
-        setError(formatError(nextError));
-        return null;
-      } finally {
-        setUnlocking(false);
-      }
-    },
-    [isTauri],
-  );
-
-  const disableMasterPassword = useCallback(async () => {
-    if (!isTauri) {
-      setStatus(previewStatus);
-      return previewStatus;
-    }
-
-    setUnlocking(true);
-    setError(null);
-    try {
-      const nextStatus = await secretVaultDisableMasterPassword();
-      setStatus(nextStatus);
-      return nextStatus;
-    } catch (nextError) {
-      setError(formatError(nextError));
-      return null;
-    } finally {
-      setUnlocking(false);
-    }
-  }, [isTauri]);
-
-  return useMemo(
-    () => ({
-      disableMasterPassword,
-      enableMasterPassword,
-      error,
-      loading,
-      lock,
-      ready: !isTauri || Boolean(status?.unlocked),
-      requiresUnlock: isTauri && !status?.unlocked && (masterPasswordEnabled || Boolean(error)),
-      refresh,
-      retry: canAutoUnlockLocal ? unlockLocal : refresh,
-      status,
-      unlock,
-      unlocking,
-    }),
-    [
-      canAutoUnlockLocal,
-      disableMasterPassword,
-      enableMasterPassword,
-      error,
-      isTauri,
-      loading,
-      lock,
-      masterPasswordEnabled,
-      refresh,
-      status,
-      unlock,
-      unlockLocal,
-      unlocking,
-    ],
-  );
+  useVaultIdleLock({ enabled: isTauri && masterPasswordEnabled && Boolean(status?.unlocked), minutes: autoLockMinutes, onLock: lock });
+  return useMemo(() => ({
+    disableMasterPassword, enableMasterPassword, error, loading, lock,
+    ready: !isTauri || Boolean(status?.unlocked),
+    requiresUnlock: isTauri && !status?.unlocked && (masterPasswordEnabled || Boolean(error)),
+    refresh, retry: failedLockRef.current ? lock : canAutoUnlockLocal ? unlockLocal : refresh,
+    status, unlock, unlocking,
+  }), [canAutoUnlockLocal, disableMasterPassword, enableMasterPassword, error, isTauri, loading, lock, masterPasswordEnabled, refresh, status, unlock, unlockLocal, unlocking]);
 }
 
 function formatError(error: unknown) {
-  if (typeof error === "object" && error !== null && "message" in error) {
-    return String((error as { message: unknown }).message);
-  }
-
+  if (typeof error === "object" && error !== null && "message" in error) return String((error as { message: unknown }).message);
   return String(error);
 }

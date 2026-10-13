@@ -1752,12 +1752,12 @@ function SecuritySettingsSection({
 
   async function submitEnable(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const password = masterPassword.trim();
-    if (!password) {
+    const password = masterPassword;
+    if (!password.trim()) {
       setLocalError(t("settings.security.error.passwordRequired"));
       return;
     }
-    if (password !== confirmPassword.trim()) {
+    if (password !== confirmPassword) {
       setLocalError(t("settings.security.error.passwordMismatch"));
       return;
     }
@@ -1775,8 +1775,8 @@ function SecuritySettingsSection({
 
   async function submitUnlock(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const password = unlockPassword.trim();
-    if (!password) {
+    const password = unlockPassword;
+    if (!password.trim()) {
       setLocalError(t("settings.security.error.passwordRequired"));
       return;
     }
@@ -1790,12 +1790,12 @@ function SecuritySettingsSection({
 
   async function submitChangePassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const password = nextPassword.trim();
-    if (!password) {
+    const password = nextPassword;
+    if (!password.trim()) {
       setLocalError(t("settings.security.error.newPasswordRequired"));
       return;
     }
-    if (password !== nextConfirmPassword.trim()) {
+    if (password !== nextConfirmPassword) {
       setLocalError(t("settings.security.error.passwordMismatch"));
       return;
     }

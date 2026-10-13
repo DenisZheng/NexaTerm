@@ -1,3 +1,5 @@
+mod credential_delete;
+
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -1261,42 +1263,6 @@ impl StorageRepository {
         collect_rows(rows)
     }
 
-    pub fn credential_delete(&self, id: &str) -> Result<(), AppError> {
-        let references = self
-            .connection
-            .prepare("SELECT name FROM connections WHERE credential_id = ?1")
-            .and_then(|mut statement| {
-                let rows = statement.query_map(params![id], |row| row.get::<_, String>(0))?;
-                rows.collect::<Result<Vec<_>, _>>()
-            })
-            .map_err(sqlite_repository_error)?;
-        if !references.is_empty() {
-            return Err(AppError::new(
-                "credential_in_use",
-                "该凭据正在被连接使用，请先修改连接。",
-                references.join(", "),
-                true,
-            ));
-        }
-
-        let (_credential, secret_ref) = self.stored_credential(id)?;
-        let changed = self
-            .connection
-            .execute("DELETE FROM credentials WHERE id = ?1", params![id])
-            .map_err(sqlite_repository_error)?;
-        if changed == 0 {
-            return Err(AppError::new(
-                "credential_missing",
-                "凭据不存在。",
-                format!("credential_id={id}"),
-                false,
-            ));
-        }
-        if let Some(reference) = secret_ref {
-            self.secret_store.delete_secret(&reference)?;
-        }
-        Ok(())
-    }
     pub fn resolve_saved_connection(
         &self,
         connection_id: &str,
@@ -3111,7 +3077,7 @@ mod tests {
 
         let resolved = repo.resolve_saved_connection(&connection.id, None).unwrap();
 
-        assert_eq!(resolved.password, Some("secret".to_string()));
+        assert_eq!(resolved.password, Some(" secret ".to_string()));
         assert_eq!(resolved.private_key_path, None);
     }
 
@@ -3414,7 +3380,7 @@ mod tests {
         assert_eq!(saved.credential_mode, ConnectionCredentialMode::Saved);
         assert_eq!(
             repo.resolve_rdp_connection_secret(&saved.id).unwrap(),
-            Some("secret".to_string())
+            Some(" secret ".to_string())
         );
     }
 
@@ -3493,7 +3459,7 @@ mod tests {
         assert_eq!(saved.credential_mode, ConnectionCredentialMode::Saved);
         assert_eq!(
             repo.resolve_vnc_connection_secret(&saved.id).unwrap(),
-            Some("secret".to_string())
+            Some(" secret ".to_string())
         );
     }
 
@@ -3661,7 +3627,7 @@ mod tests {
 
         assert_eq!(updated.password, None);
         assert_eq!(revealed.kind, ConnectionAuthKind::Password);
-        assert_eq!(revealed.password, Some("secret".to_string()));
+        assert_eq!(revealed.password, Some(" secret ".to_string()));
         assert_eq!(revealed.private_key_passphrase, None);
     }
 
@@ -3690,7 +3656,7 @@ mod tests {
 
         assert_eq!(revealed.kind, ConnectionAuthKind::PrivateKey);
         assert_eq!(revealed.password, None);
-        assert_eq!(revealed.private_key_passphrase, Some("phrase".to_string()));
+        assert_eq!(revealed.private_key_passphrase, Some(" phrase ".to_string()));
     }
 
     #[test]
@@ -3921,7 +3887,7 @@ mod tests {
         assert!(all.iter().any(|entry| entry.command == "global-only"));
     }
 
-    fn password_connection_input() -> ConnectionProfileInput {
+    pub(super) fn password_connection_input() -> ConnectionProfileInput {
         ConnectionProfileInput {
             id: Some("conn-001".to_string()),
             source_connection_id: None,
@@ -3961,7 +3927,7 @@ mod tests {
         }
     }
 
-    fn password_credential_input() -> crate::credentials::CredentialProfileInput {
+    pub(super) fn password_credential_input() -> crate::credentials::CredentialProfileInput {
         crate::credentials::CredentialProfileInput {
             id: Some("cred-001".to_string()),
             name: Some("生产账号".to_string()),
@@ -3975,7 +3941,7 @@ mod tests {
             notes: None,
         }
     }
-    fn temp_repository(
+    pub(super) fn temp_repository(
         name: &str,
     ) -> (
         StorageRepository,

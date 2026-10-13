@@ -55,8 +55,8 @@ export function SecretVaultGate({
       await onRetry();
       return;
     }
-    const password = masterPassword.trim();
-    if (!password) {
+    const password = masterPassword;
+    if (!password.trim()) {
       setLocalError(t("vault.error.passwordRequired"));
       return;
     }
@@ -95,6 +95,7 @@ export function SecretVaultGate({
                 value={masterPassword}
                 type={showPassword ? "text" : "password"}
                 autoComplete={status?.initialized ? "current-password" : "new-password"}
+                disabled={loading || unlocking}
                 onChange={(event) => setMasterPassword(event.target.value)}
               />
               <button

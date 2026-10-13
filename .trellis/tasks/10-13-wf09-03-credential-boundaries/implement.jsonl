@@ -1,0 +1,5 @@
+{"file": "docs/WORKFLOW_SPEC.md", "reason": "WS-C06/C07/F05/F08"}
+{"file": ".trellis/spec/backend/tauri-command-contracts.md", "reason": "Vault/credential 数据边界"}
+{"file": ".trellis/spec/frontend/secret-vault-lifecycle.md", "reason": "衔接 A 切片生命周期"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "合成 secret marker 与实际行为测试"}
+{"file": ".trellis/spec/backend/credential-vault-boundaries.md", "reason": "可撤销访问与运行时删除回滚；crash/backup 边界"}
