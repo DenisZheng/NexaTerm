@@ -63,7 +63,12 @@ export function useRemoteFileTransferController({
       });
 
       void Promise.resolve()
-        .then(() => task())
+        .then(() => {
+          if (!mountedRef.current || getRemoteFileTransfer(transferId)?.status !== "running") {
+            return;
+          }
+          return task();
+        })
         .catch((error) => {
           if (mountedRef.current) {
             onTaskErrorRef.current(transferId, error);

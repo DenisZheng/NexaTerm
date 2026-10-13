@@ -58,6 +58,18 @@ describe("WF-09-01A transfer scheduling", () => {
     jobs[3].resolve(); await flush();
   });
 
+  it.each(["cancel", "remove", "unmount"])("does not start work after immediate %s", async (action) => {
+    const hook = controller();
+    const id = transfer();
+    const task = vi.fn(async () => {});
+    hook.result.current.enqueueRemoteFileTransfer(id, task);
+    if (action === "cancel") hook.result.current.requestCancelTransfer(id);
+    if (action === "remove") hook.result.current.removeTransfer(id);
+    if (action === "unmount") hook.unmount();
+    await flush();
+    expect(task).not.toHaveBeenCalled();
+  });
+
   it("does not execute unknown or removed rows", async () => {
     const hook = controller();
     const active = deferred();

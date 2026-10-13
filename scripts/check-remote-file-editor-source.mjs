@@ -435,7 +435,7 @@ for (const directTerminalNeedle of [
     throw new Error(`Same-connection terminal flow should include ${directTerminalNeedle}`);
   }
 }
-if (!/activeConnectedTerminalTab\s*\?\s*\(\s*<Tooltip label="新建同连接终端"/.test(workspaceShell)) {
+if (!/activeConnectedTerminalTab\s*\?\s*\(\s*<Tooltip label=\{tr\("workspace\.terminal\.newSameConnection"\)\}/.test(workspaceShell)) {
   throw new Error("Same-connection terminal add button should only render after a terminal session is connected");
 }
 
@@ -467,7 +467,7 @@ if (!/connection:\s*ConnectionProfile/.test(transferSessionNameMatch[1])) {
 if (/activeTab|terminalTabs/.test(transferSessionNameMatch[1] + transferSessionNameMatch[2])) {
   throw new Error("transferSessionName should not use terminal tab titles for download grouping");
 }
-if (!/connection\.name[\s\S]*connection\.host[\s\S]*mxterm-session/.test(transferSessionNameMatch[2])) {
+if (!/connection\.name[\s\S]*connection\.host[\s\S]*nexaterm-session/.test(transferSessionNameMatch[2])) {
   throw new Error("transferSessionName should prefer connection name, then host, then mxterm-session");
 }
 
