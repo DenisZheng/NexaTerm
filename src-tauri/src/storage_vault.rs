@@ -22,6 +22,11 @@ use crate::storage_local_key::{
     write_local_master_key as write_native_local_master_key,
 };
 
+mod access;
+#[cfg(test)]
+mod boundary_tests;
+use access::{SharedVaultStore, VaultAccess};
+
 pub const VAULT_SERVICE: &str = "mxterm";
 pub const VAULT_FILE_NAME: &str = "secrets.enc";
 const LOCAL_KEY_FILE_NAME: &str = "secrets.local.key";
@@ -95,6 +100,36 @@ pub trait SecretStore: Send + Sync {
     fn set_secret(&self, reference: &SecretReference, secret: &str) -> Result<(), AppError>;
     fn get_secret(&self, reference: &SecretReference) -> Result<String, AppError>;
     fn delete_secret(&self, reference: &SecretReference) -> Result<(), AppError>;
+    fn delete_secret_with_commit(&self, reference: &SecretReference, commit: &mut dyn FnMut() -> Result<(), AppError>) -> Result<(), AppError> {
+        self.delete_secrets_with_commit(std::slice::from_ref(reference), commit)
+    }
+
+    fn delete_secrets_with_commit(&self, references: &[SecretReference], commit: &mut dyn FnMut() -> Result<(), AppError>) -> Result<(), AppError> {
+        let mut previous = Vec::new();
+        for reference in references {
+            match self.get_secret(reference) {
+                Ok(secret) => previous.push((reference, secret)),
+                Err(error) if error.code == "secret_missing" => {},
+                Err(error) => return Err(error),
+            }
+        }
+        let restore = |count: usize, failure: AppError| {
+            let mut restore_failure = None;
+            for (reference, secret) in previous.iter().take(count) {
+                if let Err(error) = self.set_secret(reference, secret) { restore_failure.get_or_insert(error); }
+            }
+            match restore_failure {
+                Some(error) => Err(AppError::new("secret_store_delete_rollback_failed", "删除失败，保险库回滚恢复未完成。请重新解锁后检查凭据。", format!("failure={}; restore={}", failure.code, error.code), true)),
+                None => Err(failure),
+            }
+        };
+        for (index, (reference, _)) in previous.iter().enumerate() {
+            if let Err(error) = self.delete_secret(reference) { return restore(index, error); }
+        }
+        if let Err(error) = commit() { return restore(previous.len(), error); }
+        Ok(())
+    }
+
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -227,158 +262,104 @@ pub struct VaultStatus {
 
 #[derive(Default)]
 pub struct VaultState {
-    store: Mutex<Option<Arc<VaultSecretStore>>>,
+    store: SharedVaultStore,
+}
+
+impl Drop for VaultState {
+    fn drop(&mut self) {
+        *self.store.lock().unwrap_or_else(|poison| poison.into_inner()) = None;
+    }
 }
 
 impl VaultState {
+    fn with_current<T>(&self, action: impl FnOnce(&mut Option<Arc<VaultSecretStore>>) -> Result<T, AppError>) -> Result<T, AppError> {
+        let mut current = self.store.lock().map_err(|_| secret_store_write_failed(VAULT_FILE_NAME, "vault state lock poisoned"))?;
+        action(&mut current)
+    }
+
     pub fn unlock_local(&self, root: impl AsRef<Path>) -> Result<VaultStatus, AppError> {
         let root = root.as_ref();
-        match self.unlock_local_strict(root) {
+        self.with_current(|current| match Self::unlock_local_strict(root, current) {
             Ok(status) => Ok(status),
-            Err(error) if local_recovery_allowed(root, &error) => {
-                self.recover_local_vault_from_legacy(root)
-            }
+            Err(error) if local_recovery_allowed(root, &error) => Self::recover_local_vault_from_legacy(root, current),
             Err(error) => Err(error),
-        }
+        })
     }
 
-    pub fn unlock(
-        &self,
-        root: impl AsRef<Path>,
-        master_password: &str,
-    ) -> Result<VaultStatus, AppError> {
-        recover_pending_connection_transfer(root.as_ref())?;
-        if master_password.trim().is_empty() {
-            return Err(AppError::new(
-                "vault_password_missing",
-                "请输入安全密码。",
-                "master password is empty",
-                true,
-            ));
-        }
-        let store = Arc::new(VaultSecretStore::open(root.as_ref(), master_password)?);
-        let status = VaultStatus {
-            initialized: true,
-            unlocked: true,
-        };
-        *self.store.lock().map_err(|_| {
-            secret_store_write_failed(VAULT_FILE_NAME, "vault state lock poisoned")
-        })? = Some(store);
-        Ok(status)
+    pub fn unlock(&self, root: impl AsRef<Path>, master_password: &str) -> Result<VaultStatus, AppError> {
+        self.with_current(|current| Self::unlock_into(root.as_ref(), master_password, current))
     }
 
-    pub fn enable_master_password(
-        &self,
-        root: impl AsRef<Path>,
-        master_password: &str,
-    ) -> Result<VaultStatus, AppError> {
+    fn unlock_into(root: &Path, master_password: &str, current: &mut Option<Arc<VaultSecretStore>>) -> Result<VaultStatus, AppError> {
+        recover_pending_connection_transfer(root)?;
         if master_password.trim().is_empty() {
-            return Err(AppError::new(
-                "vault_password_missing",
-                "请输入安全密码。",
-                "master password is empty",
-                true,
-            ));
+            return Err(AppError::new("vault_password_missing", "请输入安全密码。", "master password is empty", true));
+        }
+        let store = Arc::new(VaultSecretStore::open(root, master_password)?);
+        *current = Some(store);
+        Ok(VaultStatus { initialized: true, unlocked: true })
+    }
+
+    pub fn enable_master_password(&self, root: impl AsRef<Path>, master_password: &str) -> Result<VaultStatus, AppError> {
+        if master_password.trim().is_empty() {
+            return Err(AppError::new("vault_password_missing", "请输入安全密码。", "master password is empty", true));
         }
         let root = root.as_ref();
-        let status = self.rekey(root, master_password)?;
-        // The local auto-unlock key no longer decrypts the re-keyed vault. Remove it
-        // from both native storage and the legacy file so master-password mode does
-        // not leave stale local unlock material behind.
-        let _ = delete_native_local_master_key();
-        let _ = fs::remove_file(root.join(LOCAL_KEY_FILE_NAME));
-        Ok(status)
+        self.with_current(|current| {
+            let status = Self::rekey(root, master_password, current)?;
+            // 新密码已发布，local 自动解锁材料不再有效；沿用 provider 清理策略。
+            let _ = delete_native_local_master_key();
+            let _ = fs::remove_file(root.join(LOCAL_KEY_FILE_NAME));
+            Ok(status)
+        })
     }
 
     pub fn disable_master_password(&self, root: impl AsRef<Path>) -> Result<VaultStatus, AppError> {
         let root = root.as_ref();
-        let master_password = local_master_password(root, true)?;
-        self.rekey(root, &master_password)
-    }
-
-    pub fn status(&self, root: impl AsRef<Path>) -> Result<VaultStatus, AppError> {
-        let unlocked = self
-            .store
-            .lock()
-            .map_err(|_| secret_store_read_failed(VAULT_FILE_NAME, "vault state lock poisoned"))?
-            .is_some();
-        Ok(VaultStatus {
-            initialized: VaultSecretStore::exists(root),
-            unlocked,
+        self.with_current(|current| {
+            if current.is_none() { return Err(vault_locked()); }
+            let password = local_master_password(root, true)?;
+            Self::rekey(root, &password, current)
         })
     }
 
+    pub fn status(&self, root: impl AsRef<Path>) -> Result<VaultStatus, AppError> {
+        let unlocked = self.store.lock().map_err(|_| secret_store_read_failed(VAULT_FILE_NAME, "vault state lock poisoned"))?.is_some();
+        Ok(VaultStatus { initialized: VaultSecretStore::exists(root), unlocked })
+    }
+
     pub fn lock(&self, root: impl AsRef<Path>) -> Result<VaultStatus, AppError> {
-        *self.store.lock().map_err(|_| {
-            secret_store_write_failed(VAULT_FILE_NAME, "vault state lock poisoned")
-        })? = None;
-        Ok(VaultStatus {
-            initialized: VaultSecretStore::exists(root),
-            unlocked: false,
+        self.with_current(|current| {
+            *current = None;
+            Ok(VaultStatus { initialized: VaultSecretStore::exists(root), unlocked: false })
         })
     }
 
     pub fn secret_store(&self) -> Result<Arc<dyn SecretStore>, AppError> {
-        let store = self
-            .store
-            .lock()
-            .map_err(|_| secret_store_read_failed(VAULT_FILE_NAME, "vault state lock poisoned"))?
-            .clone()
-            .ok_or_else(vault_locked)?;
-        Ok(store)
+        let current = self.store.lock().map_err(|_| secret_store_read_failed(VAULT_FILE_NAME, "vault state lock poisoned"))?;
+        let store = current.as_ref().ok_or_else(vault_locked)?;
+        Ok(Arc::new(VaultAccess { current: Arc::clone(&self.store), expected: Arc::downgrade(store) }))
     }
 
-    fn unlock_local_strict(&self, root: &Path) -> Result<VaultStatus, AppError> {
-        let master_password = local_master_password(root, !VaultSecretStore::exists(root))?;
-        self.unlock(root, &master_password)
+    fn unlock_local_strict(root: &Path, current: &mut Option<Arc<VaultSecretStore>>) -> Result<VaultStatus, AppError> {
+        let password = local_master_password(root, !VaultSecretStore::exists(root))?;
+        Self::unlock_into(root, &password, current)
     }
 
-    fn recover_local_vault_from_legacy(&self, root: &Path) -> Result<VaultStatus, AppError> {
-        let Some(plaintext) = legacy_vault_plaintext(root)? else {
-            return Err(vault_unlock_failed());
-        };
-        let master_password = local_master_password(root, true)?;
+    fn recover_local_vault_from_legacy(root: &Path, current: &mut Option<Arc<VaultSecretStore>>) -> Result<VaultStatus, AppError> {
+        let Some(plaintext) = legacy_vault_plaintext(root)? else { return Err(vault_unlock_failed()); };
+        let password = local_master_password(root, true)?;
         backup_existing_vault(root)?;
-        let store = Arc::new(VaultSecretStore::replace_with_plaintext(
-            root,
-            &master_password,
-            plaintext,
-        )?);
-        *self.store.lock().map_err(|_| {
-            secret_store_write_failed(VAULT_FILE_NAME, "vault state lock poisoned")
-        })? = Some(store);
-        Ok(VaultStatus {
-            initialized: true,
-            unlocked: true,
-        })
+        let store = Arc::new(VaultSecretStore::replace_with_plaintext(root, &password, plaintext)?);
+        *current = Some(store);
+        Ok(VaultStatus { initialized: true, unlocked: true })
     }
-    fn rekey(
-        &self,
-        root: impl AsRef<Path>,
-        master_password: &str,
-    ) -> Result<VaultStatus, AppError> {
-        let root = root.as_ref();
-        let current_store = {
-            self.store
-                .lock()
-                .map_err(|_| {
-                    secret_store_read_failed(VAULT_FILE_NAME, "vault state lock poisoned")
-                })?
-                .clone()
-        };
-        let plaintext = current_store.ok_or_else(vault_locked)?.clone_plaintext()?;
-        let store = Arc::new(VaultSecretStore::replace_with_plaintext(
-            root,
-            master_password,
-            plaintext,
-        )?);
-        *self.store.lock().map_err(|_| {
-            secret_store_write_failed(VAULT_FILE_NAME, "vault state lock poisoned")
-        })? = Some(store);
-        Ok(VaultStatus {
-            initialized: true,
-            unlocked: true,
-        })
+
+    fn rekey(root: &Path, password: &str, current: &mut Option<Arc<VaultSecretStore>>) -> Result<VaultStatus, AppError> {
+        let plaintext = current.as_ref().ok_or_else(vault_locked)?.clone_plaintext()?;
+        let store = Arc::new(VaultSecretStore::replace_with_plaintext(root, password, plaintext)?);
+        *current = Some(store);
+        Ok(VaultStatus { initialized: true, unlocked: true })
     }
 }
 
@@ -541,10 +522,17 @@ impl SecretStore for VaultSecretStore {
             .plaintext
             .lock()
             .map_err(|_| secret_store_write_failed(&reference.account, "vault lock poisoned"))?;
-        plaintext
+        let old = plaintext
             .secrets
             .insert(reference.account.clone(), secret.to_string());
-        self.persist_locked(&plaintext)
+        if let Err(error) = self.persist_locked(&plaintext) {
+            match old {
+                Some(old) => { plaintext.secrets.insert(reference.account.clone(), old); }
+                None => { plaintext.secrets.remove(&reference.account); }
+            }
+            return Err(error);
+        }
+        Ok(())
     }
 
     fn get_secret(&self, reference: &SecretReference) -> Result<String, AppError> {
@@ -562,8 +550,12 @@ impl SecretStore for VaultSecretStore {
             .plaintext
             .lock()
             .map_err(|_| secret_store_delete_failed(&reference.account, "vault lock poisoned"))?;
-        plaintext.secrets.remove(&reference.account);
-        self.persist_locked(&plaintext)
+        let old = plaintext.secrets.remove(&reference.account);
+        if let Err(error) = self.persist_locked(&plaintext) {
+            if let Some(old) = old { plaintext.secrets.insert(reference.account.clone(), old); }
+            return Err(error);
+        }
+        Ok(())
     }
 }
 

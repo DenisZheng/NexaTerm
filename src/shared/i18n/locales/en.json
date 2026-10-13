@@ -2695,5 +2695,8 @@
   "terminal.status.listenerFailed": "Event listener failed",
   "terminal.status.disconnected": "Disconnected",
   "workspace.time.minuteAgo": "{count} minute ago",
-  "workspace.time.hourAgo": "{count} hour ago"
+  "workspace.time.hourAgo": "{count} hour ago",
+  "credentials.error.locked": "Unlock the vault before changing credentials.",
+  "credentials.error.busy": "A credential operation is in progress. Please wait.",
+  "credentials.error.restoreFailed": "Credential deletion failed and the vault could not restore its secret. Unlock the vault and check this credential."
 }

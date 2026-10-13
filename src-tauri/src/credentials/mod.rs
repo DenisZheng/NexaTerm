@@ -202,9 +202,9 @@ pub fn validate_credential_input(
         )
     })?;
 
-    let password = trim_optional(input.password.as_ref());
+    let password = secret_optional(input.password.as_ref());
     let private_key_path = trim_optional(input.private_key_path.as_ref());
-    let private_key_passphrase = trim_optional(input.private_key_passphrase.as_ref());
+    let private_key_passphrase = secret_optional(input.private_key_passphrase.as_ref());
     let password_touched = input.password_touched || password.is_some();
     let private_key_passphrase_touched =
         input.private_key_passphrase_touched || private_key_passphrase.is_some();
@@ -270,6 +270,10 @@ fn trim_optional(value: Option<&String>) -> Option<String> {
         .map(ToOwned::to_owned)
 }
 
+fn secret_optional(value: Option<&String>) -> Option<String> {
+    value.filter(|value| !value.is_empty()).cloned()
+}
+
 #[cfg(test)]
 mod tests {
     use std::fs;
@@ -294,12 +298,12 @@ mod tests {
     }
 
     #[test]
-    fn validation_trims_password_credential() {
+    fn validation_trims_metadata_and_preserves_password() {
         let validated = validate_credential_input(&password_input()).unwrap();
 
         assert_eq!(validated.name, "生产密码");
         assert_eq!(validated.username, "deploy");
-        assert_eq!(validated.password, Some("secret".to_string()));
+        assert_eq!(validated.password, Some(" secret ".to_string()));
         assert_eq!(validated.private_key_path, None);
         assert_eq!(validated.notes, Some("共享".to_string()));
     }
@@ -358,7 +362,7 @@ mod tests {
             validated.private_key_path,
             Some("~/.ssh/id_ed25519".to_string())
         );
-        assert_eq!(validated.private_key_passphrase, Some("phrase".to_string()));
+        assert_eq!(validated.private_key_passphrase, Some(" phrase ".to_string()));
     }
 
     #[test]

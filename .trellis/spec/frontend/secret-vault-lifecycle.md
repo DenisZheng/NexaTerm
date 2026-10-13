@@ -26,4 +26,10 @@ WF-09-03A, WS-C06/C07 and the existing Vault command contract. Preserve current 
 - Type/build, full Vitest/scripts, startup/snapshot/i18n/line-budget/source gates remain required. Real native provider, auto-lock timing and GUI cancellation remain separate MANUAL_REQUIRED evidence.
 
 ## Boundary
-Credential deletion/forget, retained backend secret-store handles, complete export exclusion and real Windows/macOS/Linux keychain evidence belong to WF-09-03B. This slice adds no crypto, database, IPC or persistence schema.
+WF-09-03B implements credential deletion/forget and retained backend handle revocation; its backend contract is in backend/credential-vault-boundaries.md. Real Windows/macOS/Linux native storage evidence remains MANUAL_REQUIRED. Neither slice adds crypto, database, IPC or persistence schema.
+
+## WF-09-03B credential client
+- useCredentials keeps one list. Availability/unmount epochs reject stale responses; read revisions invalidate reads that preceded or overlapped a mutation. A successful delete cannot be undone by an older list response.
+- Disabled/unmounted scopes reject native mutations with vault_locked; same-event duplicate mutation uses a synchronous slot and returns credential_operation_in_progress. A changed availability cycle performs a fresh authoritative reload after an earlier mutation finishes.
+- Password/passphrase normalization preserves exact nonempty characters. Metadata trims; explicit untouched secrets are omitted. Returned/list profiles are projected to metadata before caching, including preview mode.
+- Actual hook tests cover disabled reads/mutations, stale-delete lists, failure preservation, exact secrets, duplicate submissions, availability re-entry and StrictMode/unmount. A locked UI does not cancel already-started backend work.

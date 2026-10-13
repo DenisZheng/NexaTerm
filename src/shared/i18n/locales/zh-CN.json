@@ -2695,5 +2695,8 @@
   "terminal.status.listenerFailed": "事件监听失败",
   "terminal.status.disconnected": "已断开",
   "workspace.time.minuteAgo": "{count} 分钟前",
-  "workspace.time.hourAgo": "{count} 小时前"
+  "workspace.time.hourAgo": "{count} 小时前",
+  "credentials.error.locked": "请先解锁保险库，再修改凭据。",
+  "credentials.error.busy": "凭据操作正在进行，请稍后重试。",
+  "credentials.error.restoreFailed": "删除失败，保险库回滚恢复未完成。请重新解锁后检查凭据。"
 }
