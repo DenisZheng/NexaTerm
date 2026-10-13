@@ -35,6 +35,15 @@ export async function selectLocalDownloadDirectory() {
   return normalizeSelectedPaths(selected)[0] || null;
 }
 
+export async function selectLocalDirectory() {
+  const selected = await open({
+    directory: true,
+    multiple: false,
+    title: t("dialog.localDirectory"),
+  });
+  return normalizeSelectedPaths(selected)[0] || null;
+}
+
 export async function selectLocalPrivateKeyFile() {
   const selected = await open({
     multiple: false,

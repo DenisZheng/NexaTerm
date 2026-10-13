@@ -6,6 +6,7 @@ const commandsRs = readFileSync(new URL("../src-tauri/src/commands.rs", import.m
 const eventsRs = readFileSync(new URL("../src-tauri/src/events.rs", import.meta.url), "utf8");
 const libRs = readFileSync(new URL("../src-tauri/src/lib.rs", import.meta.url), "utf8");
 const remoteFilesRs = readFileSync(new URL("../src-tauri/src/remote_files.rs", import.meta.url), "utf8");
+const localFilesRs = readFileSync(new URL("../src-tauri/src/local_files.rs", import.meta.url), "utf8");
 const sshConfigRs = readFileSync(new URL("../src-tauri/src/ssh_config.rs", import.meta.url), "utf8");
 const terminalSessionRs = readFileSync(new URL("../src-tauri/src/terminal/session.rs", import.meta.url), "utf8");
 const tauriCapability = readFileSync(new URL("../src-tauri/capabilities/default.json", import.meta.url), "utf8");
@@ -53,6 +54,7 @@ for (const wrapper of [
   "remoteFilePrepareUploadTemp",
   "remoteFileAppendUploadTemp",
   "remoteFileDeleteUploadTemp",
+  "localFileList",
   "remoteFileDownload",
   "remoteFileCheckDownloadTarget",
   "remoteFileDownloadToLocal",
@@ -78,6 +80,7 @@ for (const dialogNeedle of [
   "@tauri-apps/plugin-dialog",
   "selectLocalUploadFiles",
   "selectLocalUploadDirectories",
+  "selectLocalDirectory",
 ]) {
   if (!tauriDialogTs.includes(dialogNeedle)) {
     throw new Error(`Tauri dialog wrapper should include ${dialogNeedle}`);
@@ -101,11 +104,14 @@ for (const command of [
   "remote_file_prepare_upload_temp",
   "remote_file_append_upload_temp",
   "remote_file_delete_upload_temp",
+  "local_file_list",
   "remote_file_download",
   "remote_file_check_download_target",
   "remote_file_download_to_local",
 ]) {
-  if (!commandsRs.includes(command) || !libRs.includes(`commands::${command}`)) {
+  const commandSource = commandsRs.includes(command) || localFilesRs.includes(command);
+  const commandRegistration = libRs.includes(`commands::${command}`) || libRs.includes(`local_files::${command}`);
+  if (!commandSource || !commandRegistration) {
     throw new Error(`Rust command ${command} should be defined and registered`);
   }
 }

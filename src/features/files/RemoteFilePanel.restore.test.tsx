@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getLocale, setLocalePreference, type Locale } from "../../shared/i18n";
 import { defaultAdvancedConfig, defaultJumpConfig, defaultProxyConfig, type ConnectionProfile } from "../connections/connectionTypes";
 import { getWorkspaceRemoteFileNavigation, getWorkspaceRemoteFileRevision, seedWorkspaceRemoteFileDirectories, workspaceRemoteFileDirectories } from "../workspace/restore/remoteFileSnapshotBridge";
+import { LOCAL_FILE_DROP_TYPE } from "./LocalFilePanel";
 
 const mocks = vi.hoisted(() => ({ list: vi.fn() }));
 vi.mock("../../shared/tauri/runtime", () => ({ hasTauriRuntime: () => true }));
@@ -71,5 +72,32 @@ describe("WF-07 Files 目录恢复", () => {
     expect(mocks.list).toHaveBeenCalledWith(connection.id, "/srv");
     expect((screen.getByRole("textbox", { name: "远程路径" }) as HTMLInputElement).value).toBe("/srv/app");
     expect(workspaceRemoteFileDirectories(["restarted"])).toEqual({ "ssh:restarted": "/srv/app" });
+  });
+
+  it("routes an in-app local path drop to the existing upload dispatcher", async () => {
+    mocks.list.mockResolvedValue([{ name: "var", path: "/var", type: "directory" }]);
+    const onUploadLocalPaths = vi.fn();
+    render(<RemoteFilesView active connection={connection} onUploadLocalPaths={onUploadLocalPaths} />);
+    await screen.findByText("var");
+    const target = await waitFor(() => {
+      const element = document.querySelector('[data-remote-file-drop-target="/"]');
+      if (!element) {
+        throw new Error("remote root drop target not rendered");
+      }
+      return element;
+    });
+
+    fireEvent.drop(target, {
+      dataTransfer: {
+        files: [],
+        items: [],
+        types: [LOCAL_FILE_DROP_TYPE],
+        getData: (type: string) => type === LOCAL_FILE_DROP_TYPE
+          ? JSON.stringify({ paths: ["/workspace/README.md"] })
+          : "",
+      },
+    });
+
+    expect(onUploadLocalPaths).toHaveBeenCalledWith("/", ["/workspace/README.md"]);
   });
 });

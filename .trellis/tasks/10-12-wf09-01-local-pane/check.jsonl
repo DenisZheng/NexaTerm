@@ -1,0 +1,3 @@
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"核对双栏 Files UI 的 token、按钮、拖放可访问性和复用"}
+{"file":".trellis/spec/frontend/tauri-command-contracts.md","reason":"核对本地目录列表 command 的输入输出及错误语义"}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"核对新增测试、i18n parity、source/type/build 门禁"}
