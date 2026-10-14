@@ -16,7 +16,7 @@
   "base_branch": "feat/wf09-04-macros",
   "worktree_path": null,
   "commit": null,
-  "pr_url": null,
+  "pr_url": "https://github.com/DenisZheng/NexaTerm/pull/62",
   "subtasks": [],
   "children": [],
   "parent": "09-23-nexaterm-workflow-mainline",

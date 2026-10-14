@@ -1,0 +1,5 @@
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Session logging ownership and I/O contract"}
+{"file": ".trellis/spec/backend/session-log-writer.md", "reason": "Session logging ownership and I/O contract"}
+{"file": ".trellis/spec/backend/tauri-command-contracts.md", "reason": "Session logging ownership and I/O contract"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "Session logging ownership and I/O contract"}
+{"file": "docs/WORKFLOW_SPEC.md", "reason": "Session logging ownership and I/O contract"}
