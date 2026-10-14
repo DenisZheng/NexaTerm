@@ -86,3 +86,12 @@ export function selectLiveFanoutTargets(
 export function multiExecAvailableKeys(targets: readonly MultiExecTarget[]) {
   return new Set(targets.map((target) => target.key));
 }
+
+/** A queued intent never transfers to a new runtime session under the same instance key. */
+export function resolvePinnedMultiExecTarget(
+  expected: Pick<MultiExecTarget, "key" | "sessionId">,
+  resolveTarget: (key: string) => MultiExecTarget | null,
+): MultiExecTarget | null {
+  const current = resolveTarget(expected.key);
+  return current?.sessionId === expected.sessionId ? current : null;
+}

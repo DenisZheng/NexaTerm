@@ -24,6 +24,8 @@ Some bullets in `component-guidelines.md` and `tauri-command-contracts.md` descr
 | [Remote-file Transfers](./remote-file-transfers.md) | WF-09-01 实例归属、异步目标、队列暂停与内部拖放契约 | Active |
 | [Remote-file Editor](./remote-file-editor.md) | WF-09-02 读写请求身份、保存确认版本及未保存编辑保护 | Active |
 | [Secret Vault Lifecycle](./secret-vault-lifecycle.md) | WF-09-03A 主密码操作、锁定优先、闲置超时与原样密码 | Active |
+| [Macro Replay](./macro-replay.md) | WF-09-04A immutable preview, pinned sessions, cancellation and delivery status | Active |
+| [Macro Recording](./macro-recording.md) | WF-09-04B explicit source capture, sensitive placeholders and scoped history suppression | Active |
 | [Quality Guidelines](./quality-guidelines.md) | Code standards, forbidden patterns | Partial (testing requirements filled) |
 | [Type Safety](./type-safety.md) | Type patterns, validation | To fill |
 | [Tauri Command Contracts](./tauri-command-contracts.md) | Typed invoke wrappers and frontend/backend payload sync | Active (placement bullets scoped 2026-09-23) |

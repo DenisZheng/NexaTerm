@@ -49,6 +49,19 @@ test("reviewed fixtures bind rule, file and exact source bytes, not a directory 
   assert.equal(isReviewedFixture({ ...finding, file: "src/production.rs" }, source, policy), false);
 });
 
+for (const [rule, startLine, endLine] of [["curl-auth-user", 10, 14], ["curl-auth-header", 8, 11]]) {
+  test(`reviewed macro ${rule} remains limited to its unchanged synthetic test excerpt`, () => {
+    const file = "src/features/commands/commandPrivacy.test.ts";
+    const source = readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
+    const fixtures = JSON.parse(readFileSync(new URL("./security-reviewed-fixtures.json", import.meta.url), "utf8"));
+    const finding = { rule, file, startLine, endLine };
+    assert.equal(isReviewedFixture(finding, source, fixtures), true);
+    assert.equal(isReviewedFixture(finding, source.replaceAll("synthetic-marker", "changed-fixture-value"), fixtures), false);
+    assert.equal(isReviewedFixture({ ...finding, file: "src/production.ts" }, source, fixtures), false);
+    assert.equal(isReviewedFixture({ ...finding, rule: "generic-api-key" }, source, fixtures), false);
+  });
+}
+
 test("npm findings remain REVIEW-REQUIRED without exporting arbitrary report fields", () => {
   const result = normalizeNpmAudit(npmReport(), 1);
   assert.equal(result.status, "REVIEW-REQUIRED");

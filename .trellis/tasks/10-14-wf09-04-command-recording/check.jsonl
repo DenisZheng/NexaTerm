@@ -1,0 +1,6 @@
+{"file": "docs/WORKFLOW_SPEC.md", "reason": "WS-X03/04/05/07/08、WS-F08"}
+{"file": ".trellis/spec/frontend/macro-replay.md", "reason": "A 切片预览与生命周期"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "显式输入与 UI/lazy"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "真实行为测试"}
+{"file": ".trellis/spec/frontend/tauri-command-contracts.md", "reason": "typed writes/history边界"}
+{"file": ".trellis/spec/frontend/macro-recording.md", "reason": "source ticket、敏感占位、历史暂停与迟到回调契约"}
