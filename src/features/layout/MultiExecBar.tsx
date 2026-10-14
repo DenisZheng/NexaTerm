@@ -6,6 +6,7 @@ import type { MultiExecMode } from "../workspace/multiExec/actions";
 import type { MultiExecTarget } from "../workspace/multiExec/targets";
 import { MacroLauncher } from "../macros/MacroLauncher";
 import type { MacroRuntime } from "../macros/macroReplay";
+import type { MacroRecorder } from "../macros/macroRecorder";
 
 export interface MultiExecBarProps {
   readonly error: string | null;
@@ -19,11 +20,13 @@ export interface MultiExecBarProps {
   readonly onToggleTarget: (key: string, selected: boolean) => void;
   readonly macroRuntime?: MacroRuntime;
   readonly onOpenMacro?: () => void;
+  readonly macroRecorder?: MacroRecorder;
+  readonly onStartMacroRecording?: () => void;
 }
 
 /** WF-04C 顶层 MultiExec 底栏：目标勾选 + Live/停止 + 发送入口（纯展示，状态由 Shell 注入）。 */
 export function MultiExecBar({
-  error, mode, selectedKeys, targets, onClose, onOpenCommandSender, onStartLive, onStop, onToggleTarget, macroRuntime, onOpenMacro,
+  error, mode, selectedKeys, targets, onClose, onOpenCommandSender, onStartLive, onStop, onToggleTarget, macroRuntime, onOpenMacro, macroRecorder, onStartMacroRecording,
 }: MultiExecBarProps) {
   const { t } = useI18n();
   const live = mode === "live";
@@ -35,7 +38,7 @@ export function MultiExecBar({
       <div className="multi-exec-bar-head">
         <span className="multi-exec-bar-title">{t("multiExec.title")}</span>
         <div className="multi-exec-bar-modes" role="group" aria-label={t("multiExec.title")}>
-          {macroRuntime && onOpenMacro ? <MacroLauncher targets={targets} selectedKeys={selectedKeys} runtime={macroRuntime} onOpen={onOpenMacro} /> : null}
+          {macroRuntime && onOpenMacro ? <MacroLauncher targets={targets} selectedKeys={selectedKeys} runtime={macroRuntime} onOpen={onOpenMacro} recorder={macroRecorder} onStartRecording={onStartMacroRecording} /> : null}
           <Tooltip label={live || canStartLive ? t("multiExec.live") : t("multiExec.liveHint")}>
             <button
               className={`text-tool-button multi-exec-bar-mode ${live ? "active" : ""}`}

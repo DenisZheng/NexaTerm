@@ -1,7 +1,7 @@
 # Reviewed macro replay
 
 ## 1. Scope / Trigger
-WF-09-04A extends the existing MultiExec input surface. Product rules: WS-X03/04/05/06/07/08. Recording, persistence and import/export are separate follow-up slices.
+WF-09-04A extends the existing MultiExec input surface. Product rules: WS-X03/04/05/06/07/08. Explicit command recording is covered by [macro-recording.md](./macro-recording.md). Persistence and import/export remain follow-up slices.
 
 ## 2. Signatures
 - `createMacroPlan(steps, targets)` returns an immutable plan or a validation code.
@@ -16,7 +16,7 @@ Limits: 1–20 steps, 1–20 distinct sessions, 16 KiB UTF-8 per command, 64 KiB
 
 The editor and runner are lazy-loaded from MacroLauncher. Opening stops live input and closes Command Sender. Preview is consumed synchronously on confirmation, so duplicate activation cannot replay it. A fresh preview is required for another run.
 
-Draft, preview, runtime identity and results are memory-only. Do not call history, snippet, snapshot, export, storage or diagnostic APIs. Closing discards the draft. Future recording must separately address sensitive input; this slice does not capture raw keystrokes.
+A recorded `masked=true` step returns validation code `sensitive` until explicitly replaced or removed. Draft, preview, runtime identity and results are memory-only. Do not call history, snippet, snapshot, export, storage or diagnostic APIs. Closing discards the draft. Future recording must separately address sensitive input; this slice does not capture raw keystrokes.
 
 ## 4. Validation & Error Matrix
 | Condition | Result |

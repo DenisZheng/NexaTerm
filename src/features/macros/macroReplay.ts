@@ -1,15 +1,17 @@
 import { writeMultiExecCommand } from "../workspace/multiExec/send";
 import type { MultiExecTarget } from "../workspace/multiExec/targets";
+import { resolvePinnedMultiExecTarget } from "../workspace/multiExec/targets";
+import { MACRO_LIMITS, macroCommandBytes } from "./macroLimits";
 
-export const MACRO_LIMITS = { steps: 20, targets: 20, commandBytes: 16384, totalBytes: 65536, delayMs: 60000, totalDelayMs: 300000, writeTimeoutMs: 30000 } as const;
-export interface MacroStep { readonly command: string; readonly delayMs: number }
+export { MACRO_LIMITS } from "./macroLimits";
+export interface MacroStep { readonly command: string; readonly delayMs: number; readonly masked?: boolean }
 export interface MacroTarget { readonly key: string; readonly sessionId: string; readonly title: string }
 export interface MacroPlan { readonly steps: readonly MacroStep[]; readonly targets: readonly MacroTarget[] }
 export interface MacroRuntime {
   resolveTarget(key: string): MultiExecTarget | null;
   write(sessionId: string, data: string): Promise<void>;
 }
-export type MacroValidation = "steps" | "command" | "delay" | "targets";
+export type MacroValidation = "steps" | "command" | "delay" | "targets" | "sensitive";
 export type MacroDeliveryStatus = "written" | "failed" | "disconnected" | "timed_out";
 export interface MacroDelivery { readonly step: number; readonly key: string; readonly status: MacroDeliveryStatus }
 export interface MacroResult { readonly status: "completed" | "cancelled" | "failed"; readonly deliveries: readonly MacroDelivery[] }
@@ -18,9 +20,10 @@ export interface MacroResult { readonly status: "completed" | "cancelled" | "fai
 export function createMacroPlan(steps: readonly MacroStep[], targets: readonly MultiExecTarget[]):
   { plan: MacroPlan; error?: never } | { plan?: never; error: MacroValidation } {
   if (!steps.length || steps.length > MACRO_LIMITS.steps) return { error: "steps" };
-  const sizes = steps.map((step) => new TextEncoder().encode(step.command).length);
-  if (steps.some((step, index) => !step.command.trim() || /[\u0000-\u0008\u000b-\u001f\u007f-\u009f]/.test(step.command) || sizes[index] > MACRO_LIMITS.commandBytes)
-    || sizes.reduce((sum, size) => sum + size, 0) > MACRO_LIMITS.totalBytes) return { error: "command" };
+  if (steps.some((step) => step.masked)) return { error: "sensitive" };
+  const sizes = steps.map((step) => macroCommandBytes(step.command));
+  if (sizes.some((size) => size === null)
+    || sizes.reduce<number>((sum, size) => sum + (size ?? 0), 0) > MACRO_LIMITS.totalBytes) return { error: "command" };
   if (steps.some((step) => !Number.isInteger(step.delayMs) || step.delayMs < 0 || step.delayMs > MACRO_LIMITS.delayMs)
     || steps.reduce((sum, step) => sum + step.delayMs, 0) > MACRO_LIMITS.totalDelayMs) return { error: "delay" };
   if (!targets.length || targets.length > MACRO_LIMITS.targets || new Set(targets.map((target) => target.key)).size !== targets.length
@@ -47,10 +50,7 @@ export async function runMacro(plan: MacroPlan, runtime: MacroRuntime, signal: A
   onDelivery: (delivery: MacroDelivery) => void = () => {}): Promise<MacroResult> {
   const deliveries: MacroDelivery[] = [];
   const result = (status: MacroResult["status"]): MacroResult => ({ status, deliveries });
-  const current = (target: MacroTarget) => {
-    const live = runtime.resolveTarget(target.key);
-    return live?.sessionId === target.sessionId ? live : null;
-  };
+  const current = (target: MacroTarget) => resolvePinnedMultiExecTarget(target, runtime.resolveTarget);
   const report = (step: number, key: string, status: MacroDeliveryStatus) => {
     const delivery = { step, key, status }; deliveries.push(delivery); onDelivery(delivery);
   };

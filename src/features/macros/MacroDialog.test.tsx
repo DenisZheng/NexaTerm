@@ -46,3 +46,11 @@ it("displays a safe failure without rendering a native error payload", async () 
   const { runtime } = setup(); runtime.write.mockRejectedValue(new Error("synthetic-secret-marker")); preview(); fireEvent.click(screen.getByRole("button", { name: "Confirm replay" }));
   await waitFor(() => expect(screen.getByRole("status").textContent).toContain("Replay stopped")); expect(screen.queryByText(/synthetic-secret-marker/)).toBeNull();
 });
+it("blocks omitted sensitive steps until explicitly replaced, then requires a fresh preview", async () => {
+  const runtime = { resolveTarget: () => target, write: vi.fn(async () => {}) };
+  render(<MacroDialog targets={[target]} runtime={runtime} onClose={vi.fn()} initialSteps={[{ command: "", delayMs: 0, masked: true }]} />);
+  fireEvent.click(screen.getByRole("button", { name: "Preview macro" })); expect(screen.getByRole("alert").textContent).toContain("omitted sensitive step");
+  expect(screen.queryByRole("button", { name: "Confirm replay" })).toBeNull(); expect(runtime.write).not.toHaveBeenCalled();
+  fireEvent.change(screen.getByRole("textbox"), { target: { value: "pwd" } }); fireEvent.click(screen.getByRole("button", { name: "Preview macro" }));
+  expect(screen.getByRole("button", { name: "Confirm replay" })).toBeDefined(); expect(runtime.write).not.toHaveBeenCalled();
+});

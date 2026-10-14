@@ -1065,7 +1065,7 @@ Frontend types mirror Rust snake_case fields. `CommandSnippet.group` is a displa
 ### 3. Contracts
 
 - Components must call typed wrappers in `src/shared/tauri/commands.ts`; do not call `invoke("command_*")` directly from UI components.
-- Command Sender history is recorded after at least one selected target returns from `terminalWrite(...)` successfully.
+- Command Sender history is recorded after at least one selected target returns from `terminalWrite(...)` successfully, except known sensitive commands and source-scoped macro privacy pauses. The suppression decision is captured before native I/O; explicit snippet usage is still counted. See [macro recording](./macro-recording.md).
 - Terminal input history is optional and must default to disabled. When `settings.command.recordTerminalInputHistory` is enabled, `TerminalPanel` may record only successful Enter-submitted printable command lines as `terminal_input`.
 - Terminal input history must drop control sequences, function keys, cursor navigation, Tab completion, Ctrl/Alt input, TUI-like input, password-like commands, and sensitive variable assignments. It must not parse shell history files or inject shell hooks.
 - History records may include command text, `source`, successful `target_count`, `append_enter`, usage count, and timestamps. Scope records may include `ssh_connection + connection_id` or `local_profile + profile_id` for filtering. They must not include target session ids, tab ids, connection names, or command output.

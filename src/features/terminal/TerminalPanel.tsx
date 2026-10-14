@@ -1,3 +1,4 @@
+import { isSensitiveCommand } from "../commands/commandPrivacy";
 import { FitAddon } from "@xterm/addon-fit";
 import { SearchAddon } from "@xterm/addon-search";
 import { Unicode11Addon } from "@xterm/addon-unicode11";
@@ -114,6 +115,7 @@ interface TerminalPanelProps {
   onSessionIdChange?: (tabId: string, sessionId: string, requestId?: string) => void;
   onStatusChange: (tabId: string, status: string) => void;
   onTerminalInputCommand?: (tabId: string, command: string) => void;
+  canRecordTerminalInputHistory?: (tabId: string) => boolean;
   onUserInput?: (tabId: string, data: string) => void;
 }
 
@@ -143,6 +145,7 @@ export function TerminalPanel({
   onSessionIdChange,
   onStatusChange,
   onTerminalInputCommand,
+  canRecordTerminalInputHistory,
   onUserInput,
   onWarmupCaptureReady,
   searchCaseSensitive = false,
@@ -175,6 +178,7 @@ export function TerminalPanel({
   const onWarmupCaptureReadyRef = useRef(onWarmupCaptureReady);
   const onSessionIdChangeRef = useRef(onSessionIdChange);
   const onTerminalInputCommandRef = useRef(onTerminalInputCommand);
+  const canRecordTerminalInputHistoryRef = useRef(canRecordTerminalInputHistory);
   const onUserInputRef = useRef(onUserInput);
   const reconnectingPreviousSessionIdRef = useRef<string | null>(null);
   const reconnectingRef = useRef(false);
@@ -211,7 +215,8 @@ export function TerminalPanel({
 
   useEffect(() => {
     onTerminalInputCommandRef.current = onTerminalInputCommand;
-  }, [onTerminalInputCommand]);
+    canRecordTerminalInputHistoryRef.current = canRecordTerminalInputHistory;
+  }, [onTerminalInputCommand, canRecordTerminalInputHistory]);
 
   useEffect(() => {
     onUserInputRef.current = onUserInput;
@@ -445,11 +450,15 @@ export function TerminalPanel({
       if (inputDirectory.directory) {
         onCurrentDirectoryChange?.(tabId, inputDirectory.directory);
       }
-      const inputHistory = applyTerminalInputHistoryData(inputHistoryStateRef.current, data);
+      const recordHistoryForInput = canRecordTerminalInputHistoryRef.current?.(tabId) !== false;
+      const inputHistory = recordHistoryForInput
+        ? applyTerminalInputHistoryData(inputHistoryStateRef.current, data)
+        : { commands: [], state: createTerminalInputHistoryState() };
       inputHistoryStateRef.current = inputHistory.state;
       onUserInputRef.current?.(tabId, data);
       void terminalWrite(activeSessionId, data)
         .then(() => {
+          if (!recordHistoryForInput || canRecordTerminalInputHistoryRef.current?.(tabId) === false) return;
           inputHistory.commands.forEach((command) => {
             onTerminalInputCommandRef.current?.(tabId, command);
           });
@@ -1393,7 +1402,7 @@ function applyTerminalInputHistoryData(
     const code = char.charCodeAt(0);
     if (char === "\r" || char === "\n") {
       const command = nextState.dirty ? "" : nextState.buffer.trim();
-      if (command && !isSensitiveTerminalInputCommand(command)) {
+      if (command && !isSensitiveCommand(command)) {
         commands.push(command);
       }
       nextState = createTerminalInputHistoryState();
@@ -1420,15 +1429,6 @@ function applyTerminalInputHistoryData(
   }
 
   return { commands, state: nextState };
-}
-
-function isSensitiveTerminalInputCommand(command: string) {
-  return (
-    /\b(?:passwd|sshpass)\b/i.test(command) ||
-    /\bsudo\s+-S\b/i.test(command) ||
-    /\b(?:mysql|mariadb|psql|redis-cli)\b[^\n\r]*\s-p(?:\S+)?/i.test(command) ||
-    /\b(?:password|passwd|token|secret|access[_-]?key)\s*=/i.test(command)
-  );
 }
 
 function formatError(error: unknown) {

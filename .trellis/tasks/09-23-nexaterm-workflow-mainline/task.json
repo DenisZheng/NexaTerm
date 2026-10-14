@@ -39,7 +39,8 @@
     "10-13-wf09-02-editor-save-as",
     "10-13-wf09-03-vault-lifecycle",
     "10-13-wf09-03-credential-boundaries",
-    "10-14-wf09-04-macro-replay"
+    "10-14-wf09-04-macro-replay",
+    "10-14-wf09-04-command-recording"
   ],
   "parent": null,
   "relatedFiles": [],

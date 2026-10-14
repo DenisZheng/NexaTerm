@@ -15,7 +15,7 @@ for (const needle of [
   "multiExecTargets",
   "setMultiExecTargets",
   "commandSenderInput",
-  "commandSenderHistory",
+  "commandHistoryEntries",
   "commandSenderRisky",
   "sendCommandToTargets",
   "buildCommandSenderTargets",
@@ -27,13 +27,13 @@ for (const needle of [
   "terminal-subtab-panel-toggle",
   "PanelRightOpen",
   "command-sender-panel",
-  "命令操作台",
-  "Command Sender",
-  "发送并回车",
-  "发送不回车",
-  "未发送",
-  "已写入",
-  "发送失败",
+  "workspace.command.panelTitle",
+  "workspace.command.panelAria",
+  "workspace.command.sendEnter",
+  "workspace.command.sendNoEnter",
+  "workspace.command.delivery.notSent",
+  "workspace.command.delivery.written",
+  "workspace.command.delivery.failed",
 ]) {
   if (!workspaceShell.includes(needle)) {
     throw new Error(`WorkspaceShell is missing Command Sender contract: ${needle}`);
@@ -60,8 +60,9 @@ if (/\.command-sender-toggle[^{]*\{(?:(?!\n\})[\s\S])*margin-left:\s*auto;/.test
   throw new Error("Command Sender toggle must not be pushed to the far edge over the right-panel expand button.");
 }
 
-if (!/\.terminal-subtab-actions\s*\{(?:(?!\n\})[\s\S])*margin-left:\s*auto;/.test(appCss)) {
-  throw new Error("Terminal subtab action group should own the far-right alignment.");
+// The shared scrolling tab strip now owns remaining width; actions remain non-shrinking.
+if (!/\.terminal-subtab-actions\s*\{(?:(?!\n\})[\s\S])*flex:\s*0 0 auto;/.test(appCss)) {
+  throw new Error("Terminal subtab actions must remain a non-shrinking shared group.");
 }
 
 if (/right-collapse-button-floating/.test(workspaceShell) || /\.right-collapse-button-floating/.test(appCss)) {
@@ -166,7 +167,7 @@ for (const needle of ['status: "written"', 'status: "failed"', 'status: "disconn
   }
 }
 
-if (!/setCommandSenderLastSentLabel\([\s\S]*?\);\s*setCommandSenderInput\(""\);/.test(workspaceShell)) {
+if (!/if \(options\.clearInput \?\? true\) \{\s*clearCommandSenderInput\(\);\s*\}/.test(workspaceShell)) {
   throw new Error("Command Sender must clear the input after a completed send attempt.");
 }
 

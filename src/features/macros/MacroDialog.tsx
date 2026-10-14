@@ -4,11 +4,11 @@ import { WorkflowDialog } from "../../shared/ui/WorkflowDialog";
 import type { MultiExecTarget } from "../workspace/multiExec/targets";
 import { createMacroPlan, MACRO_LIMITS, runMacro, type MacroDelivery, type MacroPlan, type MacroResult, type MacroRuntime, type MacroStep, type MacroValidation } from "./macroReplay";
 
-export function MacroDialog({ targets, runtime, onClose }: {
-  targets: readonly MultiExecTarget[]; runtime: MacroRuntime; onClose(): void;
+export function MacroDialog({ targets, runtime, onClose, initialSteps = [] }: {
+  targets: readonly MultiExecTarget[]; runtime: MacroRuntime; onClose(): void; initialSteps?: readonly MacroStep[];
 }) {
   const { t } = useI18n();
-  const [steps, setSteps] = useState<MacroStep[]>([{ command: "", delayMs: 0 }]);
+  const [steps, setSteps] = useState<MacroStep[]>(() => initialSteps.length ? initialSteps.map((step) => ({ ...step })) : [{ command: "", delayMs: 0 }]);
   const [plan, setPlan] = useState<MacroPlan | null>(null);
   const [error, setError] = useState<MacroValidation | null>(null);
   const [deliveries, setDeliveries] = useState<MacroDelivery[]>([]);
@@ -55,8 +55,9 @@ export function MacroDialog({ targets, runtime, onClose }: {
       <p>{t("macros.targetCount", { count: targets.length })}</p>
       {steps.map((step, index) => <fieldset className="workflow-step" key={index}>
         <legend>{t("macros.step", { number: index + 1 })}</legend>
+        {step.masked ? <p className="dialog-subtitle">{t("macros.record.masked")}</p> : null}
         <label className="remote-file-name-field"><span>{t("macros.command")}</span>
-          <textarea rows={3} spellCheck={false} autoComplete="off" value={step.command} onChange={(event) => { const command = event.target.value; setSteps((items) => items.map((item, i) => i === index ? { ...item, command } : item)); }} />
+          <textarea rows={3} spellCheck={false} autoComplete="off" value={step.command} onChange={(event) => { const command = event.target.value; setSteps((items) => items.map((item, i) => i === index ? { ...item, command, masked: false } : item)); }} />
         </label>
         <label className="remote-file-name-field"><span>{t("macros.delay")}</span>
           <input type="number" min={0} max={MACRO_LIMITS.delayMs} step={100} value={step.delayMs} onChange={(event) => { const delayMs = Number(event.target.value); setSteps((items) => items.map((item, i) => i === index ? { ...item, delayMs } : item)); }} />

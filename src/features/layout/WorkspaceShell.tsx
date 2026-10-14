@@ -444,6 +444,8 @@ import {
   TerminalSplitSyncMenu,
 } from "../terminal/TerminalSplitMenu";
 import { MultiExecBar } from "./MultiExecBar";
+import { createMacroRecorder } from "../macros/macroRecorder";
+import { isSensitiveCommand } from "../commands/commandPrivacy";
 import { buildTerminalSplitSyncPaneOptions } from "./terminalSplitSyncOptions";
 import {
   closeTerminalSplitPane as closeTerminalSplitLayoutPane,
@@ -467,6 +469,7 @@ import {
 import { splitGroupInsertionIndex } from "../workspace/split/anchor";
 import {
   buildMultiExecTargets,
+  resolvePinnedMultiExecTarget,
   type MultiExecTarget,
 } from "../workspace/multiExec/targets";
 import { writeMultiExecLiveInput } from "../workspace/multiExec/live";
@@ -1507,6 +1510,8 @@ export function WorkspaceShell() {
     ],
     [commandSnippetGroups],
   );
+  const macroRecorder = useMemo(() => createMacroRecorder(resolveCurrentMultiExecTarget), []);
+  useEffect(() => () => macroRecorder.dispose(), [macroRecorder]);
   const multiExecRuntimeTargets = useMemo(
     () =>
       buildMultiExecTargets({
@@ -5571,6 +5576,14 @@ export function WorkspaceShell() {
     setSelectedCommandHistoryId(null);
   }
 
+  function openCommandSenderForSelectedTarget() {
+    if (!showTerminalWorkbench || isUnifiedFileTabActive) {
+      const target = selectedCommandTargets[0] || commandSenderTargets[0];
+      if (target) activateCommandSenderTarget(target);
+    }
+    openCommandSenderAndPrepareTargets();
+  }
+
   function prepareCommandSenderTargets() {
     setMultiExecMode("send");
     void loadCommandLibrary();
@@ -5739,8 +5752,14 @@ export function WorkspaceShell() {
     }
   }
 
+  function canRecordTerminalInputHistory(tabId: string) {
+    return !macroRecorder.omitAutomaticHistory([
+      terminalPaneBindingKey({ kind: "ssh", tabId }), terminalPaneBindingKey({ kind: "local", tabId }),
+    ]);
+  }
+
   async function recordTerminalInputHistoryCommand(tabId: string, command: string) {
-    if (!settings.command.recordTerminalInputHistory || !hasTauriRuntime()) {
+    if (!canRecordTerminalInputHistory(tabId) || isSensitiveCommand(command) || !settings.command.recordTerminalInputHistory || !hasTauriRuntime()) {
       return;
     }
 
@@ -6122,6 +6141,9 @@ export function WorkspaceShell() {
     if (options.setSendMode ?? true) {
       setMultiExecMode("send");
     }
+    const recordingTicket = macroRecorder.begin(command, appendEnter, targets.map((target) => target.key));
+    const suppressMacroHistory = macroRecorder.omitAutomaticHistory(targets.map((target) => target.key));
+    let recordedSourceWritten = false;
     const payload = appendEnter ? `${command}\r` : command;
     const targetByKey = new Map(targets.map((target) => [target.key, target]));
 
@@ -6135,16 +6157,29 @@ export function WorkspaceShell() {
 
     const deliveries = await writeMultiExecCommand({
       data: payload,
-      resolveTarget: resolveCurrentMultiExecTarget,
+      resolveTarget: (key) => {
+        const expected = targetByKey.get(key);
+        return expected ? resolvePinnedMultiExecTarget(expected, resolveCurrentMultiExecTarget) : null;
+      },
       targetKeys: targets.map((target) => target.key),
       write: async (sessionId, data) => {
         if (!hasTauriRuntime()) {
           throw new Error(tr("workspace.command.writeUnavailable"));
         }
-        await terminalWrite(sessionId, data);
+        try {
+          await terminalWrite(sessionId, data);
+          if (sessionId === recordingTicket?.sessionId) {
+            recordedSourceWritten = true;
+            macroRecorder.finish(recordingTicket, true);
+          }
+        } catch (error) {
+          if (sessionId === recordingTicket?.sessionId) macroRecorder.finish(recordingTicket, false);
+          throw error;
+        }
       },
     });
 
+    macroRecorder.finish(recordingTicket, recordedSourceWritten);
     setCommandSenderDeliveryByKey((deliveryByKey) => {
       const nextDeliveryByKey = { ...deliveryByKey };
       deliveries.forEach((delivery) => {
@@ -6189,7 +6224,7 @@ export function WorkspaceShell() {
 
     if (successCount > 0 && historyCommand && hasTauriRuntime()) {
       try {
-        const historyEntry = await commandHistoryRecord({
+        const historyEntry = isSensitiveCommand(historyCommand) || suppressMacroHistory ? null : await commandHistoryRecord({
           append_enter: appendEnter,
           command: historyCommand,
           scopes: uniqueCommandHistoryScopes(
@@ -6201,7 +6236,7 @@ export function WorkspaceShell() {
           target_count: successCount,
         });
         await loadCommandLibrary();
-        setSelectedCommandHistoryId(historyEntry.id);
+        if (historyEntry) setSelectedCommandHistoryId(historyEntry.id);
 
         if (snippetId) {
           const snippet = await commandSnippetMarkUsed(snippetId);
@@ -8820,6 +8855,7 @@ export function WorkspaceShell() {
                           onSendSelectionToAi={sendTerminalSelectionToAi}
                           onSessionIdChange={updateTerminalRuntimeSession}
                           onStatusChange={updateTabStatus}
+                          canRecordTerminalInputHistory={canRecordTerminalInputHistory}
                           onTerminalInputCommand={
                             settings.command.recordTerminalInputHistory
                               ? (tabId, command) => void recordTerminalInputHistoryCommand(tabId, command)
@@ -8903,6 +8939,7 @@ export function WorkspaceShell() {
                               onSearchQueryChange={updateTerminalSearchQuery}
                               onSendSelectionToAi={sendTerminalSelectionToAi}
                               onStatusChange={updateLocalTerminalTabStatus}
+                              canRecordTerminalInputHistory={canRecordTerminalInputHistory}
                               onTerminalInputCommand={
                                 settings.command.recordTerminalInputHistory
                                   ? (tabId, command) =>
@@ -9196,17 +9233,13 @@ export function WorkspaceShell() {
           {showMultiExecBar ? (
             <MultiExecBar error={terminalSplitSyncError} mode={multiExecMode}
               macroRuntime={{ resolveTarget: resolveCurrentMultiExecTarget, write: terminalWrite }}
+              macroRecorder={macroRecorder}
+              onStartMacroRecording={() => { setMultiExecBarOpen(true); setTerminalSplitSyncState(false); openCommandSenderForSelectedTarget(); }}
               onOpenMacro={() => { setMultiExecBarOpen(true); setTerminalSplitSyncState(false); closeCommandSender(); }}
               selectedKeys={multiExecTargets} targets={multiExecRuntimeTargets}
               onClose={toggleMultiExecBar} onStop={() => setTerminalSplitSyncState(false)}
               onStartLive={() => setTerminalSplitSyncState(true)} onToggleTarget={setTerminalSplitSyncParticipant}
-              onOpenCommandSender={() => {
-                if (!showTerminalWorkbench || isUnifiedFileTabActive) {
-                  const target = selectedCommandTargets[0] || commandSenderTargets[0];
-                  if (target) activateCommandSenderTarget(target);
-                }
-                openCommandSenderAndPrepareTargets();
-              }} />
+              onOpenCommandSender={openCommandSenderForSelectedTarget} />
           ) : null}
         </section>
 

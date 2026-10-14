@@ -11602,6 +11602,7 @@ button {
 }
 
 .multi-exec-bar-head,
+.multi-exec-bar-modes,
 .multi-exec-bar-targets {
   flex-wrap: wrap;
 }
