@@ -127,4 +127,10 @@ assertIncludes(
   "TerminalPanel must be lazy-loaded from WorkspaceShell.",
 );
 
+// WF-09-04A: editor/runner are loaded only after explicit macro entry.
+const macroLauncherSource = readFileSync("src/features/macros/MacroLauncher.tsx", "utf8");
+assertNoRuntimeStaticImport(macroLauncherSource, "./MacroDialog", "MacroDialog");
+assertIncludes(macroLauncherSource, 'import("./MacroDialog")', "Macro dialog must remain lazy-loaded.");
+assertIncludes(macroLauncherSource, "{open ? <Suspense", "Closed macro entry must not mount its editor/runner.");
+assertIncludes(shellSource, "onOpenMacro={() => { setMultiExecBarOpen(true); setTerminalSplitSyncState(false); closeCommandSender(); }}", "Opening a macro must keep its owning bar mounted while stopping live input.");
 console.log("startup module boundary source check passed");

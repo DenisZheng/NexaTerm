@@ -9195,6 +9195,8 @@ export function WorkspaceShell() {
           ) : null}
           {showMultiExecBar ? (
             <MultiExecBar error={terminalSplitSyncError} mode={multiExecMode}
+              macroRuntime={{ resolveTarget: resolveCurrentMultiExecTarget, write: terminalWrite }}
+              onOpenMacro={() => { setMultiExecBarOpen(true); setTerminalSplitSyncState(false); closeCommandSender(); }}
               selectedKeys={multiExecTargets} targets={multiExecRuntimeTargets}
               onClose={toggleMultiExecBar} onStop={() => setTerminalSplitSyncState(false)}
               onStartLive={() => setTerminalSplitSyncState(true)} onToggleTarget={setTerminalSplitSyncParticipant}

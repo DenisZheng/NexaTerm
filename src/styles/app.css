@@ -18960,3 +18960,10 @@ body[data-platform="macos"][data-theme-mode="dark"] .ui-tooltip-arrow {
   width: 13px;
   height: 13px;
 }
+
+/* Shared multi-step workflow surface; inherits explicit and system theme tokens. */
+.workflow-dialog { width: min(680px, calc(100vw - 48px)); max-height: 86vh; grid-template-rows: auto minmax(0, 1fr) auto; }
+.workflow-dialog .dialog-body { overflow-y: auto; min-height: 0; }
+.workflow-step { display: grid; gap: 8px; margin: 12px 0; padding: 12px; border: 1px solid var(--mx-line); border-radius: 8px; }
+.workflow-dialog textarea { width: 100%; resize: vertical; min-height: 72px; border: 1px solid var(--mx-line); border-radius: 6px; padding: 8px; color: var(--mx-text); background: var(--mx-panel); }
+.workflow-command { white-space: pre-wrap; overflow-wrap: anywhere; padding: 8px; border: 1px solid var(--mx-line); border-radius: 6px; }

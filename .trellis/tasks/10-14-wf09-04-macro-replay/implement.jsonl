@@ -1,0 +1,5 @@
+{"file": "docs/WORKFLOW_SPEC.md", "reason": "WS-X03/04/05/06/07/08"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "现有 UI 与输入通道"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "实际行为测试"}
+{"file": ".trellis/spec/frontend/tauri-command-contracts.md", "reason": "terminalWrite 与历史排除"}
+{"file": ".trellis/spec/frontend/macro-replay.md", "reason": "固定会话预览、取消、超时与内存边界"}
