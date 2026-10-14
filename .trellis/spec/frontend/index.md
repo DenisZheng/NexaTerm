@@ -31,6 +31,8 @@ Some bullets in `component-guidelines.md` and `tauri-command-contracts.md` descr
 | [Tauri Command Contracts](./tauri-command-contracts.md) | Typed invoke wrappers and frontend/backend payload sync | Active (placement bullets scoped 2026-09-23) |
 | [Workflow Spec (product rules)](../../../docs/WORKFLOW_SPEC.md) | Target interaction rules `WS-xx`, status, owning WF package, superseded-rule table | v0.6 (2026-10-03) |
 
+- [Terminal Search](./terminal-search.md) — transient instance state, literal/whole-word matching, bounded highlight counts and cleanup.
+
 ---
 
 ## Pre-Development Checklist

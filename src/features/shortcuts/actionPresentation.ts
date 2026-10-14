@@ -51,6 +51,7 @@ export const actionReasonKeys: Readonly<Record<ActionDisabledReason, ActionMessa
   "terminal-required": "actionBar.reason.terminalRequired",
   "terminal-unavailable": "actionBar.reason.terminalUnavailable",
   "search-query-empty": "actionBar.reason.noQuery",
+  "search-query-too-long": "actionBar.reason.queryTooLong",
   "unknown-action": "actionBar.reason.unknown",
   "local-only": "actionBar.reason.localOnly",
   "no-multi-exec-targets": "actionBar.reason.noMultiExecTargets",

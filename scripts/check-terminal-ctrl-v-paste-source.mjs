@@ -31,8 +31,14 @@ assertContains(
 
 assertContains(
   "src/features/settings/SettingsView.tsx",
-  /title="Ctrl\+V 粘贴到终端"/,
+  /title=\{t\("settings\.localTerminal\.ctrlV\.title"\)\}/,
   "SettingsView must render the Ctrl+V paste toggle.",
+);
+
+assertContains(
+  "src/features/settings/SettingsView.tsx",
+  /checked=\{settings\.ctrlVPaste\}[\s\S]*?onChange=\{\(ctrlVPaste\) => onUpdate\(\{ ctrlVPaste \}\)\}/,
+  "The localized Ctrl+V toggle must still read and update the actual setting.",
 );
 
 assertContains(

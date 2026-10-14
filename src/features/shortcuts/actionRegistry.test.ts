@@ -164,12 +164,22 @@ describe("WF-01 4B: policies and shortcut compatibility", () => {
     const context = fixture();
     const request = { actionId: "terminal.search.next" };
     expect(resolveWorkspaceAction(request, context, {}).enabled).toBe(true);
-    const emptyQuery = { ...context, instances: context.instances.map((instance) => ({ ...instance, searchQuery: "  " })) };
+    const emptyQuery = { ...context, instances: context.instances.map((instance) => ({ ...instance, searchQuery: "" })) };
     expect(resolveWorkspaceAction(request, emptyQuery, {}).reason).toBe("search-query-empty");
     expect(resolveWorkspaceAction({ actionId: "terminal.search.toggle" }, emptyQuery, {}).enabled).toBe(true);
     const disabled = { ...context, instances: context.instances.map((instance) => ({ ...instance, canSearch: false, canCreateTerminal: false })) };
     expect(resolveWorkspaceAction(request, disabled, {}).reason).toBe("terminal-unavailable");
     expect(resolveWorkspaceAction({ actionId: "terminal.newTab" }, disabled, {}).reason).toBe("terminal-unavailable");
+  });
+
+  it("allows literal whitespace search from entry actions and rejects overlong queries", () => {
+    const context = fixture();
+    const whitespace = { ...context, instances: context.instances.map((instance) => ({ ...instance, searchQuery: "  " })) };
+    const tooLong = { ...context, instances: context.instances.map((instance) => ({ ...instance, searchQuery: "x".repeat(1025) })) };
+    for (const actionId of ["terminal.search.next", "terminal.search.previous"]) {
+      expect(resolveWorkspaceAction({ actionId, source: "menu" }, whitespace, {}).enabled).toBe(true);
+      expect(resolveWorkspaceAction({ actionId, source: "toolbar" }, tooLong, {}).reason).toBe("search-query-too-long");
+    }
   });
 
   it("has different targets for close-tab, close-pane, close-item and close-group", () => {

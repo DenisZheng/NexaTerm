@@ -81,6 +81,11 @@ for (const [path, name] of startupHeavyImports) {
   assertNoRuntimeStaticImport(shellSource, path, name);
 }
 
+const terminalSearchOwner = readFileSync("src/features/layout/useWorkspaceTerminalSearch.ts", "utf8");
+assertNoRuntimeStaticImport(terminalSearchOwner, "../terminal/TerminalPanel", "TerminalPanel in search owner");
+assertNoRuntimeStaticImport(terminalSearchOwner, "../terminal/terminalSearchController", "terminal search controller in search owner");
+assertNoRuntimeStaticImport(terminalSearchOwner, "@xterm/addon-search", "SearchAddon in search owner");
+
 assertIncludes(
   shellSource,
   "const ConnectionDialog = lazy(",

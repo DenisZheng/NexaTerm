@@ -12944,7 +12944,7 @@ body.vnc-runner-window-body {
   width: min(360px, calc(100% - 20px));
   min-height: 34px;
   display: grid;
-  grid-template-columns: minmax(160px, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
   padding: 5px 8px 5px 10px;
@@ -12952,11 +12952,12 @@ body.vnc-runner-window-body {
   border-radius: 8px;
   color: var(--mx-text);
   background: color-mix(in srgb, var(--mx-panel) 92%, transparent);
-  box-shadow: 0 8px 24px rgb(15 23 42 / 10%);
+  box-shadow: var(--mx-glass-shadow);
   backdrop-filter: blur(10px);
 }
 
 .terminal-search-input-wrap {
+  grid-column: 1 / -1;
   min-width: 0;
   height: 24px;
   display: grid;
@@ -12997,7 +12998,9 @@ body.vnc-runner-window-body {
 }
 
 .terminal-search-result {
-  min-width: 54px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   color: var(--mx-subtle);
   font-size: 12px;
   font-weight: 600;
@@ -13005,7 +13008,9 @@ body.vnc-runner-window-body {
 }
 
 .terminal-search-actions {
+  min-width: 0;
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
   gap: 4px;
@@ -13026,7 +13031,7 @@ body.vnc-runner-window-body {
 
 .terminal-search-actions button:hover:not(:disabled) {
   color: var(--mx-text);
-  background: rgb(148 163 184 / 14%);
+  background: color-mix(in srgb, var(--mx-muted) 14%, transparent);
 }
 
 .terminal-search-actions button.active {

@@ -1,4 +1,5 @@
 import { useConnectionGroups } from "../connections/useConnectionGroups";
+import { useWorkspaceTerminalSearch } from "./useWorkspaceTerminalSearch";
 import {
   lazy,
   Suspense,
@@ -329,7 +330,6 @@ import {
 } from "../connections/connectionErrorCodes";
 import type {
   TerminalPromptDirectorySnapshotReader,
-  TerminalSearchNavigationRequest,
 } from "../terminal/TerminalPanel";
 import {
   aiSendMessageShortcutActionId,
@@ -585,11 +585,6 @@ interface CommandSnippetGroupDialogState {
   originalName?: string;
   selectAfterSave?: boolean;
   value: string;
-}
-interface TerminalSearchState {
-  caseSensitive: boolean;
-  open: boolean;
-  query: string;
 }
 type ConnectionStepMode = "test" | "terminal";
 type ConnectionStepStatus = "idle" | "running" | "waiting_host_key" | "prompt" | "success" | "error";
@@ -1028,10 +1023,9 @@ export function WorkspaceShell() {
     useState(tr("workspace.command.last.none"));
   const [commandSenderDeliveryByKey, setCommandSenderDeliveryByKey] =
     useState<Record<string, { message?: string; status: CommandSenderDeliveryStatus }>>({});
-  const [terminalSearchByTabId, setTerminalSearchByTabId] =
-    useState<Record<string, TerminalSearchState>>({});
-  const [terminalSearchNavigationRequest, setTerminalSearchNavigationRequest] =
-    useState<TerminalSearchNavigationRequest | null>(null);
+  const { terminalSearchByTabId, terminalSearchNavigationRequest, toggleTerminalSearch,
+    closeTerminalSearch, updateTerminalSearchQuery, toggleTerminalSearchCaseSensitive,
+    toggleTerminalSearchWholeWord, requestTerminalSearchNavigation, acknowledgeTerminalSearchNavigation } = useWorkspaceTerminalSearch(terminalTabs, localTerminalTabs);
   const [terminalRecentOutputByTabId, setTerminalRecentOutputByTabId] =
     useState<Record<string, string>>({});
   const [aiContextRequestKey, setAiContextRequestKey] = useState(0);
@@ -1587,10 +1581,6 @@ export function WorkspaceShell() {
       ...localTerminalTabs.map((tab) => tab.id),
     ]);
 
-    setTerminalSearchByTabId((states) => {
-      const entries = Object.entries(states).filter(([tabId]) => availableTabIds.has(tabId));
-      return entries.length === Object.keys(states).length ? states : Object.fromEntries(entries);
-    });
     setTerminalRecentOutputByTabId((outputs) => {
       const entries = Object.entries(outputs).filter(([tabId]) => availableTabIds.has(tabId));
       return entries.length === Object.keys(outputs).length ? outputs : Object.fromEntries(entries);
@@ -5499,77 +5489,6 @@ export function WorkspaceShell() {
     );
   }
 
-  function toggleTerminalSearch(tabId: string | null | undefined) {
-    if (!tabId) {
-      return;
-    }
-    setTerminalSearchByTabId((states) => {
-      const current = states[tabId] || { caseSensitive: false, open: false, query: "" };
-      return {
-        ...states,
-        [tabId]: {
-          ...current,
-          open: !current.open,
-        },
-      };
-    });
-  }
-
-  function requestTerminalSearchNavigation(
-    direction: TerminalSearchNavigationRequest["direction"],
-    tabId: string,
-  ) {
-    setTerminalSearchByTabId((states) => {
-      const current = states[tabId] || { caseSensitive: false, open: true, query: "" };
-      return { ...states, [tabId]: { ...current, open: true } };
-    });
-    setTerminalSearchNavigationRequest({ direction, id: Date.now(), tabId });
-  }
-
-  function closeTerminalSearch(tabId: string) {
-    setTerminalSearchByTabId((states) => {
-      const current = states[tabId];
-      if (!current?.open) {
-        return states;
-      }
-      return {
-        ...states,
-        [tabId]: {
-          ...current,
-          open: false,
-        },
-      };
-    });
-  }
-
-  function updateTerminalSearchQuery(tabId: string, query: string) {
-    setTerminalSearchByTabId((states) => {
-      const current = states[tabId] || { caseSensitive: false, open: true, query: "" };
-      return {
-        ...states,
-        [tabId]: {
-          ...current,
-          open: true,
-          query,
-        },
-      };
-    });
-  }
-
-  function toggleTerminalSearchCaseSensitive(tabId: string) {
-    setTerminalSearchByTabId((states) => {
-      const current = states[tabId] || { caseSensitive: false, open: true, query: "" };
-      return {
-        ...states,
-        [tabId]: {
-          ...current,
-          caseSensitive: !current.caseSensitive,
-          open: true,
-        },
-      };
-    });
-  }
-
   function handleCommandSenderInputChange(value: string) {
     setCommandSenderInput(value);
     setSelectedCommandSnippetId(null);
@@ -8851,7 +8770,9 @@ export function WorkspaceShell() {
                           onRecentOutput={appendTerminalRecentOutput}
                           onSearchClose={closeTerminalSearch}
                           onSearchCaseSensitiveToggle={toggleTerminalSearchCaseSensitive}
+                          onSearchWholeWordToggle={toggleTerminalSearchWholeWord}
                           onSearchQueryChange={updateTerminalSearchQuery}
+                          onSearchNavigationHandled={acknowledgeTerminalSearchNavigation}
                           onSendSelectionToAi={sendTerminalSelectionToAi}
                           onSessionIdChange={updateTerminalRuntimeSession}
                           onStatusChange={updateTabStatus}
@@ -8864,6 +8785,7 @@ export function WorkspaceShell() {
                           onUserInput={handleMultiExecUserInput}
                           onWarmupCaptureReady={stopTerminalWarmupCapture}
                           searchCaseSensitive={Boolean(terminalSearchByTabId[tab.id]?.caseSensitive)}
+                          searchWholeWord={Boolean(terminalSearchByTabId[tab.id]?.wholeWord)}
                           searchNavigationRequest={terminalSearchNavigationRequest}
                           searchOpen={Boolean(terminalSearchByTabId[tab.id]?.open)}
                           searchQuery={terminalSearchByTabId[tab.id]?.query || ""}
@@ -8936,7 +8858,9 @@ export function WorkspaceShell() {
                               onRecentOutput={appendTerminalRecentOutput}
                               onSearchClose={closeTerminalSearch}
                               onSearchCaseSensitiveToggle={toggleTerminalSearchCaseSensitive}
+                              onSearchWholeWordToggle={toggleTerminalSearchWholeWord}
                               onSearchQueryChange={updateTerminalSearchQuery}
+                              onSearchNavigationHandled={acknowledgeTerminalSearchNavigation}
                               onSendSelectionToAi={sendTerminalSelectionToAi}
                               onStatusChange={updateLocalTerminalTabStatus}
                               canRecordTerminalInputHistory={canRecordTerminalInputHistory}
@@ -8949,6 +8873,7 @@ export function WorkspaceShell() {
                               onUserInput={handleMultiExecUserInput}
                               onWarmupCaptureReady={stopTerminalWarmupCapture}
                               searchCaseSensitive={Boolean(terminalSearchByTabId[tab.id]?.caseSensitive)}
+                              searchWholeWord={Boolean(terminalSearchByTabId[tab.id]?.wholeWord)}
                               searchNavigationRequest={terminalSearchNavigationRequest}
                               searchOpen={Boolean(terminalSearchByTabId[tab.id]?.open)}
                               searchQuery={terminalSearchByTabId[tab.id]?.query || ""}

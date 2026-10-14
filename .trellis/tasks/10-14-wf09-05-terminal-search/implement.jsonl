@@ -1,0 +1,7 @@
+{"file": "docs/WORKFLOW_SPEC.md", "reason": "Confirmed instance, input and snapshot boundaries"}
+{"file": ".trellis/spec/frontend/index.md", "reason": "Frontend development and quality entry"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Reuse existing UI, global tokens and lazy terminal"}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "Transient workspace state and lifecycle"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "Separate behavior tests, source checks and native acceptance"}
+{"file": ".trellis/spec/frontend/terminal-search.md", "reason": "Executable search mode/count/palette and cleanup contracts"}
+{"file": ".trellis/spec/guides/code-reuse-thinking-guide.md", "reason": "Reuse current SearchAddon and shared controls"}
