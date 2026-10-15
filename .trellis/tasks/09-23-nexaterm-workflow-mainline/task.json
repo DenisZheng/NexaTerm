@@ -45,7 +45,8 @@
     "10-14-wf09-05-session-log",
     "10-14-wf09-05-live-log",
     "10-15-wf09-05-keyword-highlight",
-    "10-15-wf09-05-keyword-rules"
+    "10-15-wf09-05-keyword-rules",
+    "10-15-wf09-06-probe-core"
   ],
   "parent": null,
   "relatedFiles": [],

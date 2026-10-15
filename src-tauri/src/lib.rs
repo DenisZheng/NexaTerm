@@ -20,6 +20,7 @@ mod local_files;
 mod mobaxterm_import;
 pub mod mcp;
 mod network_tools;
+pub mod connection_probe;
 mod performance_probe;
 mod rdp;
 mod remote_exec_pool;
