@@ -42,7 +42,8 @@
     "10-14-wf09-04-macro-replay",
     "10-14-wf09-04-command-recording",
     "10-14-wf09-05-terminal-search",
-    "10-14-wf09-05-session-log"
+    "10-14-wf09-05-session-log",
+    "10-14-wf09-05-live-log"
   ],
   "parent": null,
   "relatedFiles": [],

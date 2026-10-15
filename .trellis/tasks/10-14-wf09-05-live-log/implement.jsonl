@@ -1,0 +1,5 @@
+{"file": ".trellis/spec/backend/session-log-writer.md", "reason": "Live log lifecycle and contract"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Live log lifecycle and contract"}
+{"file": ".trellis/spec/frontend/tauri-command-contracts.md", "reason": "Live log lifecycle and contract"}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "Live log lifecycle and contract"}
+{"file": "docs/WORKFLOW_SPEC.md", "reason": "Live log lifecycle and contract"}

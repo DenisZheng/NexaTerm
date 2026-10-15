@@ -2755,5 +2755,22 @@
   "macros.record.reason.limit": "Recording reached a step, size or delay limit and stopped. Delays were not shortened.",
   "macros.record.reason.sensitive": "Sensitive or authentication input detected; recording paused and text omitted.",
   "macros.invalid.sensitive": "Replace or remove every omitted sensitive step before previewing.",
-  "macros.record.historyOmitted": "Automatic history for this recording source is paused until you discard or start a new recording."
+  "macros.record.historyOmitted": "Automatic history for this recording source is paused until you discard or start a new recording.",
+  "terminal.log.start": "Start log",
+  "terminal.log.stop": "Stop log",
+  "terminal.log.idle": "Logging off",
+  "terminal.log.checking": "Checking log status…",
+  "terminal.log.starting": "Opening log…",
+  "terminal.log.recording": "Recording",
+  "terminal.log.stopping": "Finishing log…",
+  "terminal.log.stopped": "Log stopped",
+  "terminal.log.limit_reached": "Stopped at size limit",
+  "terminal.log.overflow": "Stopped: log queue full",
+  "terminal.log.failed": "Log failed; partial file may exist",
+  "terminal.log.invalid_encoding": "Stopped: invalid or incomplete UTF-8",
+  "terminal.log.error": "Log operation unavailable; check status before retrying",
+  "terminal.log.retry": "Check status",
+  "terminal.log.choose": "Choose new file",
+  "terminal.log.warning": "Save future output from this session as UTF-8, including ANSI sequences and echoed input. Output may contain passwords or other secrets; it is not redacted. Only a new file is allowed. Recording stops at 100 MiB, on disconnect, or if the write queue fills. Choose a trusted private folder.",
+  "terminal.log.unsupported": "Logging is available for SSH and Local/WSL sessions"
 }

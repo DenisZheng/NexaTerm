@@ -48,6 +48,7 @@ import {
   createTerminalOutputSchedule,
   TerminalOutputQueue,
 } from "./terminalOutputFlow";
+import { TerminalLogControls } from "./TerminalLogControls";
 import { TerminalSearchBar } from "./TerminalSearchBar";
 import { getTerminalSearchDecorations, mixHexColors, normalizeHexColor, observeTerminalSearchPalette } from "./terminalSearchPalette";
 import { createTerminalSearchController, TERMINAL_SEARCH_HIGHLIGHT_LIMIT,
@@ -74,6 +75,7 @@ interface TerminalPanelProps {
   clearRequestId?: number;
   connection: ConnectionProfile | null;
   autoConnect?: boolean;
+  logSupported?: boolean;
   ctrlVPaste?: boolean;
   cursorBlink?: boolean;
   cursorStyle?: TerminalCursorStyle;
@@ -121,6 +123,7 @@ export function TerminalPanel({
   clearRequestId = 0,
   connection,
   autoConnect = true,
+  logSupported = true,
   ctrlVPaste = true,
   cursorBlink = true,
   cursorStyle = "block",
@@ -916,6 +919,7 @@ export function TerminalPanel({
       style={style}
       onPointerDown={onPaneFocus}
     >
+      <TerminalLogControls sessionId={sessionId} supported={logSupported} />
       {searchOpen ? (
         <TerminalSearchBar query={searchQuery} caseSensitive={searchCaseSensitive} wholeWord={searchWholeWord}
           result={searchResult} onQueryChange={(query) => onSearchQueryChange?.(tabId, query)}

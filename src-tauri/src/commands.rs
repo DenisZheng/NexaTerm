@@ -579,10 +579,11 @@ pub async fn terminal_resize(
 
 #[tauri::command]
 pub async fn terminal_close(
+    app: AppHandle,
     manager: State<'_, TerminalManager>,
     session_id: String,
 ) -> Result<(), AppError> {
-    manager.close(session_id).await
+    manager.close(&app, session_id).await
 }
 
 #[tauri::command]

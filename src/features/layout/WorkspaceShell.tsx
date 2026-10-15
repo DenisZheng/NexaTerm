@@ -8843,6 +8843,7 @@ export function WorkspaceShell() {
                               active={isTerminalPanelActive(tab.id, "local")}
                               {...terminalSplitContentProps({ kind: "local", tabId: tab.id })}
                               autoConnect={false}
+                              logSupported={!tab.source || tab.source === "local"}
                               clearRequestId={
                                 terminalClearRequest?.tabId === tab.id ? terminalClearRequest.id : 0
                               }

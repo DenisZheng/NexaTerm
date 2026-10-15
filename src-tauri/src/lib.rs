@@ -62,6 +62,7 @@ pub fn run() {
         .manage(performance_probe::PerformanceProbeState::default())
         .manage(remote_files::RemoteFileManager::default())
         .manage(terminal::manager::TerminalManager::default())
+        .manage(terminal::session_log_runtime::SessionLogs::default())
         .manage(temporary_connections::TemporaryConnectionManager::default())
         .manage(rdp::RdpSessionManager::default())
         .manage(vnc::VncSessionManager::default())
@@ -171,6 +172,9 @@ pub fn run() {
             commands::terminal_write,
             commands::terminal_resize,
             commands::terminal_close,
+            terminal::session_log_runtime::terminal_log_start,
+            terminal::session_log_runtime::terminal_log_stop,
+            terminal::session_log_runtime::terminal_log_status,
             commands::get_supported_window_materials,
             commands::set_window_material,
             commands::remote_file_list,

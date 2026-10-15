@@ -11139,7 +11139,7 @@ button {
   min-height: 0;
   overflow: hidden;
   display: grid;
-  grid-template-rows: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
   background: var(--mx-terminal);
   color: #d1d5db;
 }
@@ -12938,7 +12938,7 @@ body.vnc-runner-window-body {
 .terminal-search-bar {
   position: absolute;
   z-index: 6;
-  top: 8px;
+  top: 36px;
   right: 10px;
   min-width: 0;
   width: min(360px, calc(100% - 20px));
@@ -18973,3 +18973,30 @@ body[data-platform="macos"][data-theme-mode="dark"] .ui-tooltip-arrow {
 .workflow-step { display: grid; gap: 8px; margin: 12px 0; padding: 12px; border: 1px solid var(--mx-line); border-radius: 8px; }
 .workflow-dialog textarea { width: 100%; resize: vertical; min-height: 72px; border: 1px solid var(--mx-line); border-radius: 6px; padding: 8px; color: var(--mx-text); background: var(--mx-panel); }
 .workflow-command { white-space: pre-wrap; overflow-wrap: anywhere; padding: 8px; border: 1px solid var(--mx-line); border-radius: 6px; }
+
+.terminal-log-controls {
+  box-sizing: border-box;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 2px 8px;
+  border-bottom: 1px solid var(--mx-line);
+  background: var(--mx-panel);
+  color: var(--mx-text);
+  font-size: 11px;
+}
+.terminal-log-controls > button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  height: 22px;
+  padding: 0 6px;
+}
+.terminal-log-controls > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use russh::{ChannelMsg, ChannelReadHalf};
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 use tokio::sync::Mutex;
 
 use crate::app_error::AppError;
@@ -188,7 +188,17 @@ impl TerminalManager {
         }
     }
 
-    pub async fn close(&self, session_id: String) -> Result<(), AppError> {
+    pub async fn start_log(&self, logs: &super::session_log_runtime::SessionLogs,
+        session_id: &str, path: std::path::PathBuf,
+    ) -> Result<super::session_log_runtime::CaptureStatus, AppError> {
+        let sessions = self.sessions.lock().await;
+        match sessions.get(session_id) {
+            Some(ManagedTerminalSession::Ssh(_)) | Some(ManagedTerminalSession::Local(_)) => logs.start(session_id, path),
+            _ => Err(AppError::new("terminal_log_session_unavailable", "日志目标会话不可用。", "session unavailable", false)),
+        }
+    }
+
+    pub async fn close(&self, app: &AppHandle, session_id: String) -> Result<(), AppError> {
         validate_session_id(&session_id)?;
 
         let session = self
@@ -205,6 +215,7 @@ impl TerminalManager {
                 )
             })?;
 
+        app.state::<super::session_log_runtime::SessionLogs>().close(&session_id);
         match session {
             ManagedTerminalSession::Ssh(session) => session.close().await,
             ManagedTerminalSession::Local(session) => session.close().await,
@@ -308,6 +319,7 @@ fn spawn_reader(
             Err(error) => {
                 emit_terminal_error(&app, &session_id, &request_id, &error);
                 sessions.lock().await.remove(&session_id);
+                app.state::<super::session_log_runtime::SessionLogs>().close(&session_id);
                 let _ = app.emit(
                     crate::events::TERMINAL_STATE_CHANGED,
                     TerminalStateChangedEvent {
@@ -389,6 +401,7 @@ fn spawn_reader(
         }
 
         sessions.lock().await.remove(&session_id);
+        app.state::<super::session_log_runtime::SessionLogs>().close(&session_id);
         let _ = app.emit(
             crate::events::TERMINAL_STATE_CHANGED,
             TerminalStateChangedEvent {
@@ -442,6 +455,7 @@ fn spawn_local_reader(
         let exit_status = session.wait_exit_status();
         tauri::async_runtime::spawn(async move {
             sessions.lock().await.remove(&session_id);
+            app.state::<super::session_log_runtime::SessionLogs>().close(&session_id);
             let _ = app.emit(
                 crate::events::TERMINAL_STATE_CHANGED,
                 TerminalStateChangedEvent {
@@ -468,6 +482,7 @@ fn spawn_telnet_reader(
         }
 
         sessions.lock().await.remove(&session_id);
+        app.state::<super::session_log_runtime::SessionLogs>().close(&session_id);
         let _ = app.emit(
             crate::events::TERMINAL_STATE_CHANGED,
             TerminalStateChangedEvent {
@@ -520,6 +535,7 @@ fn spawn_serial_reader(
 
         tauri::async_runtime::spawn(async move {
             sessions.lock().await.remove(&session_id);
+            app.state::<super::session_log_runtime::SessionLogs>().close(&session_id);
             let _ = app.emit(
                 crate::events::TERMINAL_STATE_CHANGED,
                 TerminalStateChangedEvent {
@@ -539,6 +555,7 @@ fn emit_terminal_output(
     request_id: &Option<String>,
     data: Vec<u8>,
 ) {
+    app.state::<super::session_log_runtime::SessionLogs>().output(session_id, &data);
     let _ = app.emit(
         crate::events::TERMINAL_OUTPUT,
         TerminalOutputEvent {
@@ -566,6 +583,16 @@ fn emit_terminal_error(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn log_start_rejects_missing_live_instance() {
+        let manager = TerminalManager::default();
+        let logs = super::super::session_log_runtime::SessionLogs::default();
+        let result = manager.start_log(&logs, "missing", std::env::temp_dir().join("unused-session-log")).await;
+        assert!(result.is_err());
+        assert!(logs.status("missing").is_none());
+    }
+
 
     fn valid_request() -> TerminalConnectRequest {
         TerminalConnectRequest {

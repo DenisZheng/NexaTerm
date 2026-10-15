@@ -21,6 +21,6 @@
   "children": [],
   "parent": "09-23-nexaterm-workflow-mainline",
   "relatedFiles": [],
-  "notes": "Writer foundation only; 13 Rust tests added (one Unix-only), execution pending three-platform CI. No runtime/UI capture enabled. Manual acceptance deferred by user.",
+  "notes": "Writer foundation passed all seven executing CI #591 jobs at a046b8c, including three-platform Rust. Live integration continues in 10-14-wf09-05-live-log; manual acceptance deferred.",
   "meta": {}
 }
