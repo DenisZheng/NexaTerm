@@ -1,3 +1,4 @@
+import { LocalConnectionDiagnostics } from "./LocalConnectionDiagnostics";
 import * as Dialog from "@radix-ui/react-dialog";
 import { DismissableLayerBranch } from "@radix-ui/react-dismissable-layer";
 import { siDocker } from "simple-icons";
@@ -1815,6 +1816,8 @@ export function DockerToolPanel({
           connections={connections}
         />
       ) : toolboxView === "network" ? (
+        <div className="connection-diagnostics-stack">
+        <LocalConnectionDiagnostics key={connection?.id || "local"} active={active} initialHost={connection?.host} initialPort={connection?.port} />
         <NetworkDiagnosticsView
           connection={connection}
           error={diagnosticError}
@@ -1834,6 +1837,7 @@ export function DockerToolPanel({
           onReset={resetNetworkDiagnostic}
           onRun={(event) => void runNetworkDiagnostic(event)}
         />
+        </div>
       ) : (
         <ScheduledTasksView
           busyKey={scheduledTaskBusyKey}

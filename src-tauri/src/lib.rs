@@ -21,6 +21,7 @@ mod mobaxterm_import;
 pub mod mcp;
 mod network_tools;
 pub mod connection_probe;
+mod connection_probe_runtime;
 mod performance_probe;
 mod rdp;
 mod remote_exec_pool;
@@ -60,6 +61,7 @@ pub fn run() {
         .manage(docker_tools::DockerExecSessionManager::default())
         .manage(docker_tools::DockerLogStreamManager::default())
         .manage(network_tools::NetworkDiagnosticSessionManager::default())
+        .manage(connection_probe_runtime::LocalProbeManager::default())
         .manage(performance_probe::PerformanceProbeState::default())
         .manage(remote_files::RemoteFileManager::default())
         .manage(terminal::manager::TerminalManager::default())
@@ -72,6 +74,11 @@ pub fn run() {
         .manage(mcp::McpRemoteServiceManager::default())
         .manage(VaultState::default())
         .manage(legacy_webview_settings::LegacyWebviewSettingsProbeState::default())
+        .on_window_event(|window, event| {
+            if matches!(event, tauri::WindowEvent::Destroyed) {
+                window.state::<connection_probe_runtime::LocalProbeManager>().cancel_window(window.label());
+            }
+        })
         .setup(|app| {
             #[cfg(windows)]
             {
@@ -228,6 +235,9 @@ pub fn run() {
             commands::docker_engine_save_config,
             commands::docker_exec_invalidate_connection,
             commands::network_diagnostic_run,
+            connection_probe_runtime::local_probe_reserve,
+            connection_probe_runtime::local_probe_run,
+            connection_probe_runtime::local_probe_cancel,
             commands::tunnel_list,
             commands::tunnel_upsert,
             commands::tunnel_delete,

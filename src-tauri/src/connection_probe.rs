@@ -5,7 +5,7 @@ use std::net::{IpAddr, SocketAddr, ToSocketAddrs};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tokio::net::TcpStream;
 use tokio::sync::{watch, Semaphore};
 
@@ -14,7 +14,7 @@ const MAX_ADDRESSES: usize = 16;
 const TOTAL_TIMEOUT: Duration = Duration::from_secs(5);
 const ADDRESS_TIMEOUT: Duration = Duration::from_secs(1);
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ProbeKind { Dns, Tcp }
 
@@ -47,7 +47,7 @@ impl Default for ProbeCancellation {
 }
 impl ProbeCancellation {
     pub fn cancel(&self) { self.0.send_replace(true); }
-    fn is_cancelled(&self) -> bool { *self.0.borrow() }
+    pub(crate) fn is_cancelled(&self) -> bool { *self.0.borrow() }
 }
 
 #[derive(Clone)]

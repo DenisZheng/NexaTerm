@@ -21,6 +21,6 @@
   "children": [],
   "parent": "09-23-nexaterm-workflow-mainline",
   "relatedFiles": [],
-  "notes": "CI #595 Cargo check passed on three platforms; test compilation failed E0282 (release-only channel type). Explicit unit channel fix applied; new CI pending. UI/IPC and manual acceptance remain follow-ups.",
+  "notes": "CI #597 seven executing jobs SUCCESS after deterministic refusal/timeout classification correction; package Windows skipped. Core11 tests verified on three platforms. IPC/UI continues in WF-09-06B; manual acceptance deferred.",
   "meta": {}
 }

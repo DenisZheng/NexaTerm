@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/backend/connection-probe.md", "reason": "IPC and bounded owner"}
+{"file": ".trellis/spec/frontend/local-connection-diagnostics.md", "reason": "UI races and lifecycle"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Shared styles and lazy boundaries"}
+{"file": "docs/WORKFLOW_SPEC.md", "reason": "Approved identity and privacy rules"}
