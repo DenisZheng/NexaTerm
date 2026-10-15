@@ -21,6 +21,6 @@
   "children": [],
   "parent": "09-23-nexaterm-workflow-mainline",
   "relatedFiles": [],
-  "notes": "Explicit SSH/Local logging integrated. Local frontend/script/types/build/source gates passed. Nine new Rust tests pending CI; native GUI/theme/protocol acceptance deferred by user.",
+  "notes": "Live logging c4e3102 passed all seven executing CI #592 jobs, including three-platform Rust and fixtures. Manual GUI/theme/protocol acceptance remains deferred.",
   "meta": {}
 }

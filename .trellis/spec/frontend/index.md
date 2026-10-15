@@ -77,3 +77,5 @@ The goal is to help AI assistants and new team members understand how YOUR proje
 ---
 
 **Language**: All documentation should be written in **English**.
+
+- [Terminal Keyword Highlighting](./terminal-keyword-highlight.md) — built-in severity rules, ANSI preservation and bounded viewport-priority decorations.

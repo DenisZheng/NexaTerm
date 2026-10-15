@@ -7,7 +7,7 @@ import type {
   Terminal,
 } from "@xterm/xterm";
 
-export type TerminalSemanticTokenKind = "url" | "ip" | "version" | "date" | "number";
+export type TerminalSemanticTokenKind = "url" | "ip" | "version" | "date" | "number" | "error" | "warning" | "success";
 
 export interface TerminalSemanticToken {
   end: number;
@@ -56,8 +56,14 @@ interface DecoratedLine {
 const scanBacklogLines = 180;
 const retainedDecoratedLines = 360;
 const maxLineCells = 4096;
+export const TERMINAL_SEMANTIC_MAX_CHARS = 4096;
+export const TERMINAL_SEMANTIC_MAX_LINE_TOKENS = 64;
+export const TERMINAL_SEMANTIC_MAX_DECORATIONS = 2048;
 
 const tokenMatchers: TokenMatcher[] = [
+  { kind: "error", pattern: /(?<![\p{L}\p{M}\p{N}_])(?:error|fatal|fail|failed|failure)(?![\p{L}\p{M}\p{N}_])/giu, priority: 60 },
+  { kind: "warning", pattern: /(?<![\p{L}\p{M}\p{N}_])(?:warn|warning)(?![\p{L}\p{M}\p{N}_])/giu, priority: 60 },
+  { kind: "success", pattern: /(?<![\p{L}\p{M}\p{N}_])(?:success|succeeded|passed)(?![\p{L}\p{M}\p{N}_])/giu, priority: 60 },
   {
     kind: "url",
     pattern: /\bhttps?:\/\/[^\s<>"'`]+/gi,
@@ -87,7 +93,7 @@ const tokenMatchers: TokenMatcher[] = [
   },
 ];
 
-const darkSemanticPalette: TerminalSemanticHighlightPalette = {
+const darkSemanticPalette: Record<Exclude<TerminalSemanticTokenKind, "error" | "warning" | "success">, string> = {
   date: "#22C55E",
   ip: "#C084FC",
   number: "#38BDF8",
@@ -95,7 +101,7 @@ const darkSemanticPalette: TerminalSemanticHighlightPalette = {
   version: "#22D3EE",
 };
 
-const lightSemanticPalette: TerminalSemanticHighlightPalette = {
+const lightSemanticPalette: typeof darkSemanticPalette = {
   date: "#15803D",
   ip: "#7C3AED",
   number: "#0284C7",
@@ -114,6 +120,8 @@ export function createTerminalSemanticHighlighter(
 ): TerminalSemanticHighlighter {
   const lineDecorations = new Map<number, DecoratedLine>();
   let activePalette = palette;
+  let decorationCount = 0;
+  let priorityViewport = { start: 0, end: -1 };
   let disposed = false;
   let refreshTimer: number | null = null;
 
@@ -122,6 +130,7 @@ export function createTerminalSemanticHighlighter(
     if (!decoratedLine) {
       return;
     }
+    decorationCount -= decoratedLine.decorations.length;
     decoratedLine.decorations.forEach((decoration) => decoration.dispose());
     decoratedLine.marker.dispose();
     lineDecorations.delete(lineIndex);
@@ -143,6 +152,7 @@ export function createTerminalSemanticHighlighter(
       lineDecorations.delete(lineIndex);
       const existing = lineDecorations.get(decoratedLine.marker.line);
       if (existing) {
+        decorationCount -= existing.decorations.length;
         existing.decorations.forEach((decoration) => decoration.dispose());
         existing.marker.dispose();
       }
@@ -171,7 +181,15 @@ export function createTerminalSemanticHighlighter(
     }
 
     disposeDecoratedLine(lineIndex);
-    if (ranges.length === 0) {
+    if (lineIndex >= priorityViewport.start && lineIndex <= priorityViewport.end) {
+      for (const [otherLine] of [...lineDecorations]) {
+        if (decorationCount + ranges.length <= TERMINAL_SEMANTIC_MAX_DECORATIONS &&
+            lineDecorations.size < retainedDecoratedLines) break;
+        if (otherLine < priorityViewport.start || otherLine > priorityViewport.end) disposeDecoratedLine(otherLine);
+      }
+    }
+    if (ranges.length === 0 || decorationCount >= TERMINAL_SEMANTIC_MAX_DECORATIONS ||
+        lineDecorations.size >= retainedDecoratedLines) {
       return;
     }
 
@@ -182,7 +200,8 @@ export function createTerminalSemanticHighlighter(
       return;
     }
 
-    const decorations = ranges
+    const availableRanges = ranges.slice(0, TERMINAL_SEMANTIC_MAX_DECORATIONS - decorationCount);
+    const decorations = availableRanges
       .map((range) =>
         terminal.registerDecoration({
           foregroundColor: activePalette[range.kind],
@@ -199,10 +218,11 @@ export function createTerminalSemanticHighlighter(
       return;
     }
 
+    decorationCount += decorations.length;
     lineDecorations.set(lineIndex, {
       decorations,
       marker,
-      signature,
+      signature: decorations.length === ranges.length ? signature : `${signature}|partial`,
     });
   };
 
@@ -253,9 +273,10 @@ export function createTerminalSemanticHighlighter(
     const viewportStartLine = Math.max(0, buffer.viewportY);
     const viewportEndLine = Math.min(lastBufferLine, buffer.viewportY + terminal.rows - 1);
 
-    scanRange(recentStartLine, cursorLine);
-    scanRange(viewportStartLine, viewportEndLine);
+    priorityViewport = { start: viewportStartLine, end: viewportEndLine };
     pruneDecorations(recentStartLine, viewportStartLine, viewportEndLine);
+    scanRange(viewportStartLine, viewportEndLine);
+    scanRange(recentStartLine, cursorLine);
   };
 
   const scheduleRefresh = () => {
@@ -297,6 +318,8 @@ export function createTerminalSemanticHighlighter(
 }
 
 export function findTerminalSemanticTokens(text: string): TerminalSemanticToken[] {
+  // Keep one Unicode code point of lookahead so the scan cap is not a fake word boundary.
+  text = text.slice(0, TERMINAL_SEMANTIC_MAX_CHARS + 2);
   const matches: Array<TerminalSemanticToken & { priority: number }> = [];
 
   tokenMatchers.forEach((matcher) => {
@@ -305,7 +328,7 @@ export function findTerminalSemanticTokens(text: string): TerminalSemanticToken[
       const rawText = match[0];
       const rawStart = match.index ?? 0;
       const trimmed = trimTerminalSemanticTokenText(rawText);
-      if (!trimmed.text) {
+      if (!trimmed.text || rawStart + trimmed.end > TERMINAL_SEMANTIC_MAX_CHARS) {
         continue;
       }
       matches.push({
@@ -327,6 +350,7 @@ export function findTerminalSemanticTokens(text: string): TerminalSemanticToken[
       left.start - right.start
     ))
     .forEach((match) => {
+      if (selected.length >= TERMINAL_SEMANTIC_MAX_LINE_TOKENS) return;
       for (let index = match.start; index < match.end; index += 1) {
         if (occupied[index]) {
           return;
@@ -347,9 +371,9 @@ export function findTerminalSemanticTokens(text: string): TerminalSemanticToken[
 }
 
 export function getTerminalSemanticHighlightPalette(theme: ITheme): TerminalSemanticHighlightPalette {
-  return getColorLuminance(theme.background) >= 0.52
-    ? lightSemanticPalette
-    : darkSemanticPalette;
+  const base = getColorLuminance(theme.background) >= 0.52 ? lightSemanticPalette : darkSemanticPalette;
+  return { ...base, error: theme.red || base.ip, warning: theme.yellow || base.url,
+    success: theme.green || base.date };
 }
 
 export function trimTerminalSemanticTokenText(text: string) {
@@ -373,7 +397,7 @@ export function trimTerminalSemanticTokenText(text: string) {
 function readTerminalLineSnapshot(line: IBufferLine, cols: number): TerminalLineSnapshot {
   const cells: TerminalLineCell[] = [];
   let text = "";
-  const maxCells = Math.min(line.length, cols, maxLineCells);
+  const maxCells = Math.min(line.length, cols, maxLineCells + 1);
 
   for (let x = 0; x < maxCells; x += 1) {
     const cell = line.getCell(x);
@@ -382,6 +406,10 @@ function readTerminalLineSnapshot(line: IBufferLine, cols: number): TerminalLine
     }
 
     const chars = cell.getChars() || " ";
+    if (text.length + chars.length > TERMINAL_SEMANTIC_MAX_CHARS) {
+      text += chars.slice(0, TERMINAL_SEMANTIC_MAX_CHARS + 2 - text.length);
+      break;
+    }
     const start = text.length;
     text += chars;
     cells.push({
