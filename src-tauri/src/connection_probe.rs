@@ -146,11 +146,18 @@ async fn bounded(cancellation: &ProbeCancellation, duration: Duration,
 }
 
 async fn connect_addresses(addresses: Addresses) -> Outcome {
+    connect_addresses_with(addresses, |address| async move {
+        TcpStream::connect(address).await.map(drop)
+    }).await
+}
+
+async fn connect_addresses_with<F, Fut>(addresses: Addresses, mut connect: F) -> Outcome
+where F: FnMut(SocketAddr) -> Fut, Fut: Future<Output = std::io::Result<()>> {
     let mut timed_out = false;
     let mut all_refused = true;
     for address in addresses.values {
-        match tokio::time::timeout(ADDRESS_TIMEOUT, TcpStream::connect(address)).await {
-            Ok(Ok(stream)) => { drop(stream); return (ProbeStatus::Success, ProbeReason::Connected); }
+        match tokio::time::timeout(ADDRESS_TIMEOUT, connect(address)).await {
+            Ok(Ok(())) => return (ProbeStatus::Success, ProbeReason::Connected),
             Ok(Err(error)) => {
                 timed_out |= error.kind() == std::io::ErrorKind::TimedOut;
                 all_refused &= error.kind() == std::io::ErrorKind::ConnectionRefused;

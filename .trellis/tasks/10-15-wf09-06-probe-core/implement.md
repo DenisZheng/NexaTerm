@@ -10,3 +10,6 @@ Implemented core with shared 4-operation/4-resolver limits, 5-second deadline, 1
 
 ## CI #595 correction
 All three platform Cargo check jobs passed, but Cargo test and fixture Rust test builds failed with E0282 at connection_probe_tests.rs:139. The release-only mpsc channel never sends a value, so its generic type cannot be inferred. Explicitly use channel::<()>(); retain the existing blocked-worker lifetime assertions. This is a test compilation correction, not a skipped gate or runtime fallback. New CI must execute the tests before claiming success.
+
+## CI #596 Windows correction
+Linux/macOS Rust and real fixture jobs passed; Windows ran 449 passing tests and one failure in the closed-loopback-port assertion. A closed port is not guaranteed to return refusal before the fixed one-second address timeout on Windows. Production correctly returned timed_out. Extracted the connector boundary and now assert refused vs timed-out outcomes with injected IO errors, preserving exact classification assertions and all real loopback success/EOF coverage. No production timeout increase, conditional skip or claim of real Windows refusal. New CI pending.

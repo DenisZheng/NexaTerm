@@ -79,14 +79,18 @@ fn loopback_tcp_connects_without_sending_payload_and_closes_socket() {
 }
 
 #[test]
-fn loopback_refusal_is_distinct_from_timeout() {
+fn connection_refusal_is_distinct_from_timeout_without_os_timing_assumptions() {
     runtime().block_on(async {
-        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
-        let port = listener.local_addr().unwrap().port();
-        drop(listener);
-        let result = ProbeEngine::default().probe(ProbeKind::Tcp, "127.0.0.1", port, &ProbeCancellation::default()).await;
-        assert_eq!(result.status, ProbeStatus::Failed);
-        assert_eq!(result.reason, ProbeReason::ConnectionRefused);
+        for (error, expected) in [
+            (std::io::ErrorKind::ConnectionRefused, (ProbeStatus::Failed, ProbeReason::ConnectionRefused)),
+            (std::io::ErrorKind::TimedOut, (ProbeStatus::TimedOut, ProbeReason::Deadline)),
+        ] {
+            let addresses = Addresses { values: vec!["127.0.0.1:22".parse().unwrap()], truncated: false };
+            let outcome = connect_addresses_with(addresses, |_| async move {
+                Err(std::io::Error::from(error))
+            }).await;
+            assert_eq!(outcome, expected);
+        }
     });
 }
 
