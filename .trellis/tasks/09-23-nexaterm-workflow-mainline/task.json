@@ -40,7 +40,12 @@
     "10-13-wf09-03-vault-lifecycle",
     "10-13-wf09-03-credential-boundaries",
     "10-14-wf09-04-macro-replay",
-    "10-14-wf09-04-command-recording"
+    "10-14-wf09-04-command-recording",
+    "10-14-wf09-05-terminal-search",
+    "10-14-wf09-05-session-log",
+    "10-14-wf09-05-live-log",
+    "10-15-wf09-05-keyword-highlight",
+    "10-15-wf09-05-keyword-rules"
   ],
   "parent": null,
   "relatedFiles": [],

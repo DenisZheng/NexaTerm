@@ -8,4 +8,6 @@ pub mod private_key;
 pub mod pty;
 pub mod serial;
 pub mod session;
+pub mod session_log;
+pub mod session_log_runtime;
 pub mod telnet;

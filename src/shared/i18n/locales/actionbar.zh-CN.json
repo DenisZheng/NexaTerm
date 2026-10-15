@@ -40,6 +40,7 @@
   "actionBar.reason.terminalRequired": "请选择 SSH 或本地终端。",
   "actionBar.reason.terminalUnavailable": "当前终端暂不能执行此操作。",
   "actionBar.reason.noQuery": "请先输入终端搜索内容。",
+  "actionBar.reason.queryTooLong": "缩短终端搜索内容后可继续导航。",
   "actionBar.reason.unknown": "此操作尚未注册。",
   "actionBar.reason.localOnly": "仅在 AI 输入框内可用。",
   "actionBar.reason.noMultiExecTargets": "还没有可用的终端目标：先打开 SSH 或 Local 终端。",

@@ -1,3 +1,4 @@
+import { normalizeKeywordRules, type TerminalKeywordRule } from "../terminal/terminalKeywordRules";
 import type { CSSProperties } from "react";
 import type { LocalePreference } from "../../shared/i18n";
 import type {
@@ -76,6 +77,7 @@ export interface AppearanceSettings {
   terminalFontMode: FontSettingMode;
   terminalFontPreset: TerminalFontPreset;
   terminalFontSize: 12 | 13 | 14 | 15 | 16;
+  terminalKeywordRules: TerminalKeywordRule[];
   themeMode: ThemeMode;
   uiFontCustom: string;
   uiFontMode: FontSettingMode;
@@ -261,6 +263,7 @@ export const defaultSettings: MxtermSettings = {
     terminalFontMode: "preset",
     terminalFontPreset: "cascadia-code",
     terminalFontSize: 13,
+    terminalKeywordRules: [],
     themeMode: "system",
     uiFontCustom: "\"Segoe UI Variable Text\", \"Segoe UI\", \"Microsoft YaHei UI\", system-ui, sans-serif",
     uiFontMode: "preset",
@@ -449,6 +452,7 @@ export function normalizeSettings(value: unknown): MxtermSettings {
         terminalFontPresets.map((preset) => preset.value),
         defaultSettings.appearance.terminalFontPreset,
       ),
+      terminalKeywordRules: normalizeKeywordRules(appearance.terminalKeywordRules),
       terminalFontSize: normalizeNumber(
         appearance.terminalFontSize,
         [12, 13, 14, 15, 16],

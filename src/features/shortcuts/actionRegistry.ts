@@ -1,3 +1,4 @@
+import { TERMINAL_SEARCH_QUERY_LIMIT } from "../terminal/terminalSearchLimits";
 import {
   getShortcutAction,
   resolveShortcutBindingById,
@@ -111,7 +112,10 @@ export function resolveWorkspaceAction(
       if (instance?.canCreateTerminal !== true) return disabled("terminal-unavailable");
     } else if (policy.capability === "search" || policy.capability === "search-result") {
       if (instance?.canSearch !== true) return disabled("terminal-unavailable");
-      if (policy.capability === "search-result" && !instance.searchQuery?.trim()) return disabled("search-query-empty");
+      if (policy.capability === "search-result") {
+        if (!instance.searchQuery?.length) return disabled("search-query-empty");
+        if (instance.searchQuery.length > TERMINAL_SEARCH_QUERY_LIMIT) return disabled("search-query-too-long");
+      }
     }
   }
   return { actionId, binding, target, enabled: true, reason: null };

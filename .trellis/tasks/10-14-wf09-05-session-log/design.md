@@ -1,0 +1,6 @@
+# Design
+A dependency-free Rust module owns a generic Write sink and a private File wrapper. Status contains only byte count and terminal state (recording/stopped/limit reached/failed). The File wrapper uses create_new, rejects relative paths before touching disk and sets Unix mode 0600. It never stores the destination or output in diagnostic state.
+
+Budget is measured in UTF-8 bytes (maximum 1 GiB); a chunk exceeding the remainder writes only its largest complete-character prefix, then flushes/closes and reports limit reached. Write failures can leave a partial final code point, which must remain an explicit failed result, not a claim of valid complete output. Successfully written byte count is retained even on errors. Flush means OS acceptance, not fsync/crash durability. No parent directories are created.
+
+This synchronous sink must run off terminal reader/UI tasks when integrated. No global registry or Tauri commands are added in this cut, so capture cannot accidentally start before consent and lifecycle controls exist. Output is not redacted: future UI must disclose that remote echo/output may contain secrets; command heuristics cannot guarantee output sanitization. Windows ACLs inherit directory policy; no claim of owner-only Windows ACLs.

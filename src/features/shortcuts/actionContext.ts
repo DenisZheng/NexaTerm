@@ -42,7 +42,7 @@ export type ActionTarget =
 /** Stable reason codes; presentation/localization belongs to the 4C entry components. */
 export type ActionDisabledReason =
   | "workspace-inactive" | "no-active-session" | "target-missing" | "wrong-target-kind"
-  | "empty-pane" | "terminal-required" | "terminal-unavailable" | "search-query-empty"
+  | "empty-pane" | "terminal-required" | "terminal-unavailable" | "search-query-empty" | "search-query-too-long"
   | "unknown-action" | "local-only" | "no-command-targets" | "no-multi-exec-targets"
   | "shortcut-unbound" | "input-focus" | "handler-unavailable" | "action-pending"
   | "capability-unavailable" | "split-unavailable" | "tunnel-unavailable";

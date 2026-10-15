@@ -31,6 +31,9 @@ Some bullets in `component-guidelines.md` and `tauri-command-contracts.md` descr
 | [Tauri Command Contracts](./tauri-command-contracts.md) | Typed invoke wrappers and frontend/backend payload sync | Active (placement bullets scoped 2026-09-23) |
 | [Workflow Spec (product rules)](../../../docs/WORKFLOW_SPEC.md) | Target interaction rules `WS-xx`, status, owning WF package, superseded-rule table | v0.6 (2026-10-03) |
 
+- [Terminal Session Logging](./terminal-session-log.md) — explicit consent, pinned capture, bounded worker status and close lifecycle.
+- [Terminal Search](./terminal-search.md) — transient instance state, literal/whole-word matching, bounded highlight counts and cleanup.
+
 ---
 
 ## Pre-Development Checklist
@@ -74,3 +77,5 @@ The goal is to help AI assistants and new team members understand how YOUR proje
 ---
 
 **Language**: All documentation should be written in **English**.
+
+- [Terminal Keyword Highlighting](./terminal-keyword-highlight.md) — built-in severity rules, ANSI preservation and bounded viewport-priority decorations.

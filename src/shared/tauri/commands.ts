@@ -820,6 +820,22 @@ export function terminalResize(sessionId: string, cols: number, rows: number) {
   });
 }
 
+export interface TerminalLogStatus {
+  capture_id: string;
+  state: "starting" | "recording" | "stopping" | "stopped" | "limit_reached" | "overflow" | "failed" | "invalid_encoding";
+  bytes_written: number;
+}
+
+export function terminalLogStart(sessionId: string, path: string) {
+  return invoke<TerminalLogStatus>("terminal_log_start", { sessionId, path, acknowledged: true });
+}
+export function terminalLogStatus(sessionId: string) {
+  return invoke<TerminalLogStatus | null>("terminal_log_status", { sessionId });
+}
+export function terminalLogStop(sessionId: string, captureId: string) {
+  return invoke<TerminalLogStatus | null>("terminal_log_stop", { sessionId, captureId });
+}
+
 export function terminalClose(sessionId: string) {
   return invoke<void>("terminal_close", { sessionId });
 }

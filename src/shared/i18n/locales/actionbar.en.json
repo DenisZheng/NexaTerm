@@ -40,6 +40,7 @@
   "actionBar.reason.terminalRequired": "Select an SSH or local terminal.",
   "actionBar.reason.terminalUnavailable": "This terminal cannot perform the action.",
   "actionBar.reason.noQuery": "Enter a terminal search query first.",
+  "actionBar.reason.queryTooLong": "Shorten the terminal search query to enable navigation.",
   "actionBar.reason.unknown": "This action is not registered.",
   "actionBar.reason.localOnly": "Available only in the AI input box.",
   "actionBar.reason.noMultiExecTargets": "No terminal targets yet. Open an SSH or Local terminal first.",

@@ -105,3 +105,11 @@ export async function selectMobaXtermSessionsImportPath() {
   });
   return normalizeSelectedPaths(selected)[0] || null;
 }
+
+export async function selectTerminalLogSavePath() {
+  return save({
+    defaultPath: `nexaterm-${new Date().toISOString().replace(/[:.]/g, "-")}.log`,
+    filters: [{ extensions: ["log", "txt"], name: t("dialog.logFile") }],
+    title: t("terminal.log.start"),
+  });
+}

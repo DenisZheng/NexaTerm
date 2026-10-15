@@ -1,3 +1,4 @@
+import type { TerminalKeywordRule } from "./terminalKeywordRules";
 import { isSensitiveCommand } from "../commands/commandPrivacy";
 import { FitAddon } from "@xterm/addon-fit";
 import { SearchAddon } from "@xterm/addon-search";
@@ -7,15 +8,10 @@ import { Terminal, type ITheme, type IWindowsPty } from "@xterm/xterm";
 import * as ContextMenu from "@radix-ui/react-context-menu";
 import {
   Bot,
-  CaseSensitive,
-  ChevronDown,
-  ChevronUp,
   ClipboardPaste,
   Copy,
   RefreshCw,
   ScanText,
-  Search,
-  X,
 } from "lucide-react";
 import { type CSSProperties, useEffect, useRef, useState } from "react";
 import "@xterm/xterm/css/xterm.css";
@@ -53,7 +49,12 @@ import {
   createTerminalOutputSchedule,
   TerminalOutputQueue,
 } from "./terminalOutputFlow";
-import { Tooltip } from "../../shared/ui/Tooltip";
+import { TerminalLogControls } from "./TerminalLogControls";
+import { TerminalSearchBar } from "./TerminalSearchBar";
+import { getTerminalSearchDecorations, mixHexColors, normalizeHexColor, observeTerminalSearchPalette } from "./terminalSearchPalette";
+import { createTerminalSearchController, TERMINAL_SEARCH_HIGHLIGHT_LIMIT,
+  type TerminalSearchController, type TerminalSearchNavigationRequest, type TerminalSearchResult } from "./terminalSearchController";
+export type { TerminalSearchNavigationRequest } from "./terminalSearchController";
 import type { TerminalCursorStyle } from "../settings/settingsTypes";
 
 const TERMINAL_SCROLLBAR_WIDTH = 6;
@@ -67,12 +68,6 @@ const PROMPT_DIRECTORY_ANCHOR_SNAPSHOT_LOOKBACK_ROWS = 2000;
 // where xterm and the shell disagree on cols/rows and output reflows wrongly.
 const TERMINAL_RESIZE_SYNC_DEBOUNCE_MS = 120;
 
-export interface TerminalSearchNavigationRequest {
-  direction: "next" | "previous";
-  id: number;
-  tabId: string;
-}
-
 export type TerminalPromptDirectorySnapshotReader = () => string | null;
 
 interface TerminalPanelProps {
@@ -81,17 +76,20 @@ interface TerminalPanelProps {
   clearRequestId?: number;
   connection: ConnectionProfile | null;
   autoConnect?: boolean;
+  logSupported?: boolean;
   ctrlVPaste?: boolean;
   cursorBlink?: boolean;
   cursorStyle?: TerminalCursorStyle;
   fontFamily: string;
   fontSize: number;
+  keywordRules?: readonly TerminalKeywordRule[];
   initialOutput?: number[];
   initialRequestId?: string;
   initialSessionId: string;
   layoutRevision?: number;
   onPaneFocus?: () => void;
   searchCaseSensitive?: boolean;
+  searchWholeWord?: boolean;
   searchNavigationRequest?: TerminalSearchNavigationRequest | null;
   searchOpen?: boolean;
   searchQuery?: string;
@@ -108,8 +106,10 @@ interface TerminalPanelProps {
     reader: TerminalPromptDirectorySnapshotReader | null,
   ) => void;
   onSearchCaseSensitiveToggle?: (tabId: string) => void;
+  onSearchWholeWordToggle?: (tabId: string) => void;
   onSearchClose?: (tabId: string) => void;
   onSearchQueryChange?: (tabId: string, query: string) => void;
+  onSearchNavigationHandled?: (request: TerminalSearchNavigationRequest) => void;
   onRecentOutput?: (tabId: string, output: string) => void;
   onSendSelectionToAi?: (tabId: string, selectedText: string) => void;
   onSessionIdChange?: (tabId: string, sessionId: string, requestId?: string) => void;
@@ -125,11 +125,13 @@ export function TerminalPanel({
   clearRequestId = 0,
   connection,
   autoConnect = true,
+  logSupported = true,
   ctrlVPaste = true,
   cursorBlink = true,
   cursorStyle = "block",
   fontFamily,
   fontSize,
+  keywordRules,
   initialOutput = [],
   initialRequestId,
   initialSessionId,
@@ -140,7 +142,9 @@ export function TerminalPanel({
   onRecentOutput,
   onSearchClose,
   onSearchCaseSensitiveToggle,
+  onSearchWholeWordToggle,
   onSearchQueryChange,
+  onSearchNavigationHandled,
   onSendSelectionToAi,
   onSessionIdChange,
   onStatusChange,
@@ -149,6 +153,7 @@ export function TerminalPanel({
   onUserInput,
   onWarmupCaptureReady,
   searchCaseSensitive = false,
+  searchWholeWord = false,
   searchNavigationRequest = null,
   searchOpen = false,
   searchQuery = "",
@@ -161,10 +166,9 @@ export function TerminalPanel({
 }: TerminalPanelProps) {
   const { t } = useI18n();
   const hostRef = useRef<HTMLDivElement | null>(null);
-  const searchInputRef = useRef<HTMLInputElement | null>(null);
   const terminalRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
-  const searchAddonRef = useRef<SearchAddon | null>(null);
+  const searchControllerRef = useRef<TerminalSearchController | null>(null);
   const semanticHighlighterRef = useRef<TerminalSemanticHighlighter | null>(null);
   const sessionIdRef = useRef<string | null>(null);
   const activeRequestIdRef = useRef<string | null>(initialRequestId || tabId);
@@ -202,7 +206,7 @@ export function TerminalPanel({
   const [listenersReady, setListenersReady] = useState(!hasTauriRuntime());
   const [contextMenuSelection, setContextMenuSelection] = useState("");
   const [reconnecting, setReconnecting] = useState(false);
-  const [searchResultLabel, setSearchResultLabel] = useState("");
+  const [searchResult, setSearchResult] = useState<TerminalSearchResult>({ kind: "idle" });
   const [status, setStatus] = useState(connection ? "待连接" : "空闲");
 
   useEffect(() => {
@@ -283,10 +287,9 @@ export function TerminalPanel({
       windowsPty: resolveWindowsPtyOption(initialWindowsPtyRef.current),
     });
     const fitAddon = new FitAddon();
-    const searchAddon = new SearchAddon({ highlightLimit: 1000 });
+    const searchAddon = new SearchAddon({ highlightLimit: TERMINAL_SEARCH_HIGHLIGHT_LIMIT });
     terminalRef.current = terminal;
     fitAddonRef.current = fitAddon;
-    searchAddonRef.current = searchAddon;
     terminal.loadAddon(fitAddon);
     terminal.loadAddon(searchAddon);
     terminal.loadAddon(new WebLinksAddon());
@@ -359,6 +362,7 @@ export function TerminalPanel({
     });
     const semanticHighlighter = createTerminalSemanticHighlighter(terminal, {
       palette: getTerminalSemanticHighlightPalette(theme),
+      rules: keywordRules,
     });
     semanticHighlighterRef.current = semanticHighlighter;
     fitAndSyncTerminalSize(terminal, fitAddon, sessionIdRef.current, lastSyncedSizeRef);
@@ -408,9 +412,8 @@ export function TerminalPanel({
     };
 
     terminalOutputWriterRef.current = writeDecodedOutput;
-    const searchResultsDisposable = searchAddon.onDidChangeResults((event) => {
-      setSearchResultLabel(formatSearchResultLabel(event.resultIndex, event.resultCount));
-    });
+    const searchController = createTerminalSearchController(searchAddon, terminal, setSearchResult);
+    searchControllerRef.current = searchController;
     if (startupOutputBufferingRef.current) {
       startupOutputFlushTimerRef.current = window.setTimeout(
         flushStartupOutput,
@@ -595,54 +598,29 @@ export function TerminalPanel({
       resizeObserver.disconnect();
       resizeDisposable.dispose();
       dataDisposable.dispose();
-      searchResultsDisposable.dispose();
+      searchController.dispose();
       semanticHighlighter.dispose();
       terminal.dispose();
       terminalRef.current = null;
       fitAddonRef.current = null;
-      searchAddonRef.current = null;
+      searchControllerRef.current = null;
       semanticHighlighterRef.current = null;
     };
   }, [tabId]);
 
   useEffect(() => {
-    const terminal = terminalRef.current;
-    const searchAddon = searchAddonRef.current;
-    if (!terminal || !searchAddon) {
-      return;
-    }
-
-    const trimmedQuery = searchQuery.trim();
-    if (!searchOpen) {
-      searchAddon.clearDecorations();
-      setSearchResultLabel("");
-      if (active) {
-        terminal.focus();
-      }
-      return;
-    }
-
-    if (!trimmedQuery) {
-      searchAddon.clearDecorations();
-      setSearchResultLabel("");
-      return;
-    }
-
-    const found = searchAddon.findNext(searchQuery, getTerminalSearchOptions(searchCaseSensitive, true));
-    if (!found) {
-      setSearchResultLabel(currentT("terminal.search.noMatch"));
-    }
-  }, [active, searchCaseSensitive, searchOpen, searchQuery]);
+    const refresh = () => searchControllerRef.current?.configure(
+      { open: searchOpen, query: searchQuery, caseSensitive: searchCaseSensitive, wholeWord: searchWholeWord },
+      getTerminalSearchDecorations(hostRef.current),
+    );
+    refresh();
+    if (hostRef.current) return observeTerminalSearchPalette(hostRef.current, refresh);
+  }, [searchCaseSensitive, searchWholeWord, searchOpen, searchQuery, theme]);
 
   useEffect(() => {
-    if (searchOpen && !previousSearchOpenRef.current) {
-      window.requestAnimationFrame(() => {
-        searchInputRef.current?.focus();
-        searchInputRef.current?.select();
-      });
-    }
+    if (previousSearchOpenRef.current && !searchOpen && active) terminalRef.current?.focus();
     previousSearchOpenRef.current = searchOpen;
-  }, [searchOpen]);
+  }, [active, searchOpen]);
 
   useEffect(() => {
     if (!clearRequestId || lastClearRequestIdRef.current === clearRequestId) {
@@ -664,23 +642,9 @@ export function TerminalPanel({
     }
 
     lastSearchNavigationRequestIdRef.current = searchNavigationRequest.id;
-    if (searchNavigationRequest.direction === "previous") {
-      findPreviousTerminalSearch(
-        searchAddonRef.current,
-        searchQuery,
-        searchCaseSensitive,
-        setSearchResultLabel,
-      );
-      return;
-    }
-
-    findNextTerminalSearch(
-      searchAddonRef.current,
-      searchQuery,
-      searchCaseSensitive,
-      setSearchResultLabel,
-    );
-  }, [searchCaseSensitive, searchNavigationRequest, searchOpen, searchQuery, tabId]);
+    searchControllerRef.current?.navigate(searchNavigationRequest.direction);
+    onSearchNavigationHandled?.(searchNavigationRequest);
+  }, [searchNavigationRequest, searchOpen, onSearchNavigationHandled, tabId]);
 
   useEffect(() => {
     const terminal = terminalRef.current;
@@ -713,6 +677,10 @@ export function TerminalPanel({
     terminal.options.theme = withTerminalChromeTheme(theme);
     semanticHighlighterRef.current?.setPalette(getTerminalSemanticHighlightPalette(theme));
   }, [theme]);
+
+  useEffect(() => {
+    semanticHighlighterRef.current?.setRules(keywordRules ?? []);
+  }, [keywordRules]);
 
   useEffect(() => {
     const terminal = terminalRef.current;
@@ -959,102 +927,14 @@ export function TerminalPanel({
       style={style}
       onPointerDown={onPaneFocus}
     >
+      <TerminalLogControls sessionId={sessionId} supported={logSupported} />
       {searchOpen ? (
-        <div className="terminal-search-bar" role="search">
-          <label className="terminal-search-input-wrap">
-            <Search className="ui-icon" aria-hidden="true" />
-            <input
-              ref={searchInputRef}
-              aria-label={t("terminal.search.aria")}
-              value={searchQuery}
-              placeholder={t("terminal.search.placeholder")}
-              spellCheck={false}
-              onChange={(event) => onSearchQueryChange?.(tabId, event.currentTarget.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Escape") {
-                  event.preventDefault();
-                  onSearchClose?.(tabId);
-                  return;
-                }
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  if (event.shiftKey) {
-                    findPreviousTerminalSearch(
-                      searchAddonRef.current,
-                      searchQuery,
-                      searchCaseSensitive,
-                      setSearchResultLabel,
-                    );
-                  } else {
-                    findNextTerminalSearch(
-                      searchAddonRef.current,
-                      searchQuery,
-                      searchCaseSensitive,
-                      setSearchResultLabel,
-                    );
-                  }
-                }
-              }}
-            />
-          </label>
-          {searchResultLabel ? (
-            <span className="terminal-search-result" aria-live="polite">
-              {searchResultLabel}
-            </span>
-          ) : null}
-          <div className="terminal-search-actions">
-            <Tooltip label={searchCaseSensitive ? t("terminal.search.caseSensitive") : t("terminal.search.caseInsensitive")}>
-              <button
-                className={searchCaseSensitive ? "active" : ""}
-                type="button"
-                aria-label={t("terminal.search.toggleCase")}
-                aria-pressed={searchCaseSensitive}
-                onClick={() => onSearchCaseSensitiveToggle?.(tabId)}
-              >
-                <CaseSensitive className="ui-icon" aria-hidden="true" />
-              </button>
-            </Tooltip>
-            <Tooltip label={t("terminal.search.previous")}>
-              <button
-                type="button"
-                aria-label={t("terminal.search.previousAria")}
-                disabled={searchQuery.trim().length === 0}
-                onClick={() =>
-                  findPreviousTerminalSearch(
-                    searchAddonRef.current,
-                    searchQuery,
-                    searchCaseSensitive,
-                    setSearchResultLabel,
-                  )
-                }
-              >
-                <ChevronUp className="ui-icon" aria-hidden="true" />
-              </button>
-            </Tooltip>
-            <Tooltip label={t("terminal.search.next")}>
-              <button
-                type="button"
-                aria-label={t("terminal.search.nextAria")}
-                disabled={searchQuery.trim().length === 0}
-                onClick={() =>
-                  findNextTerminalSearch(
-                    searchAddonRef.current,
-                    searchQuery,
-                    searchCaseSensitive,
-                    setSearchResultLabel,
-                  )
-                }
-              >
-                <ChevronDown className="ui-icon" aria-hidden="true" />
-              </button>
-            </Tooltip>
-            <Tooltip label={t("terminal.search.close")}>
-              <button type="button" aria-label={t("terminal.search.closeAria")} onClick={() => onSearchClose?.(tabId)}>
-                <X className="ui-icon" aria-hidden="true" />
-              </button>
-            </Tooltip>
-          </div>
-        </div>
+        <TerminalSearchBar query={searchQuery} caseSensitive={searchCaseSensitive} wholeWord={searchWholeWord}
+          result={searchResult} onQueryChange={(query) => onSearchQueryChange?.(tabId, query)}
+          onCaseToggle={() => onSearchCaseSensitiveToggle?.(tabId)}
+          onWholeWordToggle={() => onSearchWholeWordToggle?.(tabId)}
+          onNavigate={(direction) => searchControllerRef.current?.navigate(direction)}
+          onClose={() => onSearchClose?.(tabId)} />
       ) : null}
       <ContextMenu.Root
         onOpenChange={(open) => {
@@ -1118,141 +998,6 @@ export function TerminalPanel({
       </ContextMenu.Root>
     </section>
   );
-}
-
-function getTerminalSearchOptions(caseSensitive: boolean, incremental = false) {
-  const primary = readHexToken("--mx-primary", "#2374c6");
-  const panel = readHexToken("--mx-panel", "#ffffff");
-  const text = readHexToken("--mx-text", "#20242a");
-
-  return {
-    decorations: {
-      activeMatchBackground: mixHexColors(primary, panel, 0.18),
-      activeMatchBorder: mixHexColors(primary, text, 0.58),
-      activeMatchColorOverviewRuler: primary,
-      matchBackground: mixHexColors(primary, panel, 0.1),
-      matchBorder: mixHexColors(primary, text, 0.42),
-      matchOverviewRuler: primary,
-    },
-    caseSensitive,
-    incremental,
-  };
-}
-
-function readHexToken(tokenName: string, fallback: string) {
-  if (typeof window === "undefined") {
-    return fallback;
-  }
-
-  const styles = window.getComputedStyle(document.documentElement);
-  return resolveHexToken(styles, tokenName, fallback, new Set());
-}
-
-function resolveHexToken(styles: CSSStyleDeclaration, tokenName: string, fallback: string, visited: Set<string>) {
-  if (visited.has(tokenName)) {
-    return fallback;
-  }
-  visited.add(tokenName);
-
-  const rawValue = styles.getPropertyValue(tokenName).trim();
-  const normalized = normalizeHexColor(rawValue);
-  if (normalized) {
-    return normalized;
-  }
-
-  const variable = rawValue.match(/^var\(\s*(--[\w-]+)(?:\s*,\s*([^)]*))?\)$/);
-  if (!variable) {
-    return fallback;
-  }
-  const variableFallback = normalizeHexColor(variable[2]?.trim() || "") || fallback;
-  return resolveHexToken(styles, variable[1], variableFallback, visited);
-}
-
-function normalizeHexColor(value: string) {
-  const hex = value.match(/^#([\da-f]{3}|[\da-f]{6})$/i);
-  if (hex) {
-    const digits = hex[1];
-    if (digits.length === 6) {
-      return `#${digits.toLowerCase()}`;
-    }
-    return `#${digits
-      .split("")
-      .map((digit) => digit + digit)
-      .join("")
-      .toLowerCase()}`;
-  }
-
-  const rgb = value.match(/^rgba?\(\s*(\d{1,3})[\s,]+(\d{1,3})[\s,]+(\d{1,3})/i);
-  if (!rgb) {
-    return null;
-  }
-  return rgbToHex(Number(rgb[1]), Number(rgb[2]), Number(rgb[3]));
-}
-
-function mixHexColors(foreground: string, background: string, foregroundWeight: number) {
-  const fg = hexToRgb(foreground);
-  const bg = hexToRgb(background);
-  const weight = Math.max(0, Math.min(1, foregroundWeight));
-  return rgbToHex(
-    Math.round(fg.r * weight + bg.r * (1 - weight)),
-    Math.round(fg.g * weight + bg.g * (1 - weight)),
-    Math.round(fg.b * weight + bg.b * (1 - weight)),
-  );
-}
-
-function hexToRgb(value: string) {
-  const hex = value.replace("#", "");
-  return {
-    r: Number.parseInt(hex.slice(0, 2), 16),
-    g: Number.parseInt(hex.slice(2, 4), 16),
-    b: Number.parseInt(hex.slice(4, 6), 16),
-  };
-}
-
-function rgbToHex(r: number, g: number, b: number) {
-  return `#${[r, g, b]
-    .map((channel) => Math.max(0, Math.min(255, channel)).toString(16).padStart(2, "0"))
-    .join("")}`;
-}
-
-function findNextTerminalSearch(
-  searchAddon: SearchAddon | null,
-  query: string,
-  caseSensitive: boolean,
-  setSearchResultLabel: (label: string) => void,
-) {
-  if (!searchAddon || !query.trim()) {
-    return;
-  }
-  const found = searchAddon.findNext(query, getTerminalSearchOptions(caseSensitive));
-  if (!found) {
-    setSearchResultLabel(currentT("terminal.search.noMatch"));
-  }
-}
-
-function findPreviousTerminalSearch(
-  searchAddon: SearchAddon | null,
-  query: string,
-  caseSensitive: boolean,
-  setSearchResultLabel: (label: string) => void,
-) {
-  if (!searchAddon || !query.trim()) {
-    return;
-  }
-  const found = searchAddon.findPrevious(query, getTerminalSearchOptions(caseSensitive));
-  if (!found) {
-    setSearchResultLabel(currentT("terminal.search.noMatch"));
-  }
-}
-
-function formatSearchResultLabel(resultIndex: number, resultCount: number) {
-  if (resultCount === 0) {
-    return currentT("terminal.search.noMatch");
-  }
-  if (resultIndex < 0) {
-    return currentT("terminal.search.count", { count: resultCount });
-  }
-  return `${(resultIndex + 1).toString()} / ${resultCount.toString()}`;
 }
 
 function readPromptDirectorySnapshot(

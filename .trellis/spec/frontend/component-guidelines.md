@@ -516,6 +516,7 @@ replacing package has shipped.
   Search decoration options must satisfy xterm's `#RRGGBB` contract while being
   derived from global `--mx-*` tokens; use a local token-to-hex adapter rather
   than hard-coded feature colors.
+  Executable mode/count/palette and lifecycle contracts: [terminal-search.md](./terminal-search.md).
 - Scrollable app panes should use the shared light scrollbar treatment in
   `src/styles/app.css`: transparent tracks/corners, no WebKit scrollbar
   buttons/arrows, transparent thumbs by default, and only a low-alpha neutral

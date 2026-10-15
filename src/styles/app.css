@@ -11139,7 +11139,7 @@ button {
   min-height: 0;
   overflow: hidden;
   display: grid;
-  grid-template-rows: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
   background: var(--mx-terminal);
   color: #d1d5db;
 }
@@ -12938,13 +12938,13 @@ body.vnc-runner-window-body {
 .terminal-search-bar {
   position: absolute;
   z-index: 6;
-  top: 8px;
+  top: 36px;
   right: 10px;
   min-width: 0;
   width: min(360px, calc(100% - 20px));
   min-height: 34px;
   display: grid;
-  grid-template-columns: minmax(160px, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
   padding: 5px 8px 5px 10px;
@@ -12952,11 +12952,12 @@ body.vnc-runner-window-body {
   border-radius: 8px;
   color: var(--mx-text);
   background: color-mix(in srgb, var(--mx-panel) 92%, transparent);
-  box-shadow: 0 8px 24px rgb(15 23 42 / 10%);
+  box-shadow: var(--mx-glass-shadow);
   backdrop-filter: blur(10px);
 }
 
 .terminal-search-input-wrap {
+  grid-column: 1 / -1;
   min-width: 0;
   height: 24px;
   display: grid;
@@ -12997,7 +12998,9 @@ body.vnc-runner-window-body {
 }
 
 .terminal-search-result {
-  min-width: 54px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   color: var(--mx-subtle);
   font-size: 12px;
   font-weight: 600;
@@ -13005,7 +13008,9 @@ body.vnc-runner-window-body {
 }
 
 .terminal-search-actions {
+  min-width: 0;
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
   gap: 4px;
@@ -13026,7 +13031,7 @@ body.vnc-runner-window-body {
 
 .terminal-search-actions button:hover:not(:disabled) {
   color: var(--mx-text);
-  background: rgb(148 163 184 / 14%);
+  background: color-mix(in srgb, var(--mx-muted) 14%, transparent);
 }
 
 .terminal-search-actions button.active {
@@ -18968,3 +18973,43 @@ body[data-platform="macos"][data-theme-mode="dark"] .ui-tooltip-arrow {
 .workflow-step { display: grid; gap: 8px; margin: 12px 0; padding: 12px; border: 1px solid var(--mx-line); border-radius: 8px; }
 .workflow-dialog textarea { width: 100%; resize: vertical; min-height: 72px; border: 1px solid var(--mx-line); border-radius: 6px; padding: 8px; color: var(--mx-text); background: var(--mx-panel); }
 .workflow-command { white-space: pre-wrap; overflow-wrap: anywhere; padding: 8px; border: 1px solid var(--mx-line); border-radius: 6px; }
+
+.terminal-log-controls {
+  box-sizing: border-box;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 2px 8px;
+  border-bottom: 1px solid var(--mx-line);
+  background: var(--mx-panel);
+  color: var(--mx-text);
+  font-size: 11px;
+}
+.terminal-log-controls > button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  height: 22px;
+  padding: 0 6px;
+}
+.terminal-log-controls > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-keyword-editor,
+.settings-keyword-editor label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  width: 100%;
+}
+.settings-keyword-editor { gap: 10px; }
+.settings-keyword-editor textarea.settings-input { width: 100%; height: auto; resize: vertical; }
+.settings-keyword-editor small { color: var(--mx-muted); }
+.settings-keyword-editor [role="alert"] { color: var(--mx-danger); margin: 0; }
+.settings-keyword-actions { display: flex; flex-wrap: wrap; gap: 8px; }

@@ -1,3 +1,4 @@
+import { TerminalKeywordSettings } from "./TerminalKeywordSettings";
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from "react";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import {
@@ -3235,6 +3236,8 @@ function AppearanceSettingsSection({
             onChange={(terminalFontSize) => onUpdate({ terminalFontSize })}
           />
         </SettingsRow>
+
+        <TerminalKeywordSettings rules={settings.terminalKeywordRules} onChange={(terminalKeywordRules) => onUpdate({ terminalKeywordRules })} />
 
         <SettingsRow icon={PanelLeft} title={t("settings.appearance.iconSize.title")} description={t("settings.appearance.iconSize.description")}>
           <SegmentedControl
