@@ -1,3 +1,4 @@
+import type { TerminalKeywordRule } from "./terminalKeywordRules";
 import type {
   IDecoration,
   IDisposable,
@@ -20,12 +21,14 @@ export type TerminalSemanticHighlightPalette = Record<TerminalSemanticTokenKind,
 
 interface TerminalSemanticHighlightOptions {
   palette: TerminalSemanticHighlightPalette;
+  rules?: readonly TerminalKeywordRule[];
 }
 
 interface TokenMatcher {
   kind: TerminalSemanticTokenKind;
   pattern: RegExp;
   priority: number;
+  literal?: boolean;
 }
 
 interface TerminalLineCell {
@@ -112,14 +115,16 @@ const lightSemanticPalette: typeof darkSemanticPalette = {
 export interface TerminalSemanticHighlighter extends IDisposable {
   refresh: () => void;
   setPalette: (palette: TerminalSemanticHighlightPalette) => void;
+  setRules: (rules: readonly TerminalKeywordRule[]) => void;
 }
 
 export function createTerminalSemanticHighlighter(
   terminal: Terminal,
-  { palette }: TerminalSemanticHighlightOptions,
+  { palette, rules = [] }: TerminalSemanticHighlightOptions,
 ): TerminalSemanticHighlighter {
   const lineDecorations = new Map<number, DecoratedLine>();
   let activePalette = palette;
+  let customMatchers = compileKeywordMatchers(rules);
   let decorationCount = 0;
   let priorityViewport = { start: 0, end: -1 };
   let disposed = false;
@@ -169,7 +174,7 @@ export function createTerminalSemanticHighlighter(
     }
 
     const snapshot = readTerminalLineSnapshot(line, terminal.cols);
-    const ranges = findTerminalSemanticTokens(snapshot.text)
+    const ranges = findSemanticTokens(snapshot.text, customMatchers)
       .map((token) => tokenToCellRange(token, snapshot))
       .filter((range): range is SemanticCellRange => Boolean(range));
     const signature = ranges
@@ -309,6 +314,11 @@ export function createTerminalSemanticHighlighter(
       clearDecorations();
     },
     refresh,
+    setRules: (rules) => {
+      customMatchers = compileKeywordMatchers(rules);
+      clearDecorations();
+      refresh();
+    },
     setPalette: (palette) => {
       activePalette = palette;
       clearDecorations();
@@ -317,17 +327,27 @@ export function createTerminalSemanticHighlighter(
   };
 }
 
-export function findTerminalSemanticTokens(text: string): TerminalSemanticToken[] {
+function compileKeywordMatchers(rules: readonly TerminalKeywordRule[]): TokenMatcher[] {
+  return rules.map(({ text, kind }) => ({ kind, priority: 65, literal: true,
+    pattern: new RegExp(`(?<![\\p{L}\\p{M}\\p{N}_])${text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![\\p{L}\\p{M}\\p{N}_])`, "giu"),
+  }));
+}
+
+export function findTerminalSemanticTokens(text: string, rules: readonly TerminalKeywordRule[] = []): TerminalSemanticToken[] {
+  return findSemanticTokens(text, compileKeywordMatchers(rules));
+}
+
+function findSemanticTokens(text: string, customMatchers: TokenMatcher[]): TerminalSemanticToken[] {
   // Keep one Unicode code point of lookahead so the scan cap is not a fake word boundary.
   text = text.slice(0, TERMINAL_SEMANTIC_MAX_CHARS + 2);
   const matches: Array<TerminalSemanticToken & { priority: number }> = [];
 
-  tokenMatchers.forEach((matcher) => {
+  [...tokenMatchers, ...customMatchers].forEach((matcher) => {
     matcher.pattern.lastIndex = 0;
     for (const match of text.matchAll(matcher.pattern)) {
       const rawText = match[0];
       const rawStart = match.index ?? 0;
-      const trimmed = trimTerminalSemanticTokenText(rawText);
+      const trimmed = matcher.literal ? { text: rawText, start: 0, end: rawText.length } : trimTerminalSemanticTokenText(rawText);
       if (!trimmed.text || rawStart + trimmed.end > TERMINAL_SEMANTIC_MAX_CHARS) {
         continue;
       }

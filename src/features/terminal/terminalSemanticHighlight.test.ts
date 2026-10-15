@@ -124,3 +124,24 @@ it("does not invent a whole-word boundary at the physical-cell scan cap", async 
   f.highlighter.refresh();
   expect(f.live()).toHaveLength(0);
 });
+
+it("matches custom literals without regex interpretation or punctuation trimming", () => {
+  const rules = [{ text: "[timeout]", kind: "warning" as const }, { text: "a+b", kind: "success" as const },
+    { text: "error", kind: "success" as const }];
+  const text = "[timeout] a+b aaab ERROR https://example.invalid/error error_count 中error";
+  expect(findTerminalSemanticTokens(text, rules).map(({kind,text})=>[kind,text])).toEqual([
+    ["warning","[timeout]"], ["success","a+b"], ["success","ERROR"], ["url","https://example.invalid/error"],
+  ]);
+});
+it("applies saved changes to existing buffer, removes old decorations and preserves ANSI", async () => {
+  const f = actual();
+  await f.write("中: timeout ready \x1b[31mtimeout\x1b[0m");
+  const before = f.terminal.buffer.active.getLine(0)?.translateToString(true);
+  f.highlighter.setRules([{text:"timeout",kind:"warning"}]);
+  expect(f.live()).toEqual([{x:4,width:7,colour:"#aaaa00",disposed:false}]);
+  f.highlighter.setRules([{text:"ready",kind:"success"}]);
+  expect(f.live()).toEqual([{x:12,width:5,colour:"#00aa00",disposed:false}]);
+  f.highlighter.setRules([]);
+  expect(f.live()).toEqual([]);
+  expect(f.terminal.buffer.active.getLine(0)?.translateToString(true)).toBe(before);
+});

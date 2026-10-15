@@ -8762,6 +8762,7 @@ export function WorkspaceShell() {
                           cursorStyle={settings.appearance.cursorStyle}
                           fontFamily={terminalFontFamily}
                           fontSize={settings.appearance.terminalFontSize}
+                          keywordRules={settings.appearance.terminalKeywordRules}
                           initialSessionId={tab.sessionId}
                           initialOutput={tab.warmupOutput}
                           initialRequestId={tab.requestId}
@@ -8853,6 +8854,7 @@ export function WorkspaceShell() {
                               cursorStyle={settings.appearance.cursorStyle}
                               fontFamily={terminalFontFamily}
                               fontSize={settings.appearance.terminalFontSize}
+                              keywordRules={settings.appearance.terminalKeywordRules}
                               initialSessionId={tab.sessionId}
                               initialOutput={tab.warmupOutput}
                               initialRequestId={tab.requestId}

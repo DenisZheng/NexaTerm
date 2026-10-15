@@ -1,3 +1,4 @@
+import type { TerminalKeywordRule } from "./terminalKeywordRules";
 import { isSensitiveCommand } from "../commands/commandPrivacy";
 import { FitAddon } from "@xterm/addon-fit";
 import { SearchAddon } from "@xterm/addon-search";
@@ -81,6 +82,7 @@ interface TerminalPanelProps {
   cursorStyle?: TerminalCursorStyle;
   fontFamily: string;
   fontSize: number;
+  keywordRules?: readonly TerminalKeywordRule[];
   initialOutput?: number[];
   initialRequestId?: string;
   initialSessionId: string;
@@ -129,6 +131,7 @@ export function TerminalPanel({
   cursorStyle = "block",
   fontFamily,
   fontSize,
+  keywordRules,
   initialOutput = [],
   initialRequestId,
   initialSessionId,
@@ -359,6 +362,7 @@ export function TerminalPanel({
     });
     const semanticHighlighter = createTerminalSemanticHighlighter(terminal, {
       palette: getTerminalSemanticHighlightPalette(theme),
+      rules: keywordRules,
     });
     semanticHighlighterRef.current = semanticHighlighter;
     fitAndSyncTerminalSize(terminal, fitAddon, sessionIdRef.current, lastSyncedSizeRef);
@@ -673,6 +677,10 @@ export function TerminalPanel({
     terminal.options.theme = withTerminalChromeTheme(theme);
     semanticHighlighterRef.current?.setPalette(getTerminalSemanticHighlightPalette(theme));
   }, [theme]);
+
+  useEffect(() => {
+    semanticHighlighterRef.current?.setRules(keywordRules ?? []);
+  }, [keywordRules]);
 
   useEffect(() => {
     const terminal = terminalRef.current;

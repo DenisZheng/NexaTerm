@@ -19000,3 +19000,16 @@ body[data-platform="macos"][data-theme-mode="dark"] .ui-tooltip-arrow {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.settings-keyword-editor,
+.settings-keyword-editor label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  width: 100%;
+}
+.settings-keyword-editor { gap: 10px; }
+.settings-keyword-editor textarea.settings-input { width: 100%; height: auto; resize: vertical; }
+.settings-keyword-editor small { color: var(--mx-muted); }
+.settings-keyword-editor [role="alert"] { color: var(--mx-danger); margin: 0; }
+.settings-keyword-actions { display: flex; flex-wrap: wrap; gap: 8px; }
