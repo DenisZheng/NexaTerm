@@ -16,11 +16,11 @@
   "base_branch": "feat/wf09-05-terminal-enhancements",
   "worktree_path": null,
   "commit": null,
-  "pr_url": null,
+  "pr_url": "https://github.com/DenisZheng/NexaTerm/pull/63",
   "subtasks": [],
   "children": [],
   "parent": "09-23-nexaterm-workflow-mainline",
   "relatedFiles": [],
-  "notes": "DNS/TCP backend core and 11 tests implemented; no UI/IPC wiring yet. Local line-budget/diff checks passed; Rust execution awaits CI (toolchain unavailable locally). Real acceptance deferred.",
+  "notes": "CI #595 Cargo check passed on three platforms; test compilation failed E0282 (release-only channel type). Explicit unit channel fix applied; new CI pending. UI/IPC and manual acceptance remain follow-ups.",
   "meta": {}
 }

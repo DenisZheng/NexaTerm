@@ -136,7 +136,7 @@ fn dropped_resolver_caller_keeps_worker_capacity_until_real_completion() {
         let engine = ProbeEngine { operations: Arc::new(Semaphore::new(1)), resolvers: Arc::new(Semaphore::new(1)) };
         let clone = engine.clone();
         let (started_tx, started_rx) = tokio::sync::oneshot::channel();
-        let (release_tx, release_rx) = std::sync::mpsc::channel();
+        let (release_tx, release_rx) = std::sync::mpsc::channel::<()>();
         let task = tokio::spawn(async move { clone.resolve_with(move || {
             let _ = started_tx.send(());
             let _ = release_rx.recv();
