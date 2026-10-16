@@ -16,5 +16,11 @@
     "file": "src/features/commands/commandPrivacy.test.ts",
     "sourceSha256": "2faf2b289caa6820097998c6611ff179290297ceb9977a13626d2e4b742769d1",
     "reason": "WF-09-04B commandPrivacy 单测的固定合成认证样例，值仅为 synthetic-marker、域名仅为 example.invalid；用于验证自动历史过滤与录制暂停。依据 CI #588 的脱敏定位逐段核查，原始提交 a897165b0958f3fc3868908fbcd89e05a776d8c8。仅豁免完全相同规则/文件/源码片段，修改任一值即失效。"
+  },
+  {
+    "rule": "generic-api-key",
+    "file": ".trellis/spec/backend/loopback-file-service.md",
+    "sourceSha256": "1366c12239f21e65476f3facd771b2f756dbc29ff7a18485d5315bcdef100a70",
+    "reason": "CI602脱敏报告定位的文档误报：ab5719ffe3a767d5f55dfd6bd564efce262486b9 中第26行仅列出HTTP测试范围，没有任何凭据值。逐字核查为英语测试说明；仅豁免此规则/文件/完整源码行的SHA256，内容变化即失效。保留完整历史及当前源码扫描。"
   }
 ]

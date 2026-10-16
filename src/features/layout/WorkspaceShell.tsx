@@ -125,7 +125,7 @@ const loadRemoteFilePanel = () => import("../files/RemoteFilePanel");
 const loadMonitorPanel = () => import("../monitor/MonitorPanel");
 const loadTunnelPanel = () => import("../tunnels/TunnelPanel");
 const loadSettingsView = () => import("../settings/SettingsView");
-const LocalConnectionDiagnostics = lazy(() => import("../tools/LocalConnectionDiagnostics").then((module) => ({ default: module.LocalConnectionDiagnostics })));
+const LocalToolsPanel = lazy(() => import("../tools/LocalToolsPanel").then((module) => ({ default: module.LocalToolsPanel })));
 const loadDockerToolPanel = () => import("../tools/DockerToolPanel");
 const loadCommandLibraryPanel = () => import("../commands/CommandLibraryPanel");
 const loadAiAssistantPanel = () => import("../ai/AiAssistantPanel");
@@ -9233,7 +9233,7 @@ export function WorkspaceShell() {
                 active={!rightPaneCollapsed}
                 activeTool={rightTool}
                 availableTools={["commands", "ai", "tools"]}
-                toolsPanel={rightTool === "tools" ? <Suspense fallback={null}><LocalConnectionDiagnostics active={!rightPaneCollapsed} /></Suspense> : null}
+                toolsPanel={rightTool === "tools" ? <Suspense fallback={null}><LocalToolsPanel active={!rightPaneCollapsed} /></Suspense> : null}
                 connection={null}
                 commandPanel={renderCommandLibraryPanel()}
                 aiPanel={aiAssistantPanelNode}
@@ -9295,7 +9295,7 @@ export function WorkspaceShell() {
                     activeTool={rightTool}
                     availableTools={["monitor", "commands", "tools", "tunnels", "ai"]}
                     connection={remoteFileConnection}
-                    toolsPanel={rightTool === "tools" ? <Suspense fallback={null}><LocalConnectionDiagnostics key={remoteFileConnection?.id || "local"} active={!rightPaneCollapsed} initialHost={remoteFileConnection?.host} initialPort={remoteFileConnection?.port} /></Suspense> : null}
+                    toolsPanel={rightTool === "tools" ? <Suspense fallback={null}><LocalToolsPanel key={remoteFileConnection?.id || "local"} active={!rightPaneCollapsed} initialHost={remoteFileConnection?.host} initialPort={remoteFileConnection?.port} /></Suspense> : null}
                     aiPanel={aiAssistantPanelNode}
                     tunnelPanel={
                       rightTool === "tunnels" && isSshConnection(activeConnection) ? (

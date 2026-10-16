@@ -51,7 +51,8 @@
     "10-15-wf09-06-ssh-diagnosis",
     "10-15-wf09-06-local-port",
     "10-15-wf09-07-xdmcp-assessment",
-    "10-15-wf09-08-legacy-assessment"
+    "10-15-wf09-08-legacy-assessment",
+    "10-15-wf09-09-loopback-file-service"
   ],
   "parent": null,
   "relatedFiles": [],

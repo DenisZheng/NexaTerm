@@ -4,6 +4,12 @@
 > WF-04A 交付：PR #26（基于 GitHub `main` @ `a0fcc0d`）
 > 本文件是当前项目级执行顺序的唯一入口。需求范围仍以 `NEXATERM_REQUIREMENTS.md` 为准；交互规则仍以 `docs/WORKFLOW_SPEC.md` 为准。旧阶段计划、差距分析和工作流交付计划保留用于追溯，不再覆盖本文件的当前优先级。
 
+## WF-09 开发交付（2026-10-16）
+
+维护者已授权连续完成 WF-09，并将真实验收统一后置。01–06 功能及07/08评估已在 Draft PR #58–#64交付，各自最新 CI SUCCESS；09回环文件服务也已在 Draft PR #65 完成开发。代码提交的最终自动化结果与统一验收边界见下列交付清单。当前执行入口为 [WF-09 交付清单](docs/WF09-DELIVERY.md)，涵盖九项范围、堆叠关系、失败修复及后续验收。
+
+07/08完成的是批准范围内的评估，不是新增协议支持。所有 PR 保持 Draft，不合并发布；PR #12/#54不变。下方早期工作流和发布记录继续保留，不能用其验收状态替代 WF-09 的真实验收。
+
 ## 当前工作流进展（2026-10-04）
 
 唯一产品主线继续使用 `09-23-nexaterm-workflow-mainline`。WF-02B / WF-03 与图标更新已在 main；WF-04A 由 [PR #26](https://github.com/DenisZheng/NexaTerm/pull/26) 交付，A07 macOS 的真实 GUI / 导入 / 重启、legacy 冲突映射和三主题均 PASS（[归档证据](.trellis/tasks/archive/2026-10/10-02-wf-04a-session-tree-consistency/validation/a07.md)），Windows/Linux 仍仅 CI 自动化证据。

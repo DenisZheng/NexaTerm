@@ -1,3 +1,4 @@
+import { LocalFileService } from "./LocalFileService";
 import { LocalConnectionDiagnostics } from "./LocalConnectionDiagnostics";
 import * as Dialog from "@radix-ui/react-dialog";
 import { DismissableLayerBranch } from "@radix-ui/react-dismissable-layer";
@@ -88,7 +89,7 @@ import { AppSelect } from "../../shared/ui/AppSelect";
 import { TabContextMenu, type TabContextMenuAction } from "../../shared/ui/TabContextMenu";
 import { Tooltip } from "../../shared/ui/Tooltip";
 import { TunnelPanel } from "../tunnels/TunnelPanel";
-import { planDockerInitialRefresh, shouldRunDockerAutoRefresh } from "./dockerRefreshStrategy";
+import { planDockerInitialRefresh, shouldRunDockerAutoRefresh, type DockerInitialRefreshToolboxView as ToolboxView } from "./dockerRefreshStrategy";
 import { calculateDockerVirtualWindow } from "./dockerVirtualization";
 import type {
   DockerContainerAction,
@@ -113,7 +114,6 @@ import type {
 } from "./dockerTypes";
 import type { ScheduledTaskInput, ScheduledTaskSummary } from "./scheduledTaskTypes";
 
-type ToolboxView = "docker" | "tunnels" | "network" | "schedule";
 type DockerView = "containers" | "images" | "engine";
 type DockerRefreshKind = "containers" | "images" | "engine" | "engineConfig";
 
@@ -155,7 +155,7 @@ interface DockerToolPanelProps {
 
 function toolboxViews(): Array<{ icon: LucideIcon; label: string; value: ToolboxView }> {
   return [{ icon: Box, label: "Docker", value: "docker" }, { icon: Route, label: tr("docker.toolbox.tunnels"), value: "tunnels" },
-    { icon: Network, label: tr("docker.toolbox.network"), value: "network" }, { icon: Timer, label: tr("docker.toolbox.schedule"), value: "schedule" }];
+    { icon: FileJson, label: tr("fileService.title"), value: "services" }, { icon: Network, label: tr("docker.toolbox.network"), value: "network" }, { icon: Timer, label: tr("docker.toolbox.schedule"), value: "schedule" }];
 }
 
 const containerAutoRefreshMs = 10_000;
@@ -1815,7 +1815,7 @@ export function DockerToolPanel({
           activeConnectionId={activeConnectionId || connectionId}
           connections={connections}
         />
-      ) : toolboxView === "network" ? (
+      ) : toolboxView === "services" ? <LocalFileService active={active} /> : toolboxView === "network" ? (
         <div className="connection-diagnostics-stack">
         <LocalConnectionDiagnostics key={connection?.id || "local"} active={active} initialHost={connection?.host} initialPort={connection?.port} />
         <NetworkDiagnosticsView
