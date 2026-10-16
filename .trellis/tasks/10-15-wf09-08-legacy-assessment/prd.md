@@ -1,0 +1,2 @@
+# WF-09-08 Rlogin / Rsh compatibility assessment
+Approved roadmap requires a decision document first; actual implementation is conditional. Assess user value, protocol/provider boundaries, explicit opt-in/insecure warning, timeout/cancel and real interoperability requirements. Do not represent legacy protocols as SSH/Telnet or add them to advertised capabilities without implementation. No release-gate change. User authorized continuous WF-09 delivery; this assessment can conclude defer with concrete reopening criteria.
