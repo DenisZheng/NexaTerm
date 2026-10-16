@@ -96,3 +96,23 @@ fn nonblocking_reads_byte_budgets_and_peer_eof_have_distinct_results() {
     assert_eq!(result, [0,255,2,128]); peer.shutdown(Shutdown::Both).unwrap();
     until(|| socket.read(&mut buffer).unwrap().filter(|n| *n == 0));
 }
+#[test]
+fn native_urgent_mark_and_peek_preserve_normal_stream_boundaries() {
+    let (mut socket, mut peer) = pair();
+    peer.write_all(b"before").unwrap(); send_urgent_fixture(&peer,0x82); peer.write_all(b"after").unwrap();
+    until(|| socket.poll_ready().unwrap().urgent.then_some(()));
+    let before = (platform::at_mark(&socket.stream),platform::pending_bytes_fixture(&socket.stream));
+    let peek = platform::urgent(&socket.stream,true);
+    let peeked = (platform::at_mark(&socket.stream),platform::pending_bytes_fixture(&socket.stream));
+    let mut buffer = [0_u8;128]; let prefix = socket.read(&mut buffer);
+    let mut normal = Vec::new(); if let Ok(Some(n)) = prefix { normal.extend_from_slice(&buffer[..n]); }
+    let middle = (platform::at_mark(&socket.stream),platform::pending_bytes_fixture(&socket.stream));
+    let consume = platform::urgent(&socket.stream,false);
+    let after = (platform::at_mark(&socket.stream),platform::pending_bytes_fixture(&socket.stream));
+    println!("native_mark_probe before={before:?} peek={peek:?} peeked={peeked:?} prefix={prefix:?} middle={middle:?} consume={consume:?} after={after:?}");
+    until(|| {
+        if let Some(n) = socket.read(&mut buffer).unwrap() { assert_ne!(n,0); normal.extend_from_slice(&buffer[..n]); }
+        (normal.len()>=11).then_some(())
+    });
+    assert_eq!(normal,b"beforeafter"); assert_eq!(peek.unwrap(),Some(0x82)); assert_eq!(consume.unwrap(),Some(0x82));
+}

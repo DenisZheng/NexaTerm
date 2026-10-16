@@ -125,3 +125,13 @@ pub(super) fn send_urgent_fixture(stream: &TcpStream, byte: u8) -> io::Result<()
     let result = unsafe { send(stream.as_raw_socket() as _, &byte, 1, MSG_OOB) };
     if result == 1 { Ok(()) } else { Err(last_error()) }
 }
+#[cfg(test)]
+pub(super) fn pending_bytes_fixture(stream: &TcpStream) -> io::Result<u32> {
+    let mut count = 0_u32;
+    #[cfg(windows)] let result = unsafe { ioctlsocket(stream.as_raw_socket() as _, FIONREAD as _, &mut count) };
+    #[cfg(unix)] let result = unsafe { libc::ioctl(stream.as_raw_fd(), libc::FIONREAD as _, &mut count) };
+    if result == 0 { Ok(count) } else {
+        #[cfg(windows)] return Err(last_error());
+        #[cfg(unix)] return Err(io::Error::last_os_error());
+    }
+}
