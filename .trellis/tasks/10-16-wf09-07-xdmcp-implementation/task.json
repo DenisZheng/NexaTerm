@@ -16,7 +16,7 @@
   "base_branch": "docs/wf09-protocol-implementation-plan",
   "worktree_path": null,
   "commit": null,
-  "pr_url": null,
+  "pr_url": "https://github.com/DenisZheng/NexaTerm/pull/67",
   "subtasks": [],
   "children": [],
   "parent": "09-23-nexaterm-workflow-mainline",
@@ -24,6 +24,6 @@
     "docs/plans/WF09-PROTOCOL-IMPLEMENTATION-PLAN.md",
     "docs/WORKFLOW_SPEC.md"
   ],
-  "notes": "X1 implementation in progress: native external-engine worker/lease, main-only IPC, process group/job and auth cleanup; seven native process/contract tests pending three-platform CI. No bundled engine/UI/desktop claim; X0 final packaging choice and X2/X3 remain open.",
+  "notes": "X1 implementation in progress: native external-engine worker/lease, main-only IPC, process group/job and auth cleanup; eight native process/contract tests pending three-platform CI. No bundled engine/UI/desktop claim; X0 final packaging choice and X2/X3 remain open.",
   "meta": {}
 }

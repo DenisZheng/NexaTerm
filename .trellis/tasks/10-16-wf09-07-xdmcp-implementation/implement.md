@@ -11,4 +11,8 @@
 - [ ] 维护 Draft PR 和平台证据，真实验收统一后续；未通过项逐一标明。
 
 ## X1 implementation evidence (CI pending)
-Owner/lease, fixed native arguments/private authority file, platform process group/job cleanup, main-only IPC and window/exit hooks implemented. Seven native fixture/contract tests added, executed by three-platform CI; local Rust unavailable. Local line/capability/CSP/diff gates PASS. X0 component source baseline is recorded separately; no engine binary adopted, no bundled capability or real desktop claim. UI/connection schema and X2/X3 remain outstanding.
+Owner/lease, fixed native arguments/private authority file, platform process group/job cleanup, main-only IPC and window/exit hooks implemented. Eight native fixture/contract tests added, executed by three-platform CI; local Rust unavailable. Local line/capability/CSP/diff gates PASS. X0 component source baseline is recorded separately; no engine binary adopted, no bundled capability or real desktop claim. UI/connection schema and X2/X3 remain outstanding.
+
+First CI607: frontend/security/license PASS; all three Rust cargo-check jobs found AppError code argument needs &str rather than String. Corrected without changing the error contract. Added an actual async-start abort regression with a test-only worker gate; it asserts cancellation before explicit stop and quota retention until the worker really returns. Final three-platform result pending.
+
+Known X2 boundary: Unix hard-crash recovery needs a supervisor/parent-death strategy and real-engine socket/log cleanup verification; current process-group ownership covers explicit stop/window destruction/normal exit, not a claim that SIGKILL of the host cannot leave an engine. Windows job handles provide kill-on-host-close.

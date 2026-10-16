@@ -176,3 +176,27 @@ fn exhausted_display_ports_do_not_silently_start_a_process() {
     });
     drop(listeners);
 }
+
+#[test]
+fn dropping_actual_start_future_cancels_late_worker_without_freeing_its_quota() {
+    let (_guard, manager, request) = setup();
+    let (entered_tx, entered_rx) = std::sync::mpsc::sync_channel(1);
+    let (proceed_tx, proceed_rx) = std::sync::mpsc::channel();
+    *manager.gate.lock().unwrap() = Some((entered_tx, proceed_rx));
+    runtime().block_on(async {
+        let id = manager.reserve("main").unwrap();
+        let copy = manager.clone(); let worker_id = id.clone();
+        let task = tokio::spawn(async move { copy.start("main", &worker_id, request).await });
+        until(|| entered_rx.try_recv().is_ok()).await;
+        task.abort(); assert!(task.await.unwrap_err().is_cancelled());
+        assert!(manager.inner.lock().unwrap().entries.get(&id).unwrap().cancelled.load(Ordering::Acquire));
+        for _ in 1..MAX_RUNS { manager.reserve("main").unwrap(); }
+        assert!(manager.reserve("main").is_err());
+        assert_eq!(manager.stop("main", &id).await.unwrap_err().code, "xdmcp_stop_pending");
+        assert!(manager.reserve("main").is_err());
+        proceed_tx.send(()).unwrap();
+        assert_eq!(terminal(&manager, &id).await.reason, Some("cancelled"));
+        assert!(!(100..132).any(|d| markers(d).join("heartbeat").exists()));
+        assert!(manager.reserve("main").is_ok());
+    });
+}

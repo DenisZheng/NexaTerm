@@ -39,7 +39,7 @@ pub(crate) fn capability() -> Capability {
         desktop_verified: false, reason: if cfg!(any(windows, target_os = "linux")) { "engine_selection_required" } else { "platform_unavailable" } }
 }
 pub(crate) fn error(code: &'static str) -> AppError {
-    AppError::new(format!("xdmcp_{code}"), "XDMCP 操作未完成。", "", true)
+    AppError::new(&format!("xdmcp_{code}"), "XDMCP 操作未完成。", "", true)
 }
 struct Entry {
     owner: String, status: Status, used: bool, created: Instant,
@@ -48,7 +48,10 @@ struct Entry {
 #[derive(Default)]
 struct Inner { entries: HashMap<String, Entry>, recent: VecDeque<(String, Status)>, closed: bool }
 #[derive(Clone, Default)]
-pub(crate) struct XdmcpManager { inner: Arc<Mutex<Inner>> }
+pub(crate) struct XdmcpManager {
+    inner: Arc<Mutex<Inner>>,
+    #[cfg(test)] gate: Arc<Mutex<Option<(std::sync::mpsc::SyncSender<()>, std::sync::mpsc::Receiver<()>)>>>,
+}
 struct Lease { manager: XdmcpManager, id: String, owner: String, cancel: Arc<AtomicBool>, reason: &'static str }
 impl Lease {
     fn update(&self, phase: Phase, display: Option<u16>) -> Option<Status> {
@@ -175,7 +178,12 @@ fn allocate_display(lease: &Lease, local: Ipv4Addr) -> Result<(u16, TcpListener)
     Err("port_in_use")
 }
 fn worker(mut lease: Lease, request: LaunchRequest, tx: oneshot::Sender<Result<Status, &'static str>>) {
+    #[cfg(test)] {
+        let gate = lease.manager.gate.lock().unwrap().take();
+        if let Some((entered, proceed)) = gate { let _ = entered.send(()); let _ = proceed.recv(); }
+    }
     let prepared = (|| {
+        if lease.cancel.load(Ordering::Acquire) { return Err("cancelled"); }
         if !cfg!(any(windows, target_os = "linux", test)) { return Err("unavailable"); }
         let (target, local) = addresses(&request)?;
         let executable = PathBuf::from(&request.executable);
