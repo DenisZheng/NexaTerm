@@ -113,13 +113,15 @@ fn native_urgent_mark_and_peek_preserve_normal_stream_boundaries() {
     let (mut socket, mut peer) = pair();
     peer.write_all(b"before").unwrap(); send_urgent_fixture(&peer,0x82); peer.write_all(b"after").unwrap();
     until(|| socket.poll_ready().unwrap().urgent.then_some(()));
+    assert!(socket.poll_ready().unwrap().urgent, "readiness observation consumed pending OOB");
     let before = (platform::at_mark(&socket.stream),platform::pending_bytes_fixture(&socket.stream));
-    let peek = platform::urgent(&socket.stream,true);
+    let peek = socket.urgent(true);
+    assert!(socket.poll_ready().unwrap().urgent, "peeking consumed pending OOB readiness");
     let peeked = (platform::at_mark(&socket.stream),platform::pending_bytes_fixture(&socket.stream));
     let mut buffer = [0_u8;128]; let prefix = socket.read(&mut buffer);
     let mut normal = Vec::new(); if let Ok(Some(n)) = prefix { normal.extend_from_slice(&buffer[..n]); }
     let middle = (platform::at_mark(&socket.stream),platform::pending_bytes_fixture(&socket.stream));
-    let consume = platform::urgent(&socket.stream,false);
+    let consume = socket.urgent(false);
     let after = (platform::at_mark(&socket.stream),platform::pending_bytes_fixture(&socket.stream));
     println!("native_mark_probe before={before:?} peek={peek:?} peeked={peeked:?} prefix={prefix:?} middle={middle:?} consume={consume:?} after={after:?}");
     until(|| {

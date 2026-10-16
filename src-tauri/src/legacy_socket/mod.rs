@@ -109,7 +109,12 @@ impl NativeSocket {
         #[cfg(not(target_os = "macos"))] let ready = platform::readiness(&self.stream);
         ready.map_err(|_| SocketError::IoFailed)
     }
-    pub(crate) fn urgent(&self, peek: bool) -> Result<Option<u8>, SocketError> { platform::urgent(&self.stream, peek).map_err(|_| SocketError::IoFailed) }
+    pub(crate) fn urgent(&self, peek: bool) -> Result<Option<u8>, SocketError> {
+        let value = platform::urgent(&self.stream, peek).map_err(|_| SocketError::IoFailed)?;
+        // Darwin 的 EV_CLEAR 只清内核通知；观察/peek 不消费本 owner 的 pending 状态。
+        #[cfg(target_os = "macos")] if !peek && value.is_some() { self.monitor.consumed_urgent(); }
+        Ok(value)
+    }
     pub(crate) fn at_mark(&self) -> Result<bool, SocketError> { platform::at_mark(&self.stream).map_err(|_| SocketError::IoFailed) }
     pub fn read(&mut self, buffer: &mut [u8]) -> Result<Option<usize>, SocketError> {
         if buffer.is_empty() || buffer.len() > MAX_CHUNK { return Err(SocketError::InvalidChunk); }

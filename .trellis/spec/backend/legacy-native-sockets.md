@@ -18,7 +18,7 @@ Rlogin 与后续 Rsh 共用的 IPv4 TCP 基础，使用已锁定的 Tokio/libc/w
 
 遇到 PermissionDenied 也继续扫描，因为 Windows 独占冲突可能返回 EACCES；全部拒绝返回 AccessDenied，全部占用返回 PortsBusy，混合为 PortsUnavailable。不能按平台名称推断管理员要求。close/drop 回收所属 socket 和 Darwin monitor；不表示远端进程已被杀死。
 
-read/write 单次≤32KiB；read buffer 必须非空。`Some(0)` read 是 EOF，WouldBlock/Interrupted 是 `None`。write 返回实际长度，后续 owner 必须保留未写后缀，串行控制帧与用户输入。poll 非阻塞且先处理 urgent；正常流中的02/10/20/80/FF/NUL不解析成控制。Linux 使用 poll priority/band；Darwin 独占 kqueue，EVFILT_READ 为 level，EVFILT_EXCEPT+NOTE_OOB 使用 EV_CLEAR，EOF不算 urgent。Unix 用 POSIX sockatmark C ABI，禁止硬编码 ioctl 数字。
+read/write 单次≤32KiB；read buffer 必须非空。`Some(0)` read 是 EOF，WouldBlock/Interrupted 是 `None`。write 返回实际长度，后续 owner 必须保留未写后缀，串行控制帧与用户输入。poll 非阻塞且先处理 urgent；正常流中的02/10/20/80/FF/NUL不解析成控制。Linux 使用 poll priority/band；Darwin 独占 kqueue，EVFILT_READ 为 level，EVFILT_EXCEPT+NOTE_OOB 使用 EV_CLEAR，EOF不算 urgent。Darwin将已观察urgent保留为所属monitor的pending状态，只有实际MSG_OOB消费成功才清除；readiness查询和peek都不能吞掉通知。该monitor可移动但不共享给并行reader。Unix 用 POSIX sockatmark C ABI，禁止硬编码 ioctl 数字。
 
 | 当前 adapter | OOB 与边界 | flush 行为 |
 | --- | --- | --- |
