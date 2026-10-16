@@ -12,7 +12,7 @@ pub(super) fn oob_separate(stream: &TcpStream) -> io::Result<()> {
         &value as *const _ as *const _, std::mem::size_of_val(&value) as _) };
     if result == 0 { Ok(()) } else { Err(io::Error::last_os_error()) }
 }
-#[cfg(unix)]
+#[cfg(all(unix, not(target_os = "macos")))]
 pub(super) fn readiness(stream: &TcpStream) -> io::Result<Readiness> {
     let priority = libc::POLLPRI | libc::POLLRDBAND;
     let mut descriptor = libc::pollfd { fd: stream.as_raw_fd(), events: libc::POLLIN | priority, revents: 0 };
@@ -26,9 +26,10 @@ pub(super) fn readiness(stream: &TcpStream) -> io::Result<Readiness> {
         urgent: descriptor.revents & priority != 0 })
 }
 #[cfg(unix)]
-pub(super) fn urgent(stream: &TcpStream) -> io::Result<Option<u8>> {
+pub(super) fn urgent(stream: &TcpStream, peek: bool) -> io::Result<Option<u8>> {
     let mut byte = 0_u8;
-    let count = unsafe { libc::recv(stream.as_raw_fd(), &mut byte as *mut _ as *mut _, 1, libc::MSG_OOB) };
+    let flags = libc::MSG_OOB | if peek { libc::MSG_PEEK } else { 0 };
+    let count = unsafe { libc::recv(stream.as_raw_fd(), &mut byte as *mut _ as *mut _, 1, flags) };
     if count == 1 { return Ok(Some(byte)); }
     let error = io::Error::last_os_error();
     if count < 0 && matches!(error.kind(), io::ErrorKind::WouldBlock | io::ErrorKind::Interrupted) { Ok(None) }
@@ -36,9 +37,11 @@ pub(super) fn urgent(stream: &TcpStream) -> io::Result<Option<u8>> {
 }
 #[cfg(unix)]
 pub(super) fn at_mark(stream: &TcpStream) -> io::Result<bool> {
-    let mut marked = 0_i32;
-    let result = unsafe { libc::ioctl(stream.as_raw_fd(), libc::SIOCATMARK as _, &mut marked) };
-    if result == 0 { Ok(marked != 0) } else { Err(io::Error::last_os_error()) }
+    // POSIX C ABI；锁定 libc 没有导出 Linux SIOCATMARK，避免硬编码 ioctl 编号。
+    unsafe extern "C" { fn sockatmark(socket: libc::c_int) -> libc::c_int; }
+    match unsafe { sockatmark(stream.as_raw_fd()) } {
+        0 => Ok(false), 1 => Ok(true), _ => Err(io::Error::last_os_error()),
+    }
 }
 #[cfg(windows)] fn last_error() -> io::Error { io::Error::from_raw_os_error(unsafe { WSAGetLastError() }) }
 #[cfg(windows)]
@@ -65,13 +68,46 @@ pub(super) fn readiness(stream: &TcpStream) -> io::Result<Readiness> {
     Ok(Readiness { readable: read.fd_count != 0, urgent: urgent.fd_count != 0 })
 }
 #[cfg(windows)]
-pub(super) fn urgent(stream: &TcpStream) -> io::Result<Option<u8>> {
+pub(super) fn urgent(stream: &TcpStream, peek: bool) -> io::Result<Option<u8>> {
     let mut byte = 0_u8;
-    let count = unsafe { recv(stream.as_raw_socket() as _, &mut byte, 1, MSG_OOB) };
+    let flags = MSG_OOB | if peek { MSG_PEEK } else { 0 };
+    let count = unsafe { recv(stream.as_raw_socket() as _, &mut byte, 1, flags) };
     if count == 1 { return Ok(Some(byte)); }
     let error = last_error();
     if count < 0 && matches!(error.kind(), io::ErrorKind::WouldBlock | io::ErrorKind::Interrupted) { Ok(None) }
     else { Err(if count == 0 { io::ErrorKind::UnexpectedEof.into() } else { error }) }
+}
+
+#[cfg(target_os = "macos")]
+pub(super) struct Monitor(std::os::fd::OwnedFd);
+#[cfg(target_os = "macos")]
+impl Monitor {
+    pub fn new(stream: &TcpStream) -> io::Result<Self> {
+        use std::os::fd::FromRawFd;
+        let raw = unsafe { libc::kqueue() };
+        if raw < 0 { return Err(io::Error::last_os_error()); }
+        let owned = Self(unsafe { std::os::fd::OwnedFd::from_raw_fd(raw) });
+        let mut changes: [libc::kevent;2] = unsafe { std::mem::zeroed() };
+        for event in &mut changes { event.ident = stream.as_raw_fd() as _; event.flags = libc::EV_ADD | libc::EV_ENABLE; }
+        changes[0].filter = libc::EVFILT_READ;
+        changes[1].filter = libc::EVFILT_EXCEPT; changes[1].fflags = libc::NOTE_OOB;
+        let timeout = libc::timespec { tv_sec:0, tv_nsec:0 };
+        let result = unsafe { libc::kevent(owned.0.as_raw_fd(), changes.as_ptr(),2,std::ptr::null_mut(),0,&timeout) };
+        if result < 0 { Err(io::Error::last_os_error()) } else { Ok(owned) }
+    }
+    pub fn readiness(&self) -> io::Result<Readiness> {
+        let mut events: [libc::kevent;2] = unsafe { std::mem::zeroed() };
+        let timeout = libc::timespec { tv_sec:0, tv_nsec:0 };
+        let count = unsafe { libc::kevent(self.0.as_raw_fd(),std::ptr::null(),0,events.as_mut_ptr(),2,&timeout) };
+        if count < 0 { return Err(io::Error::last_os_error()); }
+        let mut ready = Readiness::default();
+        for event in &events[..count as usize] {
+            if event.flags & libc::EV_ERROR != 0 && event.data != 0 { return Err(io::Error::from_raw_os_error(event.data as i32)); }
+            if event.filter == libc::EVFILT_READ { ready.readable = true; }
+            if event.filter == libc::EVFILT_EXCEPT && event.fflags & libc::NOTE_OOB != 0 { ready.urgent = true; }
+        }
+        Ok(ready)
+    }
 }
 #[cfg(windows)]
 pub(super) fn at_mark(stream: &TcpStream) -> io::Result<bool> {

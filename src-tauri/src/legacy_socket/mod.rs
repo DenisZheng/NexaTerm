@@ -81,7 +81,10 @@ async fn wait_connect<T>(future: impl Future<Output = io::Result<T>>, cancel: &A
 }
 #[derive(Default, Clone, Copy, Debug)]
 pub struct Readiness { pub readable: bool, pub urgent: bool }
-pub struct NativeSocket { stream: TcpStream }
+pub struct NativeSocket {
+    stream: TcpStream,
+    #[cfg(target_os = "macos")] monitor: platform::Monitor,
+}
 impl std::fmt::Debug for NativeSocket {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { f.write_str("NativeSocket{..}") }
 }
@@ -89,12 +92,17 @@ impl NativeSocket {
     pub fn from_stream(stream: TcpStream) -> Result<Self, SocketError> {
         stream.set_nonblocking(true).map_err(|_| SocketError::IoFailed)?;
         platform::oob_separate(&stream).map_err(|_| SocketError::IoFailed)?;
-        Ok(Self { stream })
+        #[cfg(target_os = "macos")] let monitor = platform::Monitor::new(&stream).map_err(|_| SocketError::IoFailed)?;
+        Ok(Self { stream, #[cfg(target_os = "macos")] monitor })
     }
     pub fn local_addr(&self) -> Result<SocketAddr, SocketError> { self.stream.local_addr().map_err(|_| SocketError::IoFailed) }
     pub fn peer_addr(&self) -> Result<SocketAddr, SocketError> { self.stream.peer_addr().map_err(|_| SocketError::IoFailed) }
-    pub fn poll_ready(&self) -> Result<Readiness, SocketError> { platform::readiness(&self.stream).map_err(|_| SocketError::IoFailed) }
-    pub(crate) fn urgent(&self) -> Result<Option<u8>, SocketError> { platform::urgent(&self.stream).map_err(|_| SocketError::IoFailed) }
+    pub fn poll_ready(&self) -> Result<Readiness, SocketError> {
+        #[cfg(target_os = "macos")] let ready = self.monitor.readiness();
+        #[cfg(not(target_os = "macos"))] let ready = platform::readiness(&self.stream);
+        ready.map_err(|_| SocketError::IoFailed)
+    }
+    pub(crate) fn urgent(&self, peek: bool) -> Result<Option<u8>, SocketError> { platform::urgent(&self.stream, peek).map_err(|_| SocketError::IoFailed) }
     pub(crate) fn at_mark(&self) -> Result<bool, SocketError> { platform::at_mark(&self.stream).map_err(|_| SocketError::IoFailed) }
     pub fn read(&mut self, buffer: &mut [u8]) -> Result<Option<usize>, SocketError> {
         if buffer.is_empty() || buffer.len() > MAX_CHUNK { return Err(SocketError::InvalidChunk); }

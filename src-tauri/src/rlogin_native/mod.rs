@@ -13,23 +13,25 @@ pub struct RloginReader {
     socket: NativeSocket, flow: FlowMode, paused: bool, flushing: bool, closed: bool,
     window_enabled: bool, window: [u8; 12],
     urgent_since: Option<Instant>, quarantined: VecDeque<u8>,
+    pending_urgent: Option<u8>,
 }
 impl RloginReader {
     /// 仅用于已完成初始交换的所属 socket；未来握手 adapter 负责转移 ACK 尾部。
     pub fn new(socket: NativeSocket, rows: u16, columns: u16, x_pixels: u16, y_pixels: u16) -> Result<Self, ProtocolError> {
         Ok(Self { socket, flow: FlowMode::Local, paused: false, flushing: false, closed: false,
             window_enabled: false, window: window_size_frame(rows, columns, x_pixels, y_pixels)?,
-            urgent_since: None, quarantined: VecDeque::new() })
+            urgent_since: None, quarantined: VecDeque::new(), pending_urgent: None })
     }
     pub fn poll(&mut self, output: &mut [u8], has_capacity: bool) -> Result<ReceiveEvent, SocketError> {
         if output.is_empty() || output.len() > MAX_CHUNK { return Err(SocketError::InvalidChunk); }
         if self.closed { return Ok(ReceiveEvent::Closed); }
         let ready = self.socket.poll_ready()?;
-        if ready.urgent || self.urgent_since.is_some() {
+        if self.pending_urgent.is_none() && (ready.urgent || self.urgent_since.is_some()) {
             let since = self.urgent_since.get_or_insert_with(Instant::now);
             if since.elapsed() >= Duration::from_secs(15) { return Err(SocketError::Timeout); }
-            if let Some(bits) = self.socket.urgent()? {
+            if let Some(bits) = self.socket.urgent(true)? {
                 self.urgent_since = None;
+                self.pending_urgent = Some(bits);
                 if bits & 0x10 != 0 { self.flow = FlowMode::Remote; self.paused = false; }
                 if bits & 0x20 != 0 { self.flow = FlowMode::Local; }
                 let flush = bits & 0x02 != 0;
@@ -41,9 +43,13 @@ impl RloginReader {
             if ready.readable { self.hold_pre_mark()?; }
             return Ok(ReceiveEvent::Idle);
         }
-        if self.flushing {
-            if self.socket.at_mark()? { self.flushing = false; }
-            else {
+        if let Some(expected) = self.pending_urgent {
+            if self.socket.at_mark()? {
+                // 留住 OOB 字节直到普通 read 到达 mark；提前读走会让 Windows 丢失边界。
+                let Some(actual) = self.socket.urgent(false)? else { return Ok(ReceiveEvent::Idle); };
+                if actual != expected { return Err(SocketError::IoFailed); }
+                self.pending_urgent = None; self.flushing = false;
+            } else if self.flushing {
                 let mut discarded = [0_u8; 8192];
                 return match self.socket.read(&mut discarded)? {
                     Some(0) => { self.closed = true; Ok(ReceiveEvent::Closed) },
