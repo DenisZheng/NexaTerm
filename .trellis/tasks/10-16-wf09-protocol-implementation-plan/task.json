@@ -1,0 +1,30 @@
+{
+  "id": "wf09-protocol-implementation-plan",
+  "name": "wf09-protocol-implementation-plan",
+  "title": "WF-09 protocol implementation plan",
+  "description": "",
+  "status": "review",
+  "dev_type": "docs",
+  "scope": null,
+  "package": null,
+  "priority": "P1",
+  "creator": "codex",
+  "assignee": "codex",
+  "createdAt": "2026-10-16",
+  "completedAt": null,
+  "branch": "docs/wf09-protocol-implementation-plan",
+  "base_branch": "feat/wf09-09-loopback-file-service",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": "09-23-nexaterm-workflow-mainline",
+  "relatedFiles": [
+    "docs/plans/WF09-PROTOCOL-IMPLEMENTATION-PLAN.md",
+    "docs/WORKFLOW_SPEC.md",
+    "ROADMAP.md"
+  ],
+  "notes": "Documentation plan complete; all three implementation tasks remain planning. Local document links, JSON/JSONL, parent/task state, Trellis and diff checks PASS; no runtime/dependency/permission/CI change.",
+  "meta": {}
+}

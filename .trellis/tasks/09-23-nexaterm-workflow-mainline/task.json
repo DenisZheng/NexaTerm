@@ -52,7 +52,11 @@
     "10-15-wf09-06-local-port",
     "10-15-wf09-07-xdmcp-assessment",
     "10-15-wf09-08-legacy-assessment",
-    "10-15-wf09-09-loopback-file-service"
+    "10-15-wf09-09-loopback-file-service",
+    "10-16-wf09-protocol-implementation-plan",
+    "10-16-wf09-07-xdmcp-implementation",
+    "10-16-wf09-08a-rlogin-implementation",
+    "10-16-wf09-08b-rsh-implementation"
   ],
   "parent": null,
   "relatedFiles": [],

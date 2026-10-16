@@ -2,6 +2,10 @@
 
 更新：2026-10-16。唯一主线仍为 `09-23-nexaterm-workflow-mainline`。依据维护者连续开发至09完成、后续统一验收的授权，所有成果保留为堆叠 Draft PR；不合并、不发布，不变更 PR #12/#54。
 
+## 后续范围变更：三个协议计划实现
+
+维护者于2026-10-16进一步要求先写三个协议的实际功能计划，再开发。新的 [三协议实现计划](plans/WF09-PROTOCOL-IMPLEMENTATION-PLAN.md) 已登记；三个实现任务均 planning/未开工。下表仅描述此前批准范围的交付，**不代表扩展后的三个协议功能已经开发完成，亦不能概括为全项目只剩人工验收**。
+
 ## 开发成果
 
 | 项目 | 已交付范围 | PR / 自动化证据 |
@@ -18,7 +22,7 @@
 
 2026-10-16 已逐项查询 #58–#65：均 open/Draft、未合并、mergeable；依赖顺序为 main → #58 → #59 → #60 → #61 → #62 → #63 → #64 → #65。早先 CI 仅证明相应提交；第九项代码提交 fc7d1ad90ad4a59f7cf9814108d59adece97daa3 已通过 [CI603](https://github.com/DenisZheng/NexaTerm/actions/runs/38858276717)，七个执行作业全部 SUCCESS，打包作业按工作流条件跳过。后续交付记录提交仅更新文档/任务元数据，代码验证对象保持为该提交。
 
-07/08 按批准的评估范围交付，**不代表实现或支持了 XDMCP/Rlogin/Rsh 会话协议**。XDMCP 的三平台真实联调仍 BLOCKED/MANUAL_REQUIRED；Rlogin/Rsh 原生实现为 DEFER，需具体目标和互通证据后另立任务。详见 [XDMCP 评估](decisions/WF09-XDMCP-ASSESSMENT.md) 和 [旧协议评估](decisions/WF09-LEGACY-PROTOCOL-ASSESSMENT.md)。
+07/08 按批准的评估范围交付，**不代表实现或支持了 XDMCP/Rlogin/Rsh 会话协议**。XDMCP 的三平台真实联调仍 BLOCKED/MANUAL_REQUIRED；Rlogin/Rsh 原生实现原为 DEFER，现已改为 PLANNED 并登记独立实现任务；当前仍无运行时支持。详见 [XDMCP 评估](decisions/WF09-XDMCP-ASSESSMENT.md) 和 [旧协议评估](decisions/WF09-LEGACY-PROTOCOL-ASSESSMENT.md)。
 
 ## 第九项回归与边界
 
@@ -37,6 +41,6 @@ CI602 首轮 macOS/Windows Rust 通过，Linux 同端口释放测试失败；原
 | 终端与诊断 | 原生终端滚动/输入、ANSI 与高亮、日志文件、真实 DNS/SSH 多跳失败和端口冲突 |
 | 内置服务 FS01–FS07 | 原生 picker/IPC/clipboard、真实下载、认证拒绝、同端口重启、离开面板/关闭窗口/退出清理、审计可见性 |
 | 平台与外观 | Windows/macOS/Linux，各亮色/暗色/system-dark；GUI、权限与 OS 文件行为 |
-| 协议评估后续 | X server/真实 XDMCP 目标、许可证/分发条件；旧协议需独立批准的目标与互通计划 |
+| 协议评估后续 | X server/真实 XDMCP 目标、许可证/分发条件；Rlogin/Rsh 按新计划推进原生实现与目标互通 |
 
 这些检查统一后续进行，不用单元测试或 CI 编译替代。此前 A15 安装、签名、升级回滚等发布缺口也不因 WF-09 开发而自动关闭。

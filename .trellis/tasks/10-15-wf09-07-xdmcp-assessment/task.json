@@ -21,6 +21,6 @@
   "children": [],
   "parent": "09-23-nexaterm-workflow-mainline",
   "relatedFiles": [],
-  "notes": "Assessment delivered; runtime integration BLOCKED/MANUAL_REQUIRED on all three platforms.",
+  "notes": "Assessment delivered; runtime integration BLOCKED/MANUAL_REQUIRED on all three platforms. Follow-up: 2026-10-16 actual implementation is now PLANNED in docs/plans/WF09-PROTOCOL-IMPLEMENTATION-PLAN.md; this historical assessment remains review and does not represent implemented functionality.",
   "meta": {}
 }

@@ -1,0 +1,29 @@
+{
+  "id": "wf09-07-xdmcp-implementation",
+  "name": "wf09-07-xdmcp-implementation",
+  "title": "WF-09-07 bundled X server and XDMCP implementation",
+  "description": "",
+  "status": "planning",
+  "dev_type": "fullstack",
+  "scope": null,
+  "package": null,
+  "priority": "P1",
+  "creator": "codex",
+  "assignee": "codex",
+  "createdAt": "2026-10-16",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "docs/wf09-protocol-implementation-plan",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": "09-23-nexaterm-workflow-mainline",
+  "relatedFiles": [
+    "docs/plans/WF09-PROTOCOL-IMPLEMENTATION-PLAN.md",
+    "docs/WORKFLOW_SPEC.md"
+  ],
+  "notes": "Implementation planned (X0–X3); explicitly not started in the documentation-only turn. Acceptance: X01–X04、C01/C02.",
+  "meta": {}
+}
