@@ -34,6 +34,8 @@ Good: fragmented ACK plus banner yields one accepted exchange and every banner b
 
 Exact RFC request and resize bytes; both username byte budgets, empty/NUL/control inputs, terminal delimiter/ASCII/length validation and zero speed; every handshake chunk width including ACK+banner coalescing, byte transparency, every nonzero status, rejection fragmentation/limits/sticky errors, EOF in each state and parser reuse. Actual loopback TCP fixtures read the entire request and exercise ACK+binary data, fragmented rejection and EOF-before-ACK. All fixture sockets have IO timeouts and listener accept has a bounded deadline.
 
+Accepted fixture sockets explicitly set blocking mode before applying the2s IO timeouts: macOS inherits the listener's nonblocking mode, whereas Linux does not. Do not catch WouldBlock and label that a successful read or extend deadlines to conceal it.
+
 The standalone native workflow compiles the same production module with `rustc --test` on Windows/macOS/Linux, without another Cargo dependency graph. Full application CI also compiles and runs these tests.
 
 ## 7. Wrong / correct

@@ -99,6 +99,8 @@ fn tcp_fixture(server: impl FnOnce(TcpStream) + Send + 'static, client: impl FnO
     set_timeouts(&stream); client(stream); thread.join().unwrap();
 }
 fn set_timeouts(stream: &TcpStream) {
+    // macOS 的 accept 会继承 listener 的非阻塞模式；显式设定 fixture IO 契约。
+    stream.set_nonblocking(false).unwrap();
     stream.set_read_timeout(Some(Duration::from_secs(2))).unwrap();
     stream.set_write_timeout(Some(Duration::from_secs(2))).unwrap();
 }
