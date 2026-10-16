@@ -79,14 +79,17 @@ pub(super) fn urgent(stream: &TcpStream, peek: bool) -> io::Result<Option<u8>> {
 }
 
 #[cfg(target_os = "macos")]
-pub(super) struct Monitor { fd: std::os::fd::OwnedFd, urgent: std::cell::Cell<bool> }
+pub(super) struct Monitor {
+    fd: std::os::fd::OwnedFd, urgent: std::cell::Cell<bool>, read_probe: std::cell::Cell<bool>,
+}
 #[cfg(target_os = "macos")]
 impl Monitor {
     pub fn new(stream: &TcpStream) -> io::Result<Self> {
         use std::os::fd::FromRawFd;
         let raw = unsafe { libc::kqueue() };
         if raw < 0 { return Err(io::Error::last_os_error()); }
-        let owned = Self { fd: unsafe { std::os::fd::OwnedFd::from_raw_fd(raw) }, urgent: std::cell::Cell::new(false) };
+        let owned = Self { fd: unsafe { std::os::fd::OwnedFd::from_raw_fd(raw) },
+            urgent: std::cell::Cell::new(false), read_probe: std::cell::Cell::new(false) };
         let mut changes: [libc::kevent;2] = unsafe { std::mem::zeroed() };
         for event in &mut changes { event.ident = stream.as_raw_fd() as _; event.flags = libc::EV_ADD | libc::EV_ENABLE; }
         changes[0].filter = libc::EVFILT_READ;
@@ -101,7 +104,7 @@ impl Monitor {
         let timeout = libc::timespec { tv_sec:0, tv_nsec:0 };
         let count = unsafe { libc::kevent(self.fd.as_raw_fd(),std::ptr::null(),0,events.as_mut_ptr(),2,&timeout) };
         if count < 0 { return Err(io::Error::last_os_error()); }
-        let mut ready = Readiness { readable: false, urgent: self.urgent.get() };
+        let mut ready = Readiness { readable: self.read_probe.get(), urgent: self.urgent.get() };
         for event in &events[..count as usize] {
             if event.flags & libc::EV_ERROR != 0 && event.data != 0 { return Err(io::Error::from_raw_os_error(event.data as i32)); }
             if event.filter == libc::EVFILT_READ { ready.readable = true; }
@@ -111,7 +114,12 @@ impl Monitor {
         }
         Ok(ready)
     }
-    pub fn consumed_urgent(&self) { self.urgent.set(false); }
+    pub fn consumed_urgent(&self) {
+        self.urgent.set(false);
+        // 消费 OOB 改变普通游标的可读条件；旧 kqueue 快照不能阻止一次真实非阻塞 read。
+        self.read_probe.set(true);
+    }
+    pub fn read_attempted(&self) { self.read_probe.set(false); }
 }
 #[cfg(windows)]
 pub(super) fn at_mark(stream: &TcpStream) -> io::Result<bool> {

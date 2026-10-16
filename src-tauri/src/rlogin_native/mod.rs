@@ -63,6 +63,7 @@ impl RloginReader {
                 // Unix 在普通 read 到达 mark 后消费 OOB，按已验证的位置语义结束前段。
                 let Some(actual) = self.socket.urgent(false)? else { return Ok(ReceiveEvent::Idle); };
                 if actual != expected { return Err(SocketError::IoFailed); }
+                #[cfg(test)] eprintln!("native_fixture_consumed_mark readable_snapshot={}", ready.readable);
                 self.pending_urgent = None; self.flushing = false;
             } else if self.flushing {
                 let mut discarded = [0_u8; 8192];

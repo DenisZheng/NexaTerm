@@ -118,7 +118,9 @@ impl NativeSocket {
     pub(crate) fn at_mark(&self) -> Result<bool, SocketError> { platform::at_mark(&self.stream).map_err(|_| SocketError::IoFailed) }
     pub fn read(&mut self, buffer: &mut [u8]) -> Result<Option<usize>, SocketError> {
         if buffer.is_empty() || buffer.len() > MAX_CHUNK { return Err(SocketError::InvalidChunk); }
-        progress(self.stream.read(buffer))
+        let result = progress(self.stream.read(buffer));
+        #[cfg(target_os = "macos")] self.monitor.read_attempted();
+        result
     }
     /// 返回真实写入长度；调用方必须保留未写后缀并按顺序重试。
     pub fn write(&mut self, bytes: &[u8]) -> Result<Option<usize>, SocketError> {
