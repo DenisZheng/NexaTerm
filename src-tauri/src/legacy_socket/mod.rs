@@ -13,13 +13,14 @@ pub const CONNECT_TIMEOUT: Duration = Duration::from_secs(15);
 const CANCEL_POLL: Duration = Duration::from_millis(25);
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum SocketError { InvalidAddress, InvalidChunk, UrgentBufferFull, AccessDenied, PortsBusy, PortsUnavailable,
+pub enum SocketError { InvalidAddress, InvalidChunk, UrgentBufferFull, UrgentBoundaryUnavailable, AccessDenied, PortsBusy, PortsUnavailable,
     Unavailable, ConnectFailed, Timeout, Cancelled, IoFailed }
 impl SocketError {
     pub fn code(self) -> &'static str {
         match self {
             Self::InvalidAddress => "legacy_socket_invalid_address", Self::InvalidChunk => "legacy_socket_invalid_chunk",
             Self::UrgentBufferFull => "legacy_socket_urgent_buffer_full",
+            Self::UrgentBoundaryUnavailable => "legacy_socket_urgent_boundary_unavailable",
             Self::AccessDenied => "legacy_socket_access_denied", Self::PortsBusy => "legacy_socket_ports_busy",
             Self::PortsUnavailable => "legacy_socket_ports_unavailable", Self::Unavailable => "legacy_socket_unavailable",
             Self::ConnectFailed => "legacy_socket_connect_failed", Self::Timeout => "legacy_socket_timeout",
@@ -89,6 +90,8 @@ impl std::fmt::Debug for NativeSocket {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { f.write_str("NativeSocket{..}") }
 }
 impl NativeSocket {
+    /// 当前 Unix 实现具有已验证的位置语义；不把 Windows 的 OOB 队列状态冒充位置。
+    pub const fn supports_urgent_boundary() -> bool { cfg!(unix) }
     pub fn from_stream(stream: TcpStream) -> Result<Self, SocketError> {
         stream.set_nonblocking(true).map_err(|_| SocketError::IoFailed)?;
         platform::oob_separate(&stream).map_err(|_| SocketError::IoFailed)?;

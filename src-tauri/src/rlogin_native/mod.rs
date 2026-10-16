@@ -14,16 +14,18 @@ pub struct RloginReader {
     window_enabled: bool, window: [u8; 12],
     urgent_since: Option<Instant>, quarantined: VecDeque<u8>,
     pending_urgent: Option<u8>,
+    failed: Option<SocketError>,
 }
 impl RloginReader {
     /// 仅用于已完成初始交换的所属 socket；未来握手 adapter 负责转移 ACK 尾部。
     pub fn new(socket: NativeSocket, rows: u16, columns: u16, x_pixels: u16, y_pixels: u16) -> Result<Self, ProtocolError> {
         Ok(Self { socket, flow: FlowMode::Local, paused: false, flushing: false, closed: false,
             window_enabled: false, window: window_size_frame(rows, columns, x_pixels, y_pixels)?,
-            urgent_since: None, quarantined: VecDeque::new(), pending_urgent: None })
+            urgent_since: None, quarantined: VecDeque::new(), pending_urgent: None, failed: None })
     }
     pub fn poll(&mut self, output: &mut [u8], has_capacity: bool) -> Result<ReceiveEvent, SocketError> {
         if output.is_empty() || output.len() > MAX_CHUNK { return Err(SocketError::InvalidChunk); }
+        if let Some(error) = self.failed { return Err(error); }
         if self.closed { return Ok(ReceiveEvent::Closed); }
         let ready = self.socket.poll_ready()?;
         if self.pending_urgent.is_none() && (ready.urgent || self.urgent_since.is_some()) {
@@ -31,10 +33,18 @@ impl RloginReader {
             if since.elapsed() >= Duration::from_secs(15) { return Err(SocketError::Timeout); }
             if let Some(bits) = self.socket.urgent(true)? {
                 self.urgent_since = None;
-                self.pending_urgent = Some(bits);
+                let flush = bits & 0x02 != 0;
+                if flush && !NativeSocket::supports_urgent_boundary() {
+                    let error = SocketError::UrgentBoundaryUnavailable;
+                    self.failed = Some(error); return Err(error);
+                }
+                if NativeSocket::supports_urgent_boundary() { self.pending_urgent = Some(bits); }
+                else {
+                    let Some(actual) = self.socket.urgent(false)? else { return Ok(ReceiveEvent::Idle); };
+                    if actual != bits { self.failed = Some(SocketError::IoFailed); return Err(SocketError::IoFailed); }
+                }
                 if bits & 0x10 != 0 { self.flow = FlowMode::Remote; self.paused = false; }
                 if bits & 0x20 != 0 { self.flow = FlowMode::Local; }
-                let flush = bits & 0x02 != 0;
                 if flush { self.flushing = true; self.quarantined.clear(); }
                 let window_frame = if bits & 0x80 != 0 { self.window_enabled = true; Some(self.window) } else { None };
                 return Ok(ReceiveEvent::Control(Control { flush_output: flush, flow: self.flow, window_frame }));

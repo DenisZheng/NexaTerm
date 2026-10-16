@@ -47,11 +47,32 @@ fn native_oob_window_requests_use_latest_size_and_do_not_appear_in_data() {
 fn native_flush_discards_only_before_mark_and_combined_flags_work_under_backpressure() {
     let (mut reader, mut peer) = reader();
     peer.write_all(b"discard").unwrap(); send_urgent_fixture(&peer, 0xb2); peer.write_all(b"keep\x80").unwrap();
+    #[cfg(windows)] {
+        until(|| match reader.poll(&mut [0;128],false) {
+            Err(SocketError::UrgentBoundaryUnavailable) => Some(()), Ok(ReceiveEvent::Idle) => None,
+            other => panic!("unsupported boundary exposed data or claimed flush: {other:?}"),
+        });
+        assert_eq!(reader.poll(&mut [0;128],true),Err(SocketError::UrgentBoundaryUnavailable));
+        // 明确失败且没有误删前段或后段；这不是 Windows flush 互通通过。
+        let mut untouched=Vec::new(); let mut buffer=[0_u8;128];
+        until(|| { if let Some(n)=reader.socket.read(&mut buffer).unwrap() { assert_ne!(n,0); untouched.extend_from_slice(&buffer[..n]); }
+            (untouched.len()>=12).then_some(()) });
+        assert_eq!(untouched,b"discardkeep\x80"); reader.close().unwrap(); return;
+    }
+    #[cfg(not(windows))] {
     let event = control(&mut reader, false);
     assert!(event.flush_output); assert_eq!(event.flow, FlowMode::Local); assert!(event.window_frame.is_some());
     assert!(reader.input(&[0x13]).unwrap().is_empty());
     for _ in 0..4 { assert_eq!(reader.poll(&mut [0;128], false).unwrap(), ReceiveEvent::Idle); }
     assert!(reader.input(&[0x11]).unwrap().is_empty()); assert_eq!(data(&mut reader, 5), b"keep\x80");
+    }
+}
+#[test]
+fn combined_flow_and_window_flags_work_without_requesting_flush() {
+    let (mut reader, mut peer)=reader(); send_urgent_fixture(&peer,0xb0); peer.write_all(b"data").unwrap();
+    let event=control(&mut reader,false);
+    assert!(!event.flush_output); assert_eq!(event.flow,FlowMode::Local); assert!(event.window_frame.is_some());
+    assert!(reader.input(&[0x13,0x11]).unwrap().is_empty()); assert_eq!(data(&mut reader,4),b"data");
 }
 #[test]
 fn urgent_raw_mode_resumes_locally_paused_output_and_preserves_input_bytes() {
