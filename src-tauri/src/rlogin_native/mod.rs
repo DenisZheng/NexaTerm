@@ -36,26 +36,30 @@ impl RloginReader {
         if self.pending_urgent.is_none() && (ready.urgent || self.urgent_since.is_some()) {
             let since = self.urgent_since.get_or_insert_with(Instant::now);
             if since.elapsed() >= Duration::from_secs(15) { return Err(SocketError::Timeout); }
-            if let Some(bits) = self.socket.urgent(true)? {
+            // Darwin 在 mark 上连 MSG_PEEK 都会清位置标记；已到边界时直接消费。
+            let at_mark = NativeSocket::supports_urgent_boundary() && self.socket.at_mark()?;
+            if let Some(bits) = self.socket.urgent(!at_mark)? {
                 self.urgent_since = None;
                 let flush = bits & 0x02 != 0;
                 if flush && !NativeSocket::supports_urgent_boundary() {
                     let error = SocketError::UrgentBoundaryUnavailable;
                     self.failed = Some(error); return Err(error);
                 }
-                if NativeSocket::supports_urgent_boundary() { self.pending_urgent = Some(bits); }
+                if NativeSocket::supports_urgent_boundary() {
+                    if !at_mark { self.pending_urgent = Some(bits); }
+                }
                 else {
                     let Some(actual) = self.socket.urgent(false)? else { return Ok(ReceiveEvent::Idle); };
                     if actual != bits { self.failed = Some(SocketError::IoFailed); return Err(SocketError::IoFailed); }
                 }
                 if bits & 0x10 != 0 { self.flow = FlowMode::Remote; self.paused = false; }
                 if bits & 0x20 != 0 { self.flow = FlowMode::Local; }
-                if flush { self.flushing = true; self.quarantined.clear(); }
+                if flush { self.flushing = !at_mark; self.quarantined.clear(); }
                 let window_frame = if bits & 0x80 != 0 { self.window_enabled = true; Some(self.window) } else { None };
                 return Ok(ReceiveEvent::Control(Control { flush_output: flush, flow: self.flow, window_frame }));
             }
             // TCP 可以先通知 urgent 指针再收到控制字节；有界隔离前段数据让窗口继续推进。
-            if ready.readable { self.hold_pre_mark()?; }
+            if ready.readable && !at_mark { self.hold_pre_mark()?; }
             return Ok(ReceiveEvent::Idle);
         }
         if let Some(expected) = self.pending_urgent {
@@ -63,7 +67,6 @@ impl RloginReader {
                 // Unix 在普通 read 到达 mark 后消费 OOB，按已验证的位置语义结束前段。
                 let Some(actual) = self.socket.urgent(false)? else { return Ok(ReceiveEvent::Idle); };
                 if actual != expected { return Err(SocketError::IoFailed); }
-                #[cfg(test)] eprintln!("native_fixture_consumed_mark readable_snapshot={}", ready.readable);
                 self.pending_urgent = None; self.flushing = false;
             } else if self.flushing {
                 let mut discarded = [0_u8; 8192];

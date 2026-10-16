@@ -80,7 +80,6 @@ async fn exchange(mut socket: NativeSocket, prepared: Prepared, cancel: &AtomicB
             Some(count) => match handshake.receive(&buffer[..count])? {
                 HandshakeProgress::Pending => {},
                 HandshakeProgress::Accepted(tail) => {
-                    #[cfg(test)] eprintln!("rlogin_fixture_ack_tail_bytes={}", tail.len());
                     checkpoint(cancel, deadline)?;
                     let w = prepared.window;
                     let mut reader = RloginReader::new(socket, w.rows, w.columns, w.x_pixels, w.y_pixels)?;

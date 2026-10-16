@@ -157,7 +157,8 @@ fn native_normal_read_before_oob_peek_records_the_actual_boundary() {
     let mut buffer = [0_u8;128]; let count = socket.read(&mut buffer).unwrap().unwrap();
     let mark = platform::at_mark(&socket.stream);
     let urgent = socket.urgent(true);
-    println!("native_before_peek_probe before={before:?} read_count={count} mark={mark:?} urgent={urgent:?}");
+    let after_peek = platform::at_mark(&socket.stream);
+    println!("native_before_peek_probe before={before:?} read_count={count} mark={mark:?} urgent={urgent:?} after_peek={after_peek:?}");
     assert!(count > 0 && count <= 11); assert_eq!(&buffer[..count], &b"beforeafter"[..count]);
     assert_eq!(urgent.unwrap(), Some(0x02));
 }
