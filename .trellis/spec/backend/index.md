@@ -49,3 +49,5 @@ The goal is to help AI assistants and new team members understand how YOUR proje
 - [XDMCP Managed Runner](./xdmcp-runner.md) — external development engine ownership, process group/job cleanup and explicit incomplete bundled capability.
 
 - [Rlogin Protocol Core](./rlogin-protocol.md) — L0 request/handshake/window framing, bounded private rejection handling and loopback TCP fixtures; terminal/OOB integration remains L1.
+
+- [Native Legacy Sockets](./legacy-native-sockets.md) — L1 reserved source sockets and native OOB/mark/flow/window controller; session/IPC/terminal integration remains pending.

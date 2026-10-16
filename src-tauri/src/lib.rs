@@ -45,6 +45,8 @@ mod terminal;
 mod workspace_snapshot;
 mod temporary_connections;
 pub mod rlogin;
+pub mod legacy_socket;
+pub mod rlogin_native;
 mod tunnels;
 mod vnc;
 mod webdav;
