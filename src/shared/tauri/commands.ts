@@ -1608,3 +1608,14 @@ export function workspaceSnapshotSave(snapshot: unknown) {
 export function workspaceSnapshotClear() {
   return invoke<void>("workspace_snapshot_clear");
 }
+
+// Local direct-route diagnostics: reservation IDs are transient cancellation handles.
+export function localProbeReserve(): Promise<string> {
+  return invoke<string>("local_probe_reserve");
+}
+export function localProbeRun(reservationId: string, request: import("../../features/tools/localProbeTypes").LocalProbeRequest) {
+  return invoke<import("../../features/tools/localProbeTypes").LocalProbeResult>("local_probe_run", { reservationId, request });
+}
+export function localProbeCancel(reservationId: string): Promise<void> {
+  return invoke<void>("local_probe_cancel", { reservationId });
+}

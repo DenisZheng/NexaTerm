@@ -1,3 +1,5 @@
+import { ConnectionFailureDetails } from "../connections/ConnectionFailureDetails";
+import { diagnoseConnectionFailure, safeDiagnosticId, type ConnectionFailureDiagnosis } from "../connections/connectionFailureDiagnosis";
 import { useConnectionGroups } from "../connections/useConnectionGroups";
 import { useWorkspaceTerminalSearch } from "./useWorkspaceTerminalSearch";
 import {
@@ -123,6 +125,7 @@ const loadRemoteFilePanel = () => import("../files/RemoteFilePanel");
 const loadMonitorPanel = () => import("../monitor/MonitorPanel");
 const loadTunnelPanel = () => import("../tunnels/TunnelPanel");
 const loadSettingsView = () => import("../settings/SettingsView");
+const LocalConnectionDiagnostics = lazy(() => import("../tools/LocalConnectionDiagnostics").then((module) => ({ default: module.LocalConnectionDiagnostics })));
 const loadDockerToolPanel = () => import("../tools/DockerToolPanel");
 const loadCommandLibraryPanel = () => import("../commands/CommandLibraryPanel");
 const loadAiAssistantPanel = () => import("../ai/AiAssistantPanel");
@@ -608,6 +611,7 @@ interface ConnectionStepState {
   sessionId?: string | null; status: ConnectionStepStatus;
 }
 interface ConnectionStepErrorDetail {
+  diagnosis?: ConnectionFailureDiagnosis; diagnosticId?: string; nodeLabel?: string;
   code: string;
   message: string;
   rawMessage: string;
@@ -7749,7 +7753,7 @@ export function WorkspaceShell() {
       if (!connectingTabExists(tabId)) {
         return;
       }
-      const errorDetail = describeConnectionStepError(nextError);
+      const errorDetail = describeConnectionStepError(nextError, step.connection.id);
       const hostKeyError = parseHostKeyError(nextError);
       if (hostKeyError) {
         updateConnectingTabStep(tabId, {
@@ -7777,8 +7781,7 @@ export function WorkspaceShell() {
         updateConnectingTabStep(tabId, { ...runningStep, authKind: promptTarget.authKind, error: errorDetail.message, errorDetail, promptTarget, password: "", privateKeyPassphrase: "", privateKeyPath: "", logs: [...runningStep.logs, tr("workspace.connection.authRetry", { name: promptTarget.name || promptTarget.connectionId })], status: "prompt" });
         return;
       }
-      const nodeLabel = nodeFailure ? connectionById.get(nodeFailure.connectionId)?.name || nodeFailure.connectionId : "";
-      const contextualErrorDetail = nodeLabel ? { ...errorDetail, message: `${nodeLabel}：${errorDetail.message}` } : errorDetail;
+      const contextualErrorDetail = { ...errorDetail, nodeLabel: nodeFailure ? connectionById.get(nodeFailure.connectionId)?.name : errorDetail.diagnosis?.nodeRole === "target" ? step.connection.name : undefined };
       updateConnectingTabStep(tabId, {
         ...runningStep,
         error: contextualErrorDetail.message,
@@ -7822,7 +7825,7 @@ export function WorkspaceShell() {
       if (!connectingTabExists(tabId)) {
         return;
       }
-      const errorDetail = describeConnectionStepError(nextError);
+      const errorDetail = describeConnectionStepError(nextError, step.connection.id);
       updateConnectingTabStep(tabId, {
         ...nextStep,
         error: errorDetail.message,
@@ -9229,7 +9232,8 @@ export function WorkspaceShell() {
               <RemoteFilePanel
                 active={!rightPaneCollapsed}
                 activeTool={rightTool}
-                availableTools={["commands", "ai"]}
+                availableTools={["commands", "ai", "tools"]}
+                toolsPanel={rightTool === "tools" ? <Suspense fallback={null}><LocalConnectionDiagnostics active={!rightPaneCollapsed} /></Suspense> : null}
                 connection={null}
                 commandPanel={renderCommandLibraryPanel()}
                 aiPanel={aiAssistantPanelNode}
@@ -9291,6 +9295,7 @@ export function WorkspaceShell() {
                     activeTool={rightTool}
                     availableTools={["monitor", "commands", "tools", "tunnels", "ai"]}
                     connection={remoteFileConnection}
+                    toolsPanel={rightTool === "tools" ? <Suspense fallback={null}><LocalConnectionDiagnostics key={remoteFileConnection?.id || "local"} active={!rightPaneCollapsed} initialHost={remoteFileConnection?.host} initialPort={remoteFileConnection?.port} /></Suspense> : null}
                     aiPanel={aiAssistantPanelNode}
                     tunnelPanel={
                       rightTool === "tunnels" && isSshConnection(activeConnection) ? (
@@ -11019,10 +11024,10 @@ function ConnectionStepPanel({
                   <header>
                     <AlertTriangle className="ui-icon" aria-hidden="true" />
                     <strong>
-                      {step.errorDetail?.rawMessage || step.errorDetail?.message || step.error || tr("workspace.connection.errorFallback")}
+                      {step.errorDetail?.message || step.error || tr("workspace.connection.errorFallback")}
                     </strong>
                   </header>
-                  {step.errorDetail?.suggestion ? (
+                  {step.errorDetail?.diagnosis ? <ConnectionFailureDetails diagnosis={step.errorDetail.diagnosis} nodeLabel={step.errorDetail.nodeLabel} diagnosticId={step.errorDetail.diagnosticId} /> : step.errorDetail?.suggestion ? (
                     <p className="connection-step-error-tip">{step.errorDetail.suggestion}</p>
                   ) : null}
                   <div className="connection-step-error-actions">
@@ -11079,7 +11084,7 @@ function currentConnectionStepIndex(step: ConnectionStepState) {
     return 3;
   }
   if (step.status === "error") {
-    return connectionStepErrorIndex(step.errorDetail?.code || "");
+    return step.errorDetail?.diagnosis?.stepIndex ?? connectionStepErrorIndex(step.errorDetail?.code || "");
   }
   if (step.status === "running" && typeof step.activeStepIndex === "number") {
     return clampConnectionStepIndex(step.activeStepIndex);
@@ -11957,7 +11962,7 @@ function appendUniqueLogs(logs: string[], nextLines: string[]) {
   return next;
 }
 
-function describeConnectionStepError(error: unknown): ConnectionStepErrorDetail {
+function describeConnectionStepError(error: unknown, targetConnectionId?: string): ConnectionStepErrorDetail {
   const code =
     typeof error === "object" && error !== null && "code" in error
       ? String((error as { code: unknown }).code)
@@ -11977,6 +11982,8 @@ function describeConnectionStepError(error: unknown): ConnectionStepErrorDetail 
   return {
     code,
     message: connectionErrorSummary(code, message),
+    diagnosis: diagnoseConnectionFailure(error, targetConnectionId),
+    diagnosticId: safeDiagnosticId(diagnosticId),
     // raw_message 下线后仍要给出可追溯的线索：优先展示诊断 ID，供用户报障时对上内部日志。
     rawMessage: rawMessage || (diagnosticId ? tr("workspace.diagnostic", { id: diagnosticId }) : message),
     recoverable,

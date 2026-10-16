@@ -19013,3 +19013,18 @@ body[data-platform="macos"][data-theme-mode="dark"] .ui-tooltip-arrow {
 .settings-keyword-editor small { color: var(--mx-muted); }
 .settings-keyword-editor [role="alert"] { color: var(--mx-danger); margin: 0; }
 .settings-keyword-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.connection-diagnostics-stack {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: auto;
+  display: grid;
+  align-content: start;
+}
+.connection-diagnostics-stack > .network-diagnostics { flex: none; overflow: visible; }
+
+.connection-failure-details { display: grid; gap: 8px; min-width: 0; }
+.connection-failure-details dl { display: grid; gap: 6px; margin: 0; }
+.connection-failure-details dl > div { display: flex; flex-wrap: wrap; gap: 6px 12px; }
+.connection-failure-details dt, .connection-failure-details small { color: var(--mx-muted); }
+.connection-failure-details dd { margin: 0; color: var(--mx-text); overflow-wrap: anywhere; }

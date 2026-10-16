@@ -41,3 +41,5 @@ The goal is to help AI assistants and new team members understand how YOUR proje
 ---
 
 **Language**: All documentation should be written in **English**.
+
+- [Local Connection Probe](./connection-probe.md) — bounded DNS/TCP/loopback-bind probes, reservation IPC, cancellation and sanitized results.
