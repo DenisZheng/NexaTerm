@@ -99,17 +99,29 @@ fn nonblocking_reads_byte_budgets_and_peer_eof_have_distinct_results() {
     until(|| socket.read(&mut buffer).unwrap().filter(|n| *n == 0));
 }
 #[test]
+fn expired_shared_deadline_drops_the_reserved_handle_without_connecting() {
+    let listener = std::net::TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).unwrap(); listener.set_nonblocking(true).unwrap();
+    let SocketAddr::V4(target) = listener.local_addr().unwrap() else { unreachable!() };
+    let socket = TcpSocket::new_v4().unwrap(); socket.bind((Ipv4Addr::LOCALHOST, 0).into()).unwrap();
+    let address = socket.local_addr().unwrap();
+    let result = runtime().block_on(ReservedSocket(socket).connect_until(target, &AtomicBool::new(false), Instant::now()));
+    assert_eq!(result.err(), Some(SocketError::Timeout)); rebound(address);
+    assert_eq!(listener.accept().unwrap_err().kind(), io::ErrorKind::WouldBlock);
+}
+#[test]
 fn native_urgent_mark_and_peek_preserve_normal_stream_boundaries() {
     let (mut socket, mut peer) = pair();
     peer.write_all(b"before").unwrap(); send_urgent_fixture(&peer,0x82); peer.write_all(b"after").unwrap();
     until(|| socket.poll_ready().unwrap().urgent.then_some(()));
+    assert!(socket.poll_ready().unwrap().urgent, "readiness observation consumed pending OOB");
     let before = (platform::at_mark(&socket.stream),platform::pending_bytes_fixture(&socket.stream));
-    let peek = platform::urgent(&socket.stream,true);
+    let peek = socket.urgent(true);
+    assert!(socket.poll_ready().unwrap().urgent, "peeking consumed pending OOB readiness");
     let peeked = (platform::at_mark(&socket.stream),platform::pending_bytes_fixture(&socket.stream));
     let mut buffer = [0_u8;128]; let prefix = socket.read(&mut buffer);
     let mut normal = Vec::new(); if let Ok(Some(n)) = prefix { normal.extend_from_slice(&buffer[..n]); }
     let middle = (platform::at_mark(&socket.stream),platform::pending_bytes_fixture(&socket.stream));
-    let consume = platform::urgent(&socket.stream,false);
+    let consume = socket.urgent(false);
     let after = (platform::at_mark(&socket.stream),platform::pending_bytes_fixture(&socket.stream));
     println!("native_mark_probe before={before:?} peek={peek:?} peeked={peeked:?} prefix={prefix:?} middle={middle:?} consume={consume:?} after={after:?}");
     until(|| {
@@ -135,4 +147,18 @@ fn windows_inline_native_mark_probe() {
         (result.len()>=12).then_some(())
     });
     assert_eq!(result,b"before\x82after");
+}
+#[test]
+fn native_normal_read_before_oob_peek_records_the_actual_boundary() {
+    let (mut socket, mut peer) = pair();
+    peer.write_all(b"before").unwrap(); send_urgent_fixture(&peer, 0x02); peer.write_all(b"after").unwrap();
+    until(|| socket.poll_ready().unwrap().urgent.then_some(()));
+    let before = platform::at_mark(&socket.stream);
+    let mut buffer = [0_u8;128]; let count = socket.read(&mut buffer).unwrap().unwrap();
+    let mark = platform::at_mark(&socket.stream);
+    let urgent = socket.urgent(true);
+    let after_peek = platform::at_mark(&socket.stream);
+    println!("native_before_peek_probe before={before:?} read_count={count} mark={mark:?} urgent={urgent:?} after_peek={after_peek:?}");
+    assert!(count > 0 && count <= 11); assert_eq!(&buffer[..count], &b"beforeafter"[..count]);
+    assert_eq!(urgent.unwrap(), Some(0x02));
 }

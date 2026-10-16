@@ -79,36 +79,39 @@ pub(super) fn urgent(stream: &TcpStream, peek: bool) -> io::Result<Option<u8>> {
 }
 
 #[cfg(target_os = "macos")]
-pub(super) struct Monitor(std::os::fd::OwnedFd);
+pub(super) struct Monitor { fd: std::os::fd::OwnedFd, urgent: std::cell::Cell<bool> }
 #[cfg(target_os = "macos")]
 impl Monitor {
     pub fn new(stream: &TcpStream) -> io::Result<Self> {
         use std::os::fd::FromRawFd;
         let raw = unsafe { libc::kqueue() };
         if raw < 0 { return Err(io::Error::last_os_error()); }
-        let owned = Self(unsafe { std::os::fd::OwnedFd::from_raw_fd(raw) });
+        let owned = Self { fd: unsafe { std::os::fd::OwnedFd::from_raw_fd(raw) }, urgent: std::cell::Cell::new(false) };
         let mut changes: [libc::kevent;2] = unsafe { std::mem::zeroed() };
         for event in &mut changes { event.ident = stream.as_raw_fd() as _; event.flags = libc::EV_ADD | libc::EV_ENABLE; }
         changes[0].filter = libc::EVFILT_READ;
         changes[1].filter = libc::EVFILT_EXCEPT; changes[1].fflags = libc::NOTE_OOB;
         changes[1].flags |= libc::EV_CLEAR; // 清除已交付的 NOTE_OOB，避免消费后重复成为 urgent。
         let timeout = libc::timespec { tv_sec:0, tv_nsec:0 };
-        let result = unsafe { libc::kevent(owned.0.as_raw_fd(), changes.as_ptr(),2,std::ptr::null_mut(),0,&timeout) };
+        let result = unsafe { libc::kevent(owned.fd.as_raw_fd(), changes.as_ptr(),2,std::ptr::null_mut(),0,&timeout) };
         if result < 0 { Err(io::Error::last_os_error()) } else { Ok(owned) }
     }
     pub fn readiness(&self) -> io::Result<Readiness> {
         let mut events: [libc::kevent;2] = unsafe { std::mem::zeroed() };
         let timeout = libc::timespec { tv_sec:0, tv_nsec:0 };
-        let count = unsafe { libc::kevent(self.0.as_raw_fd(),std::ptr::null(),0,events.as_mut_ptr(),2,&timeout) };
+        let count = unsafe { libc::kevent(self.fd.as_raw_fd(),std::ptr::null(),0,events.as_mut_ptr(),2,&timeout) };
         if count < 0 { return Err(io::Error::last_os_error()); }
-        let mut ready = Readiness::default();
+        let mut ready = Readiness { readable: false, urgent: self.urgent.get() };
         for event in &events[..count as usize] {
             if event.flags & libc::EV_ERROR != 0 && event.data != 0 { return Err(io::Error::from_raw_os_error(event.data as i32)); }
             if event.filter == libc::EVFILT_READ { ready.readable = true; }
-            if event.filter == libc::EVFILT_EXCEPT && event.fflags & libc::NOTE_OOB != 0 { ready.urgent = true; }
+            if event.filter == libc::EVFILT_EXCEPT && event.fflags & libc::NOTE_OOB != 0 {
+                self.urgent.set(true); ready.urgent = true;
+            }
         }
         Ok(ready)
     }
+    pub fn consumed_urgent(&self) { self.urgent.set(false); }
 }
 #[cfg(windows)]
 pub(super) fn at_mark(stream: &TcpStream) -> io::Result<bool> {

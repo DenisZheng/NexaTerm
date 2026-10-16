@@ -9,7 +9,7 @@ Rlogin 与后续 Rsh 共用的 IPv4 TCP 基础，使用已锁定的 Tokio/libc/w
 - `bind_reserved(local: Ipv4Addr, cancel: &AtomicBool) -> Result<ReservedSocket, SocketError>`。
 - `ReservedSocket::{local_addr, connect(target: SocketAddrV4, cancel: &AtomicBool), listen}`；async connect 返回 `NativeSocket`，listen 消费保留句柄并返回 Tokio listener（尚无 Rsh 协议实现）。
 - `NativeSocket::{from_stream, local_addr, peer_addr, poll_ready, read, write, close}`；独占持有 nonblocking、OOBINLINE=false 的 stream，不提供 clone。`supports_urgent_boundary()` 是当前 adapter 的精确 mark 能力，不能代替协议能力。
-- `RloginReader::new(socket, rows, columns, x_pixels, y_pixels)` 消费**已完成初始交换**的 socket；未来 adapter 必须在 ACK 后构造并恰好转移一次合包尾部。
+- `RloginReader::new(socket, rows, columns, x_pixels, y_pixels)` 消费**已完成初始交换**的 socket；rlogin_connect 在 ACK 后构造并恰好转移一次合包尾部；详见 rlogin-connect.md。
 - `RloginReader::{poll(output, has_capacity), input(bytes), resize(...), write(bytes), close}`；事件为 `Idle / Closed / Data(count) / Control{flush_output, flow, window_frame}`。
 
 ## 3. 数据、平台与资源契约
@@ -18,11 +18,11 @@ Rlogin 与后续 Rsh 共用的 IPv4 TCP 基础，使用已锁定的 Tokio/libc/w
 
 遇到 PermissionDenied 也继续扫描，因为 Windows 独占冲突可能返回 EACCES；全部拒绝返回 AccessDenied，全部占用返回 PortsBusy，混合为 PortsUnavailable。不能按平台名称推断管理员要求。close/drop 回收所属 socket 和 Darwin monitor；不表示远端进程已被杀死。
 
-read/write 单次≤32KiB；read buffer 必须非空。`Some(0)` read 是 EOF，WouldBlock/Interrupted 是 `None`。write 返回实际长度，后续 owner 必须保留未写后缀，串行控制帧与用户输入。poll 非阻塞且先处理 urgent；正常流中的02/10/20/80/FF/NUL不解析成控制。Linux 使用 poll priority/band；Darwin 独占 kqueue，EVFILT_READ 为 level，EVFILT_EXCEPT+NOTE_OOB 使用 EV_CLEAR，EOF不算 urgent。Unix 用 POSIX sockatmark C ABI，禁止硬编码 ioctl 数字。
+read/write 单次≤32KiB；read buffer 必须非空。`Some(0)` read 是 EOF，WouldBlock/Interrupted 是 `None`。write 返回实际长度，后续 owner 必须保留未写后缀，串行控制帧与用户输入。poll 非阻塞且先处理 urgent；正常流中的02/10/20/80/FF/NUL不解析成控制。Linux 使用 poll priority/band；Darwin 独占 kqueue，EVFILT_READ 为 level，EVFILT_EXCEPT+NOTE_OOB 使用 EV_CLEAR，EOF不算 urgent。Darwin将已观察urgent保留为所属monitor的pending状态，只有实际MSG_OOB消费成功才清除；readiness查询和peek都不能吞掉通知。该monitor可移动但不共享给并行reader。Darwin的OOB peek在mark上会清位置标记，因此必须先查询位置：已到mark就直接消费并发控制事件，未到才peek并等待游标推进；不能将peek理解为对位置无副作用。等待urgent字节时若已到mark，不读取后段充当前段隔离数据。Unix 用 POSIX sockatmark C ABI，禁止硬编码 ioctl 数字。
 
 | 当前 adapter | OOB 与边界 | flush 行为 |
 | --- | --- | --- |
-| Linux / macOS | MSG_OOB|MSG_PEEK 后保留控制字节，普通游标到 mark 才消费 | 先发 flush 事件，再每次最多丢弃8KiB前段，保留后段 |
+| Linux / macOS | 未到mark时MSG_OOB|MSG_PEEK并保留控制字节；已到mark时直接消费，不再peek | 先发 flush 事件，再每次最多丢弃8KiB前段，保留后段 |
 | Windows | select exceptfds；非 flush 控制立即以 MSG_OOB 消费；本 adapter 精确 mark 能力为 false | 首次真实 flush 返回 sticky UrgentBoundaryUnavailable；不清隔离区、不读或丢弃普通字节、不发成功控制事件 |
 
 Windows 的实际 provider 探针中，非 inline recv 跨过前后段，SIOCATMARK 未提供所需游标位置；inline 探针也未提供可用位置边界。该差异是当前实现缺口，不是 Windows 精确 flush 已实现或不可实现的结论；完整 Windows Rlogin 能力保持关闭。禁止在正常字节中寻找相同值、清空所有后续数据，或把负向能力测试写成 flush 互通通过。
