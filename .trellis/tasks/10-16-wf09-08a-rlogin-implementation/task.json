@@ -3,7 +3,7 @@
   "name": "wf09-08a-rlogin-implementation",
   "title": "WF-09-08A native Rlogin implementation",
   "description": "",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": "fullstack",
   "scope": null,
   "package": null,
@@ -12,8 +12,8 @@
   "assignee": "codex",
   "createdAt": "2026-10-16",
   "completedAt": null,
-  "branch": null,
-  "base_branch": "docs/wf09-protocol-implementation-plan",
+  "branch": "feat/wf09-08a-rlogin-core",
+  "base_branch": "feat/wf09-07-xdmcp-runner",
   "worktree_path": null,
   "commit": null,
   "pr_url": null,
@@ -24,6 +24,6 @@
     "docs/plans/WF09-PROTOCOL-IMPLEMENTATION-PLAN.md",
     "docs/WORKFLOW_SPEC.md"
   ],
-  "notes": "Implementation planned (L0–L2); explicitly not started in the documentation-only turn. Acceptance: L01–L03、C01/C02.",
+  "notes": "L0 in progress: independent native request/handshake/window framing and loopback TCP fixtures. No IPC, OOB transport, terminal capability or real-server claim; L1/L2 remain open.",
   "meta": {}
 }

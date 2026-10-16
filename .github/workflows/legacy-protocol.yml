@@ -1,0 +1,33 @@
+name: Legacy protocol core
+on:
+  pull_request:
+    paths:
+      - 'src-tauri/src/rlogin/**'
+      - '.github/workflows/legacy-protocol.yml'
+permissions:
+  contents: read
+concurrency:
+  group: legacy-protocol-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  wire:
+    name: Native Rlogin core (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, macos-14, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Compile and run the production wire module with actual loopback TCP
+        shell: python
+        run: |
+          import os, pathlib, subprocess
+          executable = pathlib.Path(os.environ['RUNNER_TEMP']) / ('rlogin-wire-tests.exe' if os.name == 'nt' else 'rlogin-wire-tests')
+          subprocess.run(['rustc', '--edition=2021', '--test', 'src-tauri/src/rlogin/mod.rs', '-o', str(executable)], check=True)
+          subprocess.run([str(executable), '--nocapture'], check=True)
