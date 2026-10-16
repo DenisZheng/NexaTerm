@@ -1,6 +1,6 @@
 # WF-09-07：XDMCP 平台评估
 
-> **后续状态更新（2026-10-16）**：维护者已要求编写实际功能实现计划。开发排期改为 **PLANNED / 未开工**，详见 [三协议实现计划](../plans/WF09-PROTOCOL-IMPLEMENTATION-PLAN.md) 和 WORKFLOW_SPEC v0.7。下文保留原评估时的环境与结论，不再作为整项暂缓开发的依据；尚未取得真实互通证据的事实不变。
+> **后续状态更新（2026-10-16）**：维护者已要求编写实际功能实现计划。后续已授权开工，当前 **IN_PROGRESS / X1 运行核心（Draft PR #67）**，详见 [三协议实现计划](../plans/WF09-PROTOCOL-IMPLEMENTATION-PLAN.md) 和 WORKFLOW_SPEC v0.7。下文保留原评估时的环境与结论，不再作为整项暂缓开发的依据；尚未取得真实互通证据的事实不变。
 
 评估日期：2026-10-16。源码基线：`c1dda4e`。范围依据：`docs/wf09-feature-roadmap` 的 `.trellis/tasks/10-11-wf-09-feature-roadmap/WF-09-07-xdmcp/prd.md`（blob `6c59b11b52b97d6f4df4145e623c80e792c00cf1`）。该项验收允许真实最小演示或三平台阻塞记录。
 

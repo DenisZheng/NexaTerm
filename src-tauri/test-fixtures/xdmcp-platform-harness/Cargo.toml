@@ -1,0 +1,16 @@
+[package]
+name = "nexaterm-xdmcp-platform-harness"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+# Exact versions already present in the application lockfile. No Tauri/GUI stack.
+[dependencies]
+getrandom = "=0.3.4"
+uuid = { version = "=1.26.1", features = ["v4"] }
+
+[target.'cfg(unix)'.dependencies]
+libc = "=0.2.189"
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "=0.61.3", features = ["Win32_Foundation", "Win32_Security_Authorization", "Win32_Storage_FileSystem", "Win32_System_Threading", "Win32_System_JobObjects"] }
