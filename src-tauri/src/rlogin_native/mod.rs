@@ -1,0 +1,91 @@
+//! L1 原生接收/控制组件。握手、会话 owner、IPC 与终端输出队列另行接入。
+use crate::legacy_socket::{NativeSocket, SocketError, MAX_CHUNK};
+use crate::rlogin::{window_size_frame, ProtocolError};
+use std::{collections::VecDeque, time::{Duration, Instant}};
+#[cfg(test)] mod tests;
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum FlowMode { Local, Remote }
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Control { pub flush_output: bool, pub flow: FlowMode, pub window_frame: Option<[u8; 12]> }
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ReceiveEvent { Idle, Closed, Data(usize), Control(Control) }
+pub struct RloginReader {
+    socket: NativeSocket, flow: FlowMode, paused: bool, flushing: bool, closed: bool,
+    window_enabled: bool, window: [u8; 12],
+    urgent_since: Option<Instant>, quarantined: VecDeque<u8>,
+}
+impl RloginReader {
+    /// 仅用于已完成初始交换的所属 socket；未来握手 adapter 负责转移 ACK 尾部。
+    pub fn new(socket: NativeSocket, rows: u16, columns: u16, x_pixels: u16, y_pixels: u16) -> Result<Self, ProtocolError> {
+        Ok(Self { socket, flow: FlowMode::Local, paused: false, flushing: false, closed: false,
+            window_enabled: false, window: window_size_frame(rows, columns, x_pixels, y_pixels)?,
+            urgent_since: None, quarantined: VecDeque::new() })
+    }
+    pub fn poll(&mut self, output: &mut [u8], has_capacity: bool) -> Result<ReceiveEvent, SocketError> {
+        if output.is_empty() || output.len() > MAX_CHUNK { return Err(SocketError::InvalidChunk); }
+        if self.closed { return Ok(ReceiveEvent::Closed); }
+        let ready = self.socket.poll_ready()?;
+        if ready.urgent || self.urgent_since.is_some() {
+            let since = self.urgent_since.get_or_insert_with(Instant::now);
+            if since.elapsed() >= Duration::from_secs(15) { return Err(SocketError::Timeout); }
+            if let Some(bits) = self.socket.urgent()? {
+                self.urgent_since = None;
+                if bits & 0x10 != 0 { self.flow = FlowMode::Remote; self.paused = false; }
+                if bits & 0x20 != 0 { self.flow = FlowMode::Local; }
+                let flush = bits & 0x02 != 0;
+                if flush { self.flushing = true; self.quarantined.clear(); }
+                let window_frame = if bits & 0x80 != 0 { self.window_enabled = true; Some(self.window) } else { None };
+                return Ok(ReceiveEvent::Control(Control { flush_output: flush, flow: self.flow, window_frame }));
+            }
+            // TCP 可以先通知 urgent 指针再收到控制字节；有界隔离前段数据让窗口继续推进。
+            if ready.readable { self.hold_pre_mark()?; }
+            return Ok(ReceiveEvent::Idle);
+        }
+        if self.flushing {
+            if self.socket.at_mark()? { self.flushing = false; }
+            else {
+                let mut discarded = [0_u8; 8192];
+                return match self.socket.read(&mut discarded)? {
+                    Some(0) => { self.closed = true; Ok(ReceiveEvent::Closed) },
+                    _ => Ok(ReceiveEvent::Idle),
+                };
+            }
+        }
+        if !has_capacity || self.paused { return Ok(ReceiveEvent::Idle); }
+        if !self.quarantined.is_empty() {
+            let count = output.len().min(self.quarantined.len());
+            for byte in &mut output[..count] { *byte = self.quarantined.pop_front().unwrap(); }
+            return Ok(ReceiveEvent::Data(count));
+        }
+        if !ready.readable { return Ok(ReceiveEvent::Idle); }
+        match self.socket.read(output)? {
+            Some(0) => { self.closed = true; Ok(ReceiveEvent::Closed) },
+            Some(count) => Ok(ReceiveEvent::Data(count)), None => Ok(ReceiveEvent::Idle),
+        }
+    }
+    fn hold_pre_mark(&mut self) -> Result<(), SocketError> {
+        let capacity = MAX_CHUNK - self.quarantined.len();
+        if capacity == 0 { return Err(SocketError::UrgentBufferFull); }
+        let mut buffer = [0_u8;8192]; let length = capacity.min(buffer.len());
+        match self.socket.read(&mut buffer[..length])? {
+            Some(0) => return Err(SocketError::IoFailed),
+            Some(count) => self.quarantined.extend(&buffer[..count]), None => {},
+        }
+        Ok(())
+    }
+    pub fn input(&mut self, bytes: &[u8]) -> Result<Vec<u8>, SocketError> {
+        if bytes.len() > MAX_CHUNK { return Err(SocketError::InvalidChunk); }
+        let mut remote = Vec::with_capacity(bytes.len());
+        for &byte in bytes {
+            if self.flow == FlowMode::Local && matches!(byte, 0x11 | 0x13) { self.paused = byte == 0x13; }
+            else { remote.push(byte); }
+        }
+        Ok(remote)
+    }
+    pub fn resize(&mut self, rows: u16, columns: u16, x_pixels: u16, y_pixels: u16) -> Result<Option<[u8;12]>, ProtocolError> {
+        self.window = window_size_frame(rows, columns, x_pixels, y_pixels)?;
+        Ok(self.window_enabled.then_some(self.window))
+    }
+    pub fn write(&mut self, bytes: &[u8]) -> Result<Option<usize>, SocketError> { self.socket.write(bytes) }
+    pub fn close(self) -> Result<(), SocketError> { self.socket.close() }
+}

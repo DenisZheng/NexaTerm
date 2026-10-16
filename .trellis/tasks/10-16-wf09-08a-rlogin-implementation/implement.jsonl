@@ -6,3 +6,4 @@
 {"file": ".trellis/spec/backend/security-evidence.md", "reason": "Preserve full scanner and evidence gates"}
 {"file": ".trellis/spec/backend/rlogin-protocol.md", "reason": "L0 exact wire API, rejection privacy, byte budgets and fixture contracts"}
 {"file": ".trellis/tasks/10-16-wf09-08a-rlogin-implementation/research/bsd-rlogin-profile.md", "reason": "Pinned BSD source-port/field/OOB profile constraints; research is not real-server compatibility evidence"}
+{"file": ".trellis/spec/backend/legacy-native-sockets.md", "reason": "Concrete native socket, source-port, OOB/mark/flow/window and test contracts"}

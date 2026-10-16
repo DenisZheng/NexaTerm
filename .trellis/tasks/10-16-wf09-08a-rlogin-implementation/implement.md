@@ -23,3 +23,11 @@
 - 首轮 Linux 通过、macOS9通过/1失败；根因是非阻塞 listener 的 accepted socket 在 macOS 继承模式，fixture 却按阻塞 IO 读取。已显式设置 accepted socket 模式和2秒 IO 超时；没有忽略 WouldBlock、提高截止或修改协议断言。修复后原生三平台全部通过。
 
 下一阶段已核对的 BSD 字段/源端口约束与来源固定在 research/bsd-rlogin-profile.md；未把资料核对标作 L1 实现。
+
+## L1 native foundation (CI pending)
+
+本轮新增共用保留 socket：按1023–512有界扫描、持有真实绑定句柄、Windows 独占绑定、取消/截止与真实 fd 回收。Rlogin 控制器拥有 socket，原生分离 OOB、按 urgent mark flush、处理组合控制位、背压/本地流控和按请求窗口尺寸；未读到 urgent 字节时前段数据有界隔离。
+
+新增原生 socket/控制回归测试；独立 harness 导入生产模块，并要求精确依赖是应用 lockfile 的子集。只为既有 windows-sys 开启 WinSock feature，不引入新版本或新传递依赖。本地无 Rust 工具链，实际执行由三平台 CI 留证。
+
+尚未交付完整握手 adapter、session manager/队列、typed IPC、单次许可、UI 或真实服务端互通；不宣布可用 Rlogin 会话。Rsh 只复用未来可用的 socket 基础，本轮不算 Rsh 已实现。

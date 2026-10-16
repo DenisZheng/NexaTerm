@@ -3,6 +3,11 @@ on:
   pull_request:
     paths:
       - 'src-tauri/src/rlogin/**'
+      - 'src-tauri/src/legacy_socket/**'
+      - 'src-tauri/src/rlogin_native/**'
+      - 'src-tauri/test-fixtures/legacy-socket-harness/**'
+      - 'src-tauri/Cargo.toml'
+      - 'src-tauri/Cargo.lock'
       - '.github/workflows/legacy-protocol.yml'
 permissions:
   contents: read
@@ -11,7 +16,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   wire:
-    name: Native Rlogin core (${{ matrix.os }})
+    name: Native legacy transport (${{ matrix.os }})
     strategy:
       fail-fast: false
       matrix:
@@ -31,3 +36,20 @@ jobs:
           executable = pathlib.Path(os.environ['RUNNER_TEMP']) / ('rlogin-wire-tests.exe' if os.name == 'nt' else 'rlogin-wire-tests')
           subprocess.run(['rustc', '--edition=2021', '--test', 'src-tauri/src/rlogin/mod.rs', '-o', str(executable)], check=True)
           subprocess.run([str(executable), '--nocapture'], check=True)
+      - name: Reuse application dependency pins for the native socket harness
+        shell: python
+        run: |
+          import shutil
+          shutil.copyfile('src-tauri/Cargo.lock', 'src-tauri/test-fixtures/legacy-socket-harness/Cargo.lock')
+      - name: Run production native sockets and OOB over real loopback TCP
+        run: cargo test --manifest-path src-tauri/test-fixtures/legacy-socket-harness/Cargo.toml -- --nocapture
+      - name: Require native harness dependencies to stay inside the application lockfile
+        if: always()
+        shell: python
+        run: |
+          import pathlib, tomllib
+          original = tomllib.loads(pathlib.Path('src-tauri/Cargo.lock').read_text())
+          actual = tomllib.loads(pathlib.Path('src-tauri/test-fixtures/legacy-socket-harness/Cargo.lock').read_text())
+          expected = {(p['name'], p['version'], p.get('checksum')) for p in original['package']}
+          unexpected = [p['name'] for p in actual['package'] if p['name'] != 'nexaterm-legacy-socket-harness' and (p['name'], p['version'], p.get('checksum')) not in expected]
+          assert not unexpected, f'native harness introduced unreviewed dependencies: {unexpected}'
