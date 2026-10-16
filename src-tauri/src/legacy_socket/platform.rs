@@ -91,6 +91,7 @@ impl Monitor {
         for event in &mut changes { event.ident = stream.as_raw_fd() as _; event.flags = libc::EV_ADD | libc::EV_ENABLE; }
         changes[0].filter = libc::EVFILT_READ;
         changes[1].filter = libc::EVFILT_EXCEPT; changes[1].fflags = libc::NOTE_OOB;
+        changes[1].flags |= libc::EV_CLEAR; // 清除已交付的 NOTE_OOB，避免消费后重复成为 urgent。
         let timeout = libc::timespec { tv_sec:0, tv_nsec:0 };
         let result = unsafe { libc::kevent(owned.0.as_raw_fd(), changes.as_ptr(),2,std::ptr::null_mut(),0,&timeout) };
         if result < 0 { Err(io::Error::last_os_error()) } else { Ok(owned) }
@@ -134,4 +135,11 @@ pub(super) fn pending_bytes_fixture(stream: &TcpStream) -> io::Result<u32> {
         #[cfg(windows)] return Err(last_error());
         #[cfg(unix)] return Err(io::Error::last_os_error());
     }
+}
+#[cfg(all(test, windows))]
+pub(super) fn inline_fixture(stream: &TcpStream) -> io::Result<()> {
+    let value = 1_i32;
+    let result = unsafe { setsockopt(stream.as_raw_socket() as _, SOL_SOCKET, SO_OOBINLINE,
+        &value as *const _ as *const u8, std::mem::size_of_val(&value) as _) };
+    if result == 0 { Ok(()) } else { Err(last_error()) }
 }

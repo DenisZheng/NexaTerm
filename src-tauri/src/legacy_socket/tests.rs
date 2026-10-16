@@ -67,7 +67,9 @@ fn cancellation_timeout_and_actual_task_abort_drop_owned_pending_sockets() {
         let address = socket.local_addr().unwrap(); let cancel = Arc::new(AtomicBool::new(false)); let copy = cancel.clone();
         let thread = if cancelled { Some(std::thread::spawn(move || { std::thread::sleep(Duration::from_millis(15)); copy.store(true, Ordering::Release); })) } else { None };
         let pending = async move { let _owned = socket; std::future::pending::<io::Result<()>>().await };
-        let result = rt.block_on(wait_connect(pending, &cancel, Instant::now() + Duration::from_millis(80)));
+        // 取消场景与80ms超时场景分开；CI 调度不能把正确的取消误归为已到期。
+        let deadline = if cancelled { Duration::from_secs(2) } else { Duration::from_millis(80) };
+        let result = rt.block_on(wait_connect(pending, &cancel, Instant::now() + deadline));
         assert_eq!(result, Err(if cancelled { SocketError::Cancelled } else { SocketError::Timeout }));
         if let Some(thread) = thread { thread.join().unwrap(); } rebound(address);
     }
@@ -115,4 +117,22 @@ fn native_urgent_mark_and_peek_preserve_normal_stream_boundaries() {
         (normal.len()>=11).then_some(())
     });
     assert_eq!(normal,b"beforeafter"); assert_eq!(peek.unwrap(),Some(0x82)); assert_eq!(consume.unwrap(),Some(0x82));
+    assert!(!socket.poll_ready().unwrap().urgent, "consumed OOB remained ready after passing its mark");
+}
+#[cfg(windows)]
+#[test]
+fn windows_inline_native_mark_probe() {
+    let (mut socket, mut peer) = pair(); platform::inline_fixture(&socket.stream).unwrap();
+    peer.write_all(b"before").unwrap(); send_urgent_fixture(&peer,0x82); peer.write_all(b"after").unwrap();
+    let mut result = Vec::new(); let mut buffer = [0_u8;128];
+    until(|| {
+        let mark = platform::at_mark(&socket.stream); let ready = socket.poll_ready();
+        let read = socket.read(&mut buffer);
+        if let Ok(Some(n)) = read {
+            println!("windows_inline_probe mark={mark:?} ready={ready:?} read={read:?}");
+            assert_ne!(n,0); result.extend_from_slice(&buffer[..n]);
+        }
+        (result.len()>=12).then_some(())
+    });
+    assert_eq!(result,b"before\x82after");
 }
