@@ -181,3 +181,45 @@ fn resolver_errors_are_classified_without_raw_details_and_release_capacity() {
         assert_eq!(engine.resolvers.available_permits(), MAX_CONCURRENT);
     });
 }
+
+#[test]
+fn local_port_rejects_non_loopback_targets_and_zero_before_io() {
+    runtime().block_on(async {
+        let engine = ProbeEngine::default();
+        let _occupied = engine.operations.clone().acquire_many_owned(MAX_CONCURRENT as u32).await.unwrap();
+        for host in ["localhost", "::1", "0.0.0.0", "127.0.0.2", "example.invalid"] {
+            assert_eq!(engine.probe(ProbeKind::LocalPort, host, 22, &ProbeCancellation::default()).await.reason, ProbeReason::InvalidHost);
+        }
+        assert_eq!(engine.probe(ProbeKind::LocalPort, "127.0.0.1", 0, &ProbeCancellation::default()).await.reason, ProbeReason::InvalidPort);
+    });
+}
+
+#[test]
+fn local_port_detects_occupied_socket_without_dns_and_releases_bind() {
+    runtime().block_on(async {
+        let engine = ProbeEngine::default();
+        let _dns_full = engine.resolvers.clone().acquire_many_owned(MAX_CONCURRENT as u32).await.unwrap();
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let occupied = engine.probe(ProbeKind::LocalPort, "127.0.0.1", port, &ProbeCancellation::default()).await;
+        assert_eq!(occupied.reason, ProbeReason::AddressInUse);
+        assert_eq!(occupied.address_count, 0);
+        drop(listener);
+        assert_eq!(engine.probe(ProbeKind::LocalPort, "127.0.0.1", port, &ProbeCancellation::default()).await.reason, ProbeReason::PortAvailable);
+        let _rebound = tokio::net::TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, port)).await.unwrap();
+        assert_eq!(engine.operations.available_permits(), MAX_CONCURRENT);
+    });
+}
+
+#[test]
+fn bind_errors_are_fixed_and_precancelled_port_never_binds() {
+    use std::io::{Error, ErrorKind};
+    for (kind, reason) in [(ErrorKind::PermissionDenied, ProbeReason::PermissionDenied), (ErrorKind::Other, ProbeReason::BindFailed)] {
+        assert_eq!(local_bind_outcome(Err(Error::new(kind, "private detail"))), (ProbeStatus::Failed, reason));
+    }
+    runtime().block_on(async {
+        let cancellation = ProbeCancellation::default();
+        cancellation.cancel();
+        assert_eq!(ProbeEngine::default().probe(ProbeKind::LocalPort, "127.0.0.1", 22, &cancellation).await.status, ProbeStatus::Cancelled);
+    });
+}

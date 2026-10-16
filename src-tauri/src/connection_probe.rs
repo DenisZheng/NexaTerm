@@ -6,7 +6,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
-use tokio::net::TcpStream;
+use tokio::net::{TcpSocket, TcpStream};
 use tokio::sync::{watch, Semaphore};
 
 const MAX_CONCURRENT: usize = 4;
@@ -16,7 +16,7 @@ const ADDRESS_TIMEOUT: Duration = Duration::from_secs(1);
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum ProbeKind { Dns, Tcp }
+pub enum ProbeKind { Dns, Tcp, LocalPort }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -27,6 +27,7 @@ pub enum ProbeStatus { Success, Cancelled, TimedOut, Unavailable, Failed, Invali
 pub enum ProbeReason {
     Resolved, Connected, Cancelled, Deadline, Busy, InvalidHost, InvalidPort,
     ResolutionFailed, NoAddresses, ConnectionRefused, ConnectFailed, AddressLimit, WorkerUnavailable,
+    PortAvailable, AddressInUse, PermissionDenied, BindFailed,
 }
 
 #[derive(Debug, Serialize)]
@@ -74,12 +75,13 @@ impl ProbeEngine {
             addresses_truncated: false };
         let outcome = if cancellation.is_cancelled() {
             (ProbeStatus::Cancelled, ProbeReason::Cancelled)
-        } else if !valid_host(host) {
+        } else if !valid_host(host) || (kind == ProbeKind::LocalPort && host != "127.0.0.1") {
             (ProbeStatus::InvalidInput, ProbeReason::InvalidHost)
-        } else if kind == ProbeKind::Tcp && port == 0 {
+        } else if kind != ProbeKind::Dns && port == 0 {
             (ProbeStatus::InvalidInput, ProbeReason::InvalidPort)
         } else if let Ok(_permit) = self.operations.clone().try_acquire_owned() {
             bounded(cancellation, TOTAL_TIMEOUT, async {
+                if kind == ProbeKind::LocalPort { return bind_local_port(port); }
                 let addresses = match self.resolve(host, port).await {
                     Ok(value) => value,
                     Err(outcome) => return outcome,
@@ -115,6 +117,26 @@ impl ProbeEngine {
             let _permit = permit;
             resolver().map_err(|_| (ProbeStatus::Failed, ProbeReason::ResolutionFailed))
         }).await.map_err(|_| (ProbeStatus::Unavailable, ProbeReason::WorkerUnavailable))?
+    }
+}
+
+fn bind_local_port(port: u16) -> Outcome {
+    // Bind only: never listen, accept, resolve names or retain a reservation.
+    let result = TcpSocket::new_v4().and_then(|socket| {
+        socket.bind(SocketAddr::from(([127, 0, 0, 1], port)))
+    });
+    local_bind_outcome(result)
+}
+
+fn local_bind_outcome(result: std::io::Result<()>) -> Outcome {
+    use std::io::ErrorKind;
+    match result {
+        Ok(()) => (ProbeStatus::Success, ProbeReason::PortAvailable),
+        Err(error) => (ProbeStatus::Failed, match error.kind() {
+            ErrorKind::AddrInUse => ProbeReason::AddressInUse,
+            ErrorKind::PermissionDenied => ProbeReason::PermissionDenied,
+            _ => ProbeReason::BindFailed,
+        }),
     }
 }
 

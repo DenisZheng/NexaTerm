@@ -1,4 +1,11 @@
 {
+  "localProbe.local_port": "Local port availability",
+  "localProbe.localPortScope": "Checks only TCP binding on 127.0.0.1. The port is released immediately; other addresses and IPv6 are not checked.",
+  "localProbe.localPortMetrics": "IPv4 loopback bind check · {ms} ms",
+  "localProbe.reason.port_available": "The port could be bound at this instant. It is not reserved; recheck when starting your service.",
+  "localProbe.reason.address_in_use": "The loopback port is occupied. Stop the service you own or choose another port.",
+  "localProbe.reason.permission_denied": "The operating system denied binding this port. Check system policy or choose an allowed port.",
+  "localProbe.reason.bind_failed": "The loopback bind failed. Check your local network settings and retry.",
   "connectionDiagnosis.phase": "Failure stage",
   "connectionDiagnosis.id": "Diagnostic ID: {id}",
   "connectionDiagnosis.stage.connect": "SSH connection / handshake",

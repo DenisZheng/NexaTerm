@@ -4,7 +4,7 @@
 A backend core for explicit connection diagnosis before SSH exists. Current remote `network_tools` still runs through SSH and remains unchanged. The core is exposed through the bounded reservation owner described below. No credential, Host Key, proxy/jump or terminal side effects. Future integration must label results as local direct-route probes, not end-to-end SSH reachability.
 
 ## 2. Signatures
-`ProbeEngine::probe(&self, kind: ProbeKind, host: &str, port: u16, cancellation: &ProbeCancellation) -> ProbeResult` is async. `ProbeKind` is Dns/Tcp. `ProbeCancellation::cancel()` is sticky and clone-shared; create a fresh token per retry. Engine clones share limits; IPC registers one engine per app, never one per call.
+`ProbeEngine::probe(&self, kind: ProbeKind, host: &str, port: u16, cancellation: &ProbeCancellation) -> ProbeResult` is async. `ProbeKind` is Dns/Tcp/LocalPort. `ProbeCancellation::cancel()` is sticky and clone-shared; create a fresh token per retry. Engine clones share limits; IPC registers one engine per app, never one per call.
 
 ## 3. Contract and lifecycle
 Fixed five-second deadline includes resolver and all TCP attempts; up to sixteen addresses, one-second per-address TCP timeout. Four operation permits, four system resolver permits, acquired without waiting; no unbounded queue. IP literals bypass DNS. Resolver permit moves into `spawn_blocking` and survives caller timeout/cancel/drop until actual system lookup finishes. OS resolution cannot be forcibly interrupted. RAII releases sockets and operation permits on completion or caller drop. TCP sends no application payload and drops the connected socket immediately.
@@ -34,7 +34,7 @@ Wrong: drop the resolver JoinHandle and release its quota when the UI cancels, o
 ### Signatures and request contract
 App-managed `LocalProbeManager` owns one shared engine and at most 16 transient reservations. Main webview only:
 - `local_probe_reserve() -> Result<String, AppError>` returns a UUID without starting I/O.
-- `local_probe_run(reservation_id: String, request: { kind: "dns" | "tcp", host: String, port: u16 }) -> Result<ProbeResult, AppError>` starts the reservation once. Result schema is unchanged.
+- `local_probe_run(reservation_id: String, request: { kind: "dns" | "tcp" | "local_port", host: String, port: u16 }) -> Result<ProbeResult, AppError>` starts the reservation once. Result schema is unchanged.
 - `local_probe_cancel(reservation_id: String) -> Result<(), AppError>` removes unused reservations or signals an active token. Missing/wrong-owner IDs are idempotent and reveal no entry.
 Typed React wrappers are `localProbeReserve/Run/Cancel` in shared/tauri/commands.ts. IDs live only in operation refs. Unused reservations expire after 15 seconds; reserve lazily prunes expired entries and begin rejects/removes expired leases. Active entries are never evicted by age.
 
@@ -47,3 +47,8 @@ Good: reserve → run → result → lease drop removes entry. Base: reserve →
 
 ### Wrong vs correct
 Wrong: fire run before obtaining a cancellation handle, or remove active entries simply because they are old. Correct: reserve first, consume exactly once, signal active cancellation, and let RAII own completion. Never infer process/socket/DNS termination from the cancel acknowledgement alone.
+
+## Local-port binding (WF-09-06D)
+Scope: explicit IPv4 loopback bind availability, not a persistent port reservation or process inventory. `ProbeKind::LocalPort` / `local_port` requires host exactly127.0.0.1 and port1–65535 before capacity is acquired. Other addresses (including localhost and ::1) return invalid_host. Same reservation, four-operation limit, cancellation and five-second bound apply; DNS capacity is not used. A numeric TcpSocket binds then drops without listening/accepting; no application payload or process data.
+Result reasons: success/port_available; failed/address_in_use, permission_denied or bind_failed. Address count remains0. No raw errors. UI labels instantaneous IPv4 scope and absence of reservation even after the selector changes. Existing DNS/TCP contracts are unchanged.
+Good: bind then release allows the next service to bind. Base: current loopback listener reports occupied. Bad: external host/port0 rejected before I/O. Tests assert occupied socket, release/rebind, exhausted DNS quota bypass, fixed error mapping and pre-cancel. Real platform GUI/native acceptance remains MANUAL_REQUIRED. Wrong: display TCP refusal as port availability or promise IPv6/any-interface availability. Correct: directly test the bounded explicit bind and state its limited scope.

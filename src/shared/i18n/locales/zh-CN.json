@@ -1,4 +1,11 @@
 {
+  "localProbe.local_port": "本地端口可用性",
+  "localProbe.localPortScope": "仅检查 127.0.0.1 的 TCP 绑定，检查后立即释放；不检查其他地址或 IPv6。",
+  "localProbe.localPortMetrics": "IPv4 回环绑定检查 · {ms} 毫秒",
+  "localProbe.reason.port_available": "此刻可以绑定该端口，端口未被保留；启动服务时仍需重新检查。",
+  "localProbe.reason.address_in_use": "回环端口已被占用。停止你管理的服务，或选择其他端口。",
+  "localProbe.reason.permission_denied": "操作系统拒绝绑定该端口。请检查系统策略，或选择允许使用的端口。",
+  "localProbe.reason.bind_failed": "回环端口绑定失败。请检查本机网络设置后重试。",
   "connectionDiagnosis.phase": "失败阶段",
   "connectionDiagnosis.id": "诊断编号：{id}",
   "connectionDiagnosis.stage.connect": "SSH 连接 / 握手",
