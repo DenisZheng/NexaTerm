@@ -4,3 +4,4 @@
 {"file": ".trellis/spec/backend/tauri-command-contracts.md", "reason": "Review actual signatures and owner validation before registering IPC"}
 {"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Shared component, prototype and lazy module conventions"}
 {"file": ".trellis/spec/backend/security-evidence.md", "reason": "Preserve full scanner and evidence gates"}
+{"file": ".trellis/spec/backend/xdmcp-runner.md", "reason": "Concrete X1 worker, platform process lifetime, IPC and test contracts"}

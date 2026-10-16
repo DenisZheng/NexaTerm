@@ -3,7 +3,7 @@
   "name": "wf09-07-xdmcp-implementation",
   "title": "WF-09-07 bundled X server and XDMCP implementation",
   "description": "",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": "fullstack",
   "scope": null,
   "package": null,
@@ -12,7 +12,7 @@
   "assignee": "codex",
   "createdAt": "2026-10-16",
   "completedAt": null,
-  "branch": null,
+  "branch": "feat/wf09-07-xdmcp-runner",
   "base_branch": "docs/wf09-protocol-implementation-plan",
   "worktree_path": null,
   "commit": null,
@@ -24,6 +24,6 @@
     "docs/plans/WF09-PROTOCOL-IMPLEMENTATION-PLAN.md",
     "docs/WORKFLOW_SPEC.md"
   ],
-  "notes": "Implementation planned (X0–X3); explicitly not started in the documentation-only turn. Acceptance: X01–X04、C01/C02.",
+  "notes": "X1 implementation in progress: native external-engine worker/lease, main-only IPC, process group/job and auth cleanup; seven native process/contract tests pending three-platform CI. No bundled engine/UI/desktop claim; X0 final packaging choice and X2/X3 remain open.",
   "meta": {}
 }

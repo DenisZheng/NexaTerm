@@ -49,6 +49,8 @@ mod vnc;
 mod webdav;
 mod webdav_sync;
 mod x11_forward;
+mod xdmcp;
+mod xdmcp_runtime;
 use storage_vault::VaultState;
 use tauri::Manager;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -66,6 +68,7 @@ pub fn run() {
         .manage(network_tools::NetworkDiagnosticSessionManager::default())
         .manage(connection_probe_runtime::LocalProbeManager::default())
         .manage(file_service::FileServiceManager::default())
+        .manage(xdmcp::XdmcpManager::default())
         .manage(performance_probe::PerformanceProbeState::default())
         .manage(remote_files::RemoteFileManager::default())
         .manage(terminal::manager::TerminalManager::default())
@@ -82,6 +85,7 @@ pub fn run() {
             if matches!(event, tauri::WindowEvent::Destroyed) {
                 window.state::<connection_probe_runtime::LocalProbeManager>().cancel_window(window.label());
                 window.state::<file_service::FileServiceManager>().cancel_window(window.label());
+                window.state::<xdmcp::XdmcpManager>().cancel_window(window.label());
             }
         })
         .setup(|app| {
@@ -240,6 +244,11 @@ pub fn run() {
             commands::docker_engine_save_config,
             commands::docker_exec_invalidate_connection,
             commands::network_diagnostic_run,
+            xdmcp_runtime::xdmcp_capabilities,
+            xdmcp_runtime::xdmcp_reserve,
+            xdmcp_runtime::xdmcp_start,
+            xdmcp_runtime::xdmcp_stop,
+            xdmcp_runtime::xdmcp_status,
             file_service_runtime::file_service_reserve,
             file_service_runtime::file_service_start,
             file_service_runtime::file_service_stop,
@@ -289,7 +298,11 @@ pub fn run() {
             // Tauri 2 的 `App::run` 在事件循环结束后直接 `process::exit`，托管状态不会被 Drop，
             // 因此 MCP sidecar 子进程必须在 `RunEvent::Exit` 回调里显式收尾，否则会在应用退出后残留。
             if let tauri::RunEvent::Exit = event {
-                tauri::async_runtime::block_on(app.state::<file_service::FileServiceManager>().shutdown());
+                tauri::async_runtime::block_on(async {
+                    let files = app.state::<file_service::FileServiceManager>();
+                    let desktops = app.state::<xdmcp::XdmcpManager>();
+                    tokio::join!(files.shutdown(), desktops.shutdown());
+                });
                 app.state::<mcp::McpRemoteServiceManager>().shutdown();
             }
         });
