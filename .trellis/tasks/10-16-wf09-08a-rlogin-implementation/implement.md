@@ -14,7 +14,7 @@
 
 已实现无外部依赖的原生请求编码、初始 ACK/拒绝增量处理、原样返回 banner 尾部、固定错误与1024字节拒绝上限，以及12字节窗口帧。十项测试涵盖字节契约、每种非零拒绝码、分片/合包/EOF、UTF-8字段预算、复用拒绝，以及三个真实 loopback TCP fixture。独立三平台 workflow 直接编译生产模块；完整应用 CI 同时保留。本地无 Rust 工具链，执行结果由 CI 记录。
 
-尚未实现 urgent/OOB、flow control/flush、保留源端口、连接许可、终端 manager/IPC/UI 或真实服务端联调；当前不提供可用的 Rlogin 会话入口，不把 ACK 作为登录成功。
+L0 交付时未实现 urgent/OOB、flow control/flush、保留源端口；这些后续组件的当前状态见下节。连接许可、终端 manager/IPC/UI 和真实服务端联调仍未完成，不把 ACK 作为登录成功。
 
 代码基准 `82af029bdf45a9dbf67943ee2760df6fb552a825`；[Draft #68](https://github.com/DenisZheng/NexaTerm/pull/68)，基于 #67。
 
@@ -24,10 +24,12 @@
 
 下一阶段已核对的 BSD 字段/源端口约束与来源固定在 research/bsd-rlogin-profile.md；未把资料核对标作 L1 实现。
 
-## L1 native foundation (CI pending)
+## L1 native foundation
 
-本轮新增共用保留 socket：按1023–512有界扫描、持有真实绑定句柄、Windows 独占绑定、取消/截止与真实 fd 回收。Rlogin 控制器拥有 socket，原生分离 OOB、按 urgent mark flush、处理组合控制位、背压/本地流控和按请求窗口尺寸；未读到 urgent 字节时前段数据有界隔离。
+代码基准 `76ddffecf8b308272ab441c9391922d08b0b8869`；[Draft #69](https://github.com/DenisZheng/NexaTerm/pull/69)，基于 #68。实现共用保留 socket：1023–512有界扫描、持有真实绑定句柄、Windows独占绑定、取消/截止与真实句柄回收。Rlogin控制器实现原生OOB分离、组合控制位、窗口请求/resize、本地流控与背压；Unix精确flush通过，Windows当前adapter缺失精确边界，真实flush明确失败并保留数据，不能标作完整协议可用。
 
-新增原生 socket/控制回归测试；独立 harness 导入生产模块，并要求精确依赖是应用 lockfile 的子集。只为既有 windows-sys 开启 WinSock feature，不引入新版本或新传递依赖。本地无 Rust 工具链，实际执行由三平台 CI 留证。
+- [x] 已执行三平台生产模块 harness：Linux24/macOS24/Windows25通过，无skip/ignore；应用锁子集核对通过。Unix CI真实低端口结果为AccessDenied，Windows实际连接源端口与所持低端口一致，不将前者称为协议联调成功。
+- [x] [完整应用 CI #620](https://github.com/DenisZheng/NexaTerm/actions/runs/38932285024)：7个实际执行job全通过；Rust Linux/macOS498、Windows500通过，Linux另有4个既有ignored；前端888通过/1todo，类型/构建/source/security/license/fixture全部通过。条件打包未触发。
+- [ ] Windows精确flush backend、完整握手adapter、session manager/队列、typed IPC、单次许可、UI和真实rlogind互通继续开发。L1整体未完成；本轮不算Rsh已实现。
 
-尚未交付完整握手 adapter、session manager/队列、typed IPC、单次许可、UI 或真实服务端互通；不宣布可用 Rlogin 会话。Rsh 只复用未来可用的 socket 基础，本轮不算 Rsh 已实现。
+只为既有windows-sys开启WinSock feature，无新crate版本或传递依赖。详细平台证据、失败根因和后续资源约束见 [research/native-socket-evidence.md](research/native-socket-evidence.md)。收口只修改文档、注释和测试名称，运行逻辑及断言不变。本地无Rust工具链，实际Rust执行以CI为准。

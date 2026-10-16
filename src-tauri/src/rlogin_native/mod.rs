@@ -55,7 +55,7 @@ impl RloginReader {
         }
         if let Some(expected) = self.pending_urgent {
             if self.socket.at_mark()? {
-                // 留住 OOB 字节直到普通 read 到达 mark；提前读走会让 Windows 丢失边界。
+                // Unix 在普通 read 到达 mark 后消费 OOB，按已验证的位置语义结束前段。
                 let Some(actual) = self.socket.urgent(false)? else { return Ok(ReceiveEvent::Idle); };
                 if actual != expected { return Err(SocketError::IoFailed); }
                 self.pending_urgent = None; self.flushing = false;

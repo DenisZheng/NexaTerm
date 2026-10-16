@@ -44,7 +44,7 @@ fn native_oob_window_requests_use_latest_size_and_do_not_appear_in_data() {
     assert_eq!(control(&mut reader, false).window_frame, Some(changed)); assert_eq!(data(&mut reader, 1), b"!");
 }
 #[test]
-fn native_flush_discards_only_before_mark_and_combined_flags_work_under_backpressure() {
+fn native_flush_is_exact_where_supported_or_reports_limit_without_discarding_data() {
     let (mut reader, mut peer) = reader();
     peer.write_all(b"discard").unwrap(); send_urgent_fixture(&peer, 0xb2); peer.write_all(b"keep\x80").unwrap();
     #[cfg(windows)] {
