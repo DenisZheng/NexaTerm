@@ -9,7 +9,7 @@ Rlogin 与后续 Rsh 共用的 IPv4 TCP 基础，使用已锁定的 Tokio/libc/w
 - `bind_reserved(local: Ipv4Addr, cancel: &AtomicBool) -> Result<ReservedSocket, SocketError>`。
 - `ReservedSocket::{local_addr, connect(target: SocketAddrV4, cancel: &AtomicBool), listen}`；async connect 返回 `NativeSocket`，listen 消费保留句柄并返回 Tokio listener（尚无 Rsh 协议实现）。
 - `NativeSocket::{from_stream, local_addr, peer_addr, poll_ready, read, write, close}`；独占持有 nonblocking、OOBINLINE=false 的 stream，不提供 clone。`supports_urgent_boundary()` 是当前 adapter 的精确 mark 能力，不能代替协议能力。
-- `RloginReader::new(socket, rows, columns, x_pixels, y_pixels)` 消费**已完成初始交换**的 socket；未来 adapter 必须在 ACK 后构造并恰好转移一次合包尾部。
+- `RloginReader::new(socket, rows, columns, x_pixels, y_pixels)` 消费**已完成初始交换**的 socket；rlogin_connect 在 ACK 后构造并恰好转移一次合包尾部；详见 rlogin-connect.md。
 - `RloginReader::{poll(output, has_capacity), input(bytes), resize(...), write(bytes), close}`；事件为 `Idle / Closed / Data(count) / Control{flush_output, flow, window_frame}`。
 
 ## 3. 数据、平台与资源契约

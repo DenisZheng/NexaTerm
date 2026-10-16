@@ -33,3 +33,11 @@ L0 交付时未实现 urgent/OOB、flow control/flush、保留源端口；这些
 - [ ] Windows精确flush backend、完整握手adapter、session manager/队列、typed IPC、单次许可、UI和真实rlogind互通继续开发。L1整体未完成；本轮不算Rsh已实现。
 
 只为既有windows-sys开启WinSock feature，无新crate版本或传递依赖。详细平台证据、失败根因和后续资源约束见 [research/native-socket-evidence.md](research/native-socket-evidence.md)。收口只修改文档、注释和测试名称，运行逻辑及断言不变。本地无Rust工具链，实际Rust执行以CI为准。
+
+## L1 establish / ACK adapter（下一刀）
+
+- [x] 先验证BSD profile/地址/窗口；复用L0编码，不截断或静默改参数。
+- [x] connect接收绝对截止，全部建立阶段复用同一15秒预算；处理partial write、增量ACK/拒绝、取消/EOF/drop。
+- [x] ACK尾部转入现有reader有界区，恰好一次且支持背压/urgent；无登录成功推断。
+- [ ] loopback回归验证请求、合包尾部、固定拒绝错误、无ACK EOF、取消/超时/实际task abort回收。
+- [ ] 更新规范和生产模块harness，原生三平台与完整CI通过后维护堆叠Draft PR。

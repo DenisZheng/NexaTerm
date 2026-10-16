@@ -10,7 +10,7 @@ mod platform;
 #[cfg(test)] pub(crate) mod fixture;
 pub const MAX_CHUNK: usize = 32 * 1024;
 pub const CONNECT_TIMEOUT: Duration = Duration::from_secs(15);
-const CANCEL_POLL: Duration = Duration::from_millis(25);
+pub(crate) const CANCEL_POLL: Duration = Duration::from_millis(25);
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SocketError { InvalidAddress, InvalidChunk, UrgentBufferFull, UrgentBoundaryUnavailable, AccessDenied, PortsBusy, PortsUnavailable,
@@ -32,7 +32,7 @@ impl std::fmt::Display for SocketError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { f.write_str(self.code()) }
 }
 impl std::error::Error for SocketError {}
-fn valid(address: Ipv4Addr) -> bool { !address.is_unspecified() && !address.is_multicast() && !address.is_broadcast() }
+pub(crate) fn valid(address: Ipv4Addr) -> bool { !address.is_unspecified() && !address.is_multicast() && !address.is_broadcast() }
 pub struct ReservedSocket(TcpSocket);
 impl std::fmt::Debug for ReservedSocket {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { f.write_str("ReservedSocket{..}") }
@@ -63,8 +63,12 @@ fn choose_port<T>(cancel: &AtomicBool, mut bind: impl FnMut(u16) -> io::Result<T
 impl ReservedSocket {
     pub fn local_addr(&self) -> Result<SocketAddr, SocketError> { self.0.local_addr().map_err(|_| SocketError::IoFailed) }
     pub async fn connect(self, target: SocketAddrV4, cancel: &AtomicBool) -> Result<NativeSocket, SocketError> {
+        self.connect_until(target, cancel, Instant::now() + CONNECT_TIMEOUT).await
+    }
+    pub(crate) async fn connect_until(self, target: SocketAddrV4, cancel: &AtomicBool, deadline: Instant) -> Result<NativeSocket, SocketError> {
         if !valid(*target.ip()) || target.port() == 0 { return Err(SocketError::InvalidAddress); }
-        let stream = wait_connect(self.0.connect(target.into()), cancel, Instant::now() + CONNECT_TIMEOUT).await?;
+        let deadline = deadline.min(Instant::now() + CONNECT_TIMEOUT);
+        let stream = wait_connect(self.0.connect(target.into()), cancel, deadline).await?;
         if cancel.load(Ordering::Acquire) { return Err(SocketError::Cancelled); }
         NativeSocket::from_stream(stream.into_std().map_err(|_| SocketError::IoFailed)?)
     }

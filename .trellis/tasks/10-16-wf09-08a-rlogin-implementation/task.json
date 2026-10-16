@@ -12,11 +12,11 @@
   "assignee": "codex",
   "createdAt": "2026-10-16",
   "completedAt": null,
-  "branch": "feat/wf09-08a-rlogin-native-socket",
-  "base_branch": "feat/wf09-08a-rlogin-core",
+  "branch": "feat/wf09-08a-rlogin-handshake",
+  "base_branch": "feat/wf09-08a-rlogin-native-socket",
   "worktree_path": null,
   "commit": null,
-  "pr_url": "https://github.com/DenisZheng/NexaTerm/pull/69",
+  "pr_url": null,
   "subtasks": [],
   "children": [],
   "parent": "09-23-nexaterm-workflow-mainline",
@@ -24,6 +24,6 @@
     "docs/plans/WF09-PROTOCOL-IMPLEMENTATION-PLAN.md",
     "docs/WORKFLOW_SPEC.md"
   ],
-  "notes": "L0 passed. L1 socket/control foundation: native harness Linux/macOS24, Windows25 passed; full CI620 all7 executed jobs passed (Rust Linux/macOS498, Windows500). Unix exact flush verified; current Windows adapter explicitly rejects flush without discarding data. Windows exact boundary, handshake adapter, owner/IPC/UI and real interop remain; task stays in_progress.",
+  "notes": "L0 passed. L1 socket/control foundation: native harness Linux/macOS24, Windows25 passed; full CI620 all7 executed jobs passed (Rust Linux/macOS498, Windows500). Unix exact flush verified; current Windows adapter explicitly rejects flush without discarding data. Windows exact boundary, handshake adapter, owner/IPC/UI and real interop remain; task stays in_progress. Next slice implemented, CI pending: native establish/ACK-tail adapter under one total deadline; no IPC/UI or full Windows capability.",
   "meta": {}
 }

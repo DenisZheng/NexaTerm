@@ -1,4 +1,4 @@
-//! L1 原生接收/控制组件。握手、会话 owner、IPC 与终端输出队列另行接入。
+//! L1 原生接收/控制组件。握手由 rlogin_connect 接入，会话 owner/IPC/终端队列另行开发。
 use crate::legacy_socket::{NativeSocket, SocketError, MAX_CHUNK};
 use crate::rlogin::{window_size_frame, ProtocolError};
 use std::{collections::VecDeque, time::{Duration, Instant}};
@@ -17,11 +17,16 @@ pub struct RloginReader {
     failed: Option<SocketError>,
 }
 impl RloginReader {
-    /// 仅用于已完成初始交换的所属 socket；未来握手 adapter 负责转移 ACK 尾部。
+    /// 仅用于已完成初始交换的所属 socket；rlogin_connect 将 ACK 尾部转入有界区。
     pub fn new(socket: NativeSocket, rows: u16, columns: u16, x_pixels: u16, y_pixels: u16) -> Result<Self, ProtocolError> {
         Ok(Self { socket, flow: FlowMode::Local, paused: false, flushing: false, closed: false,
             window_enabled: false, window: window_size_frame(rows, columns, x_pixels, y_pixels)?,
             urgent_since: None, quarantined: VecDeque::new(), pending_urgent: None, failed: None })
+    }
+    /// 建立 adapter 在交付 owner 前调用一次；ACK 合包尾部与后续 urgent 共用有界未渲染区。
+    pub(crate) fn seed_initial(&mut self, bytes: &[u8]) -> Result<(), SocketError> {
+        if bytes.len() > MAX_CHUNK - self.quarantined.len() { return Err(SocketError::UrgentBufferFull); }
+        self.quarantined.extend(bytes); Ok(())
     }
     pub fn poll(&mut self, output: &mut [u8], has_capacity: bool) -> Result<ReceiveEvent, SocketError> {
         if output.is_empty() || output.len() > MAX_CHUNK { return Err(SocketError::InvalidChunk); }

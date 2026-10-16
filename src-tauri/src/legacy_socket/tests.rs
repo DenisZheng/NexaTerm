@@ -99,6 +99,16 @@ fn nonblocking_reads_byte_budgets_and_peer_eof_have_distinct_results() {
     until(|| socket.read(&mut buffer).unwrap().filter(|n| *n == 0));
 }
 #[test]
+fn expired_shared_deadline_drops_the_reserved_handle_without_connecting() {
+    let listener = std::net::TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).unwrap(); listener.set_nonblocking(true).unwrap();
+    let SocketAddr::V4(target) = listener.local_addr().unwrap() else { unreachable!() };
+    let socket = TcpSocket::new_v4().unwrap(); socket.bind((Ipv4Addr::LOCALHOST, 0).into()).unwrap();
+    let address = socket.local_addr().unwrap();
+    let result = runtime().block_on(ReservedSocket(socket).connect_until(target, &AtomicBool::new(false), Instant::now()));
+    assert_eq!(result.err(), Some(SocketError::Timeout)); rebound(address);
+    assert_eq!(listener.accept().unwrap_err().kind(), io::ErrorKind::WouldBlock);
+}
+#[test]
 fn native_urgent_mark_and_peek_preserve_normal_stream_boundaries() {
     let (mut socket, mut peer) = pair();
     peer.write_all(b"before").unwrap(); send_urgent_fixture(&peer,0x82); peer.write_all(b"after").unwrap();
