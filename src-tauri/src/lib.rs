@@ -22,6 +22,9 @@ pub mod mcp;
 mod network_tools;
 pub mod connection_probe;
 mod connection_probe_runtime;
+mod file_service;
+mod file_service_http;
+mod file_service_runtime;
 mod performance_probe;
 mod rdp;
 mod remote_exec_pool;
@@ -62,6 +65,7 @@ pub fn run() {
         .manage(docker_tools::DockerLogStreamManager::default())
         .manage(network_tools::NetworkDiagnosticSessionManager::default())
         .manage(connection_probe_runtime::LocalProbeManager::default())
+        .manage(file_service::FileServiceManager::default())
         .manage(performance_probe::PerformanceProbeState::default())
         .manage(remote_files::RemoteFileManager::default())
         .manage(terminal::manager::TerminalManager::default())
@@ -77,6 +81,7 @@ pub fn run() {
         .on_window_event(|window, event| {
             if matches!(event, tauri::WindowEvent::Destroyed) {
                 window.state::<connection_probe_runtime::LocalProbeManager>().cancel_window(window.label());
+                window.state::<file_service::FileServiceManager>().cancel_window(window.label());
             }
         })
         .setup(|app| {
@@ -235,6 +240,11 @@ pub fn run() {
             commands::docker_engine_save_config,
             commands::docker_exec_invalidate_connection,
             commands::network_diagnostic_run,
+            file_service_runtime::file_service_reserve,
+            file_service_runtime::file_service_start,
+            file_service_runtime::file_service_stop,
+            file_service_runtime::file_service_status,
+            file_service_runtime::file_service_audit,
             connection_probe_runtime::local_probe_reserve,
             connection_probe_runtime::local_probe_run,
             connection_probe_runtime::local_probe_cancel,
@@ -279,6 +289,7 @@ pub fn run() {
             // Tauri 2 的 `App::run` 在事件循环结束后直接 `process::exit`，托管状态不会被 Drop，
             // 因此 MCP sidecar 子进程必须在 `RunEvent::Exit` 回调里显式收尾，否则会在应用退出后残留。
             if let tauri::RunEvent::Exit = event {
+                tauri::async_runtime::block_on(app.state::<file_service::FileServiceManager>().shutdown());
                 app.state::<mcp::McpRemoteServiceManager>().shutdown();
             }
         });
