@@ -14,9 +14,9 @@
 | 06 连接诊断 | 有界 DNS/TCP、结构化 SSH 失败定位、本地端口检查 | #63，c1dda4e，CI600 SUCCESS |
 | 07 XDMCP | 可行性评估、三平台阻塞证据和复现步骤 | #64，7dc35d6，CI601 SUCCESS |
 | 08 Rlogin/Rsh | 评估及暂缓原生 provider 的决策 | #64，7dc35d6，CI601 SUCCESS |
-| 09 内置服务 | 单文件只读 IPv4 回环服务、临时认证、Tools UI、停止/退出清理和有界审计 | #65，最终 CI 待更新 |
+| 09 内置服务 | 单文件只读 IPv4 回环服务、临时认证、Tools UI、停止/退出清理和有界审计 | #65，fc7d1ad，CI603 SUCCESS |
 
-2026-10-16 已逐项查询 #58–#65：均 open/Draft、未合并、mergeable；依赖顺序为 main → #58 → #59 → #60 → #61 → #62 → #63 → #64 → #65。早先 CI 仅证明相应提交；最终第九项变更必须有自己的 CI 结果。
+2026-10-16 已逐项查询 #58–#65：均 open/Draft、未合并、mergeable；依赖顺序为 main → #58 → #59 → #60 → #61 → #62 → #63 → #64 → #65。早先 CI 仅证明相应提交；第九项代码提交 fc7d1ad90ad4a59f7cf9814108d59adece97daa3 已通过 [CI603](https://github.com/DenisZheng/NexaTerm/actions/runs/38858276717)，七个执行作业全部 SUCCESS，打包作业按工作流条件跳过。后续交付记录提交仅更新文档/任务元数据，代码验证对象保持为该提交。
 
 07/08 按批准的评估范围交付，**不代表实现或支持了 XDMCP/Rlogin/Rsh 会话协议**。XDMCP 的三平台真实联调仍 BLOCKED/MANUAL_REQUIRED；Rlogin/Rsh 原生实现为 DEFER，需具体目标和互通证据后另立任务。详见 [XDMCP 评估](decisions/WF09-XDMCP-ASSESSMENT.md) 和 [旧协议评估](decisions/WF09-LEGACY-PROTOCOL-ASSESSMENT.md)。
 
@@ -26,7 +26,7 @@
 
 CI602 首轮 macOS/Windows Rust 通过，Linux 同端口释放测试失败；原因是已完成 HTTP 的 TIME_WAIT。修复为 Unix SO_REUSEADDR（不启用 SO_REUSEPORT，Windows 不改默认设置），增加实际 manager 同端口重启回归。另一个失败为测试说明第26行的 generic-api-key 误报；仅登记规则/文件/完整源码 SHA256，并测试任一字段或内容变化即不再豁免，保留全历史与当前源码扫描。不能把首轮失败记为通过。
 
-本地全量前端887通过/1既有todo；新增命令参数检查随后单独验证。脚本、类型/构建、源码门禁及最终三平台结果以第九项 implement 和 PR checks 为准。本地没有 Rust 工具链，三平台执行由未降级的 CI 完成。
+最终代码 CI：前端112个测试文件、888通过/1既有todo；脚本179通过/3环境限定跳过；三平台 Rust、集成 fixtures、安全与许可证全部通过。八项新增文件服务 Rust 测试均通过，Linux 同端口释放/重启回归已验证。最终本地定向13通过，类型/构建及源码门禁通过。本地没有 Rust 工具链，三平台执行由未降级的 CI 完成。
 
 ## 后续统一验收（尚未通过）
 
