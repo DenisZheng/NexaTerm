@@ -4,3 +4,5 @@
 {"file": ".trellis/spec/backend/tauri-command-contracts.md", "reason": "Review actual signatures and owner validation before registering IPC"}
 {"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Shared component, prototype and lazy module conventions"}
 {"file": ".trellis/spec/backend/security-evidence.md", "reason": "Preserve full scanner and evidence gates"}
+{"file": ".trellis/spec/backend/rlogin-protocol.md", "reason": "L0 exact wire API, rejection privacy, byte budgets and fixture contracts"}
+{"file": ".trellis/tasks/10-16-wf09-08a-rlogin-implementation/research/bsd-rlogin-profile.md", "reason": "Pinned BSD source-port/field/OOB profile constraints; research is not real-server compatibility evidence"}

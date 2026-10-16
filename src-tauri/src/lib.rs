@@ -44,6 +44,7 @@ mod sync_import_transaction;
 mod terminal;
 mod workspace_snapshot;
 mod temporary_connections;
+pub mod rlogin;
 mod tunnels;
 mod vnc;
 mod webdav;
