@@ -18,3 +18,8 @@ Good: explicit TCP run renders connection/refusal advice and never sends a shell
 
 ## Wrong vs correct
 Wrong: put raw errors or transient handles in persistent UI, auto-run on focus, or show TCP success as SSH authentication. Correct: fixed bilingual outcomes, explicit user intent, bounded backend owner and transient operation refs.
+
+## Structured SSH failures (WF-09-06C)
+`diagnoseConnectionFailure(unknown, targetConnectionId?)` reuses stable code classification and typed SshNodeFailure. Output is fixed stage/reason/stepIndex/nodeRole and optional nodeConnectionId; it never copies error text, endpoint, username or credential data. Known connect phase means connection/handshake combined; no TCP-success inference. Typed direct_tcpip identifies the forwarding destination (not necessarily the previous hop that refused forwarding). Auth/HostKey/channel/config/proxy phases retain separate advice. Unknown codes and unrecognised node phases remain explicit unknown.
+
+ConnectionStepErrorDetail owns transient diagnosis; visible failure details resolve node names only from existing profiles, never echo an unknown raw identifier. The error headline uses existing safe summary; a validated diagnostic ID appears separately. Error workflow index follows diagnosis (jump auth=3, channel=4). Existing Host Key and credential prompt branches retain precedence. Retry clears errorDetail and its diagnosis; no extra network request, IPC or persisted schema is introduced. All new strings use English/zh-CN catalogs and existing token styles.

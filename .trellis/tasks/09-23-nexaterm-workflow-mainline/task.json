@@ -47,7 +47,8 @@
     "10-15-wf09-05-keyword-highlight",
     "10-15-wf09-05-keyword-rules",
     "10-15-wf09-06-probe-core",
-    "10-15-wf09-06-local-diagnostics"
+    "10-15-wf09-06-local-diagnostics",
+    "10-15-wf09-06-ssh-diagnosis"
   ],
   "parent": null,
   "relatedFiles": [],
