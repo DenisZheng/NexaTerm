@@ -1,0 +1,29 @@
+{
+  "id": "wf09-08b-rsh-implementation",
+  "name": "wf09-08b-rsh-implementation",
+  "title": "WF-09-08B native Rsh implementation",
+  "description": "",
+  "status": "planning",
+  "dev_type": "fullstack",
+  "scope": null,
+  "package": null,
+  "priority": "P1",
+  "creator": "codex",
+  "assignee": "codex",
+  "createdAt": "2026-10-16",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "docs/wf09-protocol-implementation-plan",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": "09-23-nexaterm-workflow-mainline",
+  "relatedFiles": [
+    "docs/plans/WF09-PROTOCOL-IMPLEMENTATION-PLAN.md",
+    "docs/WORKFLOW_SPEC.md"
+  ],
+  "notes": "Implementation planned (S0–S2); explicitly not started in the documentation-only turn. Acceptance: S01–S03、C01/C02.",
+  "meta": {}
+}

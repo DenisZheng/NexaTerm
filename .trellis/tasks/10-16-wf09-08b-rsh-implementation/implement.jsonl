@@ -1,0 +1,6 @@
+{"file": "docs/WORKFLOW_SPEC.md", "reason": "Confirmed v0.7 protocol and bundled-server goals; do not use historical deferral as current scope"}
+{"file": "docs/plans/WF09-PROTOCOL-IMPLEMENTATION-PLAN.md", "reason": "Planned stages, lifecycle, platform/permission/license boundaries and acceptance matrix"}
+{"file": "ROADMAP.md", "reason": "Single current execution order"}
+{"file": ".trellis/spec/backend/tauri-command-contracts.md", "reason": "Review actual signatures and owner validation before registering IPC"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Shared component, prototype and lazy module conventions"}
+{"file": ".trellis/spec/backend/security-evidence.md", "reason": "Preserve full scanner and evidence gates"}
