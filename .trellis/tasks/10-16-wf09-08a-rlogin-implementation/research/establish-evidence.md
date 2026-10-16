@@ -32,4 +32,20 @@ EV_CLEAR会清内核一次性通知。首个修复让Monitor保留pending urgent
 
 ## 当前结果
 
-最新修复的三平台原生与完整应用CI待执行。须分别记录实际低端口公共adapter路径（Windows可用或Unix真实拒绝）与普通socket上的协议交换；后者不算低源端口或真实rlogind互通。
+代码基准：`0cd5cf53bb2553b35408fccec701d66acb3d0f25`。
+
+[原生 #14](https://github.com/DenisZheng/NexaTerm/actions/runs/38943343620)：三平台各34项全部通过，无skip/ignore；harness导入生产模块，依赖锁子集核对通过。L0十项另外执行，不重复计算为新增测试。
+
+| Runner | 原生harness | 公共建立adapter低端口路径 | 普通socket协议交换 |
+| --- | --- | --- | --- |
+| ubuntu-22.04 | 34通过 | 实际AccessDenied，无连接/高端口兜底 | 请求/ACK尾部/拒绝/取消/截止/abort；Unix精确flush接管通过 |
+| macos-14 | 34通过 | 实际AccessDenied，无连接/高端口兜底 | 同上；探针确认peek前mark=true、peek后false，接管flush正向断言通过 |
+| windows-latest | 34通过 | 实际低源端口完成请求、ACK、尾部交付与关闭，端口处于512–1023 | 其它交换与回收通过；精确flush仍不可用，既有明确失败/数据保留断言通过 |
+
+Unix拒绝是真实执行，不是skip，也不代表低端口legacy登录可用。普通socket fixture与真正低端口路径分别留证，均不替代真实rlogind互通；ACK不证明认证/登录成功。
+
+[完整应用 CI #626](https://github.com/DenisZheng/NexaTerm/actions/runs/38943343704)：全部7个实际执行job通过；条件Windows打包未触发，不算安装包验收。应用library：Linux508通过/4个既有ignored，macOS508通过/0ignored，Windows509通过/0ignored；新增用例全部执行。其它二进制19项、集成1项及doc测试通过；前端888通过/1todo，类型/构建、脚本/source、安全、许可证、服务fixture全部通过。
+
+本地无Rust/gitleaks；行数、YAML、capability/CSP、任务manifest和diff检查通过，Rust/完整安全扫描等执行由CI留证。最终收口仅更新文档/任务记录，生产及测试源码均未变；上述执行证据对应0cd5cf5，文档head的自动CI另列。
+
+后续开发入口：research/session-owner-seams.md。Windows精确flush、session owner/队列/许可/IPC/UI、真实rlogind互通仍待完成，不把本次建立adapter当成完整协议交付。

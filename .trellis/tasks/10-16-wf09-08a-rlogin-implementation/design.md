@@ -12,12 +12,14 @@
 
 ## L1 native foundation slice
 
-本轮实现 `.trellis/spec/backend/legacy-native-sockets.md` 的共用保留 socket 和 Rlogin urgent/mark 控制器。保留实际绑定句柄直至 connect/listen/drop；固定预算、取消和错误类型。控制器拥有单一 socket，优先处理 OOB，在输出背压/暂停时继续接收 urgent；Unix flush按mark只丢弃前段；Windows当前adapter缺失精确边界，flush明确失败并保留数据，功能目标仍待实现。最新窗口帧按请求发放。真实 native TCP fixture 逐平台验证。完整握手 adapter、session owner/队列、IPC、单次连接许可和 UI 仍是后续 L1，不把该底层组件当成可用终端入口。
+本轮实现 `.trellis/spec/backend/legacy-native-sockets.md` 的共用保留 socket 和 Rlogin urgent/mark 控制器。保留实际绑定句柄直至 connect/listen/drop；固定预算、取消和错误类型。控制器拥有单一 socket，优先处理 OOB，在输出背压/暂停时继续接收 urgent；Unix flush按mark只丢弃前段；Windows当前adapter缺失精确边界，flush明确失败并保留数据，功能目标仍待实现。最新窗口帧按请求发放。真实 native TCP fixture 逐平台验证。此基础slice不含握手adapter，接管实现见下节；session owner/队列、IPC、单次连接许可和UI仍是后续L1，不把该底层组件当成可用终端入口。
 
 ## L1 原生建立连接 adapter
 
-下一刀使用已选定BSD profile（用户名各30 UTF-8字节、terminal/speed共58字节），在任何bind前验证完整字段、窗口和数字IPv4目标。单一future独占socket，将保留源端口、connect、完整请求partial write、增量ACK/拒绝串入同一个15秒建立截止；同步有界bind前后检查预算，取消轮询25毫秒，不创建脱离owner的任务。ACK只表示初始交换完成。
+原生建立adapter使用已选定BSD profile（用户名各30 UTF-8字节、terminal/speed共58字节），在任何bind前验证完整字段、窗口和数字IPv4目标。单一future独占socket，将保留源端口、connect、完整请求partial write、增量ACK/拒绝串入同一个15秒建立截止；同步有界bind前后检查预算，取消轮询25毫秒，不创建脱离owner的任务。ACK只表示初始交换完成。
 
 ACK同包尾部转入reader已有有界隔离区，恰好一次、原样、有序地交付，继续受urgent优先、有效Unix flush和背压控制；不增加第二个无界banner缓存。拒绝正文不存入错误，不做提示文本或登录状态推断。真实loopback的协议交换在普通测试socket上执行，明确不把它称为Unix低端口登录成功；现有原生低端口测试保留。
 
 接口与测试点先固定于 .trellis/spec/backend/rlogin-connect.md。无新IPC、UI或持久化模型；尚不承担主窗口许可、四会话配额和DNS，后续会话owner负责，完整能力保持关闭。Windows精确flush缺口不被该adapter覆盖。
+
+后续owner的既有接口核对与开发顺序见 research/session-owner-seams.md；其中credit/pull/typed IPC具体签名仍须在对应实现前写入code-spec，不能当作已实现接口。

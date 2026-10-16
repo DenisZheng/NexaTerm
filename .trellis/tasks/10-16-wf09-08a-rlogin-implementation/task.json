@@ -15,7 +15,7 @@
   "branch": "feat/wf09-08a-rlogin-handshake",
   "base_branch": "feat/wf09-08a-rlogin-native-socket",
   "worktree_path": null,
-  "commit": null,
+  "commit": "0cd5cf53bb2553b35408fccec701d66acb3d0f25",
   "pr_url": "https://github.com/DenisZheng/NexaTerm/pull/70",
   "subtasks": [],
   "children": [],
@@ -24,6 +24,6 @@
     "docs/plans/WF09-PROTOCOL-IMPLEMENTATION-PLAN.md",
     "docs/WORKFLOW_SPEC.md"
   ],
-  "notes": "L0 passed. L1 socket/control foundation: native harness Linux/macOS24, Windows25 passed; full CI620 all7 executed jobs passed (Rust Linux/macOS498, Windows500). Unix exact flush verified; current Windows adapter explicitly rejects flush without discarding data. Windows exact boundary, handshake adapter, owner/IPC/UI and real interop remain; task stays in_progress. Next slice implemented, CI pending: native establish/ACK-tail adapter under one total deadline; no IPC/UI or full Windows capability.",
+  "notes": "Native socket/control/establish code0cd5cf5 passed fast workflow14 on all3 platforms, 34 tests each, no skips. Full CI626 all7 executed jobs passed; Rust Linux/macOS508, Windows509 (Linux4 existing ignored), frontend888+1todo. Darwin readiness ownership and destructive peek-at-mark fixed with regressions. Windows exact flush, session owner/queues/consent/IPC/UI and real rlogind interop remain; task in_progress.",
   "meta": {}
 }
