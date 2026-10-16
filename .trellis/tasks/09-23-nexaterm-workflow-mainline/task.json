@@ -49,7 +49,9 @@
     "10-15-wf09-06-probe-core",
     "10-15-wf09-06-local-diagnostics",
     "10-15-wf09-06-ssh-diagnosis",
-    "10-15-wf09-06-local-port"
+    "10-15-wf09-06-local-port",
+    "10-15-wf09-07-xdmcp-assessment",
+    "10-15-wf09-08-legacy-assessment"
   ],
   "parent": null,
   "relatedFiles": [],
