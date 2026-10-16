@@ -1,0 +1,45 @@
+name: XDMCP platform lifecycle
+on:
+  pull_request:
+    paths:
+      - 'src-tauri/src/xdmcp/**'
+      - 'src-tauri/test-fixtures/xdmcp*'
+      - 'src-tauri/test-fixtures/xdmcp-platform-harness/**'
+      - '.github/workflows/xdmcp-platform.yml'
+permissions:
+  contents: read
+concurrency:
+  group: xdmcp-platform-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  platform:
+    name: Native lifecycle (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, macos-14, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Reuse application version pins
+        shell: python
+        run: |
+          import shutil
+          shutil.copyfile('src-tauri/Cargo.lock', 'src-tauri/test-fixtures/xdmcp-platform-harness/Cargo.lock')
+      - name: Run actual production platform module
+        run: cargo test --manifest-path src-tauri/test-fixtures/xdmcp-platform-harness/Cargo.toml -- --nocapture
+      - name: Require harness dependencies to stay inside the application lockfile
+        if: always()
+        shell: python
+        run: |
+          import pathlib, tomllib
+          original = tomllib.loads(pathlib.Path('src-tauri/Cargo.lock').read_text())
+          actual = tomllib.loads(pathlib.Path('src-tauri/test-fixtures/xdmcp-platform-harness/Cargo.lock').read_text())
+          expected = {(p['name'], p['version'], p.get('checksum')) for p in original['package']}
+          unexpected = [p['name'] for p in actual['package'] if p['name'] != 'nexaterm-xdmcp-platform-harness' and (p['name'], p['version'], p.get('checksum')) not in expected]
+          assert not unexpected, f'harness introduced unreviewed dependencies: {unexpected}'

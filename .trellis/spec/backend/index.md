@@ -45,3 +45,5 @@ The goal is to help AI assistants and new team members understand how YOUR proje
 - [Local Connection Probe](./connection-probe.md) — bounded DNS/TCP/loopback-bind probes, reservation IPC, cancellation and sanitized results.
 
 - [Loopback File Service](./loopback-file-service.md) — bounded single-file HTTP, main-window leases, token and shutdown contracts.
+
+- [XDMCP Managed Runner](./xdmcp-runner.md) — external development engine ownership, process group/job cleanup and explicit incomplete bundled capability.

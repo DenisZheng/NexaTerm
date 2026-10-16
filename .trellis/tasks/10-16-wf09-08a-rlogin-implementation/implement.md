@@ -1,6 +1,6 @@
 # Execution plan
 
-状态：未执行；本轮不得调用 start 进入协议实现。
+状态：后续开工已授权；本任务按顺序尚未执行，当前由 XDMCP 先推进。
 
 - [ ] L0：原生握手、字段/分片/拒绝/EOF 协议核和可复现服务端 fixture。
 - [ ] L1：Unix/Windows urgent/OOB、flush、流控/resize、源端口分配与真实 socket 测试。
