@@ -12,4 +12,4 @@ E/B边界根因：Darwin EV_CLEAR会清除一次性内核通知，原NativeSocke
 
 ## 当前结果
 
-修复后的三平台原生与完整应用CI待执行。需分别记录实际低端口公共adapter路径（Windows可用或Unix真实拒绝）与普通socket上的协议交换；后者不算低源端口或真实rlogind互通。
+修复代码基准：`4d22b1d1da160e56b9b5da4519fd634e2b0d2b89`。修复后的三平台原生与完整应用CI待执行。需分别记录实际低端口公共adapter路径（Windows可用或Unix真实拒绝）与普通socket上的协议交换；后者不算低源端口或真实rlogind互通。

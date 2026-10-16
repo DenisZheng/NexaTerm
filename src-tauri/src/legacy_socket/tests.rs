@@ -148,3 +148,16 @@ fn windows_inline_native_mark_probe() {
     });
     assert_eq!(result,b"before\x82after");
 }
+#[test]
+fn native_normal_read_before_oob_peek_records_the_actual_boundary() {
+    let (mut socket, mut peer) = pair();
+    peer.write_all(b"before").unwrap(); send_urgent_fixture(&peer, 0x02); peer.write_all(b"after").unwrap();
+    until(|| socket.poll_ready().unwrap().urgent.then_some(()));
+    let before = platform::at_mark(&socket.stream);
+    let mut buffer = [0_u8;128]; let count = socket.read(&mut buffer).unwrap().unwrap();
+    let mark = platform::at_mark(&socket.stream);
+    let urgent = socket.urgent(true);
+    println!("native_before_peek_probe before={before:?} read_count={count} mark={mark:?} urgent={urgent:?}");
+    assert!(count > 0 && count <= 11); assert_eq!(&buffer[..count], &b"beforeafter"[..count]);
+    assert_eq!(urgent.unwrap(), Some(0x02));
+}
