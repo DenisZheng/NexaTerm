@@ -7,6 +7,7 @@
 #[test]
 fn production_platform_stop_and_natural_exit() {
     use std::{fs, net::Ipv4Addr, path::Path, process::Command, time::Instant};
+    #[cfg(target_os = "macos")] assert!(!platform::mac_group_has_no_live_members(unsafe { libc::getpgrp() }));
     let fixture_root = std::env::temp_dir().join(format!("nexaterm-platform-fixture-{}", uuid::Uuid::new_v4()));
     fs::create_dir(&fixture_root).unwrap();
     let executable = fixture_root.join(if cfg!(windows) { "fixture.exe" } else { "fixture" });

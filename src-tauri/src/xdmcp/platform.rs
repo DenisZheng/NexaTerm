@@ -89,7 +89,12 @@ impl OwnedProcess {
         let result = unsafe { libc::kill(-self.group, libc::SIGKILL) };
         if result != 0 {
             let error = std::io::Error::last_os_error();
-            if error.raw_os_error() != Some(libc::ESRCH) { return Err(error); }
+            if error.raw_os_error() == Some(libc::ESRCH) { return Ok(()); }
+            // Darwin can report EPERM for an already-dead group. Never suppress
+            // a real permission failure: prove every listed member is inert first.
+            #[cfg(target_os = "macos")]
+            if error.raw_os_error() == Some(libc::EPERM) && mac_group_has_no_live_members(self.group) { return Ok(()); }
+            return Err(error);
         }
         Ok(())
     }
@@ -117,4 +122,24 @@ pub(super) fn windows_command_line(path: &Path, args: &[OsString]) -> Vec<u16> {
         result.extend(std::iter::repeat_n(92, slashes * 2)); result.push(34);
     }
     result.push(0); result
+}
+
+#[cfg(target_os = "macos")]
+pub(super) fn mac_group_has_no_live_members(group: i32) -> bool {
+    let mut members = [0_i32; 256];
+    unsafe { *libc::__error() = 0; }
+    let count = unsafe { libc::proc_listpgrppids(group, members.as_mut_ptr().cast(), std::mem::size_of_val(&members) as i32) };
+    let errno = std::io::Error::last_os_error().raw_os_error();
+    if count < 0 || members[255] != 0 { return false; } // unknown/truncated is not empty.
+    if count == 0 { return matches!(errno, Some(0) | Some(libc::ESRCH)); }
+    if !members.iter().any(|pid| *pid > 0) { return false; }
+    for pid in members.into_iter().filter(|pid| *pid > 0) {
+        let mut info: libc::proc_bsdinfo = unsafe { std::mem::zeroed() };
+        unsafe { *libc::__error() = 0; }
+        // PROC_PIDTBSDINFO=3, from Apple's proc_info.h; use libc's ABI struct.
+        let bytes = unsafe { libc::proc_pidinfo(pid, 3, 0, &mut info as *mut _ as *mut _, std::mem::size_of_val(&info) as i32) };
+        if bytes == 0 && std::io::Error::last_os_error().raw_os_error() == Some(libc::ESRCH) { continue; }
+        if bytes != std::mem::size_of_val(&info) as i32 || info.pbi_pgid != group as u32 || info.pbi_status != libc::SZOMB { return false; }
+    }
+    true
 }

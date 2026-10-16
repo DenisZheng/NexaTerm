@@ -26,3 +26,6 @@ Actual native process fixture on Windows/macOS/Linux: two isolated runs, descend
 
 ## 7. Wrong / correct
 Wrong: expose arbitrary shell args, label a live PID as logged in, free an entry before a delayed spawn returns, or kill all XWin processes. Correct: fixed args, querying status, resource-owned worker lease, per-run process group/job and bounded metadata.
+
+## Darwin zombie-group distinction
+Native CI reproduced EPERM from killpg after TERM ended the group. Only macOS EPERM may be completed after bounded proc_listpgrppids/proc_pidinfo checks prove no live group member; all other permission failures, unknown states, query errors or a full256-member buffer remain failures. The leader stays unreaped through this check. The native harness and full suite also assert that the current live group cannot be classified as inert. Do not blanket-ignore EPERM or increase stop deadlines to hide the failure.

@@ -130,6 +130,7 @@ fn invalid_fields_missing_consent_and_non_native_files_never_launch() {
 #[test]
 fn auth_file_permissions_fixed_arguments_and_history_are_bounded() {
     let (_guard, manager, request) = setup();
+    #[cfg(target_os = "macos")] assert!(!platform::mac_group_has_no_live_members(unsafe { libc::getpgrp() }));
     let directory = platform::RunDirectory::create(123).unwrap();
     let auth = fs::read(directory.path.join("authority")).unwrap();
     assert!(auth.starts_with(&[255, 255, 0, 0, 0, 3, b'1', b'2', b'3']));
