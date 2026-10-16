@@ -1619,3 +1619,11 @@ export function localProbeRun(reservationId: string, request: import("../../feat
 export function localProbeCancel(reservationId: string): Promise<void> {
   return invoke<void>("local_probe_cancel", { reservationId });
 }
+
+export function fileServiceReserve(): Promise<string> { return invoke("file_service_reserve"); }
+export function fileServiceStart(reservationId: string, path: string, port: number) {
+  return invoke<import("../../features/tools/fileServiceTypes").FileServiceStarted>("file_service_start", { reservationId, path, port });
+}
+export function fileServiceStop(reservationId: string): Promise<void> { return invoke("file_service_stop", { reservationId }); }
+export function fileServiceStatus() { return invoke<import("../../features/tools/fileServiceTypes").FileServiceStatus | null>("file_service_status"); }
+export function fileServiceAudit() { return invoke<import("../../features/tools/fileServiceTypes").FileServiceAudit[]>("file_service_audit"); }

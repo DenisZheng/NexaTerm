@@ -51,7 +51,7 @@ fn snapshot_is_fixed_and_each_start_rotates_token() {
         std::fs::write(&file.0, b"second").unwrap();
         assert!(request(first.status.port.unwrap(), "GET", &first.token, "").await.ends_with(b"first"));
         manager.stop("main", &id).await.unwrap(); let next = manager.reserve("main").unwrap();
-        let second = manager.start("main", &next, file.path(), 0).await.unwrap();
+        let second = manager.start("main", &next, file.path(), first.status.port.unwrap()).await.unwrap();
         assert_ne!(first.token, second.token);
         manager.stop("main", &id).await.unwrap(); // stale stop cannot stop the replacement.
         assert!(request(second.status.port.unwrap(), "GET", &second.token, "").await.ends_with(b"second"));

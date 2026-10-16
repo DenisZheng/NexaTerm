@@ -80,3 +80,5 @@ The goal is to help AI assistants and new team members understand how YOUR proje
 
 - [Terminal Keyword Highlighting](./terminal-keyword-highlight.md) — built-in severity rules, ANSI preservation and bounded viewport-priority decorations.
 - [Local Connection Diagnostics](./local-connection-diagnostics.md) — direct-route DNS/TCP entry, reservation IPC and cancellation races.
+
+- [Loopback File Service](./loopback-file-service.md) — local-only file serving, transient ownership and explicit clipboard flow.

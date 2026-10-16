@@ -96,6 +96,9 @@ impl FileServiceManager {
             let bytes = self.read_file(path).await?;
             let token = crate::mcp::generate_remote_token().map_err(|_| error("file_service_unavailable"))?;
             let socket = TcpSocket::new_v4().map_err(|_| error("file_service_bind_failed"))?;
+            // Unix TIME_WAIT must not prevent an explicit restart; Windows keeps exclusive binding semantics.
+            #[cfg(unix)]
+            socket.set_reuseaddr(true).map_err(|_| error("file_service_bind_failed"))?;
             socket.bind(std::net::SocketAddr::from(([127, 0, 0, 1], port))).map_err(|e| bind_error(e.kind()))?;
             let listener = socket.listen(8).map_err(|e| bind_error(e.kind()))?;
             let bound_port = listener.local_addr().map_err(|_| error("file_service_bind_failed"))?.port();

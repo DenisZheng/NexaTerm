@@ -27,3 +27,5 @@ Real loopback GET/HEAD/denial, immutable post-load contents/token rotation, stal
 
 ## 7. Wrong vs correct
 Wrong: accept root-directory paths from HTTP, log incoming headers, reuse a saved token, free worker quota when merely abandoning a blocking read, or remove the active entry before sockets close. Correct: fixed route to a bounded loaded buffer, sanitized fixed events, fresh token and resource-owned quota/lease through actual completion.
+
+Unix sockets enable SO_REUSEADDR before bind so completed HTTP connections in TIME_WAIT do not block same-port restarts. Windows retains its default; SO_REUSEPORT is never enabled. Active port conflicts remain errors. Regression starts the actual manager twice on the same explicit port after a completed GET.

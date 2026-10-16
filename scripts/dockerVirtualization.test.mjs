@@ -141,7 +141,7 @@ test("does not plan docker refresh outside the active docker tool", async () => 
     }),
     null,
   );
-  assert.equal(
+  for (const toolboxView of ["network", "services"]) assert.equal(
     planDockerInitialRefresh({
       active: true,
       connectionId: "conn-a",
@@ -151,7 +151,7 @@ test("does not plan docker refresh outside the active docker tool", async () => 
       lastContainersRefreshAt: 0,
       lastImagesRefreshAt: 0,
       now: 20_000,
-      toolboxView: "network",
+      toolboxView,
     }),
     null,
   );

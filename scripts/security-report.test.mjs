@@ -222,3 +222,14 @@ test("shallow checkout fails explicitly and overwrites a stale success report", 
     assert.equal(JSON.parse(readFileSync(path.join(root, "logs/security/secrets.json"), "utf8")).status, "FAIL");
   });
 });
+
+ test("reviewed file-service prose requires the exact source, file and rule", () => {
+  const file = ".trellis/spec/backend/loopback-file-service.md";
+  const source = readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
+  const fixtures = JSON.parse(readFileSync(new URL("./security-reviewed-fixtures.json", import.meta.url), "utf8"));
+  const finding = { rule: "generic-api-key", file, startLine: 26, endLine: 26 };
+  assert.equal(isReviewedFixture(finding, source, fixtures), true);
+  assert.equal(isReviewedFixture(finding, source.replace("Real loopback GET", "Changed loopback GET"), fixtures), false);
+  assert.equal(isReviewedFixture({ ...finding, file: "src/production.ts" }, source, fixtures), false);
+  assert.equal(isReviewedFixture({ ...finding, rule: "other-rule" }, source, fixtures), false);
+});
