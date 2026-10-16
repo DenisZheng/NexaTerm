@@ -32,7 +32,18 @@ fn production_platform_stop_and_natural_exit() {
             }
         }
         drop(process);
-        directory.cleanup().expect("production directory cleanup failed");
+        // Match the worker: Windows can briefly retain directory handles after
+        // job accounting reaches zero. Completion still requires real removal.
+        let deadline = Instant::now() + Duration::from_secs(5);
+        loop {
+            match directory.cleanup() {
+                Ok(()) => break,
+                Err(error) => {
+                    assert!(Instant::now() < deadline, "production directory cleanup failed: {error}");
+                    std::thread::sleep(POLL);
+                }
+            }
+        }
         assert!(!directory.path.exists());
     }
     let _ = fs::remove_dir_all(fixture_root);
