@@ -29,3 +29,7 @@ Wrong: expose arbitrary shell args, label a live PID as logged in, free an entry
 
 ## Darwin zombie-group distinction
 Native CI reproduced EPERM from killpg after TERM ended the group. Only macOS EPERM may be completed after bounded proc_listpgrppids/proc_pidinfo checks prove no live group member; all other permission failures, unknown states, query errors or a full256-member buffer remain failures. The leader stays unreaped through this check. The native harness and full suite also assert that the current live group cannot be classified as inert. Do not blanket-ignore EPERM or increase stop deadlines to hide the failure.
+
+## Windows directory teardown distinction
+
+Native CI observed a sharing violation during immediate directory deletion after job accounting reached zero. The worker already retains its lease and retries actual removal, marking stopping until cleanup succeeds. The small native harness must exercise that contract too: poll removal, fail with the original error after5s, and assert the directory no longer exists. Do not turn a deletion error into successful acknowledgement or free the worker quota before actual cleanup.

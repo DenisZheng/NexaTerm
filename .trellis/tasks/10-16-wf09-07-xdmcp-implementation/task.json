@@ -24,6 +24,6 @@
     "docs/plans/WF09-PROTOCOL-IMPLEMENTATION-PLAN.md",
     "docs/WORKFLOW_SPEC.md"
   ],
-  "notes": "X1 implementation in progress: native external-engine worker/lease, main-only IPC, process group/job and auth cleanup; eight native process/contract tests pending three-platform CI. No bundled engine/UI/desktop claim; X0 final packaging choice and X2/X3 remain open.",
+  "notes": "X1 external-engine native core implemented; code1a5b7cd CI611 all7 executing jobs PASS and native lifecycle run3 all3 OS PASS. Eight XDMCP tests pass on Windows/macOS/Linux. No bundled engine/UI/desktop claim; X0 pinned component audit and X2/X3 remain open. Overall task stays in_progress.",
   "meta": {}
 }

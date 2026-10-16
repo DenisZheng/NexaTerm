@@ -1,22 +1,36 @@
 # Execution plan
 
-状态：2026-10-16 已获开工授权；本轮先交付 X1 运行核心与精确能力/IPC，X0 组件清单未批准前不引入外部发行二进制。
+状态：2026-10-16 已获开工授权；X1 运行核心已实现，X0 组件审查推进中。任务整体保持 in_progress；X2/X3 尚未交付。
 
-- [ ] X0：核对候选精确版本/许可/依赖，建立可复现构建与分发 manifest；候选不等于采用。
-- [ ] X1：实现受管 runner、独立 display、状态与取消/关闭所有权，建立 socket/进程 fixture。
-- [ ] X2：Windows 随包组件、安装/签名和 direct-query 真实桌面；补会话配置、原型与能力入口。
+- [ ] X0：精确源码/许可/依赖已部分核对，继续缩小运行组件闭包，建立可复现构建与分发 manifest；候选不等于采用。
+- [x] X1：受管 runner、独立 display、状态与取消/关闭所有权，以及真实 native 进程 fixture。
+- [ ] X2：Windows 随包组件、安装/签名和 direct-query 真实桌面；会话配置、原型与能力入口。
 - [ ] X3：macOS/Linux 引擎与打包适配；逐平台留证，不用外置模式替代 bundled 完成。
-- [ ] 更新可执行 code-spec、能力矩阵和错误/资源预算契约；加入各阶段有意义的回归测试。
-- [ ] 运行受影响测试、类型/构建及既有 source/security/license gates，三平台 CI；不以静态检查代替 socket/进程运行。
-- [ ] 维护 Draft PR 和平台证据，真实验收统一后续；未通过项逐一标明。
+- [x] 更新可执行 code-spec、错误/资源预算和精确能力边界；加入有意义的回归测试。
+- [x] 三平台完整应用 CI：全部7个实际执行 job 通过；条件打包 job 未触发。
+- [x] 维护 Draft PR 和原生快速测试证据；真实 GUI/桌面验收按维护者安排统一后续。
 
-## X1 implementation evidence (CI pending)
-Owner/lease, fixed native arguments/private authority file, platform process group/job cleanup, main-only IPC and window/exit hooks implemented. Eight native fixture/contract tests added, executed by three-platform CI; local Rust unavailable. Local line/capability/CSP/diff gates PASS. X0 component source baseline is recorded separately; no engine binary adopted, no bundled capability or real desktop claim. UI/connection schema and X2/X3 remain outstanding.
+## X1 implementation and validation
 
-First CI607: frontend/security/license PASS; all three Rust cargo-check jobs found AppError code argument needs &str rather than String. Corrected without changing the error contract. Added an actual async-start abort regression with a test-only worker gate; it asserts cancellation before explicit stop and quota retention until the worker really returns. Final three-platform result pending.
+代码基准：`1a5b7cd40a175fb67cba4914dbc82bbe704eb108`；[Draft #67](https://github.com/DenisZheng/NexaTerm/pull/67)，基于计划 #66，不合并、不发布。八项真实 native fixture/契约测试包括独立运行及后代、旧句柄/外部 owner 隔离、自然/失败退出、配额/过期、端口占满、窗口关闭/shutdown、字段/许可校验及实际 start future abort。worker 在异步调用被取消或超时后仍持有租约，直到阻塞 OS 操作、进程及私有认证目录真正回收。
 
-Known X2 boundary: Unix hard-crash recovery needs a supervisor/parent-death strategy and real-engine socket/log cleanup verification; current process-group ownership covers explicit stop/window destruction/normal exit, not a claim that SIGKILL of the host cannot leave an engine. Windows job handles provide kill-on-host-close.
+| 证据 | 精确结果 |
+| --- | --- |
+| [原生快速测试 #3](https://github.com/DenisZheng/NexaTerm/actions/runs/38902476123) | Windows/macOS/Linux 全通过；导入实际生产平台模块；依赖固定为应用 lockfile 的子集 |
+| [完整 CI #611](https://github.com/DenisZheng/NexaTerm/actions/runs/38902476142) Linux | 474通过/4ignored；新增8项 XDMCP 全通过；其它二进制/集成/doc 测试通过 |
+| 同次 macOS | 474通过/0ignored；新增8项全通过；其它二进制/集成/doc 测试通过 |
+| 同次 Windows | 475通过/0ignored；新增8项 XDMCP 全通过；其它二进制/集成/doc 测试通过 |
+| 同次其余门禁 | 前端888通过/1todo、脚本和全部 source gates、安全、许可证、fixture 全通过；条件 Windows 打包 job 未触发，不代表安装包验收 |
+| 本地 | line-budget、capability/CSP、diff 检查通过；没有 Rust 工具链，不把本地静态检查当作原生执行证据 |
 
-CI608 / code64d5da1: Linux and Windows all eight new tests PASS; frontend/security/license/fixtures PASS. macOS has three actual lifecycle failures (normal-exit observation and explicit/shutdown cleanup), not a compile issue. Keep assertions/deadlines unchanged. Add a lightweight harness importing the exact production platform module for fast native diagnostics without compiling the GUI graph; its dependency lock must remain a subset of the application lock. Final fix/CI pending.
+## Resolved native failures
 
-Fast native run1 reproduced macOS explicit-stop error EPERM (errno1), with Linux/Windows PASS. Corrected Darwin zombie-only group classification through bounded native process metadata, failing closed for live/unknown/inaccessible groups. Added live-group rejection assertions; original cleanup/timeout assertions and budgets unchanged. Final native and full CI pending.
+CI607 暴露 AppError 代码参数类型问题，已改为引用 String 而不改变错误契约。CI608 的 Linux/Windows 全部新增测试通过；macOS 的三个生命周期测试暴露回收故障，快速原生 harness 将其定位为 EPERM。Darwin 修复只在有界原生查询证明组内无活跃成员时接受该 EPERM；活跃/未知/查询失败/缓冲区满继续失败，保留未 reap 的 leader 避免 PID 复用。快速与完整测试均断言不能把自身活跃组误判为空。
+
+快速 Windows harness 另暴露立即删除目录的 sharing violation。生产 worker 原有逻辑已经保留配额并持续重试真实删除；harness 改为按相同契约等待删除，5秒截止仍报原始错误，并断言目录确实消失。没有忽略删除错误、释放未清理配额或提高生产 stop 截止。
+
+## Remaining boundaries
+
+`querying` 仅表示已创建引擎并提交 query，绝不表示登录/桌面成功。当前 bundled=false、desktop_verified=false；external 开发模式只对 Windows/Linux 开放，macOS 的原生 fixture 不开启 macOS 产品能力。未引入任何外部 X server 源码或发行二进制。
+
+Unix 宿主硬崩溃回收仍需 X2 supervisor/parent-death 策略；当前组回收针对显式 stop、窗口销毁和正常退出。Windows job 句柄提供宿主句柄关闭后的回收。真实引擎的认证协商、日志/OS socket 清理、多网卡、桌面和安装签名证据仍未取得。X0 精确审查记录见 docs/decisions/WF09-XSERVER-COMPONENTS.md；X2/X3 未完成。上述缺口仅阻塞相关阶段，按已批准计划继续独立 Rlogin/Rsh 协议核。
