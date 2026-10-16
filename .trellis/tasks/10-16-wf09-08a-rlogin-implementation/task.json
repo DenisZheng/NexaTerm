@@ -16,7 +16,7 @@
   "base_branch": "feat/wf09-07-xdmcp-runner",
   "worktree_path": null,
   "commit": null,
-  "pr_url": null,
+  "pr_url": "https://github.com/DenisZheng/NexaTerm/pull/68",
   "subtasks": [],
   "children": [],
   "parent": "09-23-nexaterm-workflow-mainline",
@@ -24,6 +24,6 @@
     "docs/plans/WF09-PROTOCOL-IMPLEMENTATION-PLAN.md",
     "docs/WORKFLOW_SPEC.md"
   ],
-  "notes": "L0 in progress: independent native request/handshake/window framing and loopback TCP fixtures. No IPC, OOB transport, terminal capability or real-server claim; L1/L2 remain open.",
+  "notes": "L0 native protocol core implemented; code82af029 CI614 all7 executing jobs PASS and native wire run2 all3 OS PASS (10 tests each). No external client/dependency or raw rejection errors. Overall in_progress: L1 OOB/flow-control/reserved ports/consent/terminal IPC/UI and L2 real-server compatibility remain open; no Rlogin capability advertised.",
   "meta": {}
 }
