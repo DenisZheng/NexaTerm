@@ -15,8 +15,8 @@
   "branch": "feat/wf09-08a-rlogin-terminal",
   "base_branch": "feat/wf09-08a-rlogin-bridge",
   "worktree_path": null,
-  "commit": null,
-  "pr_url": null,
+  "commit": "9f81d3e1f4881fdf184fb55b6e8de805e4cfb1ee",
+  "pr_url": "https://github.com/DenisZheng/NexaTerm/pull/74",
   "subtasks": [],
   "children": [],
   "parent": "09-23-nexaterm-workflow-mainline",
@@ -24,6 +24,6 @@
     "docs/plans/WF09-PROTOCOL-IMPLEMENTATION-PLAN.md",
     "docs/WORKFLOW_SPEC.md"
   ],
-  "notes": "Terminal IO adapter in_progress, based on verified PR73 docs head573dbc5. Frozen strict encoding, bounded input and renderer lifetime first; connection model/prototype/mounted UI follow. No merge/release.",
+  "notes": "PR74 verified at9f81d3e: CI642 all7 executed jobs passed, Rust541/542/541 (Linux4 existing ignored), frontend1016/1 existing todo; native Rlogin28 66/67/65 and XDMCP8 all passed. Frozen encoding/bounded terminal IO complete; task in_progress. Connection model/storage/prototype/mounted UI/DNS/Windows exact urgent boundary/real interop remain. No merge or release.",
   "meta": {}
 }
