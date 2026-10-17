@@ -14,6 +14,7 @@ All commands receive an actual `WebviewWindow` and derive its label internally. 
 | `rlogin_reserve` | `request: ReserveRequest` | canonical UUID-v4 `String` |
 | `rlogin_start` (async) | `reservation_id: String` | `()` after initial ACK only |
 | `rlogin_write` | `request: WriteRequest` | `()` after bounded enqueue |
+| `rlogin_write_text` | `request: WriteTextRequest` | `()` after strict frozen-encoding conversion and bounded enqueue |
 | `rlogin_resize` | `request: ResizeRequest` | `()` after latest-size update |
 | `rlogin_read` | `request: ReadRequest` | `ReadReplyDto` |
 | `rlogin_status` | `reservation_id: String` | `StatusDto` |
@@ -23,6 +24,8 @@ All commands receive an actual `WebviewWindow` and derive its label internally. 
 Tauri top-level camelCase arguments use `reservationId`; nested typed DTO fields retain their declared snake_case JSON names.
 
 ReserveRequest: `local_address:String,target_address:String,port:u16,local_user:String,remote_user:String,terminal:String,speed:u32,window:{rows:u16,columns:u16,x_pixels:u16=0,y_pixels:u16=0},allow_plaintext:bool`. Both addresses are strict numeric IPv4; existing BSD profile/window validation remains authoritative. Reserve freezes everything and performs no IO. Start accepts only the returned canonical UUID-v4 ID, never a new target/config.
+
+Reserve also accepts `terminal_encoding:String` defaulting to `utf-8`; exactly the eight existing terminal labels are accepted before handle admission. The encoding survives start consuming the connection request. WriteTextRequest is `{reservation_id,data:String}` with no per-write encoding/target/owner override. It rejects >4096 UTF-8 bytes before encoding, rejects unrepresentable characters without replacement, bounds encoded output to32KiB and uses the same byte/item queue as raw write. ISO-2022-JP preserves explicit ESC/SI/SO terminal controls. See [terminal IO adapter](../frontend/rlogin-terminal.md) for the complete text/renderer contracts and test matrix. This adds IO support, not mounted terminal capability.
 
 WriteRequest: `{reservation_id,data:Vec<u8>}` (32KiB maximum). ResizeRequest: `{reservation_id,window}`. ReadRequest: `{reservation_id,epoch:String,ack?:{epoch:String,sequence:String}}`. Deserialize structs deny unknown fields. Status and read return fixed snake_case phases/reason codes; payload/config structs have no Debug.
 

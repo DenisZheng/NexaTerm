@@ -76,3 +76,12 @@ L0 交付时未实现 urgent/OOB、flow control/flush、保留源端口；这些
 - [x] 更新执行证据和Draft PR；UI/编码/DNS/Windows精确flush继续后续。
 
 当前前端交付代码251f2e2、Draft #73，71项新增测试及本地959项全量测试/类型/构建/23项source checks已通过，完整CI637的7个实际执行job全部通过；三平台Rust532/533/532，Linux另4个既有ignored。详情见research/frontend-delivery-evidence.md。
+
+## L1 terminal IO adapter（当前）
+
+- [ ] 严格编码与冻结配置、text write IPC和原生socket回归。
+- [ ] 增量decoder、输入背压、renderer detach/close与resize合并。
+- [ ] 行为/类型/构建/source gates、三平台原生与完整CI。
+- [ ] 证据和Draft PR收口；继续连接模型、母版原型和实际终端UI。
+
+ui-ux-pro-max已核对官方MIT来源并执行针对focus/modal与React异步cleanup的审查；落实为既有Radix焦点/显式错误/实际清理与token，不引入新视觉体系。本adapter slice无界面变更；后续UI必须先改母版并记录可点击交互证据。

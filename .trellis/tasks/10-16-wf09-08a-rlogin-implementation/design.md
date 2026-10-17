@@ -39,3 +39,7 @@ ACK同包尾部转入reader已有有界隔离区，恰好一次、原样、有�
 ## L1 前端有界交付（本轮）
 
 新建每generation单owner的无渲染器依赖桥；先poll再显式render，最多一个ready/writing帧，解析回调后才确认。poll合并并发，ready帧遇flush直接丢弃并精确ACK；已交给renderer的帧等回调，不清屏。读失败可能已消费backend帧，固定失败并关闭，不自动重读。close先失效回调，再等待backend及已发IPC；失败保留lease供重试。write/resize仅单个在途调用，无隐藏输入队列。具体签名、字节/owner预算与错误矩阵先写入frontend/rlogin-delivery.md。本轮无UI/编码/连接模型变更。
+
+## L1 终端IO适配器
+
+PR #73之后先接编码和renderer owner，具体签名/预算/错误矩阵先固定在frontend/rlogin-terminal.md。reserve默认UTF-8并冻结既有八种编码；新增严格text write与raw write共用实际输入额度。后端保留encoding_rs既有版本，不接Telnet改写。前端纯controller按epoch增量解码、128KiB/256块有界输入、单个实际write、最新resize合并和dispose后丢弃确认；close等待实际IO完成。controller不依赖React或xterm、不挂定时器、不发公共输出事件。连接模型/原型与挂载UI继续下一层，能力暂保持false，不将adapter测试称为完整终端。

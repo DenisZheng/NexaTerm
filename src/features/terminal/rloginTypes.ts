@@ -1,5 +1,6 @@
 // 原始字节契约；epoch/sequence不可转为JS number。
 export const RLOGIN_MAX_CHUNK = 32 * 1024;
+export const RLOGIN_MAX_TEXT_BYTES = 4096;
 export const rloginPhases = ["reserved", "starting", "initial_exchange_ready", "closing", "closed", "failed"] as const;
 export type RloginPhase = typeof rloginPhases[number];
 export const rloginReasons = [
@@ -12,6 +13,8 @@ export const rloginReasons = [
   "rlogin_session_invalid_ack",
   "rlogin_session_not_ready",
   "rlogin_session_unavailable",
+  "rlogin_encoding_invalid",
+  "rlogin_encoding_failed",
   "rlogin_invalid_user",
   "rlogin_invalid_terminal",
   "rlogin_invalid_speed",
@@ -38,6 +41,7 @@ export interface RloginWindow { rows: number; columns: number; x_pixels?: number
 export interface RloginReserveRequest {
   local_address: string; target_address: string; port: number; local_user: string; remote_user: string;
   terminal: string; speed: number; window: RloginWindow; allow_plaintext: boolean;
+  terminal_encoding?: import("../connections/connectionTypes").ConnectionTerminalEncoding;
 }
 export interface RloginCapability {
   native_core: boolean; exact_flush: boolean; runtime_available: boolean;
@@ -46,6 +50,7 @@ export interface RloginCapability {
 export interface RloginAck { epoch: string; sequence: string }
 export interface RloginReadRequest { reservation_id: string; epoch: string; ack: RloginAck | null }
 export interface RloginWriteRequest { reservation_id: string; data: readonly number[] }
+export interface RloginWriteTextRequest { reservation_id: string; data: string }
 export interface RloginResizeRequest { reservation_id: string; window: RloginWindow }
 export interface RloginStatus {
   epoch: string; phase: RloginPhase; reason: RloginReason | null; awaiting_ack: boolean; finished: boolean;

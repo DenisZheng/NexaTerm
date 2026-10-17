@@ -84,3 +84,5 @@ The goal is to help AI assistants and new team members understand how YOUR proje
 - [Loopback File Service](./loopback-file-service.md) — local-only file serving, transient ownership and explicit clipboard flow.
 
 - [Rlogin Delivery](./rlogin-delivery.md) — canonical byte DTOs, one credited frame, flush/render boundary and actual close barrier; UI/encoding pending.
+
+- [Rlogin Terminal IO](./rlogin-terminal.md) — frozen strict encoding, bounded input and renderer lifecycle; mounted UI pending.

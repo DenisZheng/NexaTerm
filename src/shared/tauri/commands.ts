@@ -1,4 +1,4 @@
-import type { RloginReadRequest, RloginReserveRequest, RloginResizeRequest, RloginWriteRequest } from "../../features/terminal/rloginTypes";
+import type { RloginReadRequest, RloginReserveRequest, RloginResizeRequest, RloginWriteRequest, RloginWriteTextRequest } from "../../features/terminal/rloginTypes";
 import { parseRloginCapability, parseRloginRead, parseRloginStatus, rloginId } from "../../features/terminal/rloginWire";
 import type { ConnectionGroupInput, StoredConnectionGroup, LegacyGroupReport, LegacyGroupResolution } from "../../features/connections/connectionGroupModel";
 import { invoke as tauriInvoke } from "@tauri-apps/api/core";
@@ -1630,13 +1630,14 @@ export function fileServiceStop(reservationId: string): Promise<void> { return i
 export function fileServiceStatus() { return invoke<import("../../features/tools/fileServiceTypes").FileServiceStatus | null>("file_service_status"); }
 export function fileServiceAudit() { return invoke<import("../../features/tools/fileServiceTypes").FileServiceAudit[]>("file_service_audit"); }
 
-// Rlogin仅提供原始字节IPC；UI/编码/日志均不在此边界隐式接入。
+// Rlogin独立typed IPC；文本编码由冻结的后端会话配置决定，不接公共日志。
 export function rloginCapabilities() { return invoke<unknown>("rlogin_capabilities").then(parseRloginCapability); }
 export function rloginReserve(request: RloginReserveRequest): Promise<string> {
   return invoke<unknown>("rlogin_reserve", { request: {...request, window: {...request.window}} }).then(rloginId);
 }
 export function rloginStart(reservationId: string): Promise<void> { return invoke("rlogin_start", {reservationId}); }
 export function rloginWrite(request: RloginWriteRequest): Promise<void> { return invoke("rlogin_write", {request}); }
+export function rloginWriteText(request: RloginWriteTextRequest): Promise<void> { return invoke("rlogin_write_text", {request:{...request}}); }
 export function rloginResize(request: RloginResizeRequest): Promise<void> { return invoke("rlogin_resize", {request}); }
 export function rloginRead(request: RloginReadRequest) { return invoke<unknown>("rlogin_read", {request}).then(parseRloginRead); }
 export function rloginStatus(reservationId: string) { return invoke<unknown>("rlogin_status", {reservationId}).then(parseRloginStatus); }

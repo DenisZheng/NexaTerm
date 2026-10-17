@@ -43,13 +43,14 @@ impl SessionManager {
     pub fn reserve(&self, origin: &str, request: SessionRequest, consent: bool) -> Result<String, SessionError> {
         owner(origin)?;
         if !consent { return Err(SessionError::ConsentRequired); }
+        let encoding = super::text::SessionEncoding::new(&request.terminal_encoding)?;
         rlogin_connect::validate(&request.options())?;
         let mut registry = self.inner.registry.lock().map_err(|_| SessionError::Unavailable)?;
         if registry.closed { return Err(SessionError::Unavailable); }
         registry.entries.retain(|_, e| e.request.is_none() || e.created.elapsed() < TTL);
         if registry.entries.len() >= MAX_HANDLES { return Err(SessionError::Busy); }
         let id = Uuid::new_v4().to_string();
-        registry.entries.insert(id.clone(), Entry { created: Instant::now(), request: Some(request), state: Shared::new() }); Ok(id)
+        registry.entries.insert(id.clone(), Entry { created: Instant::now(), request: Some(request), state: Shared::new(encoding) }); Ok(id)
     }
     pub(super) fn begin(&self, origin: &str, id: &str) -> Result<(WorkerLease, SessionRequest), SessionError> {
         owner(origin)?;
@@ -88,6 +89,11 @@ impl SessionManager {
     }
     pub fn write(&self, origin: &str, id: &str, bytes: &[u8]) -> Result<(), SessionError> {
         let state = self.state(origin, id)?; let result = state.lock()?.write(bytes); result
+    }
+    pub fn write_text(&self, origin: &str, id: &str, data: &str) -> Result<(), SessionError> {
+        let state = self.state(origin, id)?;
+        let bytes = state.encoding.encode(data)?;
+        let result = state.lock()?.write(&bytes); result
     }
     pub fn resize(&self, origin: &str, id: &str, size: WindowSize) -> Result<(), SessionError> {
         owner(origin)?;

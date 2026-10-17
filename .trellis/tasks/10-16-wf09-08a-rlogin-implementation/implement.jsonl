@@ -18,3 +18,4 @@
 {"file": ".trellis/tasks/10-16-wf09-08a-rlogin-implementation/research/terminal-integration-seams.md", "reason": "Inspected next-slice queue, byte, logging and generation boundaries"}
 {"file": ".trellis/spec/frontend/tauri-command-contracts.md", "reason": "Typed wrapper boundary, payload envelopes and error preservation"}
 {"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "Actual behavioral tests separated from source checks"}
+{"file": ".trellis/spec/frontend/rlogin-terminal.md", "reason": "Frozen encoding/text IPC, bounded keyboard and parser/disposal/close contracts"}

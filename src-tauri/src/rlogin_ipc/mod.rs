@@ -1,7 +1,7 @@
 //! 可由原生harness执行的IPC边界；实际窗口身份由Tauri wrapper传入。
 mod dto;
 #[cfg(test)] mod tests;
-pub(crate) use dto::{AckDto, ReadReplyDto, ReadRequest, ReserveRequest, ResizeRequest, StatusDto, WriteRequest};
+pub(crate) use dto::{AckDto, ReadReplyDto, ReadRequest, ReserveRequest, ResizeRequest, StatusDto, WriteRequest, WriteTextRequest};
 use crate::{legacy_socket::{NativeSocket, SocketError}, rlogin_session::{SessionError, SessionManager}};
 use serde::Serialize;
 
@@ -38,6 +38,9 @@ impl<'a> Boundary<'a> {
     }
     pub fn write(&self, request: WriteRequest) -> Result<(), SessionError> {
         io_available()?; id(&request.reservation_id)?; self.manager.write("main",&request.reservation_id,&request.data)
+    }
+    pub fn write_text(&self, request: WriteTextRequest) -> Result<(), SessionError> {
+        io_available()?; id(&request.reservation_id)?; self.manager.write_text("main",&request.reservation_id,&request.data)
     }
     pub fn resize(&self, request: ResizeRequest) -> Result<(), SessionError> {
         io_available()?; id(&request.reservation_id)?; self.manager.resize("main",&request.reservation_id,request.window.into_core())

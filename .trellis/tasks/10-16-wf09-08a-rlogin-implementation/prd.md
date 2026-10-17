@@ -17,3 +17,5 @@
 PR #72接入实际主窗口IPC和应用生命周期，边界以rlogin-runtime.md为准；终端UI、DNS和Windows精确flush仍待实现。
 
 本轮推进前端typed IPC和有界交付桥，契约见frontend/rlogin-delivery.md；不改变布局或注册完整协议能力。验收仍为L01–L03、C01/C02，实际终端/编码与真实服务端继续后续。
+
+后续终端接入先实现编码、键盘/粘贴背压与renderer生命周期适配器，冻结契约见frontend/rlogin-terminal.md。它是完整终端的工程依赖，不把尚未接入的连接配置/界面标为完成；随后继续原型和统一会话入口接线。沿用上述用户流程、验收编号及WS规则；不变更产品布局或启用日志/历史/宏/广播。

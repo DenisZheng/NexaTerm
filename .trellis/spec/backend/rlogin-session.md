@@ -10,6 +10,8 @@ One backend manager owns target-bound, consented numeric-IPv4 reservations and a
 
 `ReadReply {epoch,phase,reason,requires_reset,awaiting_ack,finished,frame}`; `OutputFrame {epoch,sequence,data}` is delivered once. `Ack {epoch,sequence}` acknowledges rendering or deliberate discard. No raw input/config Debug output; errors are fixed enums/codes. Phase `InitialExchangeReady` proves ACK only, never authentication.
 
+`SessionRequest.terminal_encoding:String` is validated against the existing eight labels at reserve. The immutable encoding lives with Shared after start consumes the request. `write_text(owner,id,data:&str)` validates owner/handle, bounds input to4096 UTF-8 bytes, strictly encodes it with pinned encoding_rs and uses Queues.write atomically. Raw/text share the same quota; no partial prefix is enqueued on an encoding/size error. Fixed InvalidEncoding/EncodingFailed codes contain no text. Detailed terminal-control and frontend contracts: [rlogin-terminal.md](../frontend/rlogin-terminal.md).
+
 ## 3. Contracts / budgets
 
 At most16 live transient handles; unused reservations expire after15s. Do not age-evict active sockets or unacknowledged closed-session output. Four nonwaiting worker permits remain owned through actual FD cleanup, including caller drop/cancel. Start failures/abandonment remove their records only when the worker ends. Completed output drains before final-read removal; explicit close discards remaining buffers after true worker completion. Shutdown rejects new work, cancels workers and retains their tracking until cleanup.
