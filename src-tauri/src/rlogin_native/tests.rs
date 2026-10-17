@@ -13,7 +13,7 @@ fn control(reader: &mut RloginReader, capacity: bool) -> Control {
 fn data(reader: &mut RloginReader, length: usize) -> Vec<u8> {
     let mut result = Vec::new(); let mut buffer = [0;128];
     until(|| {
-        match reader.poll(&mut buffer, true).unwrap() {
+        match reader.poll(&mut buffer, true).unwrap_or_else(|error| panic!("native_data_probe error={error:?} pending={:?} flushing={} urgent_wait={}",reader.pending_urgent,reader.flushing,reader.urgent_since.is_some())) {
             ReceiveEvent::Data(n) => result.extend_from_slice(&buffer[..n]), ReceiveEvent::Idle => {},
             other => panic!("unexpected event while reading data: {other:?}"),
         }
@@ -42,6 +42,11 @@ fn native_oob_window_requests_use_latest_size_and_do_not_appear_in_data() {
     let changed = reader.resize(40,140,0,0).unwrap().unwrap(); write_frame(&mut reader, &mut peer, changed);
     send_urgent_fixture(&peer, 0x80); peer.write_all(b"!").unwrap();
     assert_eq!(control(&mut reader, false).window_frame, Some(changed)); assert_eq!(data(&mut reader, 1), b"!");
+}
+#[cfg(target_os = "macos")]
+#[test]
+fn repeated_window_control_keeps_native_notification_ownership() {
+    for _ in 0..32 { native_oob_window_requests_use_latest_size_and_do_not_appear_in_data(); }
 }
 #[test]
 fn native_flush_is_exact_where_supported_or_reports_limit_without_discarding_data() {

@@ -12,3 +12,4 @@
 {"file": ".trellis/tasks/10-16-wf09-08a-rlogin-implementation/research/establish-evidence.md", "reason": "Native establish execution matrix, Darwin readiness ownership and destructive peek-at-mark regression evidence"}
 {"file": ".trellis/tasks/10-16-wf09-08a-rlogin-implementation/research/session-owner-seams.md", "reason": "Inspected next-slice owner, byte-budget, output-credit and main-window integration seams; not an implemented API"}
 {"file": ".trellis/spec/backend/rlogin-session.md", "reason": "Target-bound leases, actual socket lifetime, byte budgets and pull/ACK/epoch contracts"}
+{"file": ".trellis/tasks/10-16-wf09-08a-rlogin-implementation/research/session-owner-evidence.md", "reason": "Headless owner execution and urgent receive cursor fixture evidence"}
