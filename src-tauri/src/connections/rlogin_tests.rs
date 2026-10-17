@@ -43,7 +43,7 @@ fn rlogin_refuses_saved_inline_legacy_credentials_proxy_jump_x11_and_other_proto
         ("private_key_path",json!("fixture.key")),("inline_private_key_passphrase",json!("fixture passphrase")),
         ("proxy",json!({"kind":"http_connect","host":"127.0.0.1","port":8080})),
         ("jump",json!({"kind":"ssh_jump","jump_connection_id":"fixture-jump"})),
-        ("telnet",json!({"enter_mode":"crlf","backspace_mode":"del"})),
+        ("telnet",json!({"enter_mode":"cr_lf","backspace_mode":"del"})),
     ] {
         let mut value_in=serde_json::to_value(input()).unwrap();value_in[field]=value;
         let request:ConnectionProfileInput=serde_json::from_value(value_in).unwrap();

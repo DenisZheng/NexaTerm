@@ -159,3 +159,21 @@ fn failed_sql_replacement_restores_vault_and_local_tree() {
         .join(".connection-transfer-pending.json")
         .exists());
 }
+
+
+#[test]
+fn invalid_rlogin_extension_is_rejected_before_backup_or_replacement() {
+    let source=repository();
+    source.connection_upsert(crate::connections::rlogin_tests::input(),"t").unwrap();
+    let mut data=source.export_sync_data().unwrap();
+    data.connections[0].inline_secret_slot_id=Some("fixture-slot".into());
+    let bundle=SyncSnapshotBundle::from_data_for_test(serde_json::to_vec(&data).unwrap());
+    let mut target=repository();
+    let keep=target.connection_upsert(serde_json::from_value(serde_json::json!({"host":"example.invalid","port":22,"username":"keep","credential_mode":"prompt"})).unwrap(),"t").unwrap();
+    assert!(!target.sync_backup_root().join("mxterm.db").exists());
+    let error=SyncSnapshotService::import_bundle(&mut target,&bundle,SyncImportOptions::test(Some("test-password"))).unwrap_err();
+    assert_eq!(error.code,"rlogin_config_unsupported");
+    assert!(!target.sync_backup_root().join("mxterm.db").exists());
+    assert_eq!(target.connection_list().unwrap().len(),1);
+    assert_eq!(target.connection_get(&keep.id).unwrap().unwrap().host,keep.host);
+}

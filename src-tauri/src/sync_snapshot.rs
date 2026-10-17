@@ -254,8 +254,10 @@ impl SyncSnapshotService {
                 data.version
             )));
         }
-        validate_sync_data_document(&data)?;
+        // Rlogin安全字段在任何导入副作用前拒绝；一般图结构失败仍遵循既有备份契约。
+        for record in &data.connections { crate::connections::validate_stored_rlogin(record,data.version!=SYNC_PROTOCOL_VERSION)?; }
         repository.create_sync_backup()?;
+        validate_sync_data_document(&data)?;
 
         let secrets = match bundle.remote_secrets_enc.as_deref() {
             Some(encrypted) => Some(Self::decrypt_remote_secrets(
