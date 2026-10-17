@@ -219,6 +219,7 @@ fn upsert_profile(
                 advanced: ConnectionAdvancedConfig::default(),
                 rdp: None,
                 vnc: None,
+                rlogin: None,
                 telnet: None,
                 serial: None,
                 notes: None,

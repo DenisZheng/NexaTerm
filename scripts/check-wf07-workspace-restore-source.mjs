@@ -20,7 +20,7 @@ for (const needle of [
   "CREATE TABLE IF NOT EXISTS workspace_snapshots",
   "current_json TEXT",
   "backup_json TEXT",
-  "SQLITE_SCHEMA_VERSION: i64 = 4",
+  "SQLITE_SCHEMA_VERSION: i64 = 5",
 ]) {
   if (!sqlite.includes(needle)) throw new Error(`WF-07 local snapshot schema missing: ${needle}`);
 }

@@ -102,6 +102,8 @@ pub struct SyncConnectionRecord {
     pub rdp: Option<RdpConnectionConfig>,
     #[serde(default)]
     pub vnc: Option<VncConnectionConfig>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rlogin: Option<crate::connections::RloginConnectionConfig>,
     #[serde(default)]
     pub telnet: Option<TelnetConnectionConfig>,
     #[serde(default)]
@@ -252,6 +254,8 @@ impl SyncSnapshotService {
                 data.version
             )));
         }
+        // Rlogin安全字段在任何导入副作用前拒绝；一般图结构失败仍遵循既有备份契约。
+        for record in &data.connections { crate::connections::validate_stored_rlogin(record,data.version!=SYNC_PROTOCOL_VERSION)?; }
         repository.create_sync_backup()?;
         validate_sync_data_document(&data)?;
 
@@ -342,6 +346,7 @@ pub fn validate_bundle_artifacts(
 }
 
 fn validate_sync_data_document(data: &SyncDataDocument) -> Result<(), AppError> {
+    for record in &data.connections { crate::connections::validate_stored_rlogin(record,data.version!=SYNC_PROTOCOL_VERSION)?; }
     crate::connection_group_transfer::validate(&data.connection_groups, data.version == 2)?;
     for entry in &data.known_hosts {
         validate_host_key_info(&HostKeyInfo {
@@ -973,6 +978,7 @@ mod tests {
                 advanced: ConnectionAdvancedConfig::default(),
                 rdp: None,
                 vnc: None,
+                rlogin: None,
                 telnet: None,
                 serial: None,
                 notes: Some("不要同步明文".to_string()),

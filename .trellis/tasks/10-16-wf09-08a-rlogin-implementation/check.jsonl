@@ -21,3 +21,4 @@
 {"file": ".trellis/spec/frontend/rlogin-terminal.md", "reason": "Frozen encoding/text IPC, bounded keyboard and parser/disposal/close contracts"}
 {"file": ".trellis/spec/backend/sqlite-initialization.md", "reason": "Full CI exposed concurrent initial DDL ownership; preserve atomic rollback and immediate write admission"}
 {"file": ".trellis/spec/backend/xdmcp-runner.md", "reason": "Retain actual pre-stop process identity in native and application cleanup evidence"}
+{"file": ".trellis/spec/backend/rlogin-connections.md", "reason": "Independent config/schema5/serialization compatibility, transient consent, UI and owner contracts"}

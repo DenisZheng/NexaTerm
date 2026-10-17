@@ -6,7 +6,7 @@ use tauri::{AppHandle, Manager};
 
 use crate::app_error::AppError;
 
-pub const SQLITE_SCHEMA_VERSION: i64 = 4;
+pub const SQLITE_SCHEMA_VERSION: i64 = 5;
 
 /// 并发打开仓库时（每个 Tauri command 都会重新 open），等待写锁释放而不是立即报
 /// SQLITE_BUSY。此前 journal_mode=delete 且无 busy_timeout，一次用户操作并发触发多个
@@ -83,6 +83,7 @@ CREATE TABLE IF NOT EXISTS connections (
     vnc_json TEXT,
     telnet_json TEXT,
     serial_json TEXT,
+    rlogin_json TEXT,
     notes TEXT,
     is_favorite INTEGER NOT NULL DEFAULT 0,
     last_connected_at TEXT,
@@ -253,12 +254,15 @@ impl SqliteStore {
         let tx = rusqlite::Transaction::new_unchecked(&self.connection, rusqlite::TransactionBehavior::Immediate)
             .map_err(initialize_error)?;
         crate::connection_group_schema::reject_newer_schema(&tx)?;
+        let had_schema=tx.query_row("SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE name='schema_migrations')",[],|r|r.get::<_,bool>(0))
+            .map_err(initialize_error)?;
         tx.execute_batch(SCHEMA_SQL).map_err(initialize_error)?;
         tx.commit().map_err(initialize_error)?;
         crate::connection_group_schema::migrate(&self.connection)?;
         self.ensure_command_snippet_group_column()?;
         self.ensure_command_history_scope_columns()?;
         self.ensure_connection_protocol_columns()?;
+        crate::rlogin_schema::migrate(&self.connection,had_schema)?;
         self.connection
             .execute(
                 "INSERT OR IGNORE INTO schema_migrations(version, applied_at) VALUES (?1, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))",

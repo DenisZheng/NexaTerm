@@ -742,6 +742,7 @@ fn import_from_file(
                     advanced: ConnectionAdvancedConfig::default(),
                     rdp: None,
                     vnc: None,
+                    rlogin: None,
                     telnet: None,
                     serial: None,
                     notes: Some("Imported from MobaXterm".to_string()),

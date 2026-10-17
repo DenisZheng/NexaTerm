@@ -22,6 +22,9 @@ pub const CONNECTION_TRANSFER_VERSION: u16 = 2;
 #[cfg(test)]
 #[path = "connection_transfer_tree_tests.rs"]
 mod tree_tests;
+#[cfg(test)]
+#[path = "connection_transfer_rlogin_tests.rs"]
+mod rlogin_tests;
 const CONNECTION_TRANSFER_MAX_FILE_BYTES: u64 = 16 * 1024 * 1024;
 const CONNECTION_TRANSFER_MAX_PASSWORD_BYTES: usize = 1024;
 const CONNECTION_TRANSFER_MAX_CONNECTIONS: usize = 10_000;
@@ -362,11 +365,11 @@ fn apply_transfer_data(
                         inline_auth_kind, inline_secret_ref, inline_secret_slot_id,
                         inline_private_key_path, prompt_auth_kind, proxy_json, jump_json,
                         advanced_json, rdp_json, vnc_json, telnet_json, serial_json, notes, is_favorite,
-                        last_connected_at, remote_os_id, remote_os_name, remote_os_version, created_at, updated_at
+                        last_connected_at, remote_os_id, remote_os_name, remote_os_version, created_at, updated_at, rlogin_json
                      ) VALUES (
                         ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12,
                         ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24,
-                        ?25, ?26, ?27, ?28, ?29
+                        ?25, ?26, ?27, ?28, ?29, ?30
                      )
                      ON CONFLICT(id) DO UPDATE SET
                         name = excluded.name,
@@ -395,7 +398,8 @@ fn apply_transfer_data(
                         remote_os_id = excluded.remote_os_id,
                         remote_os_name = excluded.remote_os_name,
                         remote_os_version = excluded.remote_os_version,
-                        updated_at = excluded.updated_at",
+                        rlogin_json = excluded.rlogin_json,
+                    updated_at = excluded.updated_at",
                     params![
                         connection.id,
                         connection.name,
@@ -429,6 +433,7 @@ fn apply_transfer_data(
                         connection.remote_os_version,
                         connection.created_at,
                         connection.updated_at,
+                        optional_json(&connection.rlogin)?,
                     ],
                 )
                 .map_err(connection_transfer_import_failed)?;
@@ -610,6 +615,7 @@ fn preview_bundle(
 }
 
 fn validate_transfer_data(data: &ConnectionTransferData) -> Result<(), AppError> {
+    for record in &data.connections { crate::connections::validate_stored_rlogin(record,data.version!=CONNECTION_TRANSFER_VERSION)?; }
     if data.connection_groups.len() > CONNECTION_TRANSFER_MAX_GROUPS
         || data.credentials.len() > CONNECTION_TRANSFER_MAX_CREDENTIALS
         || data.connections.len() > CONNECTION_TRANSFER_MAX_CONNECTIONS
@@ -1318,6 +1324,7 @@ mod tests {
                 advanced: ConnectionAdvancedConfig::default(),
                 rdp: None,
                 vnc: None,
+                rlogin: None,
                 telnet: None,
                 serial: None,
                 notes: Some("transfer me".to_string()),
