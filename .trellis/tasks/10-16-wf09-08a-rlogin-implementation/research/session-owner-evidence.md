@@ -35,14 +35,38 @@ E/B：夹具把“消费OOB”和“普通TCP接收游标已经越过urgent位�
 
 ## 当前执行结果
 
-执行代码基准：`d3a259961f5a682893b20056522f785869fea9f9`。
+执行代码基准：`20c2a6b4eb72e16066f0c077178bbd2d1e204d3a`。
 
-[原生 #18](https://github.com/DenisZheng/NexaTerm/actions/runs/38991164357)：Linux49、Windows48通过；macOS48通过/1失败，session owner新增用例全过，但既有native_oob_window用例在普通读取阶段返回IoFailed。新增macOS重复窗口控制回归和仅测试状态/errno探针继续定位；尚未标记最终通过。[完整应用 CI #630](https://github.com/DenisZheng/NexaTerm/actions/runs/38991164427)运行中，后续修正会以新代码重跑。旧代码CI因后续测试修正而取消，不复用为最终完整证据。
+[原生 #20](https://github.com/DenisZheng/NexaTerm/actions/runs/38991575092)：全部3个job通过；L0十项另行执行，不重复计为新增；生产模块harness依赖锁子集核对通过，无skip/ignore。
+
+| Runner | harness | 实际能力证据 |
+| --- | --- | --- |
+| ubuntu-22.04 | 49通过 | owner全部用例及Unix精确flush；公共低端口路径实际AccessDenied |
+| macos-14 | 50通过 | 同上，另含32轮连续窗口控制回归；公共低端口路径实际AccessDenied |
+| windows-latest | 48通过 | owner全部用例，公共adapter实际低源端口建立/ACK/尾部/清理；Windows精确flush仍不可用，负向保留数据断言通过 |
+
+普通socket会话fixture不冒充低端口或真实rlogind互通；Unix真实AccessDenied不是skip，也不证明协议登录可用。窗口与流控等正常数据路径没有因Windows精确flush缺失而跳过。
+
+[完整应用 CI #632](https://github.com/DenisZheng/NexaTerm/actions/runs/38991575128)：前端、安全、许可证、服务fixture和Linux通过；macOS所有Rlogin用例通过，但既有XDMCP回收测试读取到空PID文件失败，不能标为完整通过。修复该fixture后重跑，见下节。旧代码完整CI因后续修正而取消，不复用为最终证据。原生#18曾在旧native_oob_window用例出现IoFailed，#19稳定复现及最终修复见下节。
 
 本地任务manifest、行数、diff、workflow YAML、Tauri capability/CSP检查通过；本机无Rust/gitleaks，原生编译与完整安全扫描以CI结果为准。harness只增加应用lockfile已有的uuid pin，无应用依赖/lock变更。
+
+## 调试复盘：Darwin旧通知再交付
+
+- 根因E/B：[原生 #19](https://github.com/DenisZheng/NexaTerm/actions/runs/38991353217)的重复窗口回归稳定复现；测试探针给出peek=true、errno22、mark=false、pending=None。这是已消费OOB之后，又按旧通知尝试读取，不是对当前真实pending控制的正常WouldBlock。
+- 前次机制只在消费后清monitor的Cell，EV_CLEAR只处理已交付的一轮。读取mark前段仍可能把旧NOTE_OOB再次排入内核filter；旧fflags在后续普通数据事件上再交付。
+- 一手核对：[Apple XNU xnu-10002.1.13 uipc_socket.c](https://github.com/apple-oss-distributions/xnu/blob/xnu-10002.1.13/bsd/kern/uipc_socket.c)的soexcept_filtops复用soread filter，filt_soread_common按位置设置NOTE_OOB且也可因普通数据返回事件；结合实际探针，定位为旧filter状态未清。仅阅读，未复制外部代码。
+- 修复在真实MSG_OOB消费成功后，同一次kevent变更删除并重建所属except filter，再清Cell；重新attach会检查当前socket，新urgent可继续交付。注册错误保持固定IoFailed，没有把EINVAL吞成Idle。
+- 防复发：macOS保留32轮完整窗口请求/resize/普通数据回归，既有重复readiness/peek、精确flush和ACK接管断言继续执行。临时errno生产模块测试探针已删除，仅保留无payload的测试失败状态上下文。具体契约已同步legacy-native-sockets.md，无模板源镜像。
 
 ## 后续接入点
 
 下一阶段接typed IPC和app管理：复用 `xdmcp_runtime.rs` 的实际WebviewWindow核验；在lib的main窗口Destroyed与RunEvent::Exit处取消并等待所属worker，不能依赖托管状态Drop。将pull/ACK/epoch映射到typed响应，输出不得经过无界emit或SessionLogs。Windows精确flush缺口仍保持完整能力关闭。
 
 DNS仍需从解析前共享原15秒截止，并为不可中断解析保留真实worker配额；当前只接受数字IPv4。IPC/UI/主题、真实rlogind互通、Windows精确flush与完整协议入口仍待完成，当前不是只剩人工验收。
+
+## 全量门禁附带修复：XDMCP夹具PID发布
+
+CI632的macOS library523通过/1失败；失败为xdmcp native natural/failed exit用例的ParseIntError::Empty，生产回收状态断言此前已过。根因D/E：测试子进程每10ms用fs::write截断并重写同一PID文件，实际group/job结束可能把进程杀在truncate和write之间；存在文件不等于PID已完整发布。
+
+修复夹具生产端：同目录暂存完整PID，再rename为就绪标记；只发布一次，取消循环重写。父进程在启动replacement前撤销旧标记，兼容Windows目标已存在限制。原有PID解析和实际进程终止断言均保留，没有忽略空/坏PID或提高超时。生产XDMCP runner逻辑未改；具体要求已写入xdmcp-runner.md，原生platform harness及完整应用CI继续验证。

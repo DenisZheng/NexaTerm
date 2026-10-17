@@ -50,8 +50,8 @@ The goal is to help AI assistants and new team members understand how YOUR proje
 
 - [Rlogin Protocol Core](./rlogin-protocol.md) — L0 request/handshake/window framing, bounded private rejection handling and loopback TCP fixtures; terminal/OOB integration remains L1.
 
-- [Native Legacy Sockets](./legacy-native-sockets.md) — L1 reserved source sockets and native OOB/mark/flow/window controller; session/IPC/terminal integration remains pending.
+- [Native Legacy Sockets](./legacy-native-sockets.md) — L1 reserved source sockets and native OOB/mark/flow/window controller; IPC/terminal integration remains pending.
 
-- [Rlogin Native Establish](./rlogin-connect.md) — BSD profile validation, one total deadline and owned ACK-tail transfer; session/IPC/UI remain pending.
+- [Rlogin Native Establish](./rlogin-connect.md) — BSD profile validation, one total deadline and owned ACK-tail transfer; IPC/UI remain pending.
 
 - [Rlogin Session Owner](./rlogin-session.md) — consented generation leases, real worker lifetime and byte-bounded pull/ACK/flush delivery; IPC/UI pending.

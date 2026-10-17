@@ -15,8 +15,8 @@
   "branch": "feat/wf09-08a-rlogin-session",
   "base_branch": "feat/wf09-08a-rlogin-handshake",
   "worktree_path": null,
-  "commit": null,
-  "pr_url": null,
+  "commit": "20c2a6b4eb72e16066f0c077178bbd2d1e204d3a",
+  "pr_url": "https://github.com/DenisZheng/NexaTerm/pull/71",
   "subtasks": [],
   "children": [],
   "parent": "09-23-nexaterm-workflow-mainline",
@@ -24,6 +24,6 @@
     "docs/plans/WF09-PROTOCOL-IMPLEMENTATION-PLAN.md",
     "docs/WORKFLOW_SPEC.md"
   ],
-  "notes": "L1 session owner in progress: one-shot target-bound consent/reservations, bounded byte queues with pull/ACK and flush epochs, actual cleanup/worker quotas. Previous native establish code0cd5cf5 and CI626 passed. Windows exact flush, IPC/UI, DNS and real server interop remain.",
+  "notes": "Headless session owner implemented. Native workflow20 passed Linux49/macOS50/Windows48, no skips, including32-cycle Darwin regression. Full CI632 exposed an existing XDMCP fixture empty-PID race; atomic PID publication fix awaits verification. Windows exact flush, IPC/UI, DNS and real server interop remain; task in_progress.",
   "meta": {}
 }

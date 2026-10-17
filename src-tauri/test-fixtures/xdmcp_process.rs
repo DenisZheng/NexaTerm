@@ -3,8 +3,13 @@ use std::{env, fs, process::{self, Command, Stdio}, thread, time::Duration};
 fn main() {
     let args: Vec<_> = env::args().skip(1).collect();
     if args.first().is_some_and(|a| a == "--descendant") {
+        // heartbeat是PID就绪标记；只原子发布一次，避免回收时杀在截断/重写之间。
+        let marker = std::path::Path::new(&args[1]);
+        let staging = marker.with_extension(format!("pending-{}", process::id()));
+        fs::write(&staging, process::id().to_string()).unwrap();
+        fs::rename(&staging, marker).unwrap();
         loop {
-            if fs::write(&args[1], process::id().to_string()).is_err() { break; }
+            if !marker.parent().unwrap().exists() { break; }
             thread::sleep(Duration::from_millis(10));
         }
         return;
@@ -20,6 +25,11 @@ fn main() {
     let target = value("-query");
     if target == "127.0.0.2" { return; }
     if target == "127.0.0.3" { process::exit(1); }
+    // 同一display重用前撤销旧标记；新子进程只发布完整PID文件。
+    match fs::remove_file(markers.join("heartbeat")) {
+        Ok(()) => {}, Err(error) if error.kind() == std::io::ErrorKind::NotFound => {},
+        Err(error) => panic!("fixture marker cleanup failed: {error}"),
+    }
     let _child = Command::new(env::current_exe().unwrap()).arg("--descendant").arg(markers.join("heartbeat"))
         .stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null()).spawn().unwrap();
     if target == "127.0.0.5" {

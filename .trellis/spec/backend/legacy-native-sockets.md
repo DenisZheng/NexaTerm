@@ -25,6 +25,8 @@ read/write 单次≤32KiB；read buffer 必须非空。`Some(0)` read 是 EOF，
 | Linux / macOS | 未到mark时MSG_OOB|MSG_PEEK并保留控制字节；已到mark时直接消费，不再peek | 先发 flush 事件，再每次最多丢弃8KiB前段，保留后段 |
 | Windows | select exceptfds；非 flush 控制立即以 MSG_OOB 消费；本 adapter 精确 mark 能力为 false | 首次真实 flush 返回 sticky UrgentBoundaryUnavailable；不清隔离区、不读或丢弃普通字节、不发成功控制事件 |
 
+Darwin实际消费OOB后，必须同时清所属pending和旧内核filter状态：在同一次kevent变更中EV_DELETE旧EVFILT_EXCEPT，再EV_ADD/EV_ENABLE/EV_CLEAR并请求NOTE_OOB。只清Cell或只依赖EV_CLEAR不足；前段read可再次排入旧NOTE_OOB，之后普通数据事件携带旧fflags会诱发重复MSG_OOB/EINVAL。重建的attach重新检查当前socket，保留这段期间新到达的urgent；注册错误仍返回IoFailed，不能吞EINVAL或当作正常Idle。readiness与peek仍不执行清理。macOS必须跑32轮重复window/request/normal-data回归，同时保留既有精确flush、peek位置与重复观察断言。
+
 Windows 的实际 provider 探针中，非 inline recv 跨过前后段，SIOCATMARK 未提供所需游标位置；inline 探针也未提供可用位置边界。该差异是当前实现缺口，不是 Windows 精确 flush 已实现或不可实现的结论；完整 Windows Rlogin 能力保持关闭。禁止在正常字节中寻找相同值、清空所有后续数据，或把负向能力测试写成 flush 互通通过。
 
 已知位02=flush、10=远端流控、20=本地流控、80=窗口请求；支持组合，10+20时本地优先，未知位作为 urgent 元数据忽略。urgent 指针先到、字节未到时，前段最多隔离32KiB，等待控制15秒；超预算明确失败，该截止不应用于普通安静连接。有效 flush 清隔离区，其它控制按序释放。隔离区须计入未来 owner 的1MiB输出预算。owner 收到有效 flush 必须清理自己尚未交付渲染的输出，本层没有该队列。无输出容量或本地暂停时仍处理 urgent，普通输出施加 TCP 背压；有效 Unix flush 仍推进前段丢弃。
