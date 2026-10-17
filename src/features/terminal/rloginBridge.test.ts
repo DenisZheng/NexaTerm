@@ -18,7 +18,7 @@ function deferred<T>(fallback: T) {
 }
 function fixture(reservationId=id()) {
   const client={read:vi.fn<RloginClient["read"]>().mockResolvedValue(reply()),write:vi.fn<RloginClient["write"]>().mockResolvedValue(),
-    resize:vi.fn<RloginClient["resize"]>().mockResolvedValue(),close:vi.fn<RloginClient["close"]>().mockResolvedValue()};
+    writeText:vi.fn<RloginClient["writeText"]>().mockResolvedValue(),resize:vi.fn<RloginClient["resize"]>().mockResolvedValue(),close:vi.fn<RloginClient["close"]>().mockResolvedValue()};
   const bridge=new RloginBridge(reservationId,client); tracked.push(bridge); return {bridge,client};
 }
 async function ready() { const f=fixture(); f.client.read.mockResolvedValueOnce(frame()); await f.bridge.poll(); return f; }
@@ -142,6 +142,20 @@ describe("Rlogin generation and cleanup", () => {
   });
 });
 describe("Rlogin bounded input and window calls", () => {
+  it("shares the input slot and close barrier between raw and frozen-encoding text",async () => {
+    const {bridge,client}=fixture(),gate=deferred<void>(undefined); client.writeText.mockReturnValueOnce(gate.promise);
+    const writing=bridge.writeText("中\r\x1b[A"); await Promise.resolve();
+    await expect(bridge.write(new Uint8Array([1]))).rejects.toThrow("rlogin_bridge_busy");
+    await expect(bridge.writeText("next")).rejects.toThrow("rlogin_bridge_busy");
+    expect(client.writeText).toHaveBeenCalledWith({reservation_id:bridge.reservationId,data:"中\r\x1b[A"});
+    let done=false; const closing=bridge.close().then(() => {done=true;}); await Promise.resolve(); expect(done).toBe(false);
+    gate.resolve(); await writing; await closing; expect(client.write).not.toHaveBeenCalled();
+  });
+  it("validates text byte and Unicode bounds before issuing IO",async () => {
+    const {bridge,client}=fixture();
+    for (const text of ["x".repeat(4097),"中".repeat(1366),"\ud800"]) await expect(bridge.writeText(text)).rejects.toThrow("rlogin_bridge_invalid_response");
+    expect(client.writeText).not.toHaveBeenCalled(); await bridge.writeText("😀".repeat(1024)); expect(client.writeText).toHaveBeenCalledTimes(1);
+  });
   it("pins one byte call, rejects overlap/oversize before IO, and close waits the issued write", async () => {
     const {bridge,client}=fixture(); const gate=deferred<void>(undefined); client.write.mockReturnValueOnce(gate.promise);
     await expect(bridge.write(new Uint8Array(32769))).rejects.toThrow("rlogin_bridge_invalid_response");

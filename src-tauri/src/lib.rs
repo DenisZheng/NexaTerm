@@ -262,6 +262,7 @@ pub fn run() {
             rlogin_runtime::rlogin_reserve,
             rlogin_runtime::rlogin_start,
             rlogin_runtime::rlogin_write,
+            rlogin_runtime::rlogin_write_text,
             rlogin_runtime::rlogin_resize,
             rlogin_runtime::rlogin_read,
             rlogin_runtime::rlogin_status,

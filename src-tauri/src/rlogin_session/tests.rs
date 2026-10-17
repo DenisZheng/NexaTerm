@@ -7,7 +7,7 @@ use tokio::sync::oneshot;
 pub(super) fn request() -> SessionRequest {
     SessionRequest { local: Ipv4Addr::LOCALHOST, target: SocketAddrV4::new(Ipv4Addr::LOCALHOST,513),
         local_user:"local".into(), remote_user:"remote".into(), terminal:"xterm".into(), speed:38400,
-        window:WindowSize { rows:24,columns:80,x_pixels:0,y_pixels:0 } }
+        window:WindowSize { rows:24,columns:80,x_pixels:0,y_pixels:0 }, terminal_encoding:"utf-8".into() }
 }
 pub(super) fn runtime() -> tokio::runtime::Runtime { tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap() }
 pub(super) async fn eventually<T>(mut operation: impl FnMut() -> Option<T>) -> T {
@@ -17,7 +17,10 @@ pub(super) async fn eventually<T>(mut operation: impl FnMut() -> Option<T>) -> T
 }
 pub(super) struct Fixture { pub id:String, pub state:Arc<Shared>, pub peer:TcpStream, pub task:tokio::task::JoinHandle<()> }
 pub(super) async fn fixture(manager:&SessionManager) -> Fixture {
-    let id=manager.reserve("main",request(),true).unwrap(); let (lease,_)=manager.begin("main",&id).unwrap();
+    fixture_with_request(manager,request()).await
+}
+pub(super) async fn fixture_with_request(manager:&SessionManager,request:SessionRequest) -> Fixture {
+    let id=manager.reserve("main",request,true).unwrap(); let (lease,_)=manager.begin("main",&id).unwrap();
     let state=lease.state.clone(); let (socket,peer)=pair(); peer.set_nonblocking(true).unwrap();
     let reader=RloginReader::new(socket,24,80,0,0).unwrap(); let (ready,received)=oneshot::channel();
     let task=tokio::spawn(actor::established(reader,lease,Some(ready))); received.await.unwrap().unwrap();

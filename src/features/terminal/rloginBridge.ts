@@ -1,10 +1,13 @@
 import { RLOGIN_MAX_CHUNK, RloginBridgeError } from "./rloginTypes";
 import type { RloginAck, RloginBridgeErrorCode, RloginReadReply, RloginReadRequest, RloginResizeRequest,
-  RloginStatus, RloginWindow, RloginWriteRequest } from "./rloginTypes";
+  RloginStatus, RloginWindow, RloginWriteRequest, RloginWriteTextRequest } from "./rloginTypes";
+import { prepareRloginInput } from "./rloginInput";
+import { RLOGIN_MAX_TEXT_BYTES } from "./rloginTypes";
 import { compareRloginCounter, invalidRloginResponse, parseRloginRead, rloginId } from "./rloginWire";
 export interface RloginClient {
   read(request: RloginReadRequest): Promise<RloginReadReply>;
   write(request: RloginWriteRequest): Promise<void>;
+  writeText(request: RloginWriteTextRequest): Promise<void>;
   resize(request: RloginResizeRequest): Promise<void>;
   close(id: string): Promise<void>;
 }
@@ -92,8 +95,18 @@ export class RloginBridge {
     if (!(bytes instanceof Uint8Array) || bytes.length>RLOGIN_MAX_CHUNK) return Promise.reject(invalidRloginResponse());
     // 仅一个在途副本；没有隐式字符串转换、输入重放或无限promise链。
     const data=Array.from(bytes);
+    return this.input(() => this.client.write({reservation_id:this.reservationId,data}));
+  }
+  writeText(data: string): Promise<void> {
+    this.active();
+    if (this.writing) return Promise.reject(new RloginBridgeError("rlogin_bridge_busy"));
+    try { prepareRloginInput(data,RLOGIN_MAX_TEXT_BYTES,1); }
+    catch { return Promise.reject(invalidRloginResponse()); }
+    return this.input(() => this.client.writeText({reservation_id:this.reservationId,data}));
+  }
+  private input(issue:()=>Promise<void>): Promise<void> {
     const work=Promise.resolve().then(() => {
-      this.active(); return this.client.write({reservation_id:this.reservationId,data});
+      this.active(); return issue();
     }).catch(() => {
       if (this.phase === "active") this.stop("rlogin_bridge_write_failed");
       throw new RloginBridgeError(this.phase === "active" ? "rlogin_bridge_write_failed" : this.error ?? "rlogin_bridge_closed");

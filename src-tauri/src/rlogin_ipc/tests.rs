@@ -7,6 +7,32 @@ fn request() -> Value {
 }
 fn decode(value: Value) -> ReserveRequest { serde_json::from_value(value).unwrap() }
 #[test]
+fn text_dto_defaults_encoding_and_refuses_target_or_encoding_overrides_on_write() {
+    let (core,_)=decode(request()).into_core().unwrap(); assert_eq!(core.terminal_encoding,"utf-8");
+    let mut value=request(); value["terminal_encoding"]=json!("gbk");
+    assert_eq!(decode(value).into_core().unwrap().0.terminal_encoding,"gbk");
+    for extra in ["terminal_encoding","owner","target_address","password"] {
+        let mut value=json!({"reservation_id":"x","data":"private fixture"}); value[extra]=json!("private");
+        assert!(serde_json::from_value::<WriteTextRequest>(value).is_err());
+    }
+    assert!(serde_json::from_value::<WriteTextRequest>(json!({"reservation_id":"x","data":[1]})).is_err());
+    let data:WriteTextRequest=serde_json::from_value(json!({"reservation_id":"x","data":"\0\r中"})).unwrap();
+    assert_eq!(data.data,"\0\r中");
+}
+#[test]
+fn text_boundary_keeps_platform_and_id_checks_before_payload_processing() {
+    let manager=SessionManager::default(); let b=Boundary::new("main",&manager).unwrap();
+    let expected=if cfg!(windows) {SocketError::UrgentBoundaryUnavailable.into()} else {SessionError::Expired};
+    assert_eq!(b.write_text(WriteTextRequest {reservation_id:"invalid".into(),data:"x".repeat(4097)}),Err(expected));
+    if cfg!(unix) {
+        let mut value=request(); value["terminal_encoding"]=json!("unknown");
+        assert_eq!(b.reserve(decode(value)),Err(SessionError::InvalidEncoding));
+        let id=b.reserve(decode(request())).unwrap();
+        assert_eq!(b.write_text(WriteTextRequest {reservation_id:id.clone(),data:"x".repeat(4097)}),Err(SessionError::InvalidChunk));
+        b.cancel(&id).unwrap();
+    }
+}
+#[test]
 fn capability_and_boundary_deny_foreign_labels_before_any_operation() {
     let manager=SessionManager::default();
     for label in ["","vnc-runner-host","MAIN","main\0"] {

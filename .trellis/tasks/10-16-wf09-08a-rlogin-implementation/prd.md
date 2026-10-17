@@ -1,6 +1,6 @@
 # WF-09-08A Rlogin 原生协议实现
 
-状态：IN_PROGRESS（L0和L1 socket/控制/建立、headless会话owner、typed IPC/应用生命周期及前端有界交付桥均已过三平台原生与完整应用CI）。父任务：09-23-nexaterm-workflow-mainline。
+状态：IN_PROGRESS（L0和L1 socket/控制/建立、headless会话owner、typed IPC/应用生命周期、前端有界交付桥及终端IO适配器均已过原生与完整应用CI）。父任务：09-23-nexaterm-workflow-mainline。
 
 用户流程：在 NexaTerm 内明确连接 Rlogin 并直接使用终端，调整窗口、断开或重连。
 
@@ -17,3 +17,7 @@
 PR #72接入实际主窗口IPC和应用生命周期，边界以rlogin-runtime.md为准；终端UI、DNS和Windows精确flush仍待实现。
 
 本轮推进前端typed IPC和有界交付桥，契约见frontend/rlogin-delivery.md；不改变布局或注册完整协议能力。验收仍为L01–L03、C01/C02，实际终端/编码与真实服务端继续后续。
+
+后续终端接入先实现编码、键盘/粘贴背压与renderer生命周期适配器，冻结契约见frontend/rlogin-terminal.md。它是完整终端的工程依赖，不把尚未接入的连接配置/界面标为完成；随后继续原型和统一会话入口接线。沿用上述用户流程、验收编号及WS规则；不变更产品布局或启用日志/历史/宏/广播。
+
+终端IO适配器现已在Draft #74通过原生28、XDMCP原生8及完整CI642，执行代码9f81d3e；57项新增前端行为测试和8项新增原生编码/IPC测试通过。配置/SQLite/同步与母版/实际终端接线继续开发，当前不开放完整协议能力。

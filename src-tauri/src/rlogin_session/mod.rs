@@ -3,10 +3,12 @@ mod actor;
 mod buffers;
 mod manager;
 mod types;
+mod text;
 #[cfg(test)] mod tests;
 #[cfg(test)] mod buffer_tests;
 #[cfg(test)] mod native_tests;
 #[cfg(test)] mod lifecycle_tests;
+#[cfg(test)] mod text_tests;
 pub use manager::SessionManager;
 pub use types::{Ack, OutputFrame, Phase, ReadReply, SessionError, SessionRequest, SessionStatus};
 use buffers::Queues;
@@ -15,12 +17,13 @@ use tokio::sync::watch;
 
 struct Shared {
     queues: Mutex<Queues>, cancel: AtomicBool, abandoned: AtomicBool, done: watch::Sender<bool>,
+    encoding: text::SessionEncoding,
 }
 impl Shared {
-    fn new() -> Arc<Self> {
+    fn new(encoding: text::SessionEncoding) -> Arc<Self> {
         let (done, _) = watch::channel(false);
         Arc::new(Self { queues: Mutex::new(Queues::new()), cancel: AtomicBool::new(false),
-            abandoned: AtomicBool::new(false), done })
+            abandoned: AtomicBool::new(false), done, encoding })
     }
     fn lock(&self) -> Result<MutexGuard<'_, Queues>, SessionError> { self.queues.lock().map_err(|_| SessionError::Unavailable) }
     fn cancel(&self) -> Result<(), SessionError> {

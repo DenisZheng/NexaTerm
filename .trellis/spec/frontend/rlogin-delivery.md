@@ -10,6 +10,8 @@ Add typed wrappers and a renderer-independent bridge for the existing numeric-IP
 
 `new RloginBridge(reservationId, client)` owns one canonical UUID-v4 generation. Client methods are read(request), write(request), resize(request), close(id). `poll(): Promise<RloginStatus|null>` coalesces concurrent calls into one native read. `render(write: (bytes: Uint8Array, onParsed:()=>void)=>void): boolean` transfers one ready frame to a sink. `write(bytes): Promise<void>` and resize(window) each allow one in-flight call, returning fixed busy on overlap; there is no hidden input queue. `close(): Promise<void>` invalidates callbacks immediately and waits actual backend close plus all already-issued IPC. A failed close retains the lease and can be retried. `snapshot()` is payload-free local metadata.
 
+The subsequent terminal IO adapter adds client.writeText(request) and bridge.writeText(data); text and raw write share the same in-flight slot and close barrier. Frozen encoding, text limits, bounded keyboard queue and incremental renderer behavior are specified separately in [rlogin-terminal.md](./rlogin-terminal.md). The bridge itself still owns no renderer, hidden queue or loop.
+
 ## 3. Contracts
 
 A module-owned set rejects duplicate bridges for the same ID and caps live/closing owners at16; release only after actual close and issued operations settle. Poll is caller-driven (future mounted terminal scheduler); no hidden timer, detached retry loop or unbounded promises. One output frame of at most32KiB can be ready or writing, plus one in-flight read response; input is at most one32KiB call and resize is at most one call.

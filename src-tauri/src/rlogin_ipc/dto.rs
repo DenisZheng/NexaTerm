@@ -18,17 +18,24 @@ pub(crate) struct ReserveRequest {
     pub local_address: String, pub target_address: String, pub port: u16,
     pub local_user: String, pub remote_user: String, pub terminal: String, pub speed: u32,
     pub window: WindowRequest, pub allow_plaintext: bool,
+    #[serde(default = "utf8")]
+    pub terminal_encoding: String,
 }
+fn utf8() -> String { "utf-8".into() }
 impl ReserveRequest {
     pub fn into_core(self) -> Result<(SessionRequest, bool), SessionError> {
         let address = |s: &str| -> Result<Ipv4Addr, SessionError> { s.parse::<Ipv4Addr>().map_err(|_| crate::legacy_socket::SocketError::InvalidAddress.into()) };
         Ok((SessionRequest { local:address(&self.local_address)?, target:SocketAddrV4::new(address(&self.target_address)?,self.port),
-            local_user:self.local_user,remote_user:self.remote_user,terminal:self.terminal,speed:self.speed,window:self.window.into_core() },self.allow_plaintext))
+            local_user:self.local_user,remote_user:self.remote_user,terminal:self.terminal,speed:self.speed,window:self.window.into_core(),
+            terminal_encoding:self.terminal_encoding },self.allow_plaintext))
     }
 }
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct WriteRequest { pub reservation_id: String, pub data: Vec<u8> }
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct WriteTextRequest { pub reservation_id: String, pub data: String }
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct ResizeRequest { pub reservation_id: String, pub window: WindowRequest }

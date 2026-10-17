@@ -253,10 +253,12 @@ fn newer_schema_is_rejected_before_initialization() {
 fn concurrent_v2_schema_upgrade_preserves_rows() {
     let path = std::env::temp_dir().join(format!("wf04a-concurrent-{}.db", uuid::Uuid::new_v4()));
     old_database(&path, false);
+    let barrier = Arc::new(std::sync::Barrier::new(4));
     let threads: Vec<_> = (0..4)
         .map(|_| {
             let path = path.clone();
-            std::thread::spawn(move || SqliteStore::open(path).unwrap().initialize())
+            let barrier = barrier.clone();
+            std::thread::spawn(move || { barrier.wait(); SqliteStore::open(path).unwrap().initialize() })
         })
         .collect();
     for thread in threads {

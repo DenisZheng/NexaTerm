@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const invoke=vi.hoisted(() => vi.fn());
 vi.mock("@tauri-apps/api/core",() => ({invoke}));
 vi.mock("../i18n",() => ({getLocale:() => "en",t:(key:string)=>key}));
-import { rloginCapabilities, rloginCancel, rloginClose, rloginRead, rloginReserve, rloginResize, rloginStart, rloginStatus, rloginWrite } from "./commands";
+import { rloginCapabilities, rloginCancel, rloginClose, rloginRead, rloginReserve, rloginResize, rloginStart, rloginStatus, rloginWrite, rloginWriteText } from "./commands";
 const id="10000000-0000-4000-8000-000000000001";
 const status={epoch:"18446744073709551615",phase:"closed",reason:null,awaiting_ack:false,finished:true};
 beforeEach(() => { invoke.mockReset(); });
@@ -39,5 +39,12 @@ describe("actual Rlogin typed wrappers", () => {
     invoke.mockResolvedValue({...status,epoch:9007199254740992}); await expect(rloginStatus(id)).rejects.toThrow("rlogin_bridge_invalid_response");
     invoke.mockResolvedValue({...status,requires_reset:false,frame:{epoch:"0",sequence:"1",data:[256]}});
     await expect(rloginRead({reservation_id:id,epoch:"0",ack:null})).rejects.toThrow("rlogin_bridge_invalid_response");
+  });
+  it("pins text input without changing whitespace, controls or the frozen encoding",async () => {
+    invoke.mockResolvedValue(undefined); const request={reservation_id:id,data:"  中\r\x1b[A\0  "};
+    const sending=rloginWriteText(request); request.data="changed"; await sending;
+    expect(invoke).toHaveBeenLastCalledWith("rlogin_write_text",{request:{reservation_id:id,data:"  中\r\x1b[A\0  "}});
+    invoke.mockRejectedValue({code:"rlogin_encoding_failed",message:"fixture"});
+    await expect(rloginWriteText(request)).rejects.toMatchObject({code:"rlogin_encoding_failed"});
   });
 });

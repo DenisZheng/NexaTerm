@@ -5,6 +5,7 @@ use std::net::{Ipv4Addr, SocketAddrV4};
 pub struct SessionRequest {
     pub local: Ipv4Addr, pub target: SocketAddrV4,
     pub local_user: String, pub remote_user: String, pub terminal: String, pub speed: u32, pub window: WindowSize,
+    pub terminal_encoding: String,
 }
 impl SessionRequest {
     pub(super) fn options(&self) -> ConnectOptions<'_> {
@@ -13,7 +14,8 @@ impl SessionRequest {
     }
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum SessionError { Denied, ConsentRequired, Busy, Expired, Duplicate, InvalidChunk, InvalidAck, NotReady, Unavailable, Connect(ConnectError) }
+pub enum SessionError { Denied, ConsentRequired, Busy, Expired, Duplicate, InvalidChunk, InvalidAck, NotReady, Unavailable,
+    InvalidEncoding, EncodingFailed, Connect(ConnectError) }
 impl SessionError {
     pub fn code(self) -> &'static str {
         match self {
@@ -21,6 +23,7 @@ impl SessionError {
             Self::Busy => "rlogin_session_busy", Self::Expired => "rlogin_session_expired", Self::Duplicate => "rlogin_session_duplicate",
             Self::InvalidChunk => "rlogin_session_invalid_chunk", Self::InvalidAck => "rlogin_session_invalid_ack",
             Self::NotReady => "rlogin_session_not_ready", Self::Unavailable => "rlogin_session_unavailable",
+            Self::InvalidEncoding => "rlogin_encoding_invalid", Self::EncodingFailed => "rlogin_encoding_failed",
             Self::Connect(error) => error.code(),
         }
     }
