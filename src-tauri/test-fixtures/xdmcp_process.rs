@@ -34,7 +34,8 @@ fn main() {
         .stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null()).spawn().unwrap();
     if target == "127.0.0.5" {
         for _ in 0..200 {
-            if markers.join("heartbeat").exists() { return; }
+            // 测试先持有实际child句柄，再允许leader自然结束，避免事后PID重用歧义。
+            if markers.join("heartbeat").exists() && markers.join("allow-exit").exists() { return; }
             thread::sleep(Duration::from_millis(5));
         }
         process::exit(2);

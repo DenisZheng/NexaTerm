@@ -240,15 +240,21 @@ impl SqliteStore {
     }
 
     pub fn initialize(&self) -> Result<(), AppError> {
-        crate::connection_group_schema::reject_newer_schema(&self.connection)?;
-        self.connection.execute_batch(SCHEMA_SQL).map_err(|error| {
+        let initialize_error = |error| {
             AppError::new(
                 "sqlite_store_init_failed",
                 "SQLite 存储初始化失败。",
                 error,
                 true,
             )
-        })?;
+        };
+        // 初始化必然写schema：在检查/准备DDL前取得写锁，避免隐式锁升级竞争。
+        // VACUUM备份和FK切换由后续迁移独立处理，不能放入此事务。
+        let tx = rusqlite::Transaction::new_unchecked(&self.connection, rusqlite::TransactionBehavior::Immediate)
+            .map_err(initialize_error)?;
+        crate::connection_group_schema::reject_newer_schema(&tx)?;
+        tx.execute_batch(SCHEMA_SQL).map_err(initialize_error)?;
+        tx.commit().map_err(initialize_error)?;
         crate::connection_group_schema::migrate(&self.connection)?;
         self.ensure_command_snippet_group_column()?;
         self.ensure_command_history_scope_columns()?;
@@ -560,6 +566,17 @@ mod tests {
         store.initialize().unwrap();
 
         assert_eq!(store.schema_version().unwrap(), SQLITE_SCHEMA_VERSION);
+    }
+
+    #[test]
+    fn initial_ddl_failure_rolls_back_new_tables_and_preserves_existing_data() {
+        let store = open_temp_store("ddl-rollback");
+        store.connection.execute_batch("CREATE TABLE connections(id TEXT PRIMARY KEY); INSERT INTO connections VALUES('original');").unwrap();
+        assert_eq!(store.initialize().unwrap_err().code,"sqlite_store_init_failed");
+        assert!(!store.table_exists("schema_migrations").unwrap());
+        assert!(!store.table_exists("app_settings").unwrap());
+        assert!(store.connection.is_autocommit());
+        assert_eq!(store.connection.query_row("SELECT id FROM connections",[],|r|r.get::<_,String>(0)).unwrap(),"original");
     }
 
     #[test]

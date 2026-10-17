@@ -26,6 +26,8 @@ Actual native process fixture on Windows/macOS/Linux: two isolated runs, descend
 
 The fixture's heartbeat file is a PID-readiness marker, not a repeatedly truncated heartbeat stream. Publish the complete PID once by writing a sibling staging file and renaming it; remove a previous run's marker before spawning its replacement. Killing a descendant between truncation and rewrite must not leave an empty visible PID. Keep actual process-stopped assertions; do not skip an empty or invalid marker to make cleanup pass.
 
+Windows process assertions must capture and retain the original process handle before stop. Opening the numeric PID only after stop can observe a recycled PID and is not evidence about the owned child. The native/application fixtures share ObservedProcess and assert immediate signalling of that retained handle after cleanup, with no extra post-stop wait. The natural-descendant fixture waits for an explicit test gate after child readiness so identity is captured before the leader exits. Keep job-accounting and directory cleanup unchanged; the old CI log alone cannot prove PID reuse or a real process leak.
+
 ## 7. Wrong / correct
 Wrong: expose arbitrary shell args, label a live PID as logged in, free an entry before a delayed spawn returns, or kill all XWin processes. Correct: fixed args, querying status, resource-owned worker lease, per-run process group/job and bounded metadata.
 

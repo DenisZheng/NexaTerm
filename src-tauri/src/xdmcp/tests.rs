@@ -1,6 +1,8 @@
 use super::*;
 use std::{fs, path::{Path, PathBuf}, process::Command, sync::{MutexGuard, OnceLock}};
 static PROCESS_TESTS: Mutex<()> = Mutex::new(());
+#[path="../../test-fixtures/xdmcp_observed_process.rs"] mod observed_process;
+use observed_process::ObservedProcess;
 fn runtime() -> tokio::runtime::Runtime { tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap() }
 fn fixture() -> PathBuf {
     static BINARY: OnceLock<PathBuf> = OnceLock::new();
@@ -44,6 +46,7 @@ fn real_processes_are_isolated_and_stop_waits_for_auth_and_tree_cleanup() {
         until(|| ma.join("heartbeat").exists() && mb.join("heartbeat").exists()).await;
         let directory = PathBuf::from(fs::read_to_string(ma.join("directory")).unwrap());
         let child = fs::read_to_string(ma.join("heartbeat")).unwrap();
+        let child = ObservedProcess::capture(child.parse().unwrap());
         manager.stop("foreign", &a).await.unwrap(); assert!(directory.exists());
         let serialized = serde_json::to_string(&manager.status("main").unwrap()).unwrap();
         for secret in [request.executable.as_str(), request.target.as_str(), directory.to_str().unwrap()] {
@@ -53,7 +56,7 @@ fn real_processes_are_isolated_and_stop_waits_for_auth_and_tree_cleanup() {
         assert!(matches!(terminal(&manager, &a).await.phase, Phase::Closed));
         assert!(manager.status("main").unwrap().iter().any(|s| s.id == b && s.phase == Phase::Querying));
         // A descendant must actually be gone, rather than merely deleting its working directory.
-        assert_process_stopped(child.parse().unwrap());
+        child.assert_stopped();
         let replacement_id = manager.reserve("main").unwrap();
         manager.start("main", &replacement_id, request.clone()).await.unwrap();
         manager.stop("main", &a).await.unwrap();
@@ -68,11 +71,16 @@ fn native_fixture_natural_and_failed_exit_are_not_desktop_success() {
         for (target, expected) in [("127.0.0.2", Phase::Closed), ("127.0.0.3", Phase::Failed), ("127.0.0.5", Phase::Closed)] {
             request.target = target.into(); let id = manager.reserve("main").unwrap();
             let started = manager.start("main", &id, request.clone()).await.unwrap();
-            let result = terminal(&manager, &id).await; assert_eq!(result.phase, expected);
             let marker = markers(started.display.unwrap());
+            let child = if target=="127.0.0.5" {
+                until(|| marker.join("heartbeat").exists()).await;
+                let child=ObservedProcess::capture(fs::read_to_string(marker.join("heartbeat")).unwrap().parse().unwrap());
+                fs::write(marker.join("allow-exit"),b"exit").unwrap(); Some(child)
+            } else { None };
+            let result = terminal(&manager, &id).await; assert_eq!(result.phase, expected);
             let directory = PathBuf::from(fs::read_to_string(marker.join("directory")).unwrap());
             assert!(!directory.exists());
-            if let Ok(pid) = fs::read_to_string(marker.join("heartbeat")) { assert_process_stopped(pid.parse().unwrap()); }
+            if let Some(child)=child { child.assert_stopped(); }
             let _ = fs::remove_dir_all(marker);
         }
     });
@@ -146,26 +154,6 @@ fn auth_file_permissions_fixed_arguments_and_history_are_bounded() {
     for _ in 0..24 { let id = manager.reserve("main").unwrap(); drop(manager.begin("main", &id).unwrap()); }
     assert_eq!(manager.status("main").unwrap().len(), 16);
 }
-fn assert_process_stopped(pid: u32) {
-    #[cfg(target_os = "linux")] {
-        if let Ok(stat) = fs::read_to_string(format!("/proc/{pid}/stat")) {
-            assert!(stat.rsplit_once(')').unwrap().1.trim_start().starts_with('Z'), "owned descendant still running");
-        }
-    }
-    #[cfg(target_os = "macos")] {
-        let output = Command::new("ps").args(["-o", "stat=", "-p", &pid.to_string()]).output().unwrap();
-        let state = String::from_utf8_lossy(&output.stdout); assert!(state.trim().is_empty() || state.trim().starts_with('Z'));
-    }
-    #[cfg(windows)] {
-        use ::windows::Win32::System::Threading::*;
-        use ::windows::Win32::Foundation::{CloseHandle, WAIT_OBJECT_0};
-        if let Ok(handle) = unsafe { OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_SYNCHRONIZE, false, pid) } {
-            assert_eq!(unsafe { WaitForSingleObject(handle, 0) }, WAIT_OBJECT_0);
-            unsafe { let _ = CloseHandle(handle); }
-        }
-    }
-}
-
 #[test]
 fn exhausted_display_ports_do_not_silently_start_a_process() {
     let (_guard, manager, request) = setup();

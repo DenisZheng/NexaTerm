@@ -16,6 +16,7 @@ This directory contains guidelines for backend development. Fill in each file wi
 |-------|-------------|--------|
 | [Directory Structure](./directory-structure.md) | Module organization and file layout | To fill |
 | [Database Guidelines](./database-guidelines.md) | ORM patterns, queries, migrations | To fill |
+| [SQLite Initialization](./sqlite-initialization.md) | Immediate DDL write admission, atomic schema batch and concurrency | Active |
 | [Connection Groups](./connection-groups.md) | WF-04A canonical group model, SQLite v3 migration and repository contracts | Active |
 | [Credential & Vault Boundaries](./credential-vault-boundaries.md) | WF-09-03B revoked handles, deletion rollback and secret exclusion | Active |
 | [Error Handling](./error-handling.md) | Error types, handling strategies | To fill |
