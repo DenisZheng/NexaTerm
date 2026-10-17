@@ -41,6 +41,8 @@ Good: reserve a validated target with consent, start once, read/ACK bounded byte
 
 Byte/item limits, partial-write credit retention, exact/idempotent/invalid ACK, flush epoch with an old in-flight frame, owner/consent, reservation expiry/duplicate, real four-worker ownership, cancelled caller and actual task abort/FD release, manager/window shutdown, EOF tail draining, native input/window/flow and slow-consumer urgent handling. Native loopback fixtures use ordinary sockets explicitly; existing reserved-source-port tests remain separate. Run production modules in three-platform harness and full application CI.
 
+A clean peer-EOF assertion after urgent control must drain a known post-mark normal byte first. On Linux, consuming MSG_OOB alone can leave the ordinary TCP cursor at the urgent sequence; close may then send reset even with no application payload left. An outbound write barrier cannot advance that receive cursor. For intentional cancellation with unread receive data, EOF or reset can prove connection release; do not globally weaken clean-EOF fixtures or change production shutdown to hide this distinction.
+
 ## 7. Wrong vs correct
 
 Wrong: removing a frame from the backend queue frees its output budget. Correct: move it into the single in-flight slot and release credit after ACK. Wrong: flush releases an in-flight frame and a late ACK discards the next frame. Correct: retain the old tagged frame until its own ACK, report the new epoch, and never repeat its bytes. Wrong: cancellation acknowledgement means socket closed. Correct: wait for actual worker completion before close/permit release.

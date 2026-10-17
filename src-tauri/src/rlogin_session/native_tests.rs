@@ -57,13 +57,20 @@ fn native_actor_preserves_raw_input_window_negotiation_and_paused_urgent_control
         manager.write("main",&session.id,b"~.\0\xff\x80").unwrap(); assert_eq!(receive(&mut session.peer,5).await,b"~.\0\xff\x80");
         manager.write("main",&session.id,&[0x13,b'?']).unwrap(); assert_eq!(receive(&mut session.peer,1).await,b"?");
         send(&mut session.peer,b"held").await; send_urgent_fixture(&session.peer,0x80);
+        send(&mut session.peer,b"tail").await;
         assert_eq!(receive(&mut session.peer,12).await,window_size_frame(33,100,0,0).unwrap());
         manager.write("main",&session.id,b"B").unwrap(); assert_eq!(receive(&mut session.peer,1).await,b"B");
         assert!(manager.read("main",&session.id,0,None).unwrap().frame.is_none(),"local pause still emitted data");
         manager.write("main",&session.id,&[0x11,b'!']).unwrap(); assert_eq!(receive(&mut session.peer,1).await,b"!");
-        let data=frame(&manager,&session.id,0,None).await; assert_eq!(data.data,b"held");
-        // 到达mark后的下一轮才消费OOB；用真实写入屏障确认控制已收口，再要求干净EOF。
-        manager.write("main",&session.id,b"C").unwrap(); assert_eq!(receive(&mut session.peer,1).await,b"C");
+        // 消费OOB不一定推进普通TCP游标；读完mark后的tail，才能要求关闭时干净EOF。
+        let mut bytes=Vec::new(); let mut ack=None;
+        eventually(|| {
+            if let Some(data)=manager.read("main",&session.id,0,ack).unwrap().frame {
+                bytes.extend_from_slice(&data.data); ack=Some(Ack{epoch:data.epoch,sequence:data.sequence});
+            }
+            (bytes.len()>=8).then_some(())
+        }).await;
+        assert_eq!(bytes,b"heldtail");
         manager.close("main",&session.id).await.unwrap(); eof(&mut session.peer).await; session.task.await.unwrap();
     });
 }
