@@ -45,3 +45,10 @@ L0 交付时未实现 urgent/OOB、flow control/flush、保留源端口；这些
 - [x] [完整应用 CI #626](https://github.com/DenisZheng/NexaTerm/actions/runs/38943343704)：7个实际执行job全部通过；Rust Linux/macOS各508、Windows509通过，Linux另4个既有ignored；其它二进制/集成/doc、前端888通过/1todo及全部source/security/license/fixture通过。条件打包未触发。
 
 最新执行代码基准：`0cd5cf53bb2553b35408fccec701d66acb3d0f25`。Darwin通知和peek位置副作用根因、最终平台矩阵见 research/establish-evidence.md。L1整体保持in_progress，下一阶段为会话owner/队列/许可/IPC/终端接入；Windows精确flush仍须继续开发。
+
+## L1 session owner（本轮）
+
+- [ ] 实现冻结配置/许可、一次消费/过期、16句柄与4worker额度、generation与取消清理。
+- [ ] 实现单socket actor、按字节有界输入/输出、partial write、最新resize、pull/ACK和flush epoch。
+- [ ] 真实socket回归验证背压、flush、输入顺序、窗口请求、close/abort回收及配额不提前释放。
+- [ ] 原生三平台harness/完整CI与规范证据收口；IPC/UI保持后续待办。

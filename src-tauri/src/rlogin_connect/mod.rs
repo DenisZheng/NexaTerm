@@ -43,7 +43,11 @@ impl ConnectOptions<'_> {
     }
 }
 pub async fn connect(options: ConnectOptions<'_>, cancel: &AtomicBool) -> Result<RloginReader, ConnectError> {
-    let deadline = Instant::now() + CONNECT_TIMEOUT;
+    connect_until(options, cancel, Instant::now() + CONNECT_TIMEOUT).await
+}
+pub(crate) fn validate(options: &ConnectOptions<'_>) -> Result<(), ConnectError> { options.prepare().map(drop) }
+pub(crate) async fn connect_until(options: ConnectOptions<'_>, cancel: &AtomicBool, deadline: Instant) -> Result<RloginReader, ConnectError> {
+    let deadline = deadline.min(Instant::now() + CONNECT_TIMEOUT);
     let prepared = options.prepare()?;
     checkpoint(cancel, deadline)?;
     let socket = bind_reserved(options.local, cancel)?;
