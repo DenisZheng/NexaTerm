@@ -16,7 +16,7 @@ fn text_dto_defaults_encoding_and_refuses_target_or_encoding_overrides_on_write(
         assert!(serde_json::from_value::<WriteTextRequest>(value).is_err());
     }
     assert!(serde_json::from_value::<WriteTextRequest>(json!({"reservation_id":"x","data":[1]})).is_err());
-    let data:WriteTextRequest=serde_json::from_value(json!({"reservation_id":"x","data":"\u0000\r中"})).unwrap();
+    let data:WriteTextRequest=serde_json::from_value(json!({"reservation_id":"x","data":"\0\r中"})).unwrap();
     assert_eq!(data.data,"\0\r中");
 }
 #[test]
