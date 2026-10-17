@@ -29,7 +29,7 @@ Some bullets in `component-guidelines.md` and `tauri-command-contracts.md` descr
 | [Quality Guidelines](./quality-guidelines.md) | Code standards, forbidden patterns | Partial (testing requirements filled) |
 | [Type Safety](./type-safety.md) | Type patterns, validation | To fill |
 | [Tauri Command Contracts](./tauri-command-contracts.md) | Typed invoke wrappers and frontend/backend payload sync | Active (placement bullets scoped 2026-09-23) |
-| [Workflow Spec (product rules)](../../../docs/WORKFLOW_SPEC.md) | Target interaction rules `WS-xx`, status, owning WF package, superseded-rule table | v0.6 (2026-10-03) |
+| [Workflow Spec (product rules)](../../../docs/WORKFLOW_SPEC.md) | Target interaction rules `WS-xx`, status, owning WF package, superseded-rule table | v0.7 (2026-10-16) |
 
 - [Terminal Session Logging](./terminal-session-log.md) — explicit consent, pinned capture, bounded worker status and close lifecycle.
 - [Terminal Search](./terminal-search.md) — transient instance state, literal/whole-word matching, bounded highlight counts and cleanup.
@@ -82,3 +82,5 @@ The goal is to help AI assistants and new team members understand how YOUR proje
 - [Local Connection Diagnostics](./local-connection-diagnostics.md) — direct-route DNS/TCP entry, reservation IPC and cancellation races.
 
 - [Loopback File Service](./loopback-file-service.md) — local-only file serving, transient ownership and explicit clipboard flow.
+
+- [Rlogin Delivery](./rlogin-delivery.md) — canonical byte DTOs, one credited frame, flush/render boundary and actual close barrier; UI/encoding pending.

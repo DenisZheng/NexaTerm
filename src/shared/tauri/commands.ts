@@ -1,3 +1,5 @@
+import type { RloginReadRequest, RloginReserveRequest, RloginResizeRequest, RloginWriteRequest } from "../../features/terminal/rloginTypes";
+import { parseRloginCapability, parseRloginRead, parseRloginStatus, rloginId } from "../../features/terminal/rloginWire";
 import type { ConnectionGroupInput, StoredConnectionGroup, LegacyGroupReport, LegacyGroupResolution } from "../../features/connections/connectionGroupModel";
 import { invoke as tauriInvoke } from "@tauri-apps/api/core";
 import { getLocale, t as tr } from "../i18n";
@@ -1627,3 +1629,16 @@ export function fileServiceStart(reservationId: string, path: string, port: numb
 export function fileServiceStop(reservationId: string): Promise<void> { return invoke("file_service_stop", { reservationId }); }
 export function fileServiceStatus() { return invoke<import("../../features/tools/fileServiceTypes").FileServiceStatus | null>("file_service_status"); }
 export function fileServiceAudit() { return invoke<import("../../features/tools/fileServiceTypes").FileServiceAudit[]>("file_service_audit"); }
+
+// Rlogin仅提供原始字节IPC；UI/编码/日志均不在此边界隐式接入。
+export function rloginCapabilities() { return invoke<unknown>("rlogin_capabilities").then(parseRloginCapability); }
+export function rloginReserve(request: RloginReserveRequest): Promise<string> {
+  return invoke<unknown>("rlogin_reserve", { request: {...request, window: {...request.window}} }).then(rloginId);
+}
+export function rloginStart(reservationId: string): Promise<void> { return invoke("rlogin_start", {reservationId}); }
+export function rloginWrite(request: RloginWriteRequest): Promise<void> { return invoke("rlogin_write", {request}); }
+export function rloginResize(request: RloginResizeRequest): Promise<void> { return invoke("rlogin_resize", {request}); }
+export function rloginRead(request: RloginReadRequest) { return invoke<unknown>("rlogin_read", {request}).then(parseRloginRead); }
+export function rloginStatus(reservationId: string) { return invoke<unknown>("rlogin_status", {reservationId}).then(parseRloginStatus); }
+export function rloginCancel(reservationId: string): Promise<void> { return invoke("rlogin_cancel", {reservationId}); }
+export function rloginClose(reservationId: string): Promise<void> { return invoke("rlogin_close", {reservationId}); }
