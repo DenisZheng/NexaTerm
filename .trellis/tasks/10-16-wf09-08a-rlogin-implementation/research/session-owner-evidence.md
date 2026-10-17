@@ -35,9 +35,9 @@ E/B：夹具把“消费OOB”和“普通TCP接收游标已经越过urgent位�
 
 ## 当前执行结果
 
-执行代码基准：`20c2a6b4eb72e16066f0c077178bbd2d1e204d3a`。
+执行代码基准：`32323da32c965c42aa878b03161d6d5d5fdc1f98`；Rlogin生产/测试源码与20c2a6b完全相同，后续只修复XDMCP进程fixture。
 
-[原生 #20](https://github.com/DenisZheng/NexaTerm/actions/runs/38991575092)：全部3个job通过；L0十项另行执行，不重复计为新增；生产模块harness依赖锁子集核对通过，无skip/ignore。
+[原生 #21](https://github.com/DenisZheng/NexaTerm/actions/runs/38992242838)：全部3个job通过；L0十项另行执行，不重复计为新增；生产模块harness依赖锁子集核对通过，无skip/ignore。
 
 | Runner | harness | 实际能力证据 |
 | --- | --- | --- |
@@ -70,3 +70,9 @@ DNS仍需从解析前共享原15秒截止，并为不可中断解析保留真实
 CI632的macOS library523通过/1失败；失败为xdmcp native natural/failed exit用例的ParseIntError::Empty，生产回收状态断言此前已过。根因D/E：测试子进程每10ms用fs::write截断并重写同一PID文件，实际group/job结束可能把进程杀在truncate和write之间；存在文件不等于PID已完整发布。
 
 修复夹具生产端：同目录暂存完整PID，再rename为就绪标记；只发布一次，取消循环重写。父进程在启动replacement前撤销旧标记，兼容Windows目标已存在限制。原有PID解析和实际进程终止断言均保留，没有忽略空/坏PID或提高超时。生产XDMCP runner逻辑未改；具体要求已写入xdmcp-runner.md，原生platform harness及完整应用CI继续验证。
+
+修复后的[XDMCP原生 #5](https://github.com/DenisZheng/NexaTerm/actions/runs/38992242834)三平台各1项全部通过，无skip/ignore。
+
+[完整应用 CI #633](https://github.com/DenisZheng/NexaTerm/actions/runs/38992242862)：全部7个实际执行job通过；条件Windows打包未触发。Rust library：Linux523通过/4个既有ignored，macOS524通过/0ignored，Windows523通过/0ignored；新增用例全部执行。各平台其它二进制19项、集成1项及doc测试通过；前端888通过/1todo，类型/构建、脚本/source、安全扫描、许可证、服务fixture全部通过。macOS/Windows的实际XDMCP自然/失败退出及PID回收断言通过。
+
+收口仅更新规范、进度和任务记录；运行及测试源码与32323da完全相同。上述执行证据对应32323da，文档head的自动CI另列；本轮不是完整协议交付，后续IPC/应用/终端、DNS、Windows精确flush与真实互通继续开发。

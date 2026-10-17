@@ -2,7 +2,7 @@
 
 ## 1. Scope / trigger
 
-Connect from an owned reserved IPv4 socket and complete the initial BSD wire exchange. No external client, DNS, IPC, consent UI, session quota, persistence, authentication inference or full protocol capability. Current Windows exact-flush limitations remain unchanged. This adapter is callable only from future backend session ownership after its own consent/quota checks.
+Connect from an owned reserved IPv4 socket and complete the initial BSD wire exchange. No external client, DNS, IPC, consent UI, session quota, persistence, authentication inference or full protocol capability. Current Windows exact-flush limitations remain unchanged. This adapter is called by backend session ownership after its own consent/quota checks; see rlogin-session.md.
 
 ## 2. Signatures
 

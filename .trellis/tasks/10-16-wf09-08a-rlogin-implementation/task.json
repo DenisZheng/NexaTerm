@@ -15,7 +15,7 @@
   "branch": "feat/wf09-08a-rlogin-session",
   "base_branch": "feat/wf09-08a-rlogin-handshake",
   "worktree_path": null,
-  "commit": "20c2a6b4eb72e16066f0c077178bbd2d1e204d3a",
+  "commit": "32323da32c965c42aa878b03161d6d5d5fdc1f98",
   "pr_url": "https://github.com/DenisZheng/NexaTerm/pull/71",
   "subtasks": [],
   "children": [],
@@ -24,6 +24,6 @@
     "docs/plans/WF09-PROTOCOL-IMPLEMENTATION-PLAN.md",
     "docs/WORKFLOW_SPEC.md"
   ],
-  "notes": "Headless session owner implemented. Native workflow20 passed Linux49/macOS50/Windows48, no skips, including32-cycle Darwin regression. Full CI632 exposed an existing XDMCP fixture empty-PID race; atomic PID publication fix awaits verification. Windows exact flush, IPC/UI, DNS and real server interop remain; task in_progress.",
+  "notes": "Headless owner code32323da passed native workflow21 Linux49/macOS50/Windows48 without skips, XDMCP native workflow5 all3, and full CI633 all7 executed jobs. Rust Linux523/macOS524/Windows523 (Linux4 existing ignored), frontend888+1todo. Darwin stale filter and XDMCP PID marker races fixed. Next: typed IPC/app lifecycle. Windows exact flush, terminal UI, DNS and real server interop remain; task in_progress.",
   "meta": {}
 }

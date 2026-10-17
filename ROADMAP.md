@@ -8,7 +8,7 @@
 
 维护者明确要求先补实现计划，再开发。XDMCP 以随包 X server 和完整桌面会话管理为目标（Windows 优先，再适配 macOS/Linux）；Rlogin 为原生终端协议；Rsh 为原生命令执行和双流/信号管理。详细阶段、组件候选与许可、端口权限、生命周期及验收见 [三协议实现计划](docs/plans/WF09-PROTOCOL-IMPLEMENTATION-PLAN.md)。
 
-顺序：`10-16-wf09-07-xdmcp-implementation` → `10-16-wf09-08a-rlogin-implementation` → `10-16-wf09-08b-rsh-implementation`，维护者已授权按计划开工：XDMCP 当前 **in_progress（X1 运行核心与 X0 组件审查）**，Rlogin 已开始 **in_progress（L0已过CI，L1 socket/控制组件已过三平台原生与完整应用CI，原生建立/ACK尾部adapter也已过三平台原生与完整应用CI，会话owner/有界pull-ACK实现待CI；Windows精确flush、IPC/终端仍待开发）**，Rsh 仍 planning。X server 发行组件尚未采用，桌面互通尚未验证。旧 BLOCKED/DEFER 结论保留为历史证据，开发排期已更新为 PLANNED；具体环境/许可缺口只阻塞相应阶段。当前执行入口是本文及该计划，下方为此前交付记录。
+顺序：`10-16-wf09-07-xdmcp-implementation` → `10-16-wf09-08a-rlogin-implementation` → `10-16-wf09-08b-rsh-implementation`，维护者已授权按计划开工：XDMCP 当前 **in_progress（X1 运行核心与 X0 组件审查）**，Rlogin 已开始 **in_progress（L0已过CI，L1 socket/控制组件已过三平台原生与完整应用CI，原生建立/ACK尾部adapter也已过三平台原生与完整应用CI，headless会话owner/有界pull-ACK也已过三平台原生与完整应用CI；Windows精确flush、IPC/应用/终端与DNS仍待开发）**，Rsh 仍 planning。X server 发行组件尚未采用，桌面互通尚未验证。旧 BLOCKED/DEFER 结论保留为历史证据，开发排期已更新为 PLANNED；具体环境/许可缺口只阻塞相应阶段。当前执行入口是本文及该计划，下方为此前交付记录。
 
 ## WF-09 开发交付（2026-10-16）
 
