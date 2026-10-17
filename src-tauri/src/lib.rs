@@ -48,6 +48,7 @@ pub mod rlogin;
 pub mod legacy_socket;
 pub mod rlogin_native;
 pub mod rlogin_connect;
+pub mod rlogin_session;
 mod tunnels;
 mod vnc;
 mod webdav;

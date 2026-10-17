@@ -23,3 +23,11 @@ ACK同包尾部转入reader已有有界隔离区，恰好一次、原样、有�
 接口与测试点先固定于 .trellis/spec/backend/rlogin-connect.md。无新IPC、UI或持久化模型；尚不承担主窗口许可、四会话配额和DNS，后续会话owner负责，完整能力保持关闭。Windows精确flush缺口不被该adapter覆盖。
 
 后续owner的既有接口核对与开发顺序见 research/session-owner-seams.md；其中credit/pull/typed IPC具体签名仍须在对应实现前写入code-spec，不能当作已实现接口。
+
+## L1 会话owner与有界交付
+
+本轮实现独立Rust会话manager/单owner actor，字段在reserve时校验并冻结，单次许可绑定目标和新UUID generation；未用租约15秒，最多16个瞬时句柄、4个真实worker。worker到实际socket关闭后才归还额度，关闭会等待该完成信号，caller future丢弃只触发取消，不提前释放资源。已关闭但输出尚未确认的句柄不静默逐出，最终读取或显式close释放。
+
+输出采用pull/ACK，最多一个已交付但未确认的块，重复pull不复制该数据；输入/输出各1MiB，块≤32KiB且队列条目也有上限，保留partial write后缀。输出预算为quarantine/read scratch/交付副本合计预留3×32KiB。flush清未交付队列并递增epoch，已交付块保留额度至前端确认/丢弃；旧确认只能释放它本身，不影响下一块。具体签名与状态见rlogin-session.md。
+
+本轮先落实headless owner与真实socket回归，不接现有Telnet无界通道，不修改终端UI/存储或开放完整协议标志。IPC接入前仍须核验主窗口与Windows边界能力；DNS和UI为后续独立接入。

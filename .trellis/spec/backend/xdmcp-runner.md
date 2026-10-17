@@ -24,6 +24,8 @@ Good: reserve, explicitly select engine/addresses, start -> querying, exact stop
 ## 6. Required tests
 Actual native process fixture on Windows/macOS/Linux: two isolated runs, descendants, cancellation/shutdown, natural/failed exit, timeout/late worker ownership, single-use/expiry/owner quotas, fixed arguments/auth permissions, status secrecy and invalid inputs. Fixture verifies runner behavior only; it is not an X server or real XDMCP evidence.
 
+The fixture's heartbeat file is a PID-readiness marker, not a repeatedly truncated heartbeat stream. Publish the complete PID once by writing a sibling staging file and renaming it; remove a previous run's marker before spawning its replacement. Killing a descendant between truncation and rewrite must not leave an empty visible PID. Keep actual process-stopped assertions; do not skip an empty or invalid marker to make cleanup pass.
+
 ## 7. Wrong / correct
 Wrong: expose arbitrary shell args, label a live PID as logged in, free an entry before a delayed spawn returns, or kill all XWin processes. Correct: fixed args, querying status, resource-owned worker lease, per-run process group/job and bounded metadata.
 
