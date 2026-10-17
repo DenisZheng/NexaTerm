@@ -67,7 +67,11 @@ fn encrypted_sync_preserves_tree_and_connection_assignment() {
 fn legacy_v2_sync_uses_original_envelope_aad_and_flat_group_defaults() {
     let password = "old-password";
     let snapshot = "old-snapshot";
-    let data: serde_json::Value = serde_json::from_str(r#"{"version":2,"connection_groups":[{"id":"old","name":"Legacy","sort_order":5,"created_at":"t","updated_at":"t"}],"connections":[],"credentials":[],"known_hosts":[],"tunnels":[],"settings":{}}"#).unwrap();
+    let mut data: serde_json::Value = serde_json::from_str(r#"{"version":2,"connection_groups":[{"id":"old","name":"Legacy","sort_order":5,"created_at":"t","updated_at":"t"}],"connections":[],"credentials":[],"known_hosts":[],"tunnels":[],"settings":{}}"#).unwrap();
+    let record = include_str!("../test-fixtures/rlogin-legacy-profile.json").trim();
+    let parsed: SyncConnectionRecord = serde_json::from_str(record).unwrap();
+    assert_eq!(serde_json::to_string(&parsed).unwrap(), record);
+    data["connections"] = serde_json::json!([serde_json::from_str::<serde_json::Value>(record).unwrap()]);
     let data_enc = serde_json::to_vec(&RemoteDataEnvelope {
         format: SYNC_FORMAT.into(),
         protocol_version: 2,
@@ -109,6 +113,9 @@ fn legacy_v2_sync_uses_original_envelope_aad_and_flat_group_defaults() {
         SyncImportOptions::test(Some(password)),
     )
     .unwrap();
+    let profile = target.connection_get("legacy-profile").unwrap().unwrap();
+    assert!(profile.rlogin.is_none());
+    assert_eq!(profile.protocol, ConnectionProtocol::Ssh);
     let groups = target.connection_groups().unwrap();
     assert_eq!(groups[0].parent_id, None);
     assert_eq!(groups[0].color, "#64748b");

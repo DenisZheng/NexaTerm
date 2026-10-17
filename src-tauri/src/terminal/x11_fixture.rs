@@ -71,6 +71,7 @@ async fn x11_fixture_russh_path_reaches_host_xvfb() {
                 },
                 rdp: None,
                 vnc: None,
+                rlogin: None,
                 telnet: None,
                 serial: None,
                 notes: None,

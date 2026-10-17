@@ -102,6 +102,8 @@ pub struct SyncConnectionRecord {
     pub rdp: Option<RdpConnectionConfig>,
     #[serde(default)]
     pub vnc: Option<VncConnectionConfig>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rlogin: Option<crate::connections::RloginConnectionConfig>,
     #[serde(default)]
     pub telnet: Option<TelnetConnectionConfig>,
     #[serde(default)]
@@ -252,8 +254,8 @@ impl SyncSnapshotService {
                 data.version
             )));
         }
-        repository.create_sync_backup()?;
         validate_sync_data_document(&data)?;
+        repository.create_sync_backup()?;
 
         let secrets = match bundle.remote_secrets_enc.as_deref() {
             Some(encrypted) => Some(Self::decrypt_remote_secrets(
@@ -342,6 +344,7 @@ pub fn validate_bundle_artifacts(
 }
 
 fn validate_sync_data_document(data: &SyncDataDocument) -> Result<(), AppError> {
+    for record in &data.connections { crate::connections::validate_stored_rlogin(record,data.version!=SYNC_PROTOCOL_VERSION)?; }
     crate::connection_group_transfer::validate(&data.connection_groups, data.version == 2)?;
     for entry in &data.known_hosts {
         validate_host_key_info(&HostKeyInfo {
@@ -973,6 +976,7 @@ mod tests {
                 advanced: ConnectionAdvancedConfig::default(),
                 rdp: None,
                 vnc: None,
+                rlogin: None,
                 telnet: None,
                 serial: None,
                 notes: Some("不要同步明文".to_string()),

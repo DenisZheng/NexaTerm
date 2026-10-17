@@ -36,6 +36,7 @@ fn password_input() -> ConnectionProfileInput {
         advanced: ConnectionAdvancedConfig::default(),
         rdp: None,
         vnc: None,
+        rlogin: None,
         telnet: None,
         serial: None,
         notes: None,
@@ -300,6 +301,7 @@ fn validation_accepts_telnet_and_clears_ssh_only_fields() {
         host: " 192.0.2.30 ".to_string(),
         port: 23,
         username: "ignored".to_string(),
+        rlogin: None,
         telnet: Some(TelnetConnectionConfig {
             enter_mode: TelnetEnterMode::Cr,
             backspace_mode: TelnetBackspaceMode::CtrlH,

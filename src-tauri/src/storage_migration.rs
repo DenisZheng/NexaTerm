@@ -138,6 +138,7 @@ impl StorageMigrator {
         }
 
         let connections = ConnectionStore::load(self.root.join("connections.json"))?.list();
+        for profile in &connections { crate::connections::validate_loaded_rlogin(profile)?; }
         let credentials = CredentialStore::load(self.root.join("credentials.json"))?.list();
         let known_hosts = KnownHostStore::load(self.root.join("known_hosts.json"))?.list();
         let tunnels = TunnelStore::load(self.root.join("tunnels.json"))?.list();
@@ -295,9 +296,10 @@ impl StorageMigrator {
                         inline_auth_kind, inline_secret_ref, inline_secret_slot_id,
                         inline_private_key_path, prompt_auth_kind, proxy_json, jump_json,
                         advanced_json, notes, is_favorite, last_connected_at, remote_os_id,
-                        remote_os_name, remote_os_version, created_at, updated_at
+                        remote_os_name, remote_os_version, created_at, updated_at,
+                        protocol, rdp_json, vnc_json, telnet_json, serial_json, rlogin_json
                     ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12,
-                              ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24)",
+                              ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28, ?29, ?30)",
                     params![
                         profile.id,
                         profile.name,
@@ -323,6 +325,12 @@ impl StorageMigrator {
                         profile.remote_os_version,
                         profile.created_at,
                         profile.updated_at,
+                        enum_value(&profile.protocol)?,
+                        optional_profile_json(&profile.rdp)?,
+                        optional_profile_json(&profile.vnc)?,
+                        optional_profile_json(&profile.telnet)?,
+                        optional_profile_json(&profile.serial)?,
+                        optional_profile_json(&profile.rlogin)?,
                     ],
                 )
                 .map_err(sqlite_migration_error)?;
@@ -394,8 +402,8 @@ impl StorageMigrator {
             ConnectionStore::load(self.legacy_repair_path("connections.json"))?
                 .list()
                 .into_iter()
-                .map(|profile| (profile.id.clone(), profile))
-                .collect::<HashMap<_, _>>();
+                .map(|profile| { crate::connections::validate_loaded_rlogin(&profile)?; Ok((profile.id.clone(), profile)) })
+                .collect::<Result<HashMap<_, _>, AppError>>()?;
         let legacy_credentials =
             CredentialStore::load(self.legacy_repair_path("credentials.json"))?
                 .list()
@@ -608,6 +616,10 @@ fn sqlite_serialize_error(error: serde_json::Error) -> AppError {
         error,
         true,
     )
+}
+
+fn optional_profile_json<T: serde::Serialize>(value:&Option<T>)->Result<Option<String>,AppError> {
+    value.as_ref().map(serde_json::to_string).transpose().map_err(sqlite_serialize_error)
 }
 
 #[cfg(test)]
