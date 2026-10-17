@@ -111,7 +111,18 @@ impl Monitor {
         }
         Ok(ready)
     }
-    pub fn consumed_urgent(&self) { self.urgent.set(false); }
+    pub fn consumed_urgent(&self, stream: &TcpStream) -> io::Result<()> {
+        // mark前段读取可再次排入旧NOTE_OOB；消费后重建此filter，连内核fflags一并清掉。
+        // 新注册会重新检查当前socket；期间新到达的urgent仍由新filter交付。
+        let mut changes: [libc::kevent;2] = unsafe { std::mem::zeroed() };
+        for event in &mut changes { event.ident = stream.as_raw_fd() as _; event.filter = libc::EVFILT_EXCEPT; }
+        changes[0].flags = libc::EV_DELETE;
+        changes[1].flags = libc::EV_ADD | libc::EV_ENABLE | libc::EV_CLEAR; changes[1].fflags = libc::NOTE_OOB;
+        let timeout = libc::timespec { tv_sec:0, tv_nsec:0 };
+        let result = unsafe { libc::kevent(self.fd.as_raw_fd(), changes.as_ptr(),2,std::ptr::null_mut(),0,&timeout) };
+        if result < 0 { return Err(io::Error::last_os_error()); }
+        self.urgent.set(false); Ok(())
+    }
 }
 #[cfg(windows)]
 pub(super) fn at_mark(stream: &TcpStream) -> io::Result<bool> {

@@ -13,7 +13,7 @@ fn control(reader: &mut RloginReader, capacity: bool) -> Control {
 fn data(reader: &mut RloginReader, length: usize) -> Vec<u8> {
     let mut result = Vec::new(); let mut buffer = [0;128];
     until(|| {
-        match reader.poll(&mut buffer, true).unwrap_or_else(|error| panic!("native_data_probe error={error:?} pending={:?} flushing={} urgent_wait={}",reader.pending_urgent,reader.flushing,reader.urgent_since.is_some())) {
+        match reader.poll(&mut buffer, true).unwrap_or_else(|error| panic!("native read failed: error={error:?} pending={:?} flushing={} urgent_wait={}",reader.pending_urgent,reader.flushing,reader.urgent_since.is_some())) {
             ReceiveEvent::Data(n) => result.extend_from_slice(&buffer[..n]), ReceiveEvent::Idle => {},
             other => panic!("unexpected event while reading data: {other:?}"),
         }

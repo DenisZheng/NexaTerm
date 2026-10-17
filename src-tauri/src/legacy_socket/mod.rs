@@ -110,14 +110,11 @@ impl NativeSocket {
         ready.map_err(|_| SocketError::IoFailed)
     }
     pub(crate) fn urgent(&self, peek: bool) -> Result<Option<u8>, SocketError> {
-        let value = platform::urgent(&self.stream, peek).map_err(|error| {
-            #[cfg(all(test, target_os = "macos"))]
-            eprintln!("native_urgent_error_probe peek={peek} errno={:?} mark={:?}", error.raw_os_error(), self.at_mark());
-            let _ = error;
-            SocketError::IoFailed
-        })?;
+        let value = platform::urgent(&self.stream, peek).map_err(|_| SocketError::IoFailed)?;
         // Darwin 的 EV_CLEAR 只清内核通知；观察/peek 不消费本 owner 的 pending 状态。
-        #[cfg(target_os = "macos")] if !peek && value.is_some() { self.monitor.consumed_urgent(); }
+        #[cfg(target_os = "macos")] if !peek && value.is_some() {
+            self.monitor.consumed_urgent(&self.stream).map_err(|_| SocketError::IoFailed)?;
+        }
         Ok(value)
     }
     pub(crate) fn at_mark(&self) -> Result<bool, SocketError> { platform::at_mark(&self.stream).map_err(|_| SocketError::IoFailed) }
