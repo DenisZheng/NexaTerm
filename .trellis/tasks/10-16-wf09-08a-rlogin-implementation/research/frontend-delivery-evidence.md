@@ -1,6 +1,6 @@
 # Rlogin 前端有界交付执行证据
 
-本轮分支feat/wf09-08a-rlogin-bridge，基于PR #72的06e2cc064990b4b7795ac78ae69874e95e514641；源码提交、Draft PR及完整CI待回填。Rust生产源码/测试/workflow未修改，保留PR #72原生和完整应用基线。
+本轮源码`251f2e2cef780e857e2f6b1dafbacfc50d6f9e4d`；[Draft #73](https://github.com/DenisZheng/NexaTerm/pull/73)基于PR #72的06e2cc064990b4b7795ac78ae69874e95e514641。Rust生产源码/测试/workflow未修改，保留PR #72原生和完整应用基线。
 
 ## 实现与验证对象
 
@@ -18,7 +18,15 @@
 
 ## 完整CI
 
-待实际执行完成后回填；本地测试不替代原生应用CI或真实WebView验收。
+[CI #637](https://github.com/DenisZheng/NexaTerm/actions/runs/38997375605)全部7个实际执行job成功；条件打包未触发。源码对象为251f2e2，不以文档收口的新SHA替代该执行对象。
+
+| 平台 | 应用library | ignored / failed |
+| --- | --- | --- |
+| Linux | 532 passed | 4个既有ignored / 0 |
+| macOS | 533 passed | 0 / 0 |
+| Windows | 532 passed | 0 / 0 |
+
+各平台其它二进制19项、集成1项及0项/doc-test均通过。前端116文件959通过/1既有todo；脚本179通过/3环境限定skip；类型/构建/source、安全与许可证、真实SSH/X11/双跳/隧道fixture均通过。新增71项均无skip/todo；完整前端在CI标准设置下构建成功。Rust/workflow未修改，未降低现有门禁。真实WebView/服务端验收仍单列。
 
 ## 尚未交付
 

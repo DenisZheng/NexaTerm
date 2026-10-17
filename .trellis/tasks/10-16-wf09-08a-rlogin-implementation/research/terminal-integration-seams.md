@@ -8,4 +8,6 @@ PR #72只交付后端IPC和应用生命周期；本文登记下一刀的复用�
 - 运行时IPC已有九项命令，签名以rlogin-runtime.md为准。后续frontend关闭/重连要await所属generation真实close；旧异步结果只能清理旧句柄，不能接管新实例。主窗口生命周期由backend托管，不以React组件卸载代替实际socket完成。
 - 当前runtime仅接受数字IPv4；DNS需要解析前开始的同一15秒绝对截止，以及不可中断解析的真实配额持有策略，不能只增加lookup包装就宣称取消回收完成。Windows capability仍拒绝运行时IO，直到精确urgent边界实现并验证；UI必须忠实显示该能力。
 
-下一刀应先完成有界前端交付桥与generation/ACK/flush回归，再接连接模型、原型和终端交互；真实WebView负向IPC、服务端互通、三主题与原生体验继续统一后续验收。
+有界前端交付桥与generation/ACK/flush回归已在PR #73编码并通过前端CI；运行契约见frontend/rlogin-delivery.md，执行记录见frontend-delivery-evidence.md。后续接连接模型、编码、原型和终端交互；真实WebView负向IPC、服务端互通、三主题与原生体验继续统一后续验收。
+
+桥接的poll由后续终端controller驱动，render只在renderer可接管时调用；epoch从poll/snapshot读取，后续增量文本decoder须按generation和flush epoch隔离。输入端单个在途调用明确返回busy，不是已经实现了键盘/粘贴队列；UI接入仍需有界排队/背压与关闭失效，不可忽略busy丢输入或建立无限promise链。
