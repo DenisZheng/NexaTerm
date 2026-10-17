@@ -6,7 +6,8 @@
 - [x] L1组件：保留源端口、原生OOB/流控/resize、Unix精确flush及真实socket测试。
 - [ ] L1：Windows精确flush backend（当前明确失败并保留数据），不缩减产品目标。
 - [x] L1组件：headless会话manager、冻结配置/单次许可、有界pull/ACK/epoch和真实worker清理。
-- [ ] L1：typed IPC、应用/窗口生命周期、终端UI/能力/编码；不执行外部客户端。
+- [x] L1组件：typed IPC、应用/窗口生命周期（原生三平台及完整CI635通过）。
+- [ ] L1：终端UI/能力/编码；不执行外部客户端。
 - [ ] L2：具体服务端 profile 的真实互通、权限拒绝与三平台/三主题验收。
 - [x] 更新已实现L0/L1组件的可执行code-spec、能力边界、错误/资源预算契约及回归测试；后续IPC/应用/终端接入仍须补齐对应契约。
 - [x] L0：受影响测试、完整应用类型/构建与既有 source/security/license gates、三平台 CI 均通过；L1/L2 新实现仍须继续验证。
@@ -47,7 +48,7 @@ L0 交付时未实现 urgent/OOB、flow control/flush、保留源端口；这些
 
 该adapter slice执行代码基准：`0cd5cf53bb2553b35408fccec701d66acb3d0f25`。Darwin通知和peek位置副作用根因、最终平台矩阵见 research/establish-evidence.md。L1整体保持in_progress，下一阶段为会话owner/队列/许可/IPC/终端接入；Windows精确flush仍须继续开发。
 
-## L1 session owner（本轮）
+## L1 session owner（PR #71）
 
 - [x] 实现冻结配置/许可、一次消费/过期、16句柄与4worker额度、generation与取消清理。
 - [x] 实现单socket actor、按字节有界输入/输出、partial write、最新resize、pull/ACK和flush epoch。
@@ -60,5 +61,9 @@ L0 交付时未实现 urgent/OOB、flow control/flush、保留源端口；这些
 
 - [x] 实际main窗口核验、typed DTO、平台能力与IO门禁。
 - [x] 不消费输出的status、main销毁取消和Exit真实完成屏障。
-- [ ] JSON/owner/生命周期/真实socket回归，三平台harness与完整CI。
-- [ ] 规范/进度/执行证据及Draft PR收口；UI/DNS/Windows精确flush继续后续。
+- [x] JSON/owner/生命周期/真实socket回归，三平台harness与完整CI。
+- [x] 规范/进度/执行证据及Draft PR收口；UI/DNS/Windows精确flush继续后续。
+
+后续终端接入已核对的队列/字节/日志/generation边界见research/terminal-integration-seams.md；它不是已实现UI或额外产品交互批准。
+
+本轮执行代码`ae8644ee3d26c15d6da183ee2930409d6dabee63`；[Draft #72](https://github.com/DenisZheng/NexaTerm/pull/72)基于#71。[原生#23](https://github.com/DenisZheng/NexaTerm/actions/runs/38995284463) Linux58/macOS59/Windows57全部通过，无skip/ignore；[完整CI635](https://github.com/DenisZheng/NexaTerm/actions/runs/38995284424)7个执行job全通过，应用library Linux532/macOS533/Windows532（Linux另4个既有ignored），前端888通过/1todo。详情见research/runtime-evidence.md。L1整体仍in_progress，下一刀先完成有界前端交付桥，再接连接/终端UI。

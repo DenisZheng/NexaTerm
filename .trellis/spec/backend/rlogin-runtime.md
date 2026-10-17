@@ -36,12 +36,15 @@ Managed main-window destruction calls `cancel_window(label)`: foreign labels do 
 
 ## 4. Validation / errors
 
+For reserve/start/write/resize/read: actual-main guard first, platform IO gate second, payload/ID validation last. The remaining validation rows assume supported IO.
+
 | Condition | Result |
 | --- | --- |
 | Actual window not main | rlogin_session_denied, no IO |
 | Exact boundary unavailable | legacy_socket_urgent_boundary_unavailable before runtime IO |
 | Missing consent / invalid profile/address/window | existing fixed consent/protocol/socket code |
-| Noncanonical/missing/old UUID | rlogin_session_expired |
+| Noncanonical UUID | rlogin_session_expired |
+| Unknown canonical UUID | status/read/write/resize/start: expired; cancel/close: idempotent success (platform IO gate has priority) |
 | Invalid counter/ACK | rlogin_session_invalid_ack, no credit mutation |
 | Queue/handle/worker limit | existing Busy; no unbounded wait |
 | Other transport / cleanup failure | fixed SessionError code; no raw OS/payload text |

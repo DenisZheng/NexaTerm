@@ -1,6 +1,6 @@
 # 下一阶段：原生会话owner接入点
 
-这是已授权L1的工程接入记录，不是另行确认的产品交互。headless session owner与pull/ACK契约现已在PR #71实现，执行证据见session-owner-evidence.md。当前只接受选定的数字IPv4；DNS、IPC和终端UI仍待接入。
+这是已授权L1的工程接入记录，不是另行确认的产品交互。headless session owner与pull/ACK契约现已在PR #71实现，执行证据见session-owner-evidence.md。当前只接受选定的数字IPv4；typed IPC/应用生命周期已在PR #72接入并通过三平台原生与完整CI；DNS和终端UI仍待接入。
 
 ## 已核对的仓库边界
 
@@ -22,7 +22,7 @@
 
 四会话配额/不排无限等待队列、未用租约过期、重复/foreign/main限制、取消在reserve/start/ACK/active各阶段、worker abort/drop及close等待真实EOF、慢消费者byte预算、partial write保留、输出ACK/flush epoch、过期generation拒绝、quiet终端不触发建立超时。真实rlogind/三主题/完整窗口IPC另行验收，不由actor fixture替代。
 
-## 下一刀：已核对的IPC与应用接入顺序（待实现）
+## IPC与应用接入顺序（PR #72已编码，保留设计时核对记录）
 
 1. `lib.rs` 当前只manage XdmcpManager，Destroyed与RunEvent::Exit也只有现有服务清理。为Rlogin增加app托管state；main销毁立即取消，Exit显式await真实worker完成。当前core.shutdown只发信号，不能直接当作退出等待，需补可测试的完成屏障；Drop仍只负责兜底取消。
 2. 独立runtime模块沿用 `xdmcp_runtime.rs` 的实际WebviewWindow参数和main标签核验，调用方不得传owner冒充。先核验窗口/平台，再处理reservation；Windows精确边界不足在IO前固定拒绝，能力对象分别说明native core、runtime和终端入口状态。
@@ -30,3 +30,5 @@
 4. 将write/resize/read/ACK/cancel/close映射到typed命令；u64 epoch/sequence在JSON边界使用十进制字符串，避免JS number损失精度。加入不消费输出的status元数据查询，不能用read当状态轮询而遗失未确认帧。
 5. read仍只交付一个有额度的帧；前端以后在xterm写入完成或明确丢弃后才ACK，同一实例串行pull。runtime不引入unbounded channel、公共terminal output emit或SessionLogs。flush epoch、新generation和旧ACK语义保持rlogin-session.md契约。
 6. 下一刀先完成无UI的DTO/owner/平台拒绝/生命周期集成及三平台回归，再进入终端连接模型、原型与真实UI；实际窗口IPC、安全属性提示、主题及真实rlogind证据继续单列，不由纯Rust DTO测试冒充。
+
+当前运行边界见rlogin-runtime.md，执行结果见runtime-evidence.md。上述“当前/下一刀”按核对当时的headless基线理解，不覆盖PR #72之后的实现状态。

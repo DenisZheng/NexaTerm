@@ -15,8 +15,8 @@
   "branch": "feat/wf09-08a-rlogin-runtime",
   "base_branch": "feat/wf09-08a-rlogin-session",
   "worktree_path": null,
-  "commit": null,
-  "pr_url": null,
+  "commit": "ae8644ee3d26c15d6da183ee2930409d6dabee63",
+  "pr_url": "https://github.com/DenisZheng/NexaTerm/pull/72",
   "subtasks": [],
   "children": [],
   "parent": "09-23-nexaterm-workflow-mainline",
@@ -24,6 +24,6 @@
     "docs/plans/WF09-PROTOCOL-IMPLEMENTATION-PLAN.md",
     "docs/WORKFLOW_SPEC.md"
   ],
-  "notes": "IPC/app-lifetime slice in progress: actual main-window boundary, strict DTO/counters, non-consuming status and real shutdown completion. Previous PR71 verified. UI/DNS/Windows exact flush/real interop remain.",
+  "notes": "PR72 runtime IPC/app lifetime implemented and verified at ae8644ee3d26c15d6da183ee2930409d6dabee63: native23 Linux58/macOS59/Windows57, CI635 all7 executed jobs passed (library532/533/532; Linux4 existing ignored). Documentation closeout preserves source. Task stays in_progress; bounded frontend delivery/UI/DNS/Windows exact flush/real interop remain.",
   "meta": {}
 }
