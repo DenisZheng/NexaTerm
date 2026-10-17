@@ -1,4 +1,4 @@
-//! 有界原生会话 owner；尚无 IPC、DNS 或终端 UI 能力声明。
+//! 有界原生会话 owner；IPC由rlogin_runtime接入，DNS/终端UI仍待实现。
 mod actor;
 mod buffers;
 mod manager;
@@ -6,8 +6,9 @@ mod types;
 #[cfg(test)] mod tests;
 #[cfg(test)] mod buffer_tests;
 #[cfg(test)] mod native_tests;
+#[cfg(test)] mod lifecycle_tests;
 pub use manager::SessionManager;
-pub use types::{Ack, OutputFrame, Phase, ReadReply, SessionError, SessionRequest};
+pub use types::{Ack, OutputFrame, Phase, ReadReply, SessionError, SessionRequest, SessionStatus};
 use buffers::Queues;
 use std::sync::{atomic::{AtomicBool, Ordering}, Arc, Mutex, MutexGuard};
 use tokio::sync::watch;

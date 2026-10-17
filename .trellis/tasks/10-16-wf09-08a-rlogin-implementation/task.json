@@ -12,11 +12,11 @@
   "assignee": "codex",
   "createdAt": "2026-10-16",
   "completedAt": null,
-  "branch": "feat/wf09-08a-rlogin-session",
-  "base_branch": "feat/wf09-08a-rlogin-handshake",
+  "branch": "feat/wf09-08a-rlogin-runtime",
+  "base_branch": "feat/wf09-08a-rlogin-session",
   "worktree_path": null,
-  "commit": "32323da32c965c42aa878b03161d6d5d5fdc1f98",
-  "pr_url": "https://github.com/DenisZheng/NexaTerm/pull/71",
+  "commit": null,
+  "pr_url": null,
   "subtasks": [],
   "children": [],
   "parent": "09-23-nexaterm-workflow-mainline",
@@ -24,6 +24,6 @@
     "docs/plans/WF09-PROTOCOL-IMPLEMENTATION-PLAN.md",
     "docs/WORKFLOW_SPEC.md"
   ],
-  "notes": "Headless owner code32323da passed native workflow21 Linux49/macOS50/Windows48 without skips, XDMCP native workflow5 all3, and full CI633 all7 executed jobs. Rust Linux523/macOS524/Windows523 (Linux4 existing ignored), frontend888+1todo. Darwin stale filter and XDMCP PID marker races fixed. Next: typed IPC/app lifecycle. Windows exact flush, terminal UI, DNS and real server interop remain; task in_progress.",
+  "notes": "IPC/app-lifetime slice in progress: actual main-window boundary, strict DTO/counters, non-consuming status and real shutdown completion. Previous PR71 verified. UI/DNS/Windows exact flush/real interop remain.",
   "meta": {}
 }

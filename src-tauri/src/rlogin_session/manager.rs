@@ -1,4 +1,4 @@
-use super::{actor, Ack, Phase, ReadReply, SessionError, SessionRequest, Shared};
+use super::{actor, Ack, Phase, ReadReply, SessionError, SessionRequest, SessionStatus, Shared};
 use crate::legacy_socket::CONNECT_TIMEOUT;
 use crate::rlogin_connect::{self, WindowSize};
 use std::{collections::HashMap, sync::{atomic::Ordering, Arc, Mutex}, time::{Duration, Instant}};
@@ -105,6 +105,10 @@ impl SessionManager {
         }
         Ok(reply)
     }
+    pub fn status(&self, origin: &str, id: &str) -> Result<SessionStatus, SessionError> {
+        let state = self.state(origin, id)?;
+        let status = state.lock()?.status(*state.done.borrow()); Ok(status)
+    }
     pub fn cancel(&self, origin: &str, id: &str) -> Result<(), SessionError> {
         owner(origin)?;
         let mut registry = self.inner.registry.lock().map_err(|_| SessionError::Unavailable)?;
@@ -126,14 +130,24 @@ impl SessionManager {
         state.wait_done().await?;
         self.inner.registry.lock().map_err(|_| SessionError::Unavailable)?.entries.remove(id); Ok(())
     }
-    pub fn shutdown(&self) {
-        if let Ok(mut registry) = self.inner.registry.lock() {
-            registry.closed = true;
-            registry.entries.retain(|_, entry| {
-                let _ = entry.state.cancel();
-                entry.request.is_none() && !*entry.state.done.borrow()
-            });
-        }
+    fn shutdown_states(&self) -> Result<Vec<Arc<Shared>>, SessionError> {
+        let mut registry = self.inner.registry.lock().map_err(|_| SessionError::Unavailable)?;
+        registry.closed = true; let mut waiting = Vec::new();
+        registry.entries.retain(|_, entry| {
+            // cancel先写入sticky原子信号；即使队列poison，仍继续取消其它worker。
+            let _ = entry.state.cancel();
+            if entry.request.is_some() { return false; }
+            waiting.push(entry.state.clone()); !*entry.state.done.borrow()
+        });
+        Ok(waiting)
+    }
+    pub fn shutdown(&self) { let _ = self.shutdown_states(); }
+    pub fn cancel_window(&self, origin: &str) { if origin == "main" { self.shutdown(); } }
+    pub async fn shutdown_wait(&self) -> Result<(), SessionError> {
+        let waiting = self.shutdown_states()?;
+        // 不持registry锁跨await；worker必须先关闭FD/归还额度，再通知完成。
+        for state in waiting { state.wait_done().await?; }
+        Ok(())
     }
 }
 

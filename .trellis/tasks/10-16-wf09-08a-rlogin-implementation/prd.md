@@ -13,3 +13,5 @@
 当前L1边界：Unix精确flush已验证；Windows当前adapter不能给出精确边界，明确错误并保留数据，仍须开发。原生建立/ACK尾部adapter与headless会话owner已过三平台原生及完整应用CI；IPC/应用/终端UI、DNS与真实服务端验收未完成。执行证据见research/session-owner-evidence.md。
 
 本轮扩展到headless会话owner与有界交付，尚不注册IPC/修改终端UI或声明完整协议可用。
+
+本轮接入实际主窗口IPC和应用生命周期，边界以rlogin-runtime.md为准；终端UI、DNS和Windows精确flush仍待实现。

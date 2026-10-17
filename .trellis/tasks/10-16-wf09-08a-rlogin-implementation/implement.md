@@ -55,3 +55,10 @@ L0 交付时未实现 urgent/OOB、flow control/flush、保留源端口；这些
 - [x] [完整CI #633](https://github.com/DenisZheng/NexaTerm/actions/runs/38992242862)全部7个实际执行job通过：Rust Linux523/macOS524/Windows523，Linux另4个既有ignored；其它二进制/集成/doc、前端888通过/1todo及source/security/license/fixture通过。XDMCP原生#5三平台各1项通过。
 
 执行代码基准`32323da32c965c42aa878b03161d6d5d5fdc1f98`；[Draft #71](https://github.com/DenisZheng/NexaTerm/pull/71)基于#70。具体平台矩阵、Linux urgent关闭语义、Darwin旧filter状态及XDMCP PID夹具竞态复盘见research/session-owner-evidence.md。收口仅文档/规范/任务更新；下一刀为typed IPC和应用生命周期，L1整体保持in_progress。
+
+## L1 IPC / application lifetime（本轮）
+
+- [x] 实际main窗口核验、typed DTO、平台能力与IO门禁。
+- [x] 不消费输出的status、main销毁取消和Exit真实完成屏障。
+- [ ] JSON/owner/生命周期/真实socket回归，三平台harness与完整CI。
+- [ ] 规范/进度/执行证据及Draft PR收口；UI/DNS/Windows精确flush继续后续。

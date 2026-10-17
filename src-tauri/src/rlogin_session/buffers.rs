@@ -1,4 +1,4 @@
-use super::{Ack, OutputFrame, Phase, ReadReply, SessionError};
+use super::{Ack, OutputFrame, Phase, ReadReply, SessionError, SessionStatus};
 use crate::legacy_socket::MAX_CHUNK;
 use crate::rlogin_connect::WindowSize;
 use std::collections::VecDeque;
@@ -65,5 +65,9 @@ impl Queues {
     }
     pub fn finish(&mut self, phase: Phase, reason: Option<SessionError>) {
         self.phase = phase; self.reason = reason; self.input.clear(); self.input_bytes = 0; self.input_items = 0; self.resize = None;
+    }
+    pub fn status(&self, done: bool) -> SessionStatus {
+        SessionStatus { epoch: self.epoch, phase: self.phase, reason: self.reason, awaiting_ack: self.flight.is_some(),
+            finished: done && self.flight.is_none() && self.output.is_empty() }
     }
 }
