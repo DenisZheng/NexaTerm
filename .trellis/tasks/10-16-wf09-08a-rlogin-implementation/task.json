@@ -12,11 +12,11 @@
   "assignee": "codex",
   "createdAt": "2026-10-16",
   "completedAt": null,
-  "branch": "feat/wf09-08a-rlogin-runtime",
-  "base_branch": "feat/wf09-08a-rlogin-session",
+  "branch": "feat/wf09-08a-rlogin-bridge",
+  "base_branch": "feat/wf09-08a-rlogin-runtime",
   "worktree_path": null,
-  "commit": "ae8644ee3d26c15d6da183ee2930409d6dabee63",
-  "pr_url": "https://github.com/DenisZheng/NexaTerm/pull/72",
+  "commit": null,
+  "pr_url": null,
   "subtasks": [],
   "children": [],
   "parent": "09-23-nexaterm-workflow-mainline",
@@ -24,6 +24,6 @@
     "docs/plans/WF09-PROTOCOL-IMPLEMENTATION-PLAN.md",
     "docs/WORKFLOW_SPEC.md"
   ],
-  "notes": "PR72 runtime IPC/app lifetime implemented and verified at ae8644ee3d26c15d6da183ee2930409d6dabee63: native23 Linux58/macOS59/Windows57, CI635 all7 executed jobs passed (library532/533/532; Linux4 existing ignored). Documentation closeout preserves source. Task stays in_progress; bounded frontend delivery/UI/DNS/Windows exact flush/real interop remain.",
+  "notes": "Frontend delivery slice in progress: typed wrappers, one credited frame, canonical counters, flush/render boundary and real close barrier. Previous PR72 verified. No UI/DNS/encoding/Windows exact flush or full protocol availability.",
   "meta": {}
 }

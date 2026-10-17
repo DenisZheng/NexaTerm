@@ -67,3 +67,10 @@ L0 交付时未实现 urgent/OOB、flow control/flush、保留源端口；这些
 后续终端接入已核对的队列/字节/日志/generation边界见research/terminal-integration-seams.md；它不是已实现UI或额外产品交互批准。
 
 本轮执行代码`ae8644ee3d26c15d6da183ee2930409d6dabee63`；[Draft #72](https://github.com/DenisZheng/NexaTerm/pull/72)基于#71。[原生#23](https://github.com/DenisZheng/NexaTerm/actions/runs/38995284463) Linux58/macOS59/Windows57全部通过，无skip/ignore；[完整CI635](https://github.com/DenisZheng/NexaTerm/actions/runs/38995284424)7个执行job全通过，应用library Linux532/macOS533/Windows532（Linux另4个既有ignored），前端888通过/1todo。详情见research/runtime-evidence.md。L1整体仍in_progress，下一刀先完成有界前端交付桥，再接连接/终端UI。
+
+## L1 frontend delivery（本轮）
+
+- [x] 固定typed DTO/响应校验与九项wrapper。
+- [x] 单帧poll/render/ACK/epoch、错误停机、generation隔离及真实close屏障。
+- [ ] 行为测试、类型/完整前端构建与source gates、完整CI。
+- [ ] 更新执行证据和Draft PR；UI/编码/DNS/Windows精确flush继续后续。

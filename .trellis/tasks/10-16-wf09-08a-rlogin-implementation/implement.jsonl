@@ -14,3 +14,7 @@
 {"file": ".trellis/spec/backend/rlogin-session.md", "reason": "Target-bound leases, actual socket lifetime, byte budgets and pull/ACK/epoch contracts"}
 {"file": ".trellis/tasks/10-16-wf09-08a-rlogin-implementation/research/session-owner-evidence.md", "reason": "Headless owner execution and urgent receive cursor fixture evidence"}
 {"file": ".trellis/spec/backend/rlogin-runtime.md", "reason": "Main-window runtime DTO, platform gate, status and actual shutdown completion contracts"}
+{"file": ".trellis/spec/frontend/rlogin-delivery.md", "reason": "Concrete bridge wire/credit/renderer/lifetime contracts"}
+{"file": ".trellis/tasks/10-16-wf09-08a-rlogin-implementation/research/terminal-integration-seams.md", "reason": "Inspected next-slice queue, byte, logging and generation boundaries"}
+{"file": ".trellis/spec/frontend/tauri-command-contracts.md", "reason": "Typed wrapper boundary, payload envelopes and error preservation"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "Actual behavioral tests separated from source checks"}

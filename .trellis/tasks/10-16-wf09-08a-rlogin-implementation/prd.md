@@ -15,3 +15,5 @@
 此前headless会话owner与有界交付slice未注册IPC；本轮继续接入，不修改终端UI或声明完整协议可用。
 
 本轮接入实际主窗口IPC和应用生命周期，边界以rlogin-runtime.md为准；终端UI、DNS和Windows精确flush仍待实现。
+
+本轮推进前端typed IPC和有界交付桥，契约见frontend/rlogin-delivery.md；不改变布局或注册完整协议能力。验收仍为L01–L03、C01/C02，实际终端/编码与真实服务端继续后续。

@@ -35,3 +35,7 @@ ACK同包尾部转入reader已有有界隔离区，恰好一次、原样、有�
 ## L1 IPC与应用生命周期（本轮）
 
 按rlogin-runtime.md接入实际主窗口核验、numeric IPv4冻结许可、typed DTO和独立status。u64在JSON边界保留十进制字符串；数据交付继续pull/ACK/epoch，不走公共terminal emit或日志。Windows精确边界不足在IO前拒绝，cleanup/status仍可使用。main销毁关闭入口并取消，Exit显式await真实worker完成；不持锁等待。此轮无UI/编码/存储或DNS改动。
+
+## L1 前端有界交付（本轮）
+
+新建每generation单owner的无渲染器依赖桥；先poll再显式render，最多一个ready/writing帧，解析回调后才确认。poll合并并发，ready帧遇flush直接丢弃并精确ACK；已交给renderer的帧等回调，不清屏。读失败可能已消费backend帧，固定失败并关闭，不自动重读。close先失效回调，再等待backend及已发IPC；失败保留lease供重试。write/resize仅单个在途调用，无隐藏输入队列。具体签名、字节/owner预算与错误矩阵先写入frontend/rlogin-delivery.md。本轮无UI/编码/连接模型变更。
