@@ -62,6 +62,8 @@ fn native_actor_preserves_raw_input_window_negotiation_and_paused_urgent_control
         assert!(manager.read("main",&session.id,0,None).unwrap().frame.is_none(),"local pause still emitted data");
         manager.write("main",&session.id,&[0x11,b'!']).unwrap(); assert_eq!(receive(&mut session.peer,1).await,b"!");
         let data=frame(&manager,&session.id,0,None).await; assert_eq!(data.data,b"held");
+        // 到达mark后的下一轮才消费OOB；用真实写入屏障确认控制已收口，再要求干净EOF。
+        manager.write("main",&session.id,b"C").unwrap(); assert_eq!(receive(&mut session.peer,1).await,b"C");
         manager.close("main",&session.id).await.unwrap(); eof(&mut session.peer).await; session.task.await.unwrap();
     });
 }
