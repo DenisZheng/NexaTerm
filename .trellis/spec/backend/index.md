@@ -54,4 +54,6 @@ The goal is to help AI assistants and new team members understand how YOUR proje
 
 - [Rlogin Native Establish](./rlogin-connect.md) — BSD profile validation, one total deadline and owned ACK-tail transfer; IPC/UI remain pending.
 
-- [Rlogin Session Owner](./rlogin-session.md) — consented generation leases, real worker lifetime and byte-bounded pull/ACK/flush delivery; IPC/UI pending.
+- [Rlogin Session Owner](./rlogin-session.md) — consented generation leases, real worker lifetime and byte-bounded pull/ACK/flush delivery; UI pending.
+
+- [Rlogin Runtime Boundary](./rlogin-runtime.md) — actual main-window commands, exact decimal ACK counters, non-consuming status and application completion barrier; UI/DNS pending.

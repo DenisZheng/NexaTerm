@@ -31,3 +31,7 @@ ACK同包尾部转入reader已有有界隔离区，恰好一次、原样、有�
 输出采用pull/ACK，最多一个已交付但未确认的块，重复pull不复制该数据；输入/输出各1MiB，块≤32KiB且队列条目也有上限，保留partial write后缀。输出预算为quarantine/read scratch/交付副本合计预留3×32KiB。flush清未交付队列并递增epoch，已交付块保留额度至前端确认/丢弃；旧确认只能释放它本身，不影响下一块。具体签名与状态见rlogin-session.md。
 
 本轮先落实headless owner与真实socket回归，不接现有Telnet无界通道，不修改终端UI/存储或开放完整协议标志。IPC接入前仍须核验主窗口与Windows边界能力；DNS和UI为后续独立接入。
+
+## L1 IPC与应用生命周期（本轮）
+
+按rlogin-runtime.md接入实际主窗口核验、numeric IPv4冻结许可、typed DTO和独立status。u64在JSON边界保留十进制字符串；数据交付继续pull/ACK/epoch，不走公共terminal emit或日志。Windows精确边界不足在IO前拒绝，cleanup/status仍可使用。main销毁关闭入口并取消，Exit显式await真实worker完成；不持锁等待。此轮无UI/编码/存储或DNS改动。

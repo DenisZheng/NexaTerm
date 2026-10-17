@@ -4,3 +4,4 @@
 #[path = "../../../src/rlogin_native/mod.rs"] pub mod rlogin_native;
 #[path = "../../../src/rlogin_connect/mod.rs"] pub mod rlogin_connect;
 #[path = "../../../src/rlogin_session/mod.rs"] pub mod rlogin_session;
+#[path = "../../../src/rlogin_ipc/mod.rs"] mod rlogin_ipc;

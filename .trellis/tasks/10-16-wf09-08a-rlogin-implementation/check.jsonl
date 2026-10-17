@@ -13,3 +13,4 @@
 {"file": ".trellis/tasks/10-16-wf09-08a-rlogin-implementation/research/session-owner-seams.md", "reason": "Inspected next-slice owner, byte-budget, output-credit and main-window integration seams; not an implemented API"}
 {"file": ".trellis/spec/backend/rlogin-session.md", "reason": "Target-bound leases, actual socket lifetime, byte budgets and pull/ACK/epoch contracts"}
 {"file": ".trellis/tasks/10-16-wf09-08a-rlogin-implementation/research/session-owner-evidence.md", "reason": "Headless owner execution and urgent receive cursor fixture evidence"}
+{"file": ".trellis/spec/backend/rlogin-runtime.md", "reason": "Main-window runtime DTO, platform gate, status and actual shutdown completion contracts"}

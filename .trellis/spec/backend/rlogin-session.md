@@ -6,7 +6,7 @@ One backend manager owns target-bound, consented numeric-IPv4 reservations and a
 
 ## 2. Signatures
 
-`SessionManager::{reserve(owner, request, consent), start(owner,id), write(owner,id,bytes), resize(owner,id,window), read(owner,id,last_epoch,ack), cancel(owner,id), close(owner,id), shutdown()}`. Reserve returns a fresh UUID, performs no IO and freezes the validated request. Start consumes it once. Core owner is exactly `main`; runtime IPC must also verify the actual window. A new UUID is the generation; old IDs cannot target a retry.
+`SessionManager::{reserve(owner, request, consent), start(owner,id), write(owner,id,bytes), resize(owner,id,window), read(owner,id,last_epoch,ack), status(owner,id), cancel(owner,id), close(owner,id), shutdown(), cancel_window(label), shutdown_wait()}`. Reserve returns a fresh UUID, performs no IO and freezes the validated request. Start consumes it once. Core owner is exactly `main`; runtime IPC must also verify the actual window. A new UUID is the generation; old IDs cannot target a retry.
 
 `ReadReply {epoch,phase,reason,requires_reset,awaiting_ack,finished,frame}`; `OutputFrame {epoch,sequence,data}` is delivered once. `Ack {epoch,sequence}` acknowledges rendering or deliberate discard. No raw input/config Debug output; errors are fixed enums/codes. Phase `InitialExchangeReady` proves ACK only, never authentication.
 
@@ -46,3 +46,5 @@ A clean peer-EOF assertion after urgent control must drain a known post-mark nor
 ## 7. Wrong vs correct
 
 Wrong: removing a frame from the backend queue frees its output budget. Correct: move it into the single in-flight slot and release credit after ACK. Wrong: flush releases an in-flight frame and a late ACK discards the next frame. Correct: retain the old tagged frame until its own ACK, report the new epoch, and never repeat its bytes. Wrong: cancellation acknowledgement means socket closed. Correct: wait for actual worker completion before close/permit release.
+
+Runtime integration is specified in [rlogin-runtime.md](./rlogin-runtime.md). `status` only snapshots metadata; it must not consume output or remove a finished handle. `shutdown_wait` closes admission, snapshots used states and signals cancellation under the registry lock, then drops that lock before waiting for each actual worker completion. Main-window destruction initiates the same cancellation; app Exit explicitly awaits completion.

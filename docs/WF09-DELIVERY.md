@@ -1,10 +1,10 @@
 # WF-09 开发交付与统一验收
 
-更新：2026-10-16。唯一主线仍为 `09-23-nexaterm-workflow-mainline`。依据维护者连续开发至09完成、后续统一验收的授权，所有成果保留为堆叠 Draft PR；不合并、不发布，不变更 PR #12/#54。
+更新：2026-10-17。唯一主线仍为 `09-23-nexaterm-workflow-mainline`。依据维护者连续开发至09完成、后续统一验收的授权，所有成果保留为堆叠 Draft PR；不合并、不发布，不变更 PR #12/#54。
 
 ## 后续范围变更：三个协议计划实现
 
-维护者于2026-10-16进一步要求先写三个协议的实际功能计划，再开发。新的 [三协议实现计划](plans/WF09-PROTOCOL-IMPLEMENTATION-PLAN.md) 已登记；维护者随后已授权开工；XDMCP X1 运行核心实现中（Draft PR #67），Rlogin/Rsh 按顺序保持 planning。随包 X server、UI 和真实桌面仍未完成。下表仅描述此前批准范围的交付，**不代表扩展后的三个协议功能已经开发完成，亦不能概括为全项目只剩人工验收**。
+维护者于2026-10-16进一步要求先写三个协议的实际功能计划，再开发。新的 [三协议实现计划](plans/WF09-PROTOCOL-IMPLEMENTATION-PLAN.md) 已登记；维护者随后已授权开工；XDMCP X1 运行核心已过三平台原生及完整CI（Draft #67）；Rlogin 的协议核、原生建立与会话owner已过三平台原生及完整CI（Draft #68–#71），typed IPC/应用生命周期已过三平台原生与完整CI（Draft #72）；Rsh 仍 planning。随包 X server、UI 和真实桌面仍未完成。下表仅描述此前批准范围的交付，**不代表扩展后的三个协议功能已经开发完成，亦不能概括为全项目只剩人工验收**。
 
 ## 开发成果
 
@@ -22,7 +22,7 @@
 
 2026-10-16 已逐项查询 #58–#65：均 open/Draft、未合并、mergeable；依赖顺序为 main → #58 → #59 → #60 → #61 → #62 → #63 → #64 → #65。早先 CI 仅证明相应提交；第九项代码提交 fc7d1ad90ad4a59f7cf9814108d59adece97daa3 已通过 [CI603](https://github.com/DenisZheng/NexaTerm/actions/runs/38858276717)，七个执行作业全部 SUCCESS，打包作业按工作流条件跳过。后续交付记录提交仅更新文档/任务元数据，代码验证对象保持为该提交。
 
-07/08 按批准的评估范围交付，**不代表实现或支持了 XDMCP/Rlogin/Rsh 会话协议**。XDMCP 的三平台真实联调仍 BLOCKED/MANUAL_REQUIRED；Rlogin/Rsh 原生实现原为 DEFER，现已改为 PLANNED 并登记独立实现任务；当前仍无运行时支持。详见 [XDMCP 评估](decisions/WF09-XDMCP-ASSESSMENT.md) 和 [旧协议评估](decisions/WF09-LEGACY-PROTOCOL-ASSESSMENT.md)。
+07/08 按批准的评估范围交付，**不代表实现或支持了 XDMCP/Rlogin/Rsh 会话协议**。XDMCP 的三平台真实联调仍 BLOCKED/MANUAL_REQUIRED；Rlogin/Rsh 原生实现原为 DEFER，现已登记独立实现任务；Rlogin 正在开发，尚无完整终端入口，Rsh 仍 planning。具体最新开发进展以 ROADMAP 和三协议实现计划为准。详见 [XDMCP 评估](decisions/WF09-XDMCP-ASSESSMENT.md) 和 [旧协议评估](decisions/WF09-LEGACY-PROTOCOL-ASSESSMENT.md)。
 
 ## 第九项回归与边界
 

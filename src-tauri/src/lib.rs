@@ -49,6 +49,8 @@ pub mod legacy_socket;
 pub mod rlogin_native;
 pub mod rlogin_connect;
 pub mod rlogin_session;
+mod rlogin_ipc;
+mod rlogin_runtime;
 mod tunnels;
 mod vnc;
 mod webdav;
@@ -74,6 +76,7 @@ pub fn run() {
         .manage(connection_probe_runtime::LocalProbeManager::default())
         .manage(file_service::FileServiceManager::default())
         .manage(xdmcp::XdmcpManager::default())
+        .manage(rlogin_session::SessionManager::default())
         .manage(performance_probe::PerformanceProbeState::default())
         .manage(remote_files::RemoteFileManager::default())
         .manage(terminal::manager::TerminalManager::default())
@@ -91,6 +94,7 @@ pub fn run() {
                 window.state::<connection_probe_runtime::LocalProbeManager>().cancel_window(window.label());
                 window.state::<file_service::FileServiceManager>().cancel_window(window.label());
                 window.state::<xdmcp::XdmcpManager>().cancel_window(window.label());
+                window.state::<rlogin_session::SessionManager>().cancel_window(window.label());
             }
         })
         .setup(|app| {
@@ -254,6 +258,15 @@ pub fn run() {
             xdmcp_runtime::xdmcp_start,
             xdmcp_runtime::xdmcp_stop,
             xdmcp_runtime::xdmcp_status,
+            rlogin_runtime::rlogin_capabilities,
+            rlogin_runtime::rlogin_reserve,
+            rlogin_runtime::rlogin_start,
+            rlogin_runtime::rlogin_write,
+            rlogin_runtime::rlogin_resize,
+            rlogin_runtime::rlogin_read,
+            rlogin_runtime::rlogin_status,
+            rlogin_runtime::rlogin_cancel,
+            rlogin_runtime::rlogin_close,
             file_service_runtime::file_service_reserve,
             file_service_runtime::file_service_start,
             file_service_runtime::file_service_stop,
@@ -306,7 +319,10 @@ pub fn run() {
                 tauri::async_runtime::block_on(async {
                     let files = app.state::<file_service::FileServiceManager>();
                     let desktops = app.state::<xdmcp::XdmcpManager>();
-                    tokio::join!(files.shutdown(), desktops.shutdown());
+                    let legacy = app.state::<rlogin_session::SessionManager>();
+                    if let (_, _, Err(error)) = tokio::join!(files.shutdown(), desktops.shutdown(), legacy.shutdown_wait()) {
+                        eprintln!("rlogin_shutdown_failed code={}",error.code());
+                    }
                 });
                 app.state::<mcp::McpRemoteServiceManager>().shutdown();
             }

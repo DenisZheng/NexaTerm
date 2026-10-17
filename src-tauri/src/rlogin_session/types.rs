@@ -38,3 +38,7 @@ pub struct ReadReply {
     pub epoch: u64, pub phase: Phase, pub reason: Option<SessionError>, pub requires_reset: bool,
     pub awaiting_ack: bool, pub finished: bool, pub frame: Option<OutputFrame>,
 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SessionStatus {
+    pub epoch: u64, pub phase: Phase, pub reason: Option<SessionError>, pub awaiting_ack: bool, pub finished: bool,
+}

@@ -7,6 +7,8 @@ on:
       - 'src-tauri/src/rlogin_native/**'
       - 'src-tauri/src/rlogin_connect/**'
       - 'src-tauri/src/rlogin_session/**'
+      - 'src-tauri/src/rlogin_ipc/**'
+      - 'src-tauri/src/rlogin_runtime.rs'
       - 'src-tauri/test-fixtures/legacy-socket-harness/**'
       - 'src-tauri/Cargo.toml'
       - 'src-tauri/Cargo.lock'
