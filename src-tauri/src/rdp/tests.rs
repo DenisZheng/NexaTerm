@@ -34,6 +34,7 @@ fn rdp_profile() -> ConnectionProfile {
         advanced: ConnectionAdvancedConfig::default(),
         rdp: None,
         vnc: None,
+        rlogin: None,
         telnet: None,
         serial: None,
         notes: None,

@@ -1,4 +1,7 @@
+mod connection_rows;
+use connection_rows::row_to_connection_profile;
 mod credential_delete;
+#[cfg(test)] mod rlogin_tests;
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -247,7 +250,7 @@ impl StorageRepository {
         Ok(count.max(0) as usize)
     }
     pub fn export_sync_data(&self) -> Result<SyncDataDocument, AppError> {
-        Ok(SyncDataDocument {
+        let data = SyncDataDocument {
             version: SYNC_PROTOCOL_VERSION,
             connection_groups: self.export_sync_groups()?,
             credentials: self.export_sync_credentials()?,
@@ -255,7 +258,9 @@ impl StorageRepository {
             known_hosts: self.export_sync_known_hosts()?,
             tunnels: self.tunnel_list()?,
             settings: self.export_sync_settings()?,
-        })
+        };
+        for record in &data.connections { crate::connections::validate_stored_rlogin(record, false)?; }
+        Ok(data)
     }
 
     pub fn export_sync_secrets(&self) -> Result<Vec<SyncSecretEntry>, AppError> {
@@ -342,6 +347,7 @@ impl StorageRepository {
         data: &SyncDataDocument,
         restore_secret_refs: bool,
     ) -> Result<SyncRepositoryImportStats, AppError> {
+        for record in &data.connections { crate::connections::validate_stored_rlogin(record,data.version!=SYNC_PROTOCOL_VERSION)?; }
         let result = self.replace_sync_data_inner(data, restore_secret_refs);
         if let Err(error) = result {
             let _ = self.connection.execute_batch("ROLLBACK;");
@@ -417,30 +423,11 @@ impl StorageRepository {
                 serde_json::to_string(&connection.jump).map_err(sqlite_serialize_error)?;
             let advanced_json =
                 serde_json::to_string(&connection.advanced).map_err(sqlite_serialize_error)?;
-            let rdp_json = connection
-                .rdp
-                .as_ref()
-                .map(serde_json::to_string)
-                .transpose()
-                .map_err(sqlite_serialize_error)?;
-            let vnc_json = connection
-                .vnc
-                .as_ref()
-                .map(serde_json::to_string)
-                .transpose()
-                .map_err(sqlite_serialize_error)?;
-            let telnet_json = connection
-                .telnet
-                .as_ref()
-                .map(serde_json::to_string)
-                .transpose()
-                .map_err(sqlite_serialize_error)?;
-            let serial_json = connection
-                .serial
-                .as_ref()
-                .map(serde_json::to_string)
-                .transpose()
-                .map_err(sqlite_serialize_error)?;
+            let rdp_json = optional_json_value(&connection.rdp)?;
+            let vnc_json = optional_json_value(&connection.vnc)?;
+            let telnet_json = optional_json_value(&connection.telnet)?;
+            let serial_json = optional_json_value(&connection.serial)?;
+            let rlogin_json = optional_json_value(&connection.rlogin)?;
             self.connection
                 .execute(
                     "INSERT INTO connections(
@@ -448,10 +435,10 @@ impl StorageRepository {
                         inline_auth_kind, inline_secret_ref, inline_secret_slot_id,
                         inline_private_key_path, prompt_auth_kind, proxy_json, jump_json,
                         advanced_json, rdp_json, vnc_json, telnet_json, serial_json, notes, is_favorite, last_connected_at, remote_os_id,
-                        remote_os_name, remote_os_version, created_at, updated_at
+                        remote_os_name, remote_os_version, created_at, updated_at, rlogin_json
                     ) VALUES (
                         ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12,
-                        ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28, ?29
+                        ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28, ?29, ?30
                     )",
                     params![
                         connection.id,
@@ -483,6 +470,7 @@ impl StorageRepository {
                         connection.remote_os_version,
                         connection.created_at,
                         connection.updated_at,
+                        rlogin_json,
                     ],
                 )
                 .map_err(sqlite_repository_error)?;
@@ -594,7 +582,7 @@ impl StorageRepository {
                         prompt_auth_kind, proxy_json, jump_json, advanced_json, rdp_json, vnc_json,
                         telnet_json, serial_json, notes,
                         is_favorite, last_connected_at, remote_os_id, remote_os_name,
-                        remote_os_version, created_at, updated_at
+                        remote_os_version, created_at, updated_at, rlogin_json
                    FROM connections ORDER BY created_at ASC, name ASC",
             )
             .map_err(sqlite_repository_error)?;
@@ -637,6 +625,7 @@ impl StorageRepository {
                     advanced: serde_json::from_str(&advanced_json).map_err(from_serde_row_error)?,
                     rdp: parse_optional_json(rdp_json)?,
                     vnc: parse_optional_json(vnc_json)?,
+                    rlogin: parse_optional_json(row.get(28)?)?,
                     telnet: parse_optional_json(telnet_json)?,
                     serial: parse_optional_json(serial_json)?,
                     notes: row.get(20)?,
@@ -783,30 +772,11 @@ impl StorageRepository {
         let jump_json = serde_json::to_string(&validated.jump).map_err(sqlite_serialize_error)?;
         let advanced_json =
             serde_json::to_string(&validated.advanced).map_err(sqlite_serialize_error)?;
-        let rdp_json = validated
-            .rdp
-            .as_ref()
-            .map(serde_json::to_string)
-            .transpose()
-            .map_err(sqlite_serialize_error)?;
-        let vnc_json = validated
-            .vnc
-            .as_ref()
-            .map(serde_json::to_string)
-            .transpose()
-            .map_err(sqlite_serialize_error)?;
-        let telnet_json = validated
-            .telnet
-            .as_ref()
-            .map(serde_json::to_string)
-            .transpose()
-            .map_err(sqlite_serialize_error)?;
-        let serial_json = validated
-            .serial
-            .as_ref()
-            .map(serde_json::to_string)
-            .transpose()
-            .map_err(sqlite_serialize_error)?;
+        let rdp_json = optional_json_value(&validated.rdp)?;
+        let vnc_json = optional_json_value(&validated.vnc)?;
+        let telnet_json = optional_json_value(&validated.telnet)?;
+        let serial_json = optional_json_value(&validated.serial)?;
+        let rlogin_json = optional_json_value(&validated.rlogin)?;
 
         self.connection
             .execute(
@@ -815,10 +785,10 @@ impl StorageRepository {
                     inline_auth_kind, inline_secret_ref, inline_secret_slot_id,
                     inline_private_key_path, prompt_auth_kind, proxy_json, jump_json,
                     advanced_json, rdp_json, vnc_json, telnet_json, serial_json, notes, is_favorite, last_connected_at, remote_os_id,
-                    remote_os_name, remote_os_version, created_at, updated_at
+                    remote_os_name, remote_os_version, created_at, updated_at, rlogin_json
                 ) VALUES (
                     ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12,
-                    ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28, ?29
+                    ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28, ?29, ?30
                 )
                 ON CONFLICT(id) DO UPDATE SET
                     name = excluded.name,
@@ -847,6 +817,7 @@ impl StorageRepository {
                     remote_os_id = excluded.remote_os_id,
                     remote_os_name = excluded.remote_os_name,
                     remote_os_version = excluded.remote_os_version,
+                    rlogin_json = excluded.rlogin_json,
                     updated_at = excluded.updated_at",
                 params![
                     id,
@@ -881,6 +852,7 @@ impl StorageRepository {
                     remote_os_version,
                     created_at,
                     now,
+                    rlogin_json,
                 ],
             )
             .map_err(sqlite_repository_error)?;
@@ -905,7 +877,7 @@ impl StorageRepository {
                         c.jump_json, c.advanced_json, c.rdp_json, c.vnc_json, c.telnet_json,
                         c.serial_json, c.notes, c.is_favorite,
                         c.last_connected_at, c.remote_os_id, c.remote_os_name,
-                        c.remote_os_version, c.created_at, c.updated_at, c.group_id
+                        c.remote_os_version, c.created_at, c.updated_at, c.group_id, c.rlogin_json
                    FROM connections c
                    LEFT JOIN connection_groups g ON g.id = c.group_id
                   ORDER BY c.created_at ASC, c.name ASC",
@@ -1040,7 +1012,7 @@ impl StorageRepository {
                         c.jump_json, c.advanced_json, c.rdp_json, c.vnc_json, c.telnet_json,
                         c.serial_json, c.notes, c.is_favorite,
                         c.last_connected_at, c.remote_os_id, c.remote_os_name,
-                        c.remote_os_version, c.created_at, c.updated_at, c.group_id
+                        c.remote_os_version, c.created_at, c.updated_at, c.group_id, c.rlogin_json
                    FROM connections c
                    LEFT JOIN connection_groups g ON g.id = c.group_id
                   WHERE c.id = ?1",
@@ -1465,6 +1437,7 @@ impl StorageRepository {
             advanced: validated.advanced,
             rdp: validated.rdp,
             vnc: validated.vnc,
+            rlogin: None,
             telnet: validated.telnet,
             serial: validated.serial,
             notes: validated.notes,
@@ -1690,7 +1663,7 @@ impl StorageRepository {
                         c.jump_json, c.advanced_json, c.rdp_json, c.vnc_json, c.telnet_json,
                         c.serial_json, c.notes, c.is_favorite,
                         c.last_connected_at, c.remote_os_id, c.remote_os_name,
-                        c.remote_os_version, c.created_at, c.updated_at, c.group_id,
+                        c.remote_os_version, c.created_at, c.updated_at, c.group_id, c.rlogin_json,
                         c.inline_secret_ref, c.inline_secret_slot_id
                    FROM connections c
                    LEFT JOIN connection_groups g ON g.id = c.group_id
@@ -1698,8 +1671,8 @@ impl StorageRepository {
                 params![id],
                 |row| {
                     let profile = row_to_connection_profile(row)?;
-                    let account: Option<String> = row.get(28)?;
-                    let slot_id: Option<String> = row.get(29)?;
+                    let account: Option<String> = row.get(29)?;
+                    let slot_id: Option<String> = row.get(30)?;
                     let reference = account.map(|account| SecretReference {
                         service: VAULT_SERVICE,
                         slot_id: slot_id.unwrap_or_else(|| account.clone()),
@@ -2419,58 +2392,6 @@ impl StorageRepository {
             .map_err(sqlite_repository_error)
     }
 
-}
-
-fn row_to_connection_profile(row: &rusqlite::Row<'_>) -> rusqlite::Result<ConnectionProfile> {
-    let protocol: String = row.get(2)?;
-    let credential_mode: String = row.get(7)?;
-    let inline_auth_kind: Option<String> = row.get(9)?;
-    let prompt_auth_kind: Option<String> = row.get(11)?;
-    let proxy_json: String = row.get(12)?;
-    let jump_json: String = row.get(13)?;
-    let advanced_json: String = row.get(14)?;
-    let rdp_json: Option<String> = row.get(15)?;
-    let vnc_json: Option<String> = row.get(16)?;
-    let telnet_json: Option<String> = row.get(17)?;
-    let serial_json: Option<String> = row.get(18)?;
-    Ok(ConnectionProfile {
-        id: row.get(0)?,
-        name: row.get(1)?,
-        protocol: serde_json::from_value(serde_json::Value::String(protocol))
-            .map_err(from_serde_row_error)?,
-        group: row.get(3)?,
-        group_id: row.get(27)?,
-        host: row.get(4)?,
-        port: row.get(5)?,
-        username: row.get(6)?,
-        credential_mode: serde_json::from_value(serde_json::Value::String(credential_mode))
-            .map_err(from_serde_row_error)?,
-        credential_id: row.get(8)?,
-        inline_auth_kind: optional_enum_from_string(inline_auth_kind)?,
-        inline_password: None,
-        inline_private_key_path: row.get(10)?,
-        inline_private_key_passphrase: None,
-        prompt_auth_kind: optional_enum_from_string(prompt_auth_kind)?,
-        proxy: serde_json::from_str(&proxy_json).map_err(from_serde_row_error)?,
-        jump: serde_json::from_str(&jump_json).map_err(from_serde_row_error)?,
-        advanced: serde_json::from_str(&advanced_json).map_err(from_serde_row_error)?,
-        rdp: parse_optional_json(rdp_json)?,
-        vnc: parse_optional_json(vnc_json)?,
-        telnet: parse_optional_json(telnet_json)?,
-        serial: parse_optional_json(serial_json)?,
-        notes: row.get(19)?,
-        is_favorite: row.get::<_, i64>(20)? != 0,
-        last_connected_at: row.get(21)?,
-        remote_os_id: row.get(22)?,
-        remote_os_name: row.get(23)?,
-        remote_os_version: row.get(24)?,
-        created_at: row.get(25)?,
-        updated_at: row.get(26)?,
-        auth_kind: None,
-        password: None,
-        private_key_path: None,
-        private_key_passphrase: None,
-    })
 }
 
 fn row_to_tunnel_rule(row: &rusqlite::Row<'_>) -> rusqlite::Result<TunnelRule> {
@@ -3475,6 +3396,7 @@ mod tests {
                     host: "192.0.2.50".to_string(),
                     port: 23,
                     username: String::new(),
+                    rlogin: None,
                     telnet: Some(TelnetConnectionConfig {
                         enter_mode: TelnetEnterMode::Lf,
                         backspace_mode: TelnetBackspaceMode::CtrlH,
@@ -3912,6 +3834,7 @@ mod tests {
             advanced: ConnectionAdvancedConfig::default(),
             rdp: None,
             vnc: None,
+            rlogin: None,
             telnet: None,
             serial: None,
             notes: None,
@@ -3956,4 +3879,8 @@ mod tests {
         (repo, db_path, secrets)
     }
 
+}
+
+fn optional_json_value<T: Serialize>(value: &Option<T>) -> Result<Option<String>, AppError> {
+    value.as_ref().map(serde_json::to_string).transpose().map_err(sqlite_serialize_error)
 }

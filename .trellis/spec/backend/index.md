@@ -58,3 +58,5 @@ The goal is to help AI assistants and new team members understand how YOUR proje
 - [Rlogin Session Owner](./rlogin-session.md) — consented generation leases, real worker lifetime and byte-bounded pull/ACK/flush delivery; UI pending.
 
 - [Rlogin Runtime Boundary](./rlogin-runtime.md) — actual main-window commands, exact decimal ACK counters, non-consuming status and application completion barrier; UI/DNS pending.
+
+- [Rlogin Connections](./rlogin-connections.md) — schema5 and exact config round trips, transient consent and terminal entry integration.

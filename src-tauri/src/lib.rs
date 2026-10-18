@@ -38,6 +38,7 @@ pub mod storage_migration;
 mod storage_local_key;
 pub mod storage_repository;
 pub mod storage_sqlite;
+mod rlogin_schema;
 pub mod storage_vault;
 pub mod sync_snapshot;
 mod sync_import_transaction;

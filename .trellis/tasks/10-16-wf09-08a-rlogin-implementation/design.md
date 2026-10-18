@@ -43,3 +43,7 @@ ACK同包尾部转入reader已有有界隔离区，恰好一次、原样、有�
 ## L1 终端IO适配器
 
 PR #73之后先接编码和renderer owner，具体签名/预算/错误矩阵先固定在frontend/rlogin-terminal.md。reserve默认UTF-8并冻结既有八种编码；新增严格text write与raw write共用实际输入额度。后端保留encoding_rs既有版本，不接Telnet改写。前端纯controller按epoch增量解码、128KiB/256块有界输入、单个实际write、最新resize合并和dispose后丢弃确认；close等待实际IO完成。controller不依赖React或xterm、不挂定时器、不发公共输出事件。连接模型/原型与挂载UI继续下一层，能力暂保持false，不将adapter测试称为完整终端。
+
+## L1 配置与实际终端接线（当前）
+
+先落实backend/rlogin-connections.md的独立配置、schema5和所有持久化通路，再完成母版交互与实际Radix表单、workspace attempt owner和TerminalPanel分流。Rlogin的raw/text输入需共用有界队列，不能经SSH或公共terminal manager兜底。保存不授权，恢复不自动连接；失败保持真实可重试清理状态。

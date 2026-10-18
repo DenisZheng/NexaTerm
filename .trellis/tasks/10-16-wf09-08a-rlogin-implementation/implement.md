@@ -87,3 +87,22 @@ L0 交付时未实现 urgent/OOB、flow control/flush、保留源端口；这些
 ui-ux-pro-max已核对官方MIT来源并执行针对focus/modal与React异步cleanup的审查；落实为既有Radix焦点/显式错误/实际清理与token，不引入新视觉体系。本adapter slice无界面变更；后续UI必须先改母版并记录可点击交互证据。
 
 执行代码9f81d3e、Draft #74：Rlogin原生28为66/67/65、XDMCP原生8各1项、完整CI642全部7个执行job成功，Rust541/542/541（Linux另4既有ignored），前端1016/1既有todo。详细失败定位、原句柄复验和最终矩阵见research/terminal-io-evidence.md。主任务及L1整体仍in_progress；继续配置/存储与终端UI。
+
+## L1 saved connections / mounted terminal（当前）
+
+- [x] 独立模型、schema5备份/原子升级、CRUD/复制、旧JSON/同步/transfer全通路（PR75，完整CI645）。
+- [ ] 母版交互、统一配置表单、本次许可与真实能力入口。
+- [ ] Workspace generation owner、原始/文本输入统一队列、TerminalPanel直连解析及关闭/重连/恢复隔离。
+- [ ] 受影响行为/隐私/迁移回归、类型/构建/source gates、完整CI和Draft PR证据。
+
+
+### 当前交付边界：先提交配置存储，再接表单与终端
+
+本轮先形成独立、可审查的backend配置存储变更，完整CI验证后继续下一堆叠UI切片。TS协议联合、母版、表单和真实终端入口仍未接入；不能把后端模型落库称为可用终端功能。当前无Rust本地工具链，迁移/加密往返/凭据行索引的实际测试依赖三平台完整CI，不能用source checks替代。
+
+
+## L1 配置存储（PR #75）
+
+执行代码90a95b6，完整CI645所有7个执行job SUCCESS。Rust560/561/560（Linux另4既有ignored），新增19项Rust回归全部通过；前端1016/1既有todo、脚本179/3既有环境skip及安全/许可证/fixtures通过。首轮夹具枚举和通用同步备份次序问题已修正并保留原断言，具体证据见research/connection-storage-evidence.md。
+
+本任务保持in_progress。表单、母版和attempt组件已进入Draft #76验证，真实Workspace/TerminalPanel入口、关闭/分屏/恢复及隐私路由继续后续；terminal_available仍false。
