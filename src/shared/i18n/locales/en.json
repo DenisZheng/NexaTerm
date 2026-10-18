@@ -2912,8 +2912,8 @@
   "terminal.log.choose": "Choose new file",
   "terminal.log.warning": "Save future output from this session as UTF-8, including ANSI sequences and echoed input. Output may contain passwords or other secrets; it is not redacted. Only a new file is allowed. Recording stops at 100 MiB, on disconnect, or if the write queue fills. Choose a trusted private folder.",
   "terminal.log.unsupported": "Logging is available for SSH and Local/WSL sessions",
-  "connectionDialog.rlogin.description": "Direct numeric IPv4; local and remote users are independent.",
-  "connectionDialog.rlogin.remoteAddress": "Remote IPv4",
+  "connectionDialog.rlogin.description": "Direct IPv4 or hostname; local and remote users are independent.",
+  "connectionDialog.rlogin.remoteAddress": "Remote IPv4 or hostname",
   "connectionDialog.rlogin.localAddress": "Local IPv4",
   "connectionDialog.rlogin.remoteUser": "Remote user",
   "connectionDialog.rlogin.localUser": "Local user",
@@ -2941,7 +2941,7 @@
   "workspace.rlogin.phase.failed": "Connection failed",
   "workspace.rlogin.phase.cleanupFailed": "Cleanup incomplete",
   "workspace.rlogin.reason.permission": "Cannot bind a restricted source port. Check the current user permissions.",
-  "workspace.rlogin.reason.address": "Valid local and remote numeric IPv4 addresses are required.",
+  "workspace.rlogin.reason.address": "Use a valid remote IPv4/hostname and numeric local IPv4.",
   "workspace.rlogin.reason.ports": "No restricted source port is available. Release its owner and retry.",
   "workspace.rlogin.reason.platform": "This platform does not provide the required native terminal capability.",
   "workspace.rlogin.reason.busy": "The connection or permit limit has been reached. Retry later.",
@@ -2956,5 +2956,7 @@
   "workspace.rlogin.connect": "Connect…",
   "workspace.rlogin.reconnect": "Reconnect…",
   "workspace.rlogin.retryClose": "Retry close",
-  "workspace.rlogin.readyHint": "A protocol ACK only completes the initial exchange. It does not confirm login; follow the remote prompt."
+  "workspace.rlogin.readyHint": "A protocol ACK only completes the initial exchange. It does not confirm login; follow the remote prompt.",
+  "workspace.rlogin.reason.dns": "Hostname resolution failed.",
+  "workspace.rlogin.reason.noIpv4": "The hostname returned no supported IPv4 address."
 }

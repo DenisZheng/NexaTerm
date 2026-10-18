@@ -33,7 +33,7 @@ WriteRequest: `{reservation_id,data:Vec<u8>}` (32KiB maximum). ResizeRequest: `{
 
 Use canonical unsigned decimal strings for every JSON u64 epoch/sequence, including zero epoch and nonzero sequences. Reject signs, whitespace, leading zeros, overflow and more than 20 characters. Convert once at the IPC boundary. Frames contain epoch/sequence strings and raw byte arrays. No u64 JSON numbers or string-to-number UI coercion.
 
-Status is a non-consuming snapshot: `{epoch,phase,reason,awaiting_ack,finished}` without frame/config. Repeated status must neither dequeue output nor remove the handle. Read inherits single-flight/ACK/epoch budgets from rlogin-session.md; a delivered frame stays credited. Capability separates `native_core`, `exact_flush`, `runtime_available`, `terminal_available=exact_flush`, `dns_available=false`, and a fixed unavailable reason. InitialExchangeReady proves ACK only.
+Status is a non-consuming snapshot: `{epoch,phase,reason,awaiting_ack,finished}` without frame/config. Repeated status must neither dequeue output nor remove the handle. Read inherits single-flight/ACK/epoch budgets from rlogin-session.md; a delivered frame stays credited. Capability separates `native_core`, `exact_flush`, `runtime_available`, `terminal_available=exact_flush`, `dns_available=exact_flush`, and a fixed unavailable reason. InitialExchangeReady proves ACK only.
 
 Managed main-window destruction calls `cancel_window(label)`: foreign labels do nothing; main closes admission and signals all owned workers. `shutdown_wait()` snapshots used states while closing admission, signals all, drops registry locks before await, and waits their actual completion watches. Unused handles are removed; active handles/permits remain tracked until FD cleanup. App RunEvent::Exit explicitly awaits this alongside existing shutdown services; do not rely on Tauri-managed state Drop. There is no false successful timeout acknowledgement or new background owner.
 
@@ -63,3 +63,5 @@ DTO unknown fields/invalid types, strict IPv4/profile rejection, exact decimal-u
 ## 7. Wrong vs correct
 
 Wrong: `manager.read(id,0,None)` for a status label; it consumes a payload the caller never renders. Correct: `manager.status(owner,id)` snapshots metadata only. Wrong: serialize sequence as a JSON number or recreate it from frontend counters. Correct: carry its exact backend decimal string through ACK. Wrong: await shutdown while holding the registry mutex. Correct: snapshot bounded owned states, release the lock, then await completion.
+
+Hostname targets are admitted without IO and resolved by the owned start actor after consent; see [DNS](./rlogin-dns.md) for grammar, frozen first IPv4, bounded OS-worker lifetime and actual-close semantics.

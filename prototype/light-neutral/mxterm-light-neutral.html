@@ -2033,11 +2033,11 @@
 
   <dialog class="rlogin-dialog" id="rlogin-workflow" aria-labelledby="rlogin-heading">
     <h2 id="rlogin-heading">Rlogin 连接</h2>
-    <p>原生终端 · 仅支持数字 IPv4 地址。保存配置后，连接仍需本次许可。</p>
+    <p>原生终端 · 远端支持 IPv4 或主机名，本地接口使用 IPv4。保存配置后，连接仍需本次许可。</p>
     <form id="rlogin-form">
       <div class="rlogin-fields">
         <label>名称<input name="name" value="Legacy server" required></label>
-        <label>远端 IPv4<input name="host" value="192.0.2.10" required></label>
+        <label>远端 IPv4 或主机名<input name="host" value="desktop.example.test" required></label>
         <label>端口<input name="port" type="number" value="513" min="1" max="65535" required></label>
         <label>远端用户<input name="remoteUser" value="remote" required></label>
         <label>本地 IPv4<input name="localAddress" value="192.0.2.20" required></label>
@@ -2254,7 +2254,7 @@
       rloginOutput.hidden = state !== "active"; rloginFeedback.classList.toggle("rlogin-error", state === "failed" || state === "cleanup-failed");
       const states = {
         consent: ["允许本次明文连接？", "Rlogin 不加密。仅向你信任的目标发送用户信息与后续终端输入；许可仅用于这次连接。"],
-        connecting: ["正在连接", "正在建立协议连接，可随时取消。"],
+        connecting: ["正在连接", "正在解析并建立协议连接，可随时取消。系统解析若仍在结束，实例保持清理中。"],
         active: ["初始交换完成", "协议 ACK 不代表已登录；继续查看远端终端提示。"],
         cancelled: ["已取消", "这次连接已清理。再次连接需要新的许可。"],
         failed: ["连接失败", "无法绑定受限源端口（legacy_socket_access_denied）。请检查当前用户权限后重试。"],

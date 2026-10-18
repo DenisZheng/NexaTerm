@@ -2,11 +2,11 @@
 
 ## 1. Scope / trigger
 
-Continue approved WF-09-08A L01-L03/C01-C02 under WORKFLOW_SPEC v0.7 WS-P01/P02/P04 and WS-R01/R02. User flow: save a Rlogin target, explicitly permit this one connection, use its native terminal, cancel/reconnect/close the same logical instance. This slice extends the connection model, storage and actual entry; the earlier IO adapter alone is not a usable terminal. No external rlogin client, DNS, elevation helper, logs/history/macros/MultiExec or permanent plaintext consent.
+Continue approved WF-09-08A L01-L03/C01-C02 under WORKFLOW_SPEC v0.7 WS-P01/P02/P04 and WS-R01/R02. User flow: save a Rlogin target, explicitly permit this one connection, use its native terminal, cancel/reconnect/close the same logical instance. This slice extends the connection model, storage and actual entry; the earlier IO adapter alone is not a usable terminal. No external rlogin client or elevation helper, logs/history/macros/MultiExec or permanent plaintext consent.
 
 ## 2. Signatures
 
-ConnectionProtocol adds `Rlogin` / JSON `rlogin`. Profile/Input/Validated/SyncConnectionRecord add optional `rlogin:RloginConnectionConfig` and requires a matching TS model before frontend activation (next UI slice). Config is `{local_address:String,local_user:String,terminal:String,speed:u32}`; terminal defaults to xterm-256color and speed38400. Host/port/username hold numeric remote IPv4/default513/remote user; advanced.terminal_encoding selects the existing eight encodings. Config rejects unknown fields. No password, allow_plaintext, runtime ID or per-run window is persisted in it.
+ConnectionProtocol adds `Rlogin` / JSON `rlogin`. Profile/Input/Validated/SyncConnectionRecord add optional `rlogin:RloginConnectionConfig` and requires a matching TS model before frontend activation (next UI slice). Config is `{local_address:String,local_user:String,terminal:String,speed:u32}`; terminal defaults to xterm-256color and speed38400. Host/port/username hold remote IPv4 or ASCII hostname/default513/remote user; advanced.terminal_encoding selects the existing eight encodings. Config rejects unknown fields. No password, allow_plaintext, runtime ID or per-run window is persisted in it.
 
 SQLite schema5 adds nullable `connections.rlogin_json TEXT`. Migration owns BEGIN IMMEDIATE, checks column under the write lock, adds it once and records version5 in that transaction. Existing on-disk databases get a unique consistent SQLite backup before upgrade; backup/migration failure aborts, no false schema success. Fresh/in-memory stores need no disk backup. Existing newer-schema rejection remains. Old profiles omit the field; all old protocol validation/defaults remain.
 
@@ -18,7 +18,7 @@ Future runtime entry freezes a deep target/config/encoding/window snapshot befor
 
 ## 3. Contracts
 
-Validate numeric local/remote IPv4 and the same BSD user/terminal/speed profile before persistence; remote user is independent of SSH credentials. Empty required fields or unsupported protocol settings fail with fixed errors, no truncation. Rlogin rejects credential/secret/proxy/jump/X11 settings instead of silently using them. Preserve only the selected terminal encoding from advanced settings; fixed native establishment budget remains15s. Saved configuration never authorizes a connection, and workspace restore never automatically reconnects Rlogin.
+Validate numeric local IPv4 and remote IPv4/ASCII hostname and the same BSD user/terminal/speed profile before persistence; remote user is independent of SSH credentials. Empty required fields or unsupported protocol settings fail with fixed errors, no truncation. Rlogin rejects credential/secret/proxy/jump/X11 settings instead of silently using them. Preserve only the selected terminal encoding from advanced settings; fixed native establishment budget remains15s. Saved configuration never authorizes a connection, and workspace restore never automatically reconnects Rlogin.
 
 All persistence paths must retain the exact config: ordinary repository list/get/upsert/duplicate, legacy JSON migration, sync export/import and connection transfer. Normal Profile and SyncRecord have different SQL row layouts; append/read the new column explicitly for each, and round-trip real repository data. Before growing frozen connections/mod.rs and storage_repository.rs, extract existing helpers without behavior change; do not raise budgets. New schema rejects old binaries through the existing version guard; backup is the explicit rollback source.
 
@@ -54,3 +54,5 @@ Backend: closed config fields, numeric/BSD bounds, unsupported settings/no secre
 ## 7. Wrong vs correct
 
 Wrong: add only a UI option or reuse SSH credentials/default fallthrough; append a SQL column without updating both row layouts. Correct: introduce the independent typed config, validate it at the backend, carry it through all storage paths and only enable the entry when its real lifecycle is wired. Wrong: persist plaintext consent as a profile setting. Correct: freeze one target snapshot, request consent for that attempt and discard it with the generation.
+
+The DNS slice extends the earlier numeric-only remote target rule; admission and persisted metadata use the shared Destination grammar without network access. See [DNS](./rlogin-dns.md). Local bind remains numeric IPv4.

@@ -4,6 +4,8 @@ export const RLOGIN_MAX_TEXT_BYTES = 4096;
 export const rloginPhases = ["reserved", "starting", "initial_exchange_ready", "closing", "closed", "failed"] as const;
 export type RloginPhase = typeof rloginPhases[number];
 export const rloginReasons = [
+  "rlogin_dns_failed",
+  "rlogin_dns_no_ipv4",
   "rlogin_session_denied",
   "rlogin_session_consent_required",
   "rlogin_session_busy",

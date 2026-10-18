@@ -1,6 +1,6 @@
 use super::{actor, Ack, Phase, ReadReply, SessionError, SessionRequest, SessionStatus, Shared};
 use crate::legacy_socket::CONNECT_TIMEOUT;
-use crate::rlogin_connect::{self, WindowSize};
+use crate::rlogin_connect::WindowSize;
 use std::{collections::HashMap, sync::{atomic::Ordering, Arc, Mutex}, time::{Duration, Instant}};
 use tokio::sync::{oneshot, OwnedSemaphorePermit, Semaphore};
 use uuid::Uuid;
@@ -9,11 +9,16 @@ const MAX_WORKERS: usize = 4;
 const TTL: Duration = Duration::from_secs(15);
 struct Entry { created: Instant, request: Option<SessionRequest>, state: Arc<Shared> }
 struct Registry { entries: HashMap<String, Entry>, closed: bool }
-struct Inner { registry: Mutex<Registry>, workers: Arc<Semaphore> }
+struct Inner { registry: Mutex<Registry>, workers: Arc<Semaphore>, resolver: super::dns::Resolver }
 pub struct SessionManager { inner: Arc<Inner> }
 pub(super) struct WorkerLease {
     pub state: Arc<Shared>, inner: Arc<Inner>, id: String, permit: Option<OwnedSemaphorePermit>,
     pub result: (Phase, Option<SessionError>), pub discard: bool, pub deadline: Instant,
+}
+impl WorkerLease {
+    pub(super) async fn resolve(&self, destination: &super::Destination) -> Result<std::net::SocketAddrV4, SessionError> {
+        self.inner.resolver.resolve(destination, &self.state.cancel, self.deadline).await
+    }
 }
 impl Drop for WorkerLease {
     fn drop(&mut self) {
@@ -35,7 +40,7 @@ fn owner(owner: &str) -> Result<(), SessionError> { if owner == "main" { Ok(()) 
 impl Default for SessionManager {
     fn default() -> Self {
         Self { inner: Arc::new(Inner { registry: Mutex::new(Registry { entries: HashMap::new(), closed: false }),
-            workers: Arc::new(Semaphore::new(MAX_WORKERS)) }) }
+            resolver: super::dns::Resolver::default(), workers: Arc::new(Semaphore::new(MAX_WORKERS)) }) }
     }
 }
 impl Drop for SessionManager { fn drop(&mut self) { self.shutdown(); } }
@@ -44,7 +49,7 @@ impl SessionManager {
         owner(origin)?;
         if !consent { return Err(SessionError::ConsentRequired); }
         let encoding = super::text::SessionEncoding::new(&request.terminal_encoding)?;
-        rlogin_connect::validate(&request.options())?;
+        request.validate()?;
         let mut registry = self.inner.registry.lock().map_err(|_| SessionError::Unavailable)?;
         if registry.closed { return Err(SessionError::Unavailable); }
         registry.entries.retain(|_, e| e.request.is_none() || e.created.elapsed() < TTL);

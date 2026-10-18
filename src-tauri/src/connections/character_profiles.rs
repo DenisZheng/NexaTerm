@@ -34,11 +34,12 @@ pub(super) fn validate_rlogin_profile_input(input:&ConnectionProfileInput,host:S
     config.local_address=config.local_address.trim().to_owned(); config.local_user=config.local_user.trim().to_owned();
     config.terminal=config.terminal.trim().to_owned(); let username=input.username.trim().to_owned();
     let address=|value:&str|value.parse::<std::net::Ipv4Addr>().map_err(|_|rlogin_config_error("legacy_socket_invalid_address"));
-    crate::rlogin_connect::validate(&crate::rlogin_connect::ConnectOptions {
-        local:address(&config.local_address)?, target:std::net::SocketAddrV4::new(address(&host)?,input.port),
-        local_user:&config.local_user,remote_user:&username,terminal:&config.terminal,speed:config.speed,
-        window:crate::rlogin_connect::WindowSize {rows:24,columns:80,x_pixels:0,y_pixels:0},
-    }).map_err(|error|rlogin_config_error(error.code()))?;
+    crate::rlogin_session::Destination::parse(&host,input.port).map_err(|error|rlogin_config_error(error.code()))?;
+    let local=address(&config.local_address)?;
+    if !crate::legacy_socket::valid(local) { return Err(rlogin_config_error("legacy_socket_invalid_address")); }
+    crate::rlogin_connect::prepare_fields(&config.local_user,&username,&config.terminal,config.speed,
+        crate::rlogin_connect::WindowSize {rows:24,columns:80,x_pixels:0,y_pixels:0})
+        .map_err(|error|rlogin_config_error(error.code()))?;
     let name=trim_optional(input.name.as_ref()).unwrap_or_else(||format!("Rlogin {username}@{host}:{}",input.port));
     Ok(ValidatedConnectionProfileInput {
         id:trim_optional(input.id.as_ref()),protocol:ConnectionProtocol::Rlogin,name,group:trim_optional(input.group.as_ref()),

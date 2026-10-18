@@ -107,4 +107,12 @@ describe("Rlogin workspace attempt lifecycle",()=>{
     const f=fixture();f.client.read.mockRejectedValue(Error("private output fixture"));await f.owner.connect(f.profile,f.window);await vi.advanceTimersByTimeAsync(25);await turn();
     expect(f.owner.getSnapshot()).toMatchObject({phase:"failed",reason:"rlogin_terminal_read_failed"});expect(JSON.stringify(f.owner.getSnapshot())).not.toContain("private");expect(vi.getTimerCount()).toBe(0);
   });
+  it("pins a hostname and consent before native start performs DNS, ignoring later profile changes",async()=>{
+    const f=fixture();f.profile.host="Desktop.Example.invalid.";
+    await f.owner.connect(f.profile,{rows:24,columns:80});
+    expect(f.consent.mock.calls[0][0].target_address).toBe("Desktop.Example.invalid.");
+    expect(f.client.reserve.mock.calls[0][0].target_address).toBe("Desktop.Example.invalid.");
+    f.profile.host="Changed.invalid";expect(f.client.reserve.mock.calls[0][0].target_address).toBe("Desktop.Example.invalid.");
+  });
+
 });
