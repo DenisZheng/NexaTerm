@@ -161,3 +161,9 @@ describe("batch connect workspace runtime", () => {
     ).toEqual({ error: "runner failed", status: "failed" });
   });
 });
+
+it("tracks Rlogin this-run consent/ACK/cleanup without a public session ID or raw error text", () => {
+  const state = (phase:string) => batchWorkspaceHandleState({kind:"character",id:"native"},{localTerminalTabs:[{id:"native",profileId:"saved",source:"rlogin",status:`rlogin:${phase}`,error:"private fixture text"}],terminalTabs:[],rdpSessions:[],vncSessions:[]});
+  expect(state("consent").status).toBe("waiting-user");expect(state("starting").status).toBe("connecting");expect(state("initial_exchange_ready").status).toBe("success");
+  for(const phase of ["failed","cleanup_failed","closed","cancelled"]){expect(state(phase).status).toBe("failed");expect(JSON.stringify(state(phase))).not.toContain("private fixture");}
+});

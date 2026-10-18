@@ -99,3 +99,13 @@ ui-ux-pro-max已核对官方MIT来源并执行针对focus/modal与React异步cle
 ### 当前交付边界：先提交配置存储，再接表单与终端
 
 本轮先形成独立、可审查的backend配置存储变更，完整CI验证后继续下一堆叠UI切片。TS协议联合、母版、表单和真实终端入口仍未接入；不能把后端模型落库称为可用终端功能。当前无Rust本地工具链，迁移/加密往返/凭据行索引的实际测试依赖三平台完整CI，不能用source checks替代。
+
+
+## L1 实际终端入口（当前）
+
+基于已验证PR76文档头cee7e736，原型体验仍按同一母版和同一用户流程。先加入私有renderer绑定与实际TerminalPanel分支（局部10项测试已通过），再接workspace私有owner map/冻结许可、异步关闭/重连、split与restore、Files/MultiExec/宏/历史排除。终端能力保持false直至实际路径与回归齐备。代码契约见frontend/rlogin-mounted-terminal.md；全量测试/构建/source及完整CI仍需执行，局部测试不称为WebView或真实rlogind验收。
+
+
+### 实际入口本轮进展（2026-10-18）
+
+#75配置存储完整CI645与#76表单/attempt组件完整CI646已通过。当前入口已实现：实际菜单/协议表单、保存后立即连接、saved/new/split/batch、冻结许可队列、动态owner、取消、重连、失败重试关闭、工作区恢复不自动连接，以及公共终端/日志/历史/宏/广播/Files/AI隔离。Unix terminal_available按exact_flush启用，Windows继续真实不可用。实际TerminalPanel私有解析交付、输入/原始字节/resize复用有界controller；EOF保留既有显示，pane卸载只detach。新增45项前端行为回归及8项真实shell脚本回归；本地全量1104通过/1既有todo。完整build/source及GitHub三平台CI证据在research/mounted-entry-evidence.md收口；未将组件测试称为原生WebView/主题/真实rlogind互通。

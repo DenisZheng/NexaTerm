@@ -72,7 +72,7 @@ function itemBadge(item: WorkspaceItem, t: Translate): string | null {
     case "split":
       return t("kind.split");
     case "local":
-      return t(item.source === "telnet" ? "kind.telnet" : item.source === "serial" ? "kind.serial" : "kind.local");
+      return item.source === "rlogin" ? "Rlogin" : t(item.source === "telnet" ? "kind.telnet" : item.source === "serial" ? "kind.serial" : "kind.local");
     case "ssh":
       return t("kind.ssh");
     case "rdp":

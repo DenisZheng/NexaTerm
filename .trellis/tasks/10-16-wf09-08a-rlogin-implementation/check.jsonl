@@ -24,3 +24,6 @@
 {"file": ".trellis/spec/backend/rlogin-connections.md", "reason": "Independent config/schema5/serialization compatibility, transient consent, UI and owner contracts"}
 {"file": ".trellis/spec/frontend/rlogin-connections.md", "reason": "Rlogin form/terminal UI and lifecycle contracts"}
 {"file": ".trellis/spec/frontend/rlogin-attempt.md", "reason": "Generation owner cancellation/cleanup and bounded scheduler contracts"}
+{"file": ".trellis/spec/frontend/rlogin-mounted-terminal.md", "reason": "Private actual TerminalPanel renderer/input/parse/dispose and routing contracts"}
+{"file": ".trellis/tasks/10-16-wf09-08a-rlogin-implementation/research/mounted-entry-seams.md", "reason": "Inspected real Panel and workspace startup/close/restore integration seams"}
+{"file": ".trellis/spec/frontend/rlogin-workspace.md", "reason": "Actual workspace entry, native close barrier, transient consent and restore/privacy contracts"}

@@ -131,7 +131,7 @@ function parseInstance(value: unknown): WorkspaceSnapshotInstance {
   if (item.kind === "local") {
     requireInstancePrefix(id, "local");
     const source =
-      item.source === "telnet" || item.source === "serial" ? item.source : "local";
+      item.source === "telnet" || item.source === "serial" || item.source === "rlogin" ? item.source : "local";
     return { id, kind: "local", ordinal: ordinal(item.ordinal), source, target };
   }
   if (item.kind === "rdp") {

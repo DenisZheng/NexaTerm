@@ -1,3 +1,7 @@
+import { RloginConsentQueue } from "./rloginConsentQueue";
+import { RloginConsentDialog } from "./RloginConsentDialog";
+import { RloginWorkspaceSessions } from "./rloginWorkspaceSessions";
+import { LocalTerminalEmptyPanel, LocalTerminalStatusPanel } from "./LocalTerminalStatusPanels";
 import { ConnectionFailureDetails } from "../connections/ConnectionFailureDetails";
 import { diagnoseConnectionFailure, safeDiagnosticId, type ConnectionFailureDiagnosis } from "../connections/connectionFailureDiagnosis";
 import { useConnectionGroups } from "../connections/useConnectionGroups";
@@ -212,6 +216,7 @@ const VncViewerSurface = lazy(async () => {
   const module = await loadVncViewerSurface();
   return { default: module.VncViewerSurface };
 });
+const RloginTerminalPane = lazy(() => import("../terminal/RloginTerminalPane"));
 const TerminalPanel = lazy(async () => {
   const module = await loadTerminalPanel();
   return { default: module.TerminalPanel };
@@ -1035,6 +1040,16 @@ export function WorkspaceShell() {
   const [aiContextRequestKey, setAiContextRequestKey] = useState(0);
   const [aiInitialContexts, setAiInitialContexts] = useState<AiContextBlock[]>([]);
   const localTerminalTabsRef = useRef<LocalTerminalTab[]>([]);
+  const [rloginConsent] = useState(() => new RloginConsentQueue());
+  const [rloginSessions] = useState(() => new RloginWorkspaceSessions(
+    () => import("../terminal/rloginRuntime"), (target, signal) => rloginConsent.request(target, signal),
+    (tabId, state) => {
+      const next = localTerminalTabsRef.current.map(tab => tab.id === tabId && tab.source === "rlogin"
+        ? { ...tab, status: `rlogin:${state.phase}`, error: state.reason } : tab);
+      localTerminalTabsRef.current = next; setLocalTerminalTabs(next);
+    },
+  ));
+  useEffect(() => () => { rloginConsent.dispose(); void rloginSessions.dispose().catch(() => undefined); }, [rloginConsent, rloginSessions]);
   const [localTerminalProfiles, setLocalTerminalProfiles] = useState<LocalTerminalProfile[]>([]);
   const localTerminalProfilesRef = useRef<LocalTerminalProfile[]>([]);
   const [localTerminalProfilesLoading, setLocalTerminalProfilesLoading] = useState(false);
@@ -1932,10 +1947,10 @@ export function WorkspaceShell() {
     : null;
   const activeAiTerminalTab = terminalSplitActive
     ? focusedTerminalSplitBinding?.kind === "local"
-      ? localTerminalTabs.find((tab) => tab.id === focusedTerminalSplitBinding.tabId) || null
+      ? localTerminalTabs.find((tab) => tab.id === focusedTerminalSplitBinding.tabId && tab.source !== "rlogin") || null
       : terminalTabs.find((tab) => tab.id === focusedTerminalSplitBinding?.tabId) || null
     : activeWorkspaceMode === "local"
-      ? activeLocalTerminalTab
+      ? activeLocalTerminalTab?.source === "rlogin" ? null : activeLocalTerminalTab
       : activeConnectedTerminalTab;
   const activeAiRecentTerminalOutput = activeAiTerminalTab
     ? terminalRecentOutputByTabId[activeAiTerminalTab.id] || ""
@@ -2023,7 +2038,9 @@ export function WorkspaceShell() {
         const source =
           tab.profileKind === "wsl"
             ? "WSL"
-            : tab.source === "telnet"
+            : tab.source === "rlogin"
+              ? "Rlogin"
+              : tab.source === "telnet"
               ? "Telnet"
               : tab.source === "serial"
                 ? tr("workspace.local.serial")
@@ -2548,7 +2565,7 @@ export function WorkspaceShell() {
   }, [updateTerminalDirectory]);
 
   const appendTerminalRecentOutput = useCallback((tabId: string, output: string) => {
-    if (!output) {
+    if (!output || localTerminalTabsRef.current.some(tab => tab.id === tabId && tab.source === "rlogin")) {
       return;
     }
     setTerminalRecentOutputByTabId((items) => {
@@ -4449,6 +4466,10 @@ export function WorkspaceShell() {
     if (!sourceTab) {
       return null;
     }
+    if (sourceTab.source === "rlogin") {
+      const connection = connectionById.get(sourceTab.profileId);
+      return connection?.protocol === "rlogin" ? { kind: "local", tabId: openRloginTerminal(connection, false).id } : null;
+    }
     if (sourceTab.source === "telnet" || sourceTab.source === "serial") {
       const connection = connectionById.get(sourceTab.profileId) || null;
       if (
@@ -4501,6 +4522,7 @@ export function WorkspaceShell() {
 
   function retryRestoredLocalTab(tabId: string) {
     const tab = localTerminalTabsRef.current.find((item) => item.id === tabId); if (!tab) return;
+    if (tab.source === "rlogin") { connectRloginTab(tab.id); return; }
     const requestId = `restore-${tab.id}-${Date.now().toString()}`;
     if (tab.source === "telnet" || tab.source === "serial") {
       const connection = connectionById.get(tab.profileId);
@@ -5519,6 +5541,7 @@ export function WorkspaceShell() {
   }
 
   function sendTerminalSelectionToAi(tabId: string, selectedText: string) {
+    if (localTerminalTabsRef.current.some(tab => tab.id === tabId && tab.source === "rlogin")) return;
     const content = selectedText.trim();
     if (!content) {
       return;
@@ -5676,7 +5699,7 @@ export function WorkspaceShell() {
   }
 
   function canRecordTerminalInputHistory(tabId: string) {
-    return !macroRecorder.omitAutomaticHistory([
+    return !localTerminalTabsRef.current.some(tab => tab.id === tabId && tab.source === "rlogin") && !macroRecorder.omitAutomaticHistory([
       terminalPaneBindingKey({ kind: "ssh", tabId }), terminalPaneBindingKey({ kind: "local", tabId }),
     ]);
   }
@@ -5705,6 +5728,7 @@ export function WorkspaceShell() {
   }
 
   function commandHistoryScopeForTerminalTab(tabId: string): CommandHistoryScope | null {
+    if (localTerminalTabsRef.current.some(tab => tab.id === tabId && tab.source === "rlogin")) return null;
     const localTab = localTerminalTabs.find((tab) => tab.id === tabId);
     if (localTab) {
       return {
@@ -6241,20 +6265,41 @@ export function WorkspaceShell() {
     };
   }
 
-  function closeLocalTerminalTabs(tabIds: string[]) {
+  function removeLocalTerminalTabs(tabIds: string[]) {
     const closingIds = new Set(tabIds);
-    tabIds.forEach(stopTerminalWarmupCapture);
-    closeRuntimeTerminalSessions(
-      localTerminalTabsRef.current.filter((tab) => closingIds.has(tab.id)),
-    );
-    const nextTabs = localTerminalTabsRef.current.filter((tab) => !closingIds.has(tab.id));
-    localTerminalTabsRef.current = nextTabs;
-    setLocalTerminalTabs(nextTabs);
-    dispatchTabs({
-      type: "tabs/closeLocalTerminals",
-      closingIds: tabIds,
-      snapshot: snapshotFromRefs({ localTerminalTabs: nextTabs.map((tab) => ({ id: tab.id })) }),
-    });
+    const nextTabs = localTerminalTabsRef.current.filter(tab => !closingIds.has(tab.id));
+    localTerminalTabsRef.current = nextTabs; setLocalTerminalTabs(nextTabs);
+    dispatchTabs({ type: "tabs/closeLocalTerminals", closingIds: tabIds,
+      snapshot: snapshotFromRefs({ localTerminalTabs: nextTabs.map(tab => ({ id: tab.id })) }) });
+  }
+
+  async function closeLocalTerminalTabs(tabIds: string[]) {
+    const closing = localTerminalTabsRef.current.filter(tab => tabIds.includes(tab.id));
+    const ordinary = closing.filter(tab => tab.source !== "rlogin");
+    ordinary.forEach(tab => stopTerminalWarmupCapture(tab.id));
+    closeRuntimeTerminalSessions(ordinary); removeLocalTerminalTabs(ordinary.map(tab => tab.id));
+    await Promise.all(closing.filter(tab => tab.source === "rlogin").map(async tab => {
+      try { await rloginSessions.close(tab.id); rloginSessions.forget(tab.id); removeLocalTerminalTabs([tab.id]); }
+      catch { /* Native owner retains the tab and exposes retry-close with a fixed reason. */ }
+    }));
+  }
+
+  function connectRloginTab(tabId: string) {
+    const tab = localTerminalTabsRef.current.find(item => item.id === tabId && item.source === "rlogin");
+    const connection = tab ? connectionById.get(tab.profileId) : null;
+    if (connection?.protocol === "rlogin") void rloginSessions.connect(tabId, connection, { columns: 80, rows: 24 }).catch(() => undefined);
+  }
+
+  function openRloginTerminal(connection: ConnectionProfile, activate = true) {
+    const tab = { ...buildCharacterTerminalTab(localTerminalTabsRef.current, "rlogin", connection.name || formatConnectionAddress(connection), connection.id), requestId: undefined, status: "rlogin:idle" };
+    const next = [...localTerminalTabsRef.current, tab]; localTerminalTabsRef.current = next; setLocalTerminalTabs(next);
+    if (activate) activateLocalTerminalTab(tab);
+    void rloginSessions.connect(tab.id, connection, { columns: 80, rows: 24 }).catch(() => undefined); return tab;
+  }
+
+  function openRloginConnectionSession(connection: ConnectionProfile) {
+    const existing = localTerminalTabsRef.current.find(tab => tab.source === "rlogin" && tab.profileId === connection.id);
+    if (existing) activateLocalTerminalTab(existing); else openRloginTerminal(connection);
   }
 
   function openLocalTerminalByProfile(
@@ -6377,7 +6422,7 @@ export function WorkspaceShell() {
 
   function buildCharacterTerminalTab(
     tabs: LocalTerminalTab[],
-    source: "telnet" | "serial",
+    source: "telnet" | "serial" | "rlogin",
     title: string,
     profileId: string,
   ): LocalTerminalTab {
@@ -6508,6 +6553,7 @@ export function WorkspaceShell() {
   }
 
   function openConnectionSession(connection: ConnectionProfile) {
+    if (connection.protocol === "rlogin") { openRloginConnectionSession(connection); return; }
     if (isRdpConnection(connection)) {
       openRdpConnectionSession(connection);
       return;
@@ -6538,6 +6584,7 @@ export function WorkspaceShell() {
     connection: ConnectionProfile,
     activate: boolean,
   ): BatchWorkspaceHandle | null {
+    if (connection.protocol === "rlogin") return { kind: "character", id: openRloginTerminal(connection, activate).id };
     if (isRdpConnection(connection)) return { kind: "rdp", id: startRdpSession(connection, activate).id };
     if (isVncConnection(connection)) return { kind: "vnc", id: startVncSession(connection, activate).id };
     if (isTelnetConnection(connection) || isSerialConnection(connection)) {
@@ -6548,6 +6595,7 @@ export function WorkspaceShell() {
   }
 
   function openTerminal(connection: ConnectionProfile) {
+    if (connection.protocol === "rlogin") { openRloginConnectionSession(connection); return; }
     if (isRdpConnection(connection)) {
       openRdpConnectionSession(connection);
       return;
@@ -7182,9 +7230,9 @@ export function WorkspaceShell() {
     closeTerminalTabs([tabId]);
   }
 
-  function closeRuntimeTerminalSessions(tabs: Array<{ sessionId?: string }>) {
+  function closeRuntimeTerminalSessions(tabs: Array<{ sessionId?: string; source?: string }>) {
     const sessionIds = new Set(
-      tabs.map((tab) => tab.sessionId).filter((sessionId): sessionId is string => Boolean(sessionId)),
+      tabs.filter(tab => tab.source !== "rlogin").map((tab) => tab.sessionId).filter((sessionId): sessionId is string => Boolean(sessionId)),
     );
     sessionIds.forEach((sessionId) => {
       void terminalClose(sessionId).catch(() => undefined);
@@ -7273,6 +7321,15 @@ export function WorkspaceShell() {
    * 连接级关闭连带远程文件，其余按实例类型分派到 WF-00B 现有关闭路径。
    */
   function executeClosePlan(plan: ClosePlan) {
+    const nativeIds = plan.localTabIds.filter(id => localTerminalTabsRef.current.some(tab => tab.id === id && tab.source === "rlogin"));
+    if (nativeIds.length) {
+      void closeLocalTerminalTabs(nativeIds).then(() => {
+        const retained = new Set(localTerminalTabsRef.current.filter(tab => nativeIds.includes(tab.id)).map(tab => tab.id));
+        executeClosePlan({ ...plan, localTabIds: plan.localTabIds.filter(id => !nativeIds.includes(id)),
+          splitGroup: retained.size ? false : plan.splitGroup, splitPaneIds: retained.size ? [] : plan.splitPaneIds });
+      });
+      return;
+    }
     for (const transferId of plan.transferIdsToCancel ?? []) requestCancelTransfer(transferId);
     for (const paneId of plan.splitPaneIds ?? []) {
       removeTerminalSplitPaneLayout(paneId);
@@ -8828,7 +8885,24 @@ export function WorkspaceShell() {
                     />
                   ) : null}
                   {localTerminalTabs.map((tab) =>
-                        tab.sessionId ? (
+                        tab.source === "rlogin" ? (
+                          <Suspense key={tab.id} fallback={<div className="terminal-direct-status">{tr("workspace.terminal.loading")}</div>}>
+                            <RloginTerminalPane tabId={tab.id} title={tab.title} owner={rloginSessions.getOwner(tab.id)} snapshot={rloginSessions.getState(tab.id)}
+                              profileAvailable={connectionById.get(tab.profileId)?.protocol === "rlogin"}
+                              onConnect={() => connectRloginTab(tab.id)} onCancel={() => { void rloginSessions.cancel(tab.id).catch(() => undefined); }}
+                              onClose={() => { void closeLocalTerminalTabs([tab.id]); }} appearance={{
+                                active: isTerminalPanelActive(tab.id, "local"), ...terminalSplitContentProps({ kind: "local", tabId: tab.id }),
+                                ctrlVPaste: settings.localTerminal.ctrlVPaste, cursorBlink: settings.appearance.cursorBlink, cursorStyle: settings.appearance.cursorStyle,
+                                fontFamily: terminalFontFamily, fontSize: settings.appearance.terminalFontSize, keywordRules: settings.appearance.terminalKeywordRules,
+                                theme: terminalColorScheme.theme, clearRequestId: terminalClearRequest?.tabId === tab.id ? terminalClearRequest.id : 0,
+                                onSearchClose: closeTerminalSearch, onSearchCaseSensitiveToggle: toggleTerminalSearchCaseSensitive,
+                                onSearchWholeWordToggle: toggleTerminalSearchWholeWord, onSearchQueryChange: updateTerminalSearchQuery,
+                                onSearchNavigationHandled: acknowledgeTerminalSearchNavigation, searchCaseSensitive: Boolean(terminalSearchByTabId[tab.id]?.caseSensitive),
+                                searchWholeWord: Boolean(terminalSearchByTabId[tab.id]?.wholeWord), searchNavigationRequest: terminalSearchNavigationRequest,
+                                searchOpen: Boolean(terminalSearchByTabId[tab.id]?.open), searchQuery: terminalSearchByTabId[tab.id]?.query || "",
+                              }}/>
+                          </Suspense>
+                        ) : tab.sessionId ? (
                           <Suspense
                             key={tab.id}
                             fallback={
@@ -9620,6 +9694,7 @@ export function WorkspaceShell() {
         </Dialog.Portal>
       </Dialog.Root>
 
+      <RloginConsentDialog queue={rloginConsent}/>
       <ConfirmDialog
         confirmLabel={tr("workspace.delete")}
         description={
@@ -10516,122 +10591,6 @@ function VncSessionToolPanel({
       ) : (
         <p className="rdp-tool-note">{tr("workspace.vnc.toolNote")}</p>
       )}
-    </section>
-  );
-}
-
-function LocalTerminalEmptyPanel({
-  active,
-  error,
-  loading,
-  profileName,
-  onOpenDefault,
-  onOpenSettings,
-}: {
-  active: boolean;
-  error: string | null;
-  loading: boolean;
-  profileName: string | null;
-  onOpenDefault: () => void;
-  onOpenSettings: () => void;
-}) {
-  return (
-    <section
-      className={`terminal-direct-status local-terminal-empty ${active ? "" : "is-hidden"}`}
-      aria-label={tr("workspace.local.emptyAria")}
-      aria-hidden={!active}
-    >
-      <div>
-        {loading ? (
-          <Loader2 className="ui-icon spin" aria-hidden="true" />
-        ) : error ? (
-          <CircleAlert className="ui-icon" aria-hidden="true" />
-        ) : (
-          <LocalTerminalIcon className="ui-icon" kind={profileName ? "powershell_core" : "custom"} />
-        )}
-        <strong>{loading ? tr("workspace.local.detecting") : tr("workspace.local.open")}</strong>
-        <span>
-          {error
-            ? error
-            : profileName
-              ? tr("workspace.local.defaultHint", { name: profileName })
-              : tr("workspace.local.noTypeHint")}
-        </span>
-        <div className="local-terminal-status-actions">
-          <button className="primary-button" type="button" disabled={!profileName || loading} onClick={onOpenDefault}>
-            <Play className="ui-icon" aria-hidden="true" />
-            {tr("workspace.local.openDefault")}
-          </button>
-          <button type="button" onClick={onOpenSettings}>
-            {tr("workspace.local.openSettings")}
-          </button>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function LocalTerminalStatusPanel({
-  active,
-  className,
-  error,
-  onPaneFocus,
-  profile,
-  source,
-  status,
-  style,
-  title,
-  visible = active,
-  onOpenSettings,
-  onRetry,
-}: {
-  active: boolean;
-  className?: string;
-  error: string | null;
-  onPaneFocus?: () => void;
-  profile: LocalTerminalProfile | null;
-  source: "local" | "telnet" | "serial";
-  status: string;
-  style?: CSSProperties;
-  title: string;
-  visible?: boolean;
-  onOpenSettings: () => void;
-  onRetry?: () => void;
-}) {
-  const { t } = useI18n();
-  const failed = status === "连接失败";
-  const subject = source === "telnet" ? tr("workspace.local.telnetSession") : source === "serial" ? tr("workspace.local.serialSession") : tr("workspace.local.subject");
-  const description = profile ? `${profile.name} · ${profile.command}` : title;
-
-  return (
-    <section
-      className={`terminal-direct-status local-terminal-status ${failed ? "is-error" : "is-loading"} ${
-        visible ? "" : "is-hidden"
-      } ${className || ""}`}
-      aria-label={`${title} ${tr("workspace.local.state")}`}
-      aria-hidden={!visible}
-      style={style}
-      onPointerDown={onPaneFocus}
-    >
-      <div>
-        {failed ? (
-          <CircleAlert className="ui-icon" aria-hidden="true" />
-        ) : (
-          <Loader2 className="ui-icon spin" aria-hidden="true" />
-        )}
-        <strong>{failed ? tr("workspace.local.openFailed", { subject }) : terminalStatusLabel(status, t)}</strong>
-        <span>{description}</span>
-        {error ? <small>{error}</small> : null}
-        {failed && onRetry ? (
-          <div className="local-terminal-status-actions">
-            <button className="primary-button" type="button" onClick={onRetry}>
-              <RefreshCw className="ui-icon" aria-hidden="true" />
-              {tr("workspace.rdp.retry")}
-            </button>
-            {source === "local" ? <button type="button" onClick={onOpenSettings}>{tr("workspace.local.openSettings")}</button> : null}
-          </div>
-        ) : null}
-      </div>
     </section>
   );
 }

@@ -26,7 +26,7 @@ interface BatchCharacterTab {
   id: string;
   profileId: string;
   sessionId?: string;
-  source?: "local" | "serial" | "telnet";
+  source?: "local" | "serial" | "telnet" | "rlogin";
   status: string;
 }
 
@@ -60,7 +60,7 @@ export function collectBatchOpenConnectionIds(snapshot: BatchWorkspaceSnapshot) 
   }
   for (const tab of snapshot.localTerminalTabs) {
     if (
-      (tab.source === "serial" || tab.source === "telnet") &&
+      (tab.source === "serial" || tab.source === "telnet" || tab.source === "rlogin") &&
       characterTabRuntimeState(tab).status !== "failed"
     ) {
       ids.add(tab.profileId);
@@ -162,6 +162,12 @@ function sshTabRuntimeState(tab: BatchSshTab): BatchHandleRuntimeState {
 }
 
 function characterTabRuntimeState(tab: BatchCharacterTab): BatchHandleRuntimeState {
+  if (tab.source === "rlogin") {
+    const phase = tab.status.replace(/^rlogin:/, "");
+    if (phase === "initial_exchange_ready") return { error: null, status: "success" }; // Initial exchange, not login authentication.
+    if (["failed", "cleanup_failed", "closed", "cancelled"].includes(phase)) return { error: tr("batch.error.terminal"), status: "failed" };
+    return { error: null, status: phase === "consent" ? "waiting-user" : "connecting" };
+  }
   if (tab.sessionId) return { error: null, status: "success" };
   if (tab.error || tab.status === "连接失败") {
     return { error: tab.error || tr("batch.error.terminal"), status: "failed" };

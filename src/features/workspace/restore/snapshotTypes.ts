@@ -32,7 +32,7 @@ export type WorkspaceSnapshotInstance =
       id: string;
       kind: "local";
       ordinal: number;
-      source: "local" | "telnet" | "serial";
+      source: "local" | "telnet" | "serial" | "rlogin";
       target: WorkspaceSnapshotTargetRef;
     }
   | {
@@ -105,7 +105,7 @@ export interface WorkspaceSnapshotCollections {
     id: string;
     ordinal: number;
     profileId: string;
-    source?: "local" | "telnet" | "serial";
+    source?: "local" | "telnet" | "serial" | "rlogin";
   }[];
   rdpSessions: readonly {
     connectionId: string;

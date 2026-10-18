@@ -144,6 +144,7 @@ export function applyWorkspaceRestorePlanToHydration(
 
 function terminalRestoreState(item: WorkspaceRestoreItem | undefined) {
   if (!item) return { error: tr("workspace.restore.missing"), status: tr("workspace.connection.failed") };
+  if (item.status === "rlogin-consent-required") return { error: undefined, status: "rlogin:idle" };
   if (item.status === "missing-profile") {
     return { error: tr("workspace.restore.profileMissing"), status: tr("workspace.connection.failed") };
   }

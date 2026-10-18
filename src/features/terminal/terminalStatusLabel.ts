@@ -1,3 +1,4 @@
+import { rloginStatusLabel } from "./rloginStatus";
 import type { MessageKey, Translate } from "../../shared/i18n";
 
 const statusKeys = new Map<string, MessageKey>([
@@ -16,6 +17,7 @@ const statusKeys = new Map<string, MessageKey>([
 
 /** 只转换既有运行时状态的显示文案，不改写状态机或远端输出。 */
 export function terminalStatusLabel(status: string, t: Translate): string {
+  if (status.startsWith("rlogin:")) return rloginStatusLabel(status.slice(7),t);
   const key = statusKeys.get(status);
   if (key) return t(key);
   // TerminalPanel 的断开状态包含当时语言的退出码后缀；展示时按当前语言重建。

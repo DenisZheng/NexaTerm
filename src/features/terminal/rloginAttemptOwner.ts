@@ -85,6 +85,7 @@ export class RloginAttemptOwner {
       if (a.cancelled) return;
       a.controller=new RloginTerminalController(new RloginBridge(a.id,this.client),target.terminal_encoding ?? "utf-8");
       this.publish(a,"starting");if (a.cancelled) return;await this.client.start(a.id);
+      if (!a.cancelled) this.publish(a,"initial_exchange_ready");
     } catch (error) { if (!a.cancelled) {a.reason=nativeReason(error);a.end="failed";} }
   }
   private consent(a:Attempt,target:RloginTarget):Promise<boolean> {
@@ -95,7 +96,10 @@ export class RloginAttemptOwner {
       signal.addEventListener("abort",cancel,{once:true});
       if (signal.aborted) {cancel();return;}
       // A late response is observed but cannot resume a cancelled attempt.
-      Promise.resolve().then(()=>a.cancelled || signal.aborted ? false : this.requestConsent(target,signal)).then(value=>finish(value===true),()=>finish(false));
+      Promise.resolve().then(()=>a.cancelled || signal.aborted ? false : this.requestConsent(target,signal)).then(value=>finish(value===true),error=>{
+        if (!a.cancelled && !signal.aborted) {a.reason=nativeReason(error);a.end="failed";}
+        finish(false);
+      });
     });
   }
   private stopTimer() {if(this.timer!==null){clearTimeout(this.timer);this.timer=null;}}

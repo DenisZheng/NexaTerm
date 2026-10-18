@@ -174,6 +174,7 @@ function protocolOptions(): Array<{ icon: typeof Terminal; label: string; value:
     { icon: Monitor, label: "RDP", value: "rdp" },
     { icon: MonitorPlay, label: "VNC", value: "vnc" },
     { icon: TerminalSquare, label: "Telnet", value: "telnet" },
+    { icon: TerminalSquare, label: "Rlogin", value: "rlogin" },
     { icon: Cable, label: tr("connectionDialog.protocol.serial"), value: "serial" },
   ];
 }

@@ -1,6 +1,7 @@
 import type { WorkspaceSnapshotInstance, WorkspaceSnapshotV1 } from "./snapshotTypes";
 
 export type WorkspaceRestoreItemStatus =
+  | "rlogin-consent-required"
   | "missing-profile"
   | "ready"
   | "temporary-auth-required";
@@ -61,7 +62,8 @@ function restoreStatus(
   temporaryTargetIds: ReadonlySet<string>,
 ): WorkspaceRestoreItemStatus {
   if (instance.target.kind === "profile") {
-    return profileIds.has(instance.target.profileId) ? "ready" : "missing-profile";
+    if(!profileIds.has(instance.target.profileId)) return "missing-profile";
+    return instance.kind==="local" && instance.source==="rlogin" ? "rlogin-consent-required" : "ready";
   }
   // A temporary target may retain a non-sensitive descriptor, but credentials
   // are intentionally never restored from the workspace snapshot.

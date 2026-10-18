@@ -37,3 +37,5 @@ Deferred capability/consent/reserve/start/close and stale callbacks; target free
 ## 7. Wrong vs correct
 
 Wrong: pane useEffect cleanup closes a public terminal session or drops an unresolved reserve. Correct: workspace retains owner and only removes a logical tab after dedicated actual close succeeds; pane only detaches the credited renderer.
+
+Native start completes at the initial protocol ACK, so publish initial_exchange_ready after that successful await and a cancellation checkpoint; this is still not authentication. Consent infrastructure rejection preserves only a known finite reason (for example queue-full rlogin_session_busy), while an ordinary false result remains cancelled.
