@@ -94,3 +94,5 @@ The goal is to help AI assistants and new team members understand how YOUR proje
 - [Rlogin Mounted Terminal](./rlogin-mounted-terminal.md) — private actual xterm binding; native workspace entry, actual xterm isolation and fixed failure rendering.
 
 - [Rlogin Workspace](./rlogin-workspace.md) — transient permits, native logical instances and restore/privacy boundaries.
+
+- [Rsh Command Task](./rsh-command-task.md) — explicit transient run, labelled bytes/EOF, renderer ACK, private cleanup and snapshot isolation.

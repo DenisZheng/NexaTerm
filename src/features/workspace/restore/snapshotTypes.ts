@@ -105,7 +105,7 @@ export interface WorkspaceSnapshotCollections {
     id: string;
     ordinal: number;
     profileId: string;
-    source?: "local" | "telnet" | "serial" | "rlogin";
+    source?: "local" | "telnet" | "serial" | "rlogin" | "rsh";
   }[];
   rdpSessions: readonly {
     connectionId: string;
@@ -197,17 +197,11 @@ function collectSnapshotInstances(
         ),
       }),
     ),
-    ...collections.localTerminalTabs.map(
-      (tab): WorkspaceSnapshotInstance => ({
-        id: instanceItemId("local", tab.id),
-        kind: "local",
-        ordinal: tab.ordinal,
-        source: tab.source ?? "local",
-        target: copyTargetRef(
-          localProfileTargets?.[tab.profileId] ?? profileTarget(tab.profileId),
-        ),
-      }),
-    ),
+    ...collections.localTerminalTabs.flatMap((tab): WorkspaceSnapshotInstance[] => {
+      if(tab.source==="rsh")return [];
+      return [{id:instanceItemId("local",tab.id),kind:"local",ordinal:tab.ordinal,source:tab.source??"local",
+        target:copyTargetRef(localProfileTargets?.[tab.profileId]??profileTarget(tab.profileId))}];
+    }),
     ...collections.rdpSessions.map(
       (session): WorkspaceSnapshotInstance => ({
         id: instanceItemId("rdp", session.id),

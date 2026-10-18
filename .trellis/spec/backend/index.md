@@ -66,3 +66,6 @@ The goal is to help AI assistants and new team members understand how YOUR proje
 - [Rsh Protocol](./rsh-protocol.md) — S0 split request framing, callback ownership and remote BSD signals.
 
 - [Rsh Native Transport](./rsh-native.md) — reserved dual connection, verified callbacks, half-close and independent drain.
+
+- [Rsh Task Owner](./rsh-task.md) — shared bounded leases, dual-stream task actor and true cleanup.
+- [Rsh Runtime IPC](./rsh-runtime.md) — actual main-window DTO/wrappers, fixed signals and unknown exit code.

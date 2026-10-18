@@ -3,25 +3,14 @@ import type { RloginCapability, RloginFrame, RloginPhase, RloginReadReply, Rlogi
 const phases: ReadonlySet<unknown> = new Set(rloginPhases);
 const reasons: ReadonlySet<unknown> = new Set(rloginReasons);
 export const invalidRloginResponse = () => new RloginBridgeError("rlogin_bridge_invalid_response");
-export function compareRloginCounter(a: string, b: string) { return a.length - b.length || (a < b ? -1 : a > b ? 1 : 0); }
-export function isRloginCounter(v: unknown): v is string {
-  return typeof v === "string" && /^(0|[1-9][0-9]{0,19})$/.test(v) && compareRloginCounter(v, "18446744073709551615") <= 0;
-}
-export function rloginId(value: unknown): string {
-  if (typeof value !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(value)) {
-    throw new RloginBridgeError("rlogin_bridge_invalid_id");
-  }
-  return value;
-}
+export { compareCounter as compareRloginCounter, isCounter as isRloginCounter } from "../../shared/tauri/legacyWire";
+import { isCounter as isRloginCounter, isLegacyId, isByteChunk } from "../../shared/tauri/legacyWire";
+export function rloginId(value:unknown):string {if(!isLegacyId(value))throw new RloginBridgeError("rlogin_bridge_invalid_id");return value;}
 function object(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw invalidRloginResponse();
   return value as Record<string, unknown>;
 }
-function validBytes(raw: unknown): raw is readonly number[] {
-  if (!Array.isArray(raw) || !raw.length || raw.length>RLOGIN_MAX_CHUNK) return false;
-  for (const value of raw) if (!Number.isInteger(value) || value<0 || value>255) return false;
-  return true;
-}
+const validBytes=(raw:unknown)=>isByteChunk(raw,RLOGIN_MAX_CHUNK);
 function keys(value: Record<string, unknown>, allowed: readonly string[]) {
   if (Object.keys(value).length !== allowed.length || Object.keys(value).some(k => !allowed.includes(k))) throw invalidRloginResponse();
 }

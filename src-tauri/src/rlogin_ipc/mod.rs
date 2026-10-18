@@ -20,10 +20,7 @@ fn io_available() -> Result<(), SessionError> {
     if NativeSocket::supports_urgent_boundary() { Ok(()) } else { Err(SocketError::UrgentBoundaryUnavailable.into()) }
 }
 fn id(value: &str) -> Result<(), SessionError> {
-    if value.len()!=36 { return Err(SessionError::Expired); }
-    let uuid = uuid::Uuid::try_parse(value).map_err(|_| SessionError::Expired)?;
-    if uuid.get_version_num()!=4 || uuid.to_string()!=value { return Err(SessionError::Expired); }
-    Ok(())
+    if crate::legacy_ipc::id(value){Ok(())}else{Err(SessionError::Expired)}
 }
 pub(crate) struct Boundary<'a> { manager: &'a SessionManager }
 impl<'a> Boundary<'a> {

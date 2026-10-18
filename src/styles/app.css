@@ -19047,3 +19047,28 @@ body[data-platform="macos"][data-theme-mode="dark"] .ui-tooltip-arrow {
 .connection-failure-details dl > div { display: flex; flex-wrap: wrap; gap: 6px 12px; }
 .connection-failure-details dt, .connection-failure-details small { color: var(--mx-muted); }
 .connection-failure-details dd { margin: 0; color: var(--mx-text); overflow-wrap: anywhere; }
+
+/* Command tasks share the global form/button/token system and have no PTY surface. */
+.command-task-pane { height:100%; min-height:0; overflow:auto; background:var(--mx-panel); color:var(--mx-text); padding:12px; }
+.command-task-pane.is-hidden { display:none; }
+.command-task-header,.command-task-actions,.command-task-stream-header { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.command-task-header { padding-bottom:8px; border-bottom:1px solid var(--mx-line); }
+.command-task-header > strong { margin-right:auto; }
+.command-task-form { display:grid; gap:8px; padding-block:8px; }
+.command-task-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px 12px; }
+.command-task-form .settings-field,.command-task-input .settings-field { display:grid; min-width:0; gap:4px; }
+.command-task-form > button { justify-self:start; }
+.command-task-toggle { display:flex; align-items:center; gap:6px; font-size:12px; }
+.command-task-command,.command-task-streams pre { font-family:var(--mx-font-mono,monospace); }
+.command-task-streams { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-block:8px; }
+.command-task-streams > section { min-width:0; border:1px solid var(--mx-line); border-radius:6px; background:var(--mx-panel-soft); }
+.command-task-stream-header { padding:6px 8px; border-bottom:1px solid var(--mx-line); font-size:12px; }
+.command-task-stream-header > button { margin-left:auto; }
+.command-task-streams pre { min-height:100px; max-height:260px; overflow:auto; margin:0; padding:8px; font-size:12px; white-space:pre-wrap; overflow-wrap:anywhere; }
+.command-task-streams .settings-help { padding-inline:8px; }
+.command-task-input { display:grid; gap:8px; padding-block:8px; border-top:1px solid var(--mx-line); }
+@media (max-width:760px) { .command-task-fields,.command-task-streams { grid-template-columns:minmax(0,1fr); } }
+
+.command-task-command { min-height:76px; resize:vertical; }
+.command-task-input textarea { min-height:52px; resize:vertical; }
+.command-task-actions .command-task-signal { width:160px; }

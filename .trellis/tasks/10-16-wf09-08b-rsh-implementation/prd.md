@@ -1,10 +1,10 @@
 # WF-09-08B Rsh 原生协议实现
 
-状态：IN_PROGRESS（S0协议核及S1双连接已通过原生/完整CI；S2 owner/UI待继续；尚无实际Rsh命令入口）。父任务：09-23-nexaterm-workflow-mainline。
+状态：IN_PROGRESS（S0/S1及S2任务owner、typed IPC和实际命令入口均开发交付；code44529a0已过完整CI660与原生41三平台；真实rshd/Unix低端口正向和WebView仍待统一验收）。父任务：09-23-nexaterm-workflow-mainline。
 
 用户流程：在 NexaTerm 内明确执行远端 Rsh 命令，查看分离输出、发送输入/信号并取消或重跑。
 
-范围依据：[三协议实现计划](../../../docs/plans/WF09-PROTOCOL-IMPLEMENTATION-PLAN.md)。本任务交付实际功能，评估报告不替代实现。产品规则仅引用 WS-P01/P02/P04、WS-R01/R02；当前运行时尚不支持该协议。
+范围依据：[三协议实现计划](../../../docs/plans/WF09-PROTOCOL-IMPLEMENTATION-PLAN.md)。本任务交付实际功能，评估报告不替代实现。产品规则仅引用 WS-P01/P02/P04、WS-R01/R02；当前已有独立Rsh命令任务入口；保留端口权限和真实服务端兼容性仍按平台取证。
 
 验收编号：S01–S03、C01/C02，正文以计划§7为准；记录实现/自动化/原生集成/真实互通/平台分发五类状态。缺环境只阻塞相应证据，不推迟无依赖开发，也不能标记可用。
 

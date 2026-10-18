@@ -217,7 +217,7 @@ export function itemTitle(item: WorkspaceItem, lookups: ItemTitleLookups): Works
       return {
         kind: "local",
         name:
-          item.source === "local"
+          item.source === "rsh" ? "Rsh" : item.source === "local"
             ? lookups.localProfileName(item.profileId)
             : lookups.connectionName(item.profileId),
         ordinal: item.ordinal,

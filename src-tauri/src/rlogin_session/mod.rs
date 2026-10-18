@@ -40,3 +40,13 @@ impl Shared {
         Ok(())
     }
 }
+
+impl crate::legacy_session::ManagedState for Shared {
+    fn signal_cancel(&self) { let _ = self.cancel(); }
+    fn completion(&self) -> watch::Receiver<bool> { self.done.subscribe() }
+}
+impl From<crate::legacy_session::LeaseError> for SessionError {
+    fn from(error:crate::legacy_session::LeaseError)->Self {use crate::legacy_session::LeaseError as E;match error {
+        E::Busy=>Self::Busy,E::Expired=>Self::Expired,E::Duplicate=>Self::Duplicate,E::Unavailable=>Self::Unavailable,
+    }}
+}

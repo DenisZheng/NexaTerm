@@ -27,3 +27,5 @@ Windows原生日志 `rsh_reserved_dual_stream: available; reserved main/listener
 本地无Rust，以远端真实编译/执行为准。本地脚本188通过/3既有环境skip，行数、启动边界、diff和Trellis上下文通过。初次脚本运行因新worktree未接已有依赖而报typescript缺失，接相同已装依赖后原命令通过，未改测试/断言。收口仅更新文档，生产代码、workflow、依赖与tested SHA一致；保持Draft，未合并/发布。
 
 后续具体owner边界见 [task-owner-next-step.md](task-owner-next-step.md)，它是待实现约束，不是已交付接口。
+
+S2任务owner/typed IPC/实际命令UI已在Draft #81开发交付并通过CI660/原生41，见 [task-evidence.md](task-evidence.md)；本页S1记录保持原验证对象。

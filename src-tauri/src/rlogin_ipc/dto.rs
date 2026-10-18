@@ -50,10 +50,7 @@ impl AckDto {
     }
 }
 pub(super) fn counter(value: &str) -> Result<u64, SessionError> {
-    if value.is_empty() || value.len()>20 || !value.bytes().all(|b| b.is_ascii_digit()) || value.len()>1 && value.starts_with('0') {
-        return Err(SessionError::InvalidAck);
-    }
-    value.parse().map_err(|_| SessionError::InvalidAck)
+    crate::legacy_ipc::counter(value).ok_or(SessionError::InvalidAck)
 }
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]

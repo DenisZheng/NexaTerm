@@ -1,6 +1,6 @@
 # NexaTerm 当前路线图
 
-> 更新：2026-10-16
+> 更新：2026-10-18
 > WF-04A 交付：PR #26（基于 GitHub `main` @ `a0fcc0d`）
 > 本文件是当前项目级执行顺序的唯一入口。需求范围仍以 `NEXATERM_REQUIREMENTS.md` 为准；交互规则仍以 `docs/WORKFLOW_SPEC.md` 为准。旧阶段计划、差距分析和工作流交付计划保留用于追溯，不再覆盖本文件的当前优先级。
 
@@ -8,7 +8,7 @@
 
 维护者明确要求先补实现计划，再开发。XDMCP 以随包 X server 和完整桌面会话管理为目标（Windows 优先，再适配 macOS/Linux）；Rlogin 为原生终端协议；Rsh 为原生命令执行和双流/信号管理。详细阶段、组件候选与许可、端口权限、生命周期及验收见 [三协议实现计划](docs/plans/WF09-PROTOCOL-IMPLEMENTATION-PLAN.md)。
 
-顺序：`10-16-wf09-07-xdmcp-implementation` → `10-16-wf09-08a-rlogin-implementation` → `10-16-wf09-08b-rsh-implementation`，维护者已授权按计划开工：XDMCP 当前 **in_progress（X1 运行核心与 X0 组件审查）**，Rlogin 已开始 **in_progress（L0已过CI，L1 socket/控制组件已过三平台原生与完整应用CI，原生建立/ACK尾部adapter也已过三平台原生与完整应用CI，headless会话owner/有界pull-ACK也已过三平台原生与完整应用CI；typed IPC/应用生命周期已过三平台原生与完整CI（Draft #72），前端有界交付桥已过行为/类型/构建及完整CI（Draft #73）；终端IO适配器（冻结编码、有界键盘/粘贴与renderer生命周期）已过三平台原生与完整CI（Draft #74）；配置/存储和表单组件已过完整CI（Draft #75/#76）；实际Workspace终端/许可/取消/重连/清理/恢复及隐私隔离已实现，本地回归通过、Draft #77完整CI649和三平台原生30均通过；Unix入口能力按exact_flush开放，DNS已过完整CI651和三平台原生32（Draft #78），Windows精确flush仍待开发，真实rlogind及WebView统一后续验收）**，Rsh 已in_progress（S0字节核和TCP fixture进入Draft #79、原生33三平台通过，完整CI652全部通过；S1实际双连接/半关闭/信号/取消清理进入Draft #80、原生36三平台已通过（Windows低端口正向、Unix权限负向），完整CI655全部通过；S2任务owner/UI继续开发）。X server 发行组件尚未采用，桌面互通尚未验证。旧 BLOCKED/DEFER 结论保留为历史证据，开发排期已更新为 PLANNED；具体环境/许可缺口只阻塞相应阶段。当前执行入口是本文及该计划，下方为此前交付记录。
+顺序：`10-16-wf09-07-xdmcp-implementation` → `10-16-wf09-08a-rlogin-implementation` → `10-16-wf09-08b-rsh-implementation`，维护者已授权按计划开工：XDMCP 当前 **in_progress（X1 运行核心与 X0 组件审查）**，Rlogin 已开始 **in_progress（L0已过CI，L1 socket/控制组件已过三平台原生与完整应用CI，原生建立/ACK尾部adapter也已过三平台原生与完整应用CI，headless会话owner/有界pull-ACK也已过三平台原生与完整应用CI；typed IPC/应用生命周期已过三平台原生与完整CI（Draft #72），前端有界交付桥已过行为/类型/构建及完整CI（Draft #73）；终端IO适配器（冻结编码、有界键盘/粘贴与renderer生命周期）已过三平台原生与完整CI（Draft #74）；配置/存储和表单组件已过完整CI（Draft #75/#76）；实际Workspace终端/许可/取消/重连/清理/恢复及隐私隔离已实现，本地回归通过、Draft #77完整CI649和三平台原生30均通过；Unix入口能力按exact_flush开放，DNS已过完整CI651和三平台原生32（Draft #78），Windows精确flush仍待开发，真实rlogind及WebView统一后续验收）**，Rsh 已in_progress（S0字节核和TCP fixture进入Draft #79、原生33三平台通过，完整CI652全部通过；S1实际双连接/半关闭/信号/取消清理进入Draft #80、原生36三平台已通过（Windows低端口正向、Unix权限负向），完整CI655全部通过；S2任务owner、typed IPC与实际命令入口已在Draft #81开发交付，code44529a0已过原生41三平台/完整CI660，前端1160与脚本191通过；真实rshd、Unix保留端口正向与WebView验收仍待后续）。X server 发行组件尚未采用，桌面互通尚未验证。旧 BLOCKED/DEFER 结论保留为历史证据，开发排期已更新为 PLANNED；具体环境/许可缺口只阻塞相应阶段。当前执行入口是本文及该计划，下方为此前交付记录。
 
 ## WF-09 开发交付（2026-10-16）
 

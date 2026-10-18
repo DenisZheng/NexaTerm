@@ -72,7 +72,7 @@ function itemBadge(item: WorkspaceItem, t: Translate): string | null {
     case "split":
       return t("kind.split");
     case "local":
-      return item.source === "rlogin" ? "Rlogin" : t(item.source === "telnet" ? "kind.telnet" : item.source === "serial" ? "kind.serial" : "kind.local");
+      return item.source === "rsh" ? "Rsh" : item.source === "rlogin" ? "Rlogin" : t(item.source === "telnet" ? "kind.telnet" : item.source === "serial" ? "kind.serial" : "kind.local");
     case "ssh":
       return t("kind.ssh");
     case "rdp":
@@ -89,7 +89,7 @@ function itemDetail(item: WorkspaceItem, lookups: TitlebarItemLookups): string |
     case "split":
       return itemDetail(item.host, lookups);
     case "local":
-      return item.source === "local" ? null : lookups.connectionAddress(item.profileId);
+      return item.source === "local" || item.source === "rsh" ? null : lookups.connectionAddress(item.profileId);
     case "ssh":
     case "rdp":
     case "vnc":
