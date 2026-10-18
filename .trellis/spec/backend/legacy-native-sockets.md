@@ -29,6 +29,8 @@ Darwin实际消费OOB后，必须同时清所属pending和旧内核filter状态�
 
 Windows 的实际 provider 探针中，非 inline recv 跨过前后段，SIOCATMARK 未提供所需游标位置；inline 探针也未提供可用位置边界。该差异是当前实现缺口，不是 Windows 精确 flush 已实现或不可实现的结论；完整 Windows Rlogin 能力保持关闭。禁止在正常字节中寻找相同值、清空所有后续数据，或把负向能力测试写成 flush 互通通过。
 
+Windows替代API反例位于`legacy_socket/windows_probe.rs`：WSARecv/WSARecvEx的普通读取在inline/separate两种模式均不返回OOB边界标签；WSARecvEx忽略输入flags，绝不能用它实现peek。普通MSG_PEEK在前段未读时可能截于mark，但在恰到mark时直接返回后段；`ioctlsocket`与`WSAIoctl`的SIOCATMARK在该位置均未给出Unix位置语义。必须保留“urgent在全部6个同值普通字节之前/之后”的两个原生fixture：两者观察相同，但正确flush应保留6/0字节，连接保持与EOF均执行。替代backend必须先能区分它们，才能进一步接入flush/epoch；不能按peek长度丢弃、将返回flags0解释为没有控制或只凭部分分段现象开启能力。详见任务[Windows原生证据](../../tasks/10-16-wf09-08a-rlogin-implementation/research/windows-urgent-evidence.md)。
+
 已知位02=flush、10=远端流控、20=本地流控、80=窗口请求；支持组合，10+20时本地优先，未知位作为 urgent 元数据忽略。urgent 指针先到、字节未到时，前段最多隔离32KiB，等待控制15秒；超预算明确失败，该截止不应用于普通安静连接。有效 flush 清隔离区，其它控制按序释放。隔离区须计入上层 owner 的1MiB输出预算。owner 收到有效 flush 必须清理自己尚未交付渲染的输出，本层没有该队列。无输出容量或本地暂停时仍处理 urgent，普通输出施加 TCP 背压；有效 Unix flush 仍推进前段丢弃。
 
 本地流控初始启用：DC3暂停、DC1恢复，消费这两个本地控制输入；远端模式原样发送并释放本地暂停，其它字节含 tilde 始终不变。保存最新验证过的12字节窗口帧，协商前 resize 只更新；80返回最新帧，协商后 resize 才返回待写帧，不能主动发送未请求的窗口帧。

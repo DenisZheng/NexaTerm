@@ -44,3 +44,5 @@ CI602 首轮 macOS/Windows Rust 通过，Linux 同端口释放测试失败；原
 | 协议评估后续 | X server/真实 XDMCP 目标、许可证/分发条件；Rlogin/Rsh 按新计划推进原生实现与目标互通 |
 
 这些检查统一后续进行，不用单元测试或 CI 编译替代。此前 A15 安装、签名、升级回滚等发布缺口也不因 WF-09 开发而自动关闭。
+
+Windows Rlogin续作见Draft [#82](https://github.com/DenisZheng/NexaTerm/pull/82)及[原生API证据](../.trellis/tasks/10-16-wf09-08a-rlogin-implementation/research/windows-urgent-evidence.md)：代码99bffa6/原生45三平台通过，证明本轮接收API组合仍不能定位精确边界，Windows能力继续关闭，不能记为协议功能完成。

@@ -121,3 +121,5 @@ DNS执行e491646，Draft #78：完整CI651全部7执行job与原生32全部3平�
 ## Windows 精确边界续作（2026-10-18）
 
 基于已交付Rsh S2的Draft #81继续本任务，不重做L0/L1已完成组件。先在Windows原生fixture对照WSARecv/WSARecvEx的inline与separate接收，观察返回flags、计数、重复peek、逐字节/合包、普通同值字节与EOF；所有输入均为自造固定字节，不打印真实payload。该实验不改生产能力开关，观察/字节保留测试不等于精确flush通过。如得到可靠标记，再补齐无urgent、恰在mark、连续urgent、ACK尾部、actor epoch/背压及三平台完整回归，随后才接入生产。没有可靠边界时继续保留固定错误与数据，不降低断言或宣称功能已完成。
+
+本轮API反例已执行：代码99bffa6、Draft #82、原生45三平台全通过；WSARecvEx输入flags假设已按官方契约修正。具体数据和待完成backend入口见research/windows-urgent-evidence.md，不把反例通过记为Windows flush完成。

@@ -380,3 +380,38 @@ Rsh任务owner、共享有界lease/DNS/严格编码、main-window typed IPC及�
 Code44529a0通过完整CI660七执行作业、原生41全三平台；Rust lib Linux616/4既有ignore、mac617、Win616，native core120/121/119；前端1160/1既有todo，脚本191/3既有环境skip。生产浏览器亮/暗/system-dark检查只算UI证据，真实rshd、Unix低端口正向和WebView仍待统一验收。CI658暴露的Rlogin配置DNS错误映射遗漏已修复并在CI659/660确认，不弱化门禁。
 
 状态：S2开发交付，Rsh任务仍in_progress，不归档或伪造真实验收PASS。Windows Rlogin精确flush和XDMCP随包/打包/桌面接入仍是后续开发项。详见任务research/task-evidence.md。
+
+
+## Session 9: WF-09 Windows urgent native API counterexamples
+
+**Date**: 2026-10-18
+**Task**: WF-09 Windows urgent native API counterexamples
+**Branch**: `feat/wf09-08a-windows-flush`
+
+### Summary
+
+Draft #82 native45 all three platforms passed; Windows exact flush remains unfinished. Full CI664 all7 executing jobs SUCCESS.
+
+### Main Changes
+
+新增WSARecv/WSARecvEx和两种SIOCATMARK的原生对照、peek到mark的游标矩阵，以及相同观察却需要保留6/0字节的强反例。生产Windows能力继续关闭，没有采用组件或改权限。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `778604c` | (see git log) |
+| `3aea78d` | (see git log) |
+| `99bffa6` | (see git log) |
+
+### Testing
+
+- 原生45全部三平台SUCCESS（core120/121/122，wire各10，无skip/ignore）；完整CI664七执行job全部SUCCESS（Rust616/617/619，Linux另4既有ignored；前端1160/1既有todo，脚本191/3既有环境skip）。
+
+### Status
+
+本轮API证据已交付；Rlogin整体仍in_progress，Windows精确flush仍须开发，未归档。
+
+### Next Steps
+
+- 替代backend须先通过本轮不可区分反例，随后补齐原精确flush矩阵；真实服务端/WebView统一后置。

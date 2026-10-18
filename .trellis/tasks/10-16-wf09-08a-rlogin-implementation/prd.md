@@ -1,5 +1,15 @@
 # WF-09-08A Rlogin 原生协议实现
 
+## 当前状态（2026-10-18）
+
+实际配置/存储、表单、Workspace终端、严格编码、DNS、typed IPC、单次许可与真实清理已开发交付（#75–#78）；Unix入口按exact_flush启用。用户流程、WS规则和L01–L03/C01–C02仍沿用本任务；真实rlogind/WebView验收统一后置。
+
+Windows精确flush仍未完成。本轮Draft #82基于#81，用生产原生harness验证WSARecv/WSARecvEx、两种SIOCATMARK与peek前后游标，反例表明本轮API组合仍无可靠边界。执行代码99bffa6、原生45三平台通过；完整CI664结果见research/windows-urgent-evidence.md。Windows runtime/terminal/dns保持false，任务保留in_progress。
+
+## 历史分阶段说明
+
+以下是各次切片开工时的范围；“尚无UI/DNS”等旧句不覆盖上面的当前状态。
+
 状态：IN_PROGRESS（L0和L1 socket/控制/建立、headless会话owner、typed IPC/应用生命周期、前端有界交付桥及终端IO适配器均已过原生与完整应用CI）。父任务：09-23-nexaterm-workflow-mainline。
 
 用户流程：在 NexaTerm 内明确连接 Rlogin 并直接使用终端，调整窗口、断开或重连。
