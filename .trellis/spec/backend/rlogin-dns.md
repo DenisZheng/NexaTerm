@@ -14,7 +14,7 @@ SessionRequest stores Destination, freezes it at reserve after single-run consen
 
 Accept canonical numeric IPv4 or ASCII DNS labels (1..63 bytes, alphanumeric/hyphen, no edge hyphen), optional trailing dot, full input<=253 bytes. Reject URL/ports/IPv6/whitespace/non-ASCII and numeric-looking invalid IPv4. Do not reinterpret invalid numeric IPv4 as a hostname. Saved/imported metadata may preserve hostname case/trailing dot; DNS itself is case-insensitive. No network during profile validation.
 
-Resolver bypasses OS for numeric input, validates numeric destinations, scans at most17 returned entries and retains at most16 unique valid IPv4 candidates; pins the first in OS order and never retries a new endpoint after partial protocol IO. No IPv6 fallback, proxy, privilege or high-port fallback. Fixed errors only, no OS strings or resolved addresses in status.
+Resolver bypasses OS for numeric input, validates numeric destinations, scans at most16 returned entries and retains at most16 unique valid IPv4 candidates; pins the first in OS order and never retries a new endpoint after partial protocol IO. No IPv6 fallback, proxy, privilege or high-port fallback. Fixed errors only, no OS strings or resolved addresses in status.
 
 Blocking OS calls cannot be forcibly cancelled. The worker owns its permit until actual completion; the session actor retains its lifetime/lease until it returns. Cancellation/deadline checkpoints prevent later bind/connect and late result publication. The shared15s budget controls establishment; an already issued OS call may delay actual cleanup beyond it, and close remains pending rather than claiming completion. No detached unlimited resolver task or early capacity release. Numeric sessions need no resolver permit.
 
@@ -33,3 +33,5 @@ Syntax boundaries, local IPv4-only, no-I/O saved/import roundtrip, direct numeri
 ## 7. Wrong vs correct
 
 Wrong: timeout a blocking resolver and drop its permit with the UI future. Correct: move permit into the real worker and retain session cleanup until actual return. Wrong: resolve each candidate again during connect. Correct: dial the pinned numeric endpoint once.
+
+S2 extraction: Destination/owned resolver now live in legacy_dns; app-injected Resources shares its four DNS permits and four actual session-worker permits with Rsh. ResolveError is protocol-neutral, with explicit SessionError mapping in Rlogin IPC/owner and saved-profile validation. Include the complete application build when extracting shared modules: the standalone socket harness does not compile connections/character_profiles.rs.

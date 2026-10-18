@@ -46,7 +46,7 @@ fn close_and_shutdown_wait_for_issued_dns_and_forbid_a_late_dial(){
         let starting=tokio::spawn(async move{owned.start_with("main",&run_id,move|mut lease,request,ready|async move{
             let result=lease.resolve_with(move||{entered.send(()).unwrap();rx.recv().unwrap();Ok(vec![SocketAddrV4::new(Ipv4Addr::LOCALHOST,514).into()])}).await;
             assert_eq!(result,Err(SocketError::Cancelled.into()));drop(request);lease.discard=true;lease.result=(Phase::Failed,Some(SocketError::Cancelled.into()));
-            let _=ready.send(Err(SocketError::Cancelled.into()));
+            let _=ready.send(Err(SocketError::Cancelled.into()));drop(lease);
         }).await});
         tokio::task::yield_now().await;received.recv_timeout(Duration::from_secs(2)).unwrap();let owned=manager.clone();
         let close=tokio::spawn(async move{owned.shutdown_wait().await});tokio::task::yield_now().await;assert!(!close.is_finished());
@@ -54,3 +54,15 @@ fn close_and_shutdown_wait_for_issued_dns_and_forbid_a_late_dial(){
         close.await.unwrap().unwrap();assert_eq!(starting.await.unwrap(),Err(SocketError::Cancelled.into()));assert_eq!(manager.available_workers(),4);
     });
 }
+
+#[test]
+fn rlogin_and_rsh_managers_share_the_actual_application_worker_quota(){runtime().block_on(async{
+    let resources=Arc::new(Resources::default());let rsh=TaskManager::with_resources(resources.clone());
+    let rlogin=crate::rlogin_session::SessionManager::with_resources(resources);let mut held=Vec::new();
+    for _ in 0..4{let id=rsh.reserve("main",request(),true).unwrap();held.push(rsh.begin("main",&id).unwrap());}
+    let id=rlogin.reserve("main",crate::rlogin_session::SessionRequest{local:Ipv4Addr::LOCALHOST,
+        target:SocketAddrV4::new(Ipv4Addr::LOCALHOST,513).into(),local_user:"local".into(),remote_user:"remote".into(),
+        terminal:"xterm".into(),speed:38400,window:crate::rlogin_connect::WindowSize{rows:24,columns:80,x_pixels:0,y_pixels:0},terminal_encoding:"utf-8".into()},true).unwrap();
+    assert_eq!(rlogin.start("main",&id).await,Err(crate::rlogin_session::SessionError::Busy));
+    assert_eq!(rsh.available_workers(),0);for(lease,command)in held{drop(command);drop(lease);}assert_eq!(rsh.available_workers(),4);
+});}

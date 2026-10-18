@@ -7,3 +7,6 @@
 {"file":".trellis/spec/backend/rsh-protocol.md","reason":"S0 BSD framing, callback ownership and fixed signal/ACK contracts"}
 {"file":".trellis/spec/backend/rsh-native.md","reason":"S1 actual dual reserved streams, cancellation, half-close and signal contracts"}
 {"file":".trellis/spec/backend/rsh-task.md","reason":"S2 shared leases/DNS, dual-stream actor, typed delivery and true cleanup contracts"}
+{"file":".trellis/spec/backend/rsh-runtime.md","reason":"Actual typed command DTO, main-window owner and application lifetime"}
+{"file":".trellis/spec/frontend/rsh-command-task.md","reason":"Explicit command UI, private generation, render ACK and privacy isolation"}
+{"file":".trellis/tasks/10-16-wf09-08b-rsh-implementation/research/prototype-command-review.md","reason":"Same prototype and verified component/interaction design review"}

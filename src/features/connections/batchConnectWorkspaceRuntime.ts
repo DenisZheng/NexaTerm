@@ -26,7 +26,7 @@ interface BatchCharacterTab {
   id: string;
   profileId: string;
   sessionId?: string;
-  source?: "local" | "serial" | "telnet" | "rlogin";
+  source?: "local" | "serial" | "telnet" | "rlogin" | "rsh";
   status: string;
 }
 

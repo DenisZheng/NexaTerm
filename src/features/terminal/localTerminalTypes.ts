@@ -76,7 +76,7 @@ export interface LocalTerminalSettings {
 
 export interface LocalTerminalTab {
   id: string;
-  source?: "local" | "telnet" | "serial" | "rlogin";
+  source?: "local" | "telnet" | "serial" | "rlogin" | "rsh";
   profileId: string;
   profileKind: string;
   /**

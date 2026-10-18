@@ -101,3 +101,21 @@ test("save-and-connect starts the returned Rlogin profile before React publishes
   shell(["openRloginTerminal"],context);context.openRloginTerminal(connection);
   assert.equal(calls.length,1);assert.equal(calls[0][1],connection);assert.equal(calls[0][2].columns,80);assert.equal(context.localTerminalTabsRef.current[0].sessionId,undefined);
 });
+
+
+test("Rsh real shell close awaits its private task owner and never calls terminal_close",async()=>{
+  const f=closeFixture();f.context.localTerminalTabsRef.current=[{...native,source:"rsh"},ordinary];f.context.rshSessions=f.context.rloginSessions;
+  const work=f.context.closeLocalTerminalTabs(["native"]);assert.deepEqual(f.calls.filter(call=>call[0]==="native-close"||call[0]==="forget"||call[0]==="public-close"),[["native-close","native"]]);
+  f.resolve();await work;assert.deepEqual(f.context.localTerminalTabsRef.current.map(tab=>tab.id),["ordinary"]);
+  assert.equal(f.calls.some(call=>call[0]==="public-close"),false);
+});
+test("Rsh retry and split cloning cannot replay commands or fall back to a local shell",()=>{
+  const trap={...native,source:"rsh"};const context={localTerminalTabs:[trap],localTerminalTabsRef:{current:[trap]}};
+  shell(["retryRestoredLocalTab","createSameSessionTerminalBinding"],context);
+  context.retryRestoredLocalTab("native");assert.equal(context.createSameSessionTerminalBinding({kind:"local",tabId:"native"}),null);
+});
+test("Rsh history and AI sinks refuse a public session ID trap",()=>{
+  const context={localTerminalTabsRef:{current:[{...native,source:"rsh"}]}};
+  shell(["sendTerminalSelectionToAi","canRecordTerminalInputHistory","commandHistoryScopeForTerminalTab"],context);
+  context.sendTerminalSelectionToAi("native","private-selection");assert.equal(context.canRecordTerminalInputHistory("native"),false);assert.equal(context.commandHistoryScopeForTerminalTab("native"),null);
+});

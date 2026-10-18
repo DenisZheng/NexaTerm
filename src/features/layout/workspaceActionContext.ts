@@ -14,7 +14,7 @@ export interface WorkspaceActionContextInput {
   readonly activePaneId: string | null;
   readonly workspaceItems: readonly WorkspaceActionItemInput[];
   readonly terminalTabs: readonly { readonly id: string }[];
-  readonly localTerminalTabs: readonly { readonly id: string }[];
+  readonly localTerminalTabs: readonly { readonly id: string; readonly source?: string }[];
   readonly rdpSessions: readonly { readonly id: string }[];
   readonly vncSessions: readonly { readonly id: string }[];
   readonly splitPanes: readonly {
@@ -50,7 +50,7 @@ export function buildWorkspaceActionContext(input: WorkspaceActionContextInput):
       : { id: item.id, kind: item.kind }),
     instances: [
       ...input.terminalTabs.map((tab) => terminalInstance("ssh", tab.id)),
-      ...input.localTerminalTabs.map((tab) => terminalInstance("local", tab.id)),
+      ...input.localTerminalTabs.map((tab) => tab.source==="rsh" ? {id:instanceItemId("local",tab.id),kind:"local" as const,canCreateTerminal:false,canSearch:false,canSplit:false} : terminalInstance("local",tab.id)),
       ...input.rdpSessions.map((session) => ({ id: instanceItemId("rdp", session.id), kind: "rdp" as const })),
       ...input.vncSessions.map((session) => ({ id: instanceItemId("vnc", session.id), kind: "vnc" as const })),
     ],

@@ -18,7 +18,7 @@ fn actual_session_close_waits_gated_dns_and_keeps_its_handle_until_real_cleanup(
             let resolver=Resolver::default();
             let result=resolver.resolve_with(&lease.state.cancel,lease.deadline,move ||{started.send(()).unwrap();wait.recv().unwrap();Ok(vec![local(513)])}).await;
             assert_eq!(result,Err(SocketError::Cancelled.into()));
-            lease.result=(Phase::Failed,Some(SocketError::Cancelled.into()));lease.discard=true;let _=ready.send(Err(SocketError::Cancelled.into()));
+            lease.result=(Phase::Failed,Some(SocketError::Cancelled.into()));lease.discard=true;let _=ready.send(Err(SocketError::Cancelled.into()));drop(lease);
         }).await});
         tokio::task::yield_now().await;entered.recv_timeout(Duration::from_secs(2)).unwrap();
         let owned=manager.clone();let close_id=id.clone();let closing=tokio::spawn(async move {owned.close("main",&close_id).await});

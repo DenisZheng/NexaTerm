@@ -1,13 +1,13 @@
 # Rsh command-task owner
 
 ## 1. Scope / trigger
-S2 under the existing WF-09 task and approved plan S01-S03/C01-C02. Native owner is implemented here; IPC/UI and real rshd remain separate evidence until integrated. No new dependency, persistence, shell execution or automatic replay.
+S2 under the existing WF-09 task and approved plan S01-S03/C01-C02. Native owner is integrated with the [main-window runtime](rsh-runtime.md) and [command UI](../frontend/rsh-command-task.md); real rshd remains separate evidence. No new dependency, persistence, shell execution or automatic replay.
 
 ## 2. Signatures
 `TaskManager::{reserve(owner,TaskRequest,consent),start,write,write_text,close_stdin,signal,read(ack:Option<u64>),status,cancel,close,shutdown,shutdown_wait,cancel_window}`. Request freezes Destination/local interface, independent users, exact command bytes, encoding and run_timeout_seconds (0=none, <=86400). InitialExchangeReady proves initial ACK only. Status exposes phase/reason, three independent EOF flags, awaiting_ack and finished; no remote exit code.
 
 ## 3. Contracts and budgets
-Shared legacy_session lease table enforces16handles/15s unused TTL/one start and nonwaiting4worker admission. App injection shares Resources between Rlogin/Rsh; default standalone managers remain isolated. Shared legacy_dns preserves owned blocking OS calls and fixed protocol error mappings. Rlogin urgent/flush/resize stays separate. Strict legacy_text conversion preserves the existing8 encodings and rejects loss/substitution.
+Each protocol uses the shared legacy_session lease implementation with16handles/15s unused TTL/one start and nonwaiting4worker admission. App injection shares Resources between Rlogin/Rsh; default standalone managers remain isolated. Shared legacy_dns preserves owned blocking OS calls and fixed protocol error mappings. Rlogin urgent/flush/resize stays separate. Strict legacy_text conversion preserves the existing8 encodings and rejects loss/substitution.
 
 One actor owns both transports. Actual partial stdin suffix retains its full byte/item credit; EOF follows every accepted input, half-closes once and then refuses new input. Independent32signal FIFO uses fixed BSD mapping and progresses under output pressure. Reads alternate stdout/stderr with independent per-stream budget1MiB inclusive of queue+flight,32KiB ACK tail,32KiB scratch and32KiB response copy. Input<=1MiB inclusive of one32KiB conversion copy; items<=32 inclusive of current partial write. There is one global output flight, exact nonzero sequence, idempotent last ACK; invalid ACK cannot free credit. Status cannot consume or evict output. Finished output drains before handle removal.
 

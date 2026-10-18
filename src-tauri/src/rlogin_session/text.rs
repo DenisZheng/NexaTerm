@@ -1,6 +1,6 @@
 //! Protocol-local error mapping preserves the established terminal contract.
 use super::SessionError;
-pub(super) use crate::legacy_text::MAX_TEXT_BYTES;
+#[cfg(test)] pub(super) use crate::legacy_text::MAX_TEXT_BYTES;
 #[derive(Clone,Copy)]
 pub(super) struct SessionEncoding(crate::legacy_text::SessionEncoding);
 impl SessionEncoding {

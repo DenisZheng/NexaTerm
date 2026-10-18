@@ -47,6 +47,11 @@ mod workspace_snapshot;
 mod temporary_connections;
 pub mod rlogin;
 pub mod rsh;
+pub mod rsh_session;
+mod rsh_ipc;
+mod rsh_runtime;
+mod legacy_ipc;
+mod legacy_text;
 pub mod legacy_dns;
 mod legacy_session;
 pub mod legacy_socket;
@@ -348,10 +353,3 @@ pub fn run() {
             }
         });
 }
-
-mod legacy_text;
-pub mod rsh_session;
-
-mod legacy_ipc;
-mod rsh_ipc;
-mod rsh_runtime;

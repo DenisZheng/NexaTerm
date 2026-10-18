@@ -1,14 +1,14 @@
 //! Rlogin-specific error mapping around the shared, owned resolver.
 pub use crate::legacy_dns::Destination;
-use crate::legacy_dns::{ResolveError, Resolver as SharedResolver};
+use crate::legacy_dns::ResolveError;
+#[cfg(test)] use crate::legacy_dns::Resolver as SharedResolver;
 use super::SessionError;
-use std::{net::SocketAddrV4, sync::{atomic::AtomicBool, Arc}, time::Instant};
+#[cfg(test)] use std::{net::SocketAddrV4, sync::{atomic::AtomicBool, Arc}, time::Instant};
+#[cfg(test)]
 #[derive(Default)]
 pub(super) struct Resolver { shared: SharedResolver }
+#[cfg(test)]
 impl Resolver {
-    pub async fn resolve(&self, destination:&Destination,cancel:&Arc<AtomicBool>,deadline:Instant)->Result<SocketAddrV4,SessionError>{
-        self.shared.resolve(destination,cancel,deadline).await.map_err(Into::into)
-    }
     #[cfg(test)]
     async fn resolve_with<F>(&self,cancel:&Arc<AtomicBool>,deadline:Instant,resolve:F)->Result<SocketAddrV4,SessionError>
     where F:FnOnce()->std::io::Result<Vec<std::net::SocketAddr>>+Send+'static {

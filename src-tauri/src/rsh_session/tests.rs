@@ -1,5 +1,5 @@
 use super::*;
-use crate::{legacy_socket::{fixture::pair,SocketError,MAX_CHUNK},rsh::{RshTransport,Signal}};
+use crate::{legacy_socket::{fixture::pair,MAX_CHUNK},rsh::{RshTransport,Signal}};
 use std::{io::{self,Read,Write},net::{Ipv4Addr,SocketAddrV4,TcpStream,Shutdown},time::{Duration,Instant}};
 use tokio::sync::oneshot;
 pub(super) fn request()->TaskRequest{TaskRequest{local:Ipv4Addr::LOCALHOST,target:SocketAddrV4::new(Ipv4Addr::LOCALHOST,514).into(),
