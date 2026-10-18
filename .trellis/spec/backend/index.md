@@ -64,3 +64,5 @@ The goal is to help AI assistants and new team members understand how YOUR proje
 - [Rlogin DNS](./rlogin-dns.md) — frozen destinations, owned bounded OS resolution and cancellation before dial.
 
 - [Rsh Protocol](./rsh-protocol.md) — S0 split request framing, callback ownership and remote BSD signals.
+
+- [Rsh Native Transport](./rsh-native.md) — reserved dual connection, verified callbacks, half-close and independent drain.

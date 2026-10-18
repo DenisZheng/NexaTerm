@@ -1,8 +1,8 @@
 # Execution plan
 
-状态：后续开工已授权；本任务按顺序尚未执行，当前由 XDMCP 先推进。
+状态：已授权持续推进；S0已实现且原生33三平台通过，完整CI652全部通过；当前实现S1。
 
-- [ ] S0：主/次连接与握手协议核、受控服务端 fixture，字段与身份校验。
+- [x] S0：分阶段字节握手协议核与受控TCP fixture、字段及回连来源纯校验（原生33/完整CI652）。
 - [ ] S1：保留端口分配/权限探测、回连归属、截止和双流清理；不自动提权。
 - [ ] S2：显式命令任务、stdin/独立stdout/stderr/信号/取消/半关闭，EOF 不伪造远端 exit code。
 - [ ] S2：服务端互通、冒名回连/拒绝/背压/重试、三平台/三主题验收。
@@ -14,3 +14,10 @@
 ## S0当前执行
 
 先固定backend/rsh-protocol.md七段契约与官方BSD服务端文档依据；实现分阶段NUL编码、固定错误、复用ACK parser、回连源IP/低端口校验、远端BSD信号映射，再用现有native harness执行真实loopback字节测试。无新IPC/配置/菜单，不改Windows Rlogin能力，不引入依赖/客户端/提权。全量应用CI与原生三平台分别留证据。后续仍需S1保留双流owner/半关闭/取消和S2实际任务UI。
+
+## S1当前执行
+
+- 固定backend/rsh-native.md七段契约，复用legacy_socket保留端口和S0纯协议，不引入外部客户端/新依赖。
+- 实现先listener后主连接、回连归属/有界拒绝、一次总截止/取消、握手双向推进及双流传输。
+- 真实loopback覆盖64KiB命令分块、提前拒绝停止写、16个冒名回连、独立EOF/晚尾部、半关闭和信号；实际低端口夹具记录当前进程能绑定或真实AccessDenied，不新增ignore/skip。
+- 执行现有三平台native harness和完整应用CI，证据明确区分普通socket夹具/保留双流/真实rshd。S1仍不宣称UI已可用。
