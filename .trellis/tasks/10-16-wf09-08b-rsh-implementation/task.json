@@ -15,8 +15,8 @@
   "branch": "feat/wf09-08b-rsh-owner",
   "base_branch": "feat/wf09-08b-rsh-connect",
   "worktree_path": null,
-  "commit": "11f9e3d521da84bbc0eb72c305045f1ae8287729",
-  "pr_url": "https://github.com/DenisZheng/NexaTerm/pull/80",
+  "commit": "44529a022af7fb0310568219b57be344147c2791",
+  "pr_url": "https://github.com/DenisZheng/NexaTerm/pull/81",
   "subtasks": [],
   "children": [],
   "parent": "09-23-nexaterm-workflow-mainline",
@@ -24,6 +24,6 @@
     "docs/plans/WF09-PROTOCOL-IMPLEMENTATION-PLAN.md",
     "docs/WORKFLOW_SPEC.md"
   ],
-  "notes": "S1 actual dual transport verified by full CI655 all7 and native36 all3; Windows reserved positive, Unix permission negative. S0 Draft#79 verified CI652/native33. S2 task owner/IPC/UI and real rshd remain; task stays in_progress.",
+  "notes": "S2 owner/typed IPC/actual command UI verified at 44529a0 by full CI660 all7 and native41 all3. Task stays in_progress for real rshd, Unix reserved-positive and WebView acceptance. Windows Rlogin exact flush and bundled X server remain separate unfinished development.",
   "meta": {}
 }

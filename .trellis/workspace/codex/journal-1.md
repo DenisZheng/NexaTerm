@@ -364,3 +364,19 @@ closeDecision 纯决策 + close action + followUp；六条关闭路径接入、�
 ### Next Steps
 
 - None - task complete
+
+---
+
+## Session 8: WF-09 Rsh S2 command task delivery
+
+- Date: 2026-10-18
+- Branch: `feat/wf09-08b-rsh-owner`
+- Task: `10-16-wf09-08b-rsh-implementation` under `09-23-nexaterm-workflow-mainline`
+- Commits: `295a2f5`, `aec0676`, `4482bba`, `44529a0`
+- Delivery: Draft [#81](https://github.com/DenisZheng/NexaTerm/pull/81), stacked on #80; no merge/release and no changes to #12/#54.
+
+Rsh任务owner、共享有界lease/DNS/严格编码、main-window typed IPC及实际独立命令任务界面已开发交付。双流/EOF/信号/取消/重跑、真实资源完成barrier及renderer ACK有行为证据；命令和运行资源不进入快照/历史/宏/AI/MultiExec或PTY重连/复制。
+
+Code44529a0通过完整CI660七执行作业、原生41全三平台；Rust lib Linux616/4既有ignore、mac617、Win616，native core120/121/119；前端1160/1既有todo，脚本191/3既有环境skip。生产浏览器亮/暗/system-dark检查只算UI证据，真实rshd、Unix低端口正向和WebView仍待统一验收。CI658暴露的Rlogin配置DNS错误映射遗漏已修复并在CI659/660确认，不弱化门禁。
+
+状态：S2开发交付，Rsh任务仍in_progress，不归档或伪造真实验收PASS。Windows Rlogin精确flush和XDMCP随包/打包/桌面接入仍是后续开发项。详见任务research/task-evidence.md。

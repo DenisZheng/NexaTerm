@@ -1,4 +1,8 @@
-# S2 下一步：Rsh 命令任务 owner
+# S2交接约束（已实现）
+
+本页保留S2开工前约束供追溯；任务owner、typed IPC及实际命令任务入口现已在Draft #81开发交付，code44529a0已过完整CI660/原生41三平台。最新证据和后续真实互通缺口见 [task-evidence.md](task-evidence.md)，不要重复S0/S1或重新从owner开工。其余开发项仍是Windows Rlogin精确flush与XDMCP随包组件/打包/桌面接入。
+
+# 原S2开工约束
 
 S1已有实际双连接传输并过原生36三平台；用户仍不能从UI运行Rsh。下一刀先完成owner，随后typed IPC和实际命令任务入口，不能把S1函数当作完整功能。以下是后续实现约束，不是当前已存在API。
 
