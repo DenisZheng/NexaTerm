@@ -21,7 +21,7 @@ export class RloginTerminalController {
   constructor(private readonly bridge:RloginBridge,encoding:ConnectionTerminalEncoding) {
     try { this.decoder=new RloginDecoder(encoding); }
     catch (error) { void bridge.close().catch(() => {}); throw error; }
-    this.input=new RloginInputQueue(data => bridge.writeText(data),code => this.stop(code));
+    this.input=new RloginInputQueue(data => bridge.writeText(data),code => this.stop(code),data => bridge.write(Uint8Array.from(data)));
   }
   snapshot() { return {...this.bridge.snapshot(),terminalError:this.error,input:this.input.snapshot(),attached:this.attachment!==null}; }
   attach(renderer:RloginRenderer):()=>void {
@@ -83,6 +83,10 @@ export class RloginTerminalController {
   send(text:string):Promise<void> {
     if (!this.accepting) return Promise.reject(new RloginTerminalError(this.error ?? "rlogin_terminal_closed"));
     return this.input.send(text);
+  }
+  sendBinary(data:string):Promise<void> {
+    if (!this.accepting) return Promise.reject(new RloginTerminalError(this.error ?? "rlogin_terminal_closed"));
+    return this.input.sendBinary(data);
   }
   resize(window:RloginWindow):Promise<void> {
     if (!this.accepting) return Promise.reject(new RloginTerminalError("rlogin_terminal_closed"));

@@ -1,3 +1,4 @@
+import { normalizeRloginInput } from "./rloginProfile";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { t as tr, useI18n } from "../../shared/i18n";
@@ -406,6 +407,7 @@ export function useConnections(options: { enabled?: boolean } = {}) {
   );
 }
 export function normalizeConnectionInput(input: ConnectionProfileInput): ConnectionProfileInput {
+  if (input.protocol === "rlogin") return normalizeRloginInput(input);
   const protocol = input.protocol || "ssh";
   const sourceConnectionId = input.source_connection_id?.trim() || undefined;
   if (protocol === "rdp") {

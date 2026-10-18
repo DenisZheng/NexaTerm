@@ -7602,11 +7602,12 @@ export function WorkspaceShell() {
       return undefined;
     }
 
+    const nativeRlogin = connection.protocol === "rlogin";
     const authKind = connection.prompt_auth_kind || connection.inline_auth_kind || "password";
     const step: ConnectionStepState = {
       authKind,
       connection,
-      error: null,
+      error: nativeRlogin ? tr("workspace.rlogin.nativeRequired") : null,
       hostKey: null,
       hostKeyDecision: null,
       id: Date.now(),
@@ -7617,13 +7618,13 @@ export function WorkspaceShell() {
       password: "",
       privateKeyPassphrase: "",
       privateKeyPath: "",
-      promptTarget: connection.credential_mode === "prompt" ? credentialPromptTargetFromConnection(connection) : null, runtimeCredentials: {},
+      promptTarget: !nativeRlogin && connection.credential_mode === "prompt" ? credentialPromptTargetFromConnection(connection) : null, runtimeCredentials: {},
       temporary: connection.created_at === "temporary",
       temporaryContextRef: connection.created_at === "temporary" ? connection.id : null,
       temporaryCredentialsReady: false,
       oldHostKeyFingerprint: null,
       sessionId: null,
-      status: connection.credential_mode === "prompt" ? "prompt" : "idle",
+      status: nativeRlogin ? "error" : connection.credential_mode === "prompt" ? "prompt" : "idle",
     };
     const existingTab = reuseTabId ? terminalTabsRef.current.find((item) => item.id === reuseTabId) || null : null;
     const builtTab = buildConnectingTab(terminalTabsRef.current, connection, step);
@@ -7636,13 +7637,17 @@ export function WorkspaceShell() {
     if (activate) {
       dispatchTabs({ type: "tabs/startConnecting", connectionId: connection.id, tabId: tab.id });
     }
-    if (connection.credential_mode !== "prompt") {
+    if (!nativeRlogin && connection.credential_mode !== "prompt") {
       void runConnectionStep(tab.id, step);
     }
     return tab;
   }
 
   async function runConnectionStep(tabId: string, step: ConnectionStepState) {
+    if (step.connection.protocol === "rlogin") {
+      updateConnectingTabStep(tabId, { ...step, promptTarget: null, status: "error", error: tr("workspace.rlogin.nativeRequired") });
+      return;
+    }
     const runningStep: ConnectionStepState = {
       ...step,
       ...(step.temporary ? { password: "", privateKeyPassphrase: "", privateKeyPath: "" } : {}),

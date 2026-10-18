@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>mXterm Light Neutral Prototype</title>
+  <link rel="stylesheet" href="../../src/styles/tokens.css">
   <style>
     :root {
       --bg: #ffffff;
@@ -1614,6 +1615,25 @@
       border-color: var(--accent);
       color: var(--accent);
     }
+
+    /* Rlogin workflow: keep the existing desktop density and shared theme tokens. */
+    .rlogin-dialog { width: min(620px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow: auto; margin: auto; padding: 20px; border: 1px solid var(--mx-line); border-radius: 8px; background: var(--mx-panel); color: var(--mx-text); font-size: 13px; }
+    .rlogin-dialog::backdrop { background: color-mix(in srgb, var(--mx-text) 22%, transparent); }
+    .rlogin-dialog h2 { margin: 0 0 8px; font-size: 16px; }
+    .rlogin-dialog p { line-height: 1.6; color: var(--mx-muted); }
+    .rlogin-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0; }
+    .rlogin-fields label { display: grid; gap: 6px; min-width: 0; }
+    .rlogin-dialog input, .rlogin-dialog button { padding: 6px 9px; border: 1px solid var(--mx-line); border-radius: 5px; background: var(--mx-panel-soft); color: var(--mx-text); min-width: 0; }
+    .rlogin-dialog :focus-visible { outline: 2px solid var(--mx-primary); outline-offset: 2px; }
+    .rlogin-dialog button:disabled { opacity: .5; cursor: default; }
+    .rlogin-dialog footer { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+    .rlogin-dialog .primary { color: var(--mx-primary); border-color: var(--mx-primary); }
+    .rlogin-dialog .rlogin-error { color: var(--mx-danger); }
+    .rlogin-dialog [hidden] { display: none; }
+    .rlogin-summary { padding: 12px; background: var(--mx-panel-soft); border: 1px solid var(--mx-line); border-radius: 5px; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.6; }
+    .rlogin-encoding-menu { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+    .rlogin-terminal-preview { padding: 12px; background: var(--mx-terminal); color: var(--mx-terminal-text); font-family: var(--font-mono); min-height: 120px; white-space: pre-wrap; }
+    @media (max-width: 540px) { .rlogin-fields { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
@@ -2002,11 +2022,43 @@
 
   <div class="state-bar" aria-label="原型状态切换（仅原型）">
     <span>原型状态</span>
+    <button class="ghost-btn" type="button" data-rlogin-open>Rlogin</button>
+    <button class="ghost-btn" type="button" data-rlogin-theme>主题：亮色</button>
     <button class="ghost-btn" type="button" data-set-state='{"state":"empty","sidebar":"sessions"}'>空工作区</button>
     <button class="ghost-btn" type="button" data-set-state='{"state":"ssh","sidebar":"files"}'>SSH + Files</button>
     <button class="ghost-btn" type="button" data-set-state='{"state":"multi","sidebar":"sessions"}'>四 pane + MultiExec</button>
     <button class="ghost-btn" type="button" data-toggle-narrow>窄窗口</button>
   </div>
+
+
+  <dialog class="rlogin-dialog" id="rlogin-workflow" aria-labelledby="rlogin-heading">
+    <h2 id="rlogin-heading">Rlogin 连接</h2>
+    <p>原生终端 · 仅支持数字 IPv4 地址。保存配置后，连接仍需本次许可。</p>
+    <form id="rlogin-form">
+      <div class="rlogin-fields">
+        <label>名称<input name="name" value="Legacy server" required></label>
+        <label>远端 IPv4<input name="host" value="192.0.2.10" required></label>
+        <label>端口<input name="port" type="number" value="513" min="1" max="65535" required></label>
+        <label>远端用户<input name="remoteUser" value="remote" required></label>
+        <label>本地 IPv4<input name="localAddress" value="192.0.2.20" required></label>
+        <label>本地用户<input name="localUser" value="local" required></label>
+        <label>终端类型<input name="terminal" value="xterm-256color" required></label>
+        <label>终端速率<input name="speed" type="number" value="38400" min="1" max="4294967295" required></label>
+        <label>文本编码<button type="button" id="rlogin-encoding" aria-expanded="false" aria-controls="rlogin-encoding-menu">UTF-8</button></label>
+      </div>
+      <div id="rlogin-encoding-menu" class="rlogin-encoding-menu" hidden aria-label="文本编码"></div>
+      <p>本地用户与远端用户独立填写。使用受限源端口；权限不足时显示错误，不自动提权。</p>
+      <footer><button type="button" data-rlogin-dismiss>关闭</button><button type="submit">保存</button><button class="primary" type="button" id="rlogin-connect">连接…</button></footer>
+    </form>
+    <section id="rlogin-attempt" hidden>
+      <h3 id="rlogin-phase">允许本次明文连接？</h3>
+      <div class="rlogin-summary" id="rlogin-target"></div>
+      <p id="rlogin-feedback" role="status" aria-live="polite"></p>
+      <pre class="rlogin-terminal-preview" id="rlogin-output" hidden></pre>
+      <footer id="rlogin-attempt-actions"></footer>
+    </section>
+    <p id="rlogin-saved" role="status" aria-live="polite"></p>
+  </dialog>
 
   <script>
     const root = document.documentElement;
@@ -2170,6 +2222,67 @@
         window.addEventListener("pointerup", stop);
       });
     });
+
+
+    // Prototype only: every transport outcome is explicitly simulated by a button.
+    const rloginDialog = document.querySelector("#rlogin-workflow");
+    const rloginForm = document.querySelector("#rlogin-form");
+    const rloginAttempt = document.querySelector("#rlogin-attempt");
+    const rloginFeedback = document.querySelector("#rlogin-feedback");
+    const rloginActions = document.querySelector("#rlogin-attempt-actions");
+    const rloginPhase = document.querySelector("#rlogin-phase");
+    const rloginOutput = document.querySelector("#rlogin-output");
+    let rloginSnapshot = null;
+    let rloginEncoding = "utf-8";
+    let rloginState = "configuration";
+    const encodings = ["utf-8", "gbk", "gb18030", "big5", "euc-jp", "iso-2022-jp", "shift-jis", "euc-kr"];
+    const encodingButton = document.querySelector("#rlogin-encoding");
+    const encodingMenu = document.querySelector("#rlogin-encoding-menu");
+    encodings.forEach((encoding) => {
+      const button = document.createElement("button"); button.type = "button"; button.textContent = encoding.toUpperCase();
+      button.addEventListener("click", () => { rloginEncoding = encoding; encodingButton.textContent = button.textContent; encodingMenu.hidden = true; encodingButton.setAttribute("aria-expanded", "false"); encodingButton.focus(); });
+      encodingMenu.append(button);
+    });
+    encodingButton.addEventListener("click", () => { encodingMenu.hidden = !encodingMenu.hidden; encodingButton.setAttribute("aria-expanded", String(!encodingMenu.hidden)); if (!encodingMenu.hidden) encodingMenu.querySelector("button").focus(); });
+    function rloginAction(label, action) {
+      const button = document.createElement("button"); button.type = "button"; button.textContent = label;
+      button.addEventListener("click", action); rloginActions.append(button);
+    }
+    function rloginRender(state) {
+      rloginState = state; rloginActions.replaceChildren();
+      rloginForm.hidden = state !== "configuration"; rloginAttempt.hidden = state === "configuration";
+      rloginOutput.hidden = state !== "active"; rloginFeedback.classList.toggle("rlogin-error", state === "failed" || state === "cleanup-failed");
+      const states = {
+        consent: ["允许本次明文连接？", "Rlogin 不加密。仅向你信任的目标发送用户信息与后续终端输入；许可仅用于这次连接。"],
+        connecting: ["正在连接", "正在建立协议连接，可随时取消。"],
+        active: ["初始交换完成", "协议 ACK 不代表已登录；继续查看远端终端提示。"],
+        cancelled: ["已取消", "这次连接已清理。再次连接需要新的许可。"],
+        failed: ["连接失败", "无法绑定受限源端口（legacy_socket_access_denied）。请检查当前用户权限后重试。"],
+        closing: ["正在关闭", "正在等待会话实际清理完成。"],
+        "cleanup-failed": ["关闭未完成", "资源清理失败；保留此实例以便重试关闭。"],
+        closed: ["已关闭", "本次连接许可已失效。"],
+      };
+      if (states[state]) { rloginPhase.textContent = states[state][0]; rloginFeedback.textContent = states[state][1]; }
+      if (state === "consent") { rloginAction("取消", () => rloginRender("cancelled")); rloginAction("允许本次连接", () => rloginRender("connecting")); }
+      if (state === "connecting") { rloginAction("取消连接", () => rloginRender("closing")); rloginAction("模拟初始 ACK（原型）", () => rloginRender("active")); rloginAction("模拟权限失败（原型）", () => rloginRender("failed")); }
+      if (state === "active") { rloginOutput.textContent = "[原型终端：仅展示交互状态]\n等待远端输出…"; rloginAction("重连…", () => rloginRender("closing")); rloginAction("关闭会话", () => rloginRender("closing")); }
+      if (state === "closing") { rloginAction("模拟清理完成（原型）", () => rloginRender("closed")); rloginAction("模拟清理失败（原型）", () => rloginRender("cleanup-failed")); }
+      if (state === "cleanup-failed") rloginAction("重试关闭", () => rloginRender("closing"));
+      if (["cancelled", "failed", "closed"].includes(state)) { rloginAction("编辑配置", () => rloginRender("configuration")); rloginAction("重新连接…", () => rloginRender("consent")); rloginAction("关闭", () => rloginDialog.close()); }
+      rloginActions.querySelector("button")?.focus();
+    }
+    document.querySelector("[data-rlogin-open]").addEventListener("click", () => { rloginDialog.showModal(); if (rloginState === "configuration") rloginForm.querySelector("input").focus(); });
+    document.querySelector("[data-rlogin-dismiss]").addEventListener("click", () => rloginDialog.close());
+    rloginDialog.addEventListener("cancel", (event) => { if (["connecting", "active", "closing", "cleanup-failed"].includes(rloginState)) { event.preventDefault(); if (rloginState !== "cleanup-failed") rloginRender("closing"); } });
+    rloginForm.addEventListener("submit", (event) => { event.preventDefault(); if (rloginForm.reportValidity()) document.querySelector("#rlogin-saved").textContent = "配置已保存（原型）；尚未建立连接。"; });
+    document.querySelector("#rlogin-connect").addEventListener("click", () => {
+      if (!rloginForm.reportValidity()) return;
+      rloginSnapshot = Object.freeze({ ...Object.fromEntries(new FormData(rloginForm)), encoding: rloginEncoding });
+      document.querySelector("#rlogin-target").textContent = `${rloginSnapshot.remoteUser}@${rloginSnapshot.host}:${rloginSnapshot.port}\n本地：${rloginSnapshot.localUser} · ${rloginSnapshot.localAddress}\n${rloginSnapshot.terminal}/${rloginSnapshot.speed} · ${rloginSnapshot.encoding}`;
+      document.querySelector("#rlogin-saved").textContent = ""; rloginRender("consent");
+    });
+    let prototypeTheme = 0;
+    document.querySelector("[data-rlogin-theme]").addEventListener("click", (event) => { prototypeTheme = (prototypeTheme + 1) % 3; document.body.dataset.themeMode = ["light", "dark", "system"][prototypeTheme]; event.currentTarget.textContent = ["主题：亮色", "主题：暗色", "主题：跟随系统"][prototypeTheme]; });
 
     syncUi();
   </script>

@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 
 const typeSource = readFileSync("src/features/connections/connectionTypes.ts", "utf8");
-const dialogSource = readFileSync("src/features/connections/ConnectionDialog.tsx", "utf8");
+const dialogSource = readFileSync("src/features/connections/ConnectionDialog.tsx", "utf8") + readFileSync("src/features/connections/connectionForm.ts", "utf8");
 const normalizationSource = readFileSync("src/features/connections/useConnections.ts", "utf8");
 const backendConnectionSource = readFileSync("src-tauri/src/connections/mod.rs", "utf8");
 const repositorySource = readFileSync("src-tauri/src/storage_repository.rs", "utf8");
@@ -47,4 +47,5 @@ for (const snippet of [
   }
 }
 
+if (!normalizationSource.includes('if (input.protocol === "rlogin") return normalizeRloginInput(input);')) throw new Error("Rlogin duplicate normalization must use its independent metadata path.");
 console.log("Duplicate connection source check passed.");

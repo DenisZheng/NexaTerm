@@ -41,11 +41,11 @@ const requiredSnippets = [
   },
   {
     message: "Connection host fields should use direct input guidance.",
-    snippet: 'placeholder="请输入主机地址"',
+    snippet: 'placeholder={t("connectionDialog.hostPlaceholder")}',
   },
   {
     message: "Connection username fields should use direct input guidance.",
-    snippet: 'placeholder="请输入用户名"',
+    snippet: 'placeholder={t("connectionDialog.usernamePlaceholder")}',
   },
 ];
 
@@ -55,9 +55,10 @@ for (const { message, snippet } of requiredSnippets) {
   }
 }
 
-const optionalNameLabel = "<span>名称（可以为空）</span>";
+const rloginFields = readFileSync("src/features/connections/RloginConnectionFields.tsx", "utf8");
+const optionalNameLabel = 't("connectionDialog.field.nameOptional")';
 const optionalNameLabelCount = dialogSource.split(optionalNameLabel).length - 1;
-if (optionalNameLabelCount !== 4 || dialogSource.includes("<span>名称</span>")) {
+if (optionalNameLabelCount !== 4 || !rloginFields.includes(optionalNameLabel)) {
   throw new Error("Every connection protocol name field should visibly explain that it may be blank.");
 }
 
@@ -72,39 +73,36 @@ for (const placeholder of [
   }
 }
 
-const normalizeStart = dialogSource.indexOf("function normalizeForSubmit(");
-const validateStart = dialogSource.indexOf("function validateNetworkPath(", normalizeStart);
-if (normalizeStart === -1 || validateStart === -1) {
-  throw new Error("ConnectionDialog should keep normalizeForSubmit before validateNetworkPath.");
+const normalizeSource = readFileSync("src/features/connections/connectionForm.ts", "utf8");
+if (!dialogSource.includes('from "./connectionForm"') || !normalizeSource.includes('if (form.protocol === "rlogin") return normalizeRloginInput(form);')) {
+  throw new Error("ConnectionDialog must use the extracted converter and explicit Rlogin branch.");
 }
-
-const normalizeSource = dialogSource.slice(normalizeStart, validateStart);
 
 const protocolIsolationChecks = [
   {
     protocol: "rdp",
     owns: ["rdp: withDefaultRdpConfig(form.rdp)"],
-    clears: ["vnc: undefined", "telnet: undefined", "serial: undefined"],
+    clears: ["rlogin: undefined", "vnc: undefined", "telnet: undefined", "serial: undefined"],
   },
   {
     protocol: "vnc",
     owns: ["vnc: withDefaultVncConfig(form.vnc)"],
-    clears: ["rdp: undefined", "telnet: undefined", "serial: undefined"],
+    clears: ["rlogin: undefined", "rdp: undefined", "telnet: undefined", "serial: undefined"],
   },
   {
     protocol: "telnet",
     owns: ["telnet: withDefaultTelnetConfig(form.telnet)"],
-    clears: ["rdp: undefined", "vnc: undefined", "serial: undefined"],
+    clears: ["rlogin: undefined", "rdp: undefined", "vnc: undefined", "serial: undefined"],
   },
   {
     protocol: "serial",
     owns: ["serial: {", "port_name: portName"],
-    clears: ["rdp: undefined", "vnc: undefined", "telnet: undefined"],
+    clears: ["rlogin: undefined", "rdp: undefined", "vnc: undefined", "telnet: undefined"],
   },
   {
     protocol: "ssh",
     owns: ['protocol: "ssh"'],
-    clears: ["rdp: undefined", "vnc: undefined", "telnet: undefined", "serial: undefined"],
+    clears: ["rlogin: undefined", "rdp: undefined", "vnc: undefined", "telnet: undefined", "serial: undefined"],
   },
 ];
 

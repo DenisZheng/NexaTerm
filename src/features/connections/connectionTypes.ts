@@ -11,7 +11,7 @@ import type {
   TelnetEnterMode,
 } from "../terminal/characterSessionTypes";
 
-export type ConnectionProtocol = "ssh" | "rdp" | "vnc" | "telnet" | "serial";
+export type ConnectionProtocol = "ssh" | "rdp" | "vnc" | "telnet" | "serial" | "rlogin";
 export type ConnectionProxyKind = "none" | "http_connect" | "socks5";
 export type RdpDisplayMode = "embedded" | "windowed" | "fullscreen" | "all_monitors";
 export type RdpAudioMode = "local" | "remote" | "disabled";
@@ -219,6 +219,13 @@ export function resolveVncPerformanceLevels(config: VncConnectionConfig) {
   };
 }
 
+export interface RloginConnectionConfig {
+  local_address: string;
+  local_user: string;
+  terminal: string;
+  speed: number;
+}
+
 export interface TelnetConnectionConfig {
   enter_mode: TelnetEnterMode;
   backspace_mode: CharacterBackspaceMode;
@@ -255,6 +262,7 @@ export interface ConnectionProfile {
   advanced: ConnectionAdvancedConfig;
   rdp?: RdpConnectionConfig | null;
   vnc?: VncConnectionConfig | null;
+  rlogin?: RloginConnectionConfig | null;
   telnet?: TelnetConnectionConfig | null;
   serial?: SerialConnectionConfig | null;
   notes?: string | null;
@@ -295,6 +303,7 @@ export interface ConnectionProfileInput {
   advanced: ConnectionAdvancedConfig;
   rdp?: RdpConnectionConfig | null;
   vnc?: VncConnectionConfig | null;
+  rlogin?: RloginConnectionConfig | null;
   telnet?: TelnetConnectionConfig | null;
   serial?: SerialConnectionConfig | null;
   notes?: string;
@@ -605,6 +614,10 @@ export const defaultVncConfig: VncConnectionConfig = {
     custom_args_template: "",
   },
   raw_runner_args: "",
+};
+
+export const defaultRloginConfig: RloginConnectionConfig = {
+  local_address: "", local_user: "", terminal: "xterm-256color", speed: 38400,
 };
 
 export const defaultTelnetConfig: TelnetConnectionConfig = {
