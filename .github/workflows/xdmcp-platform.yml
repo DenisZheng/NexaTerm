@@ -31,7 +31,7 @@ jobs:
         run: |
           import shutil
           shutil.copyfile('src-tauri/Cargo.lock', 'src-tauri/test-fixtures/xdmcp-platform-harness/Cargo.lock')
-      - name: Run actual production platform module
+      - name: Run actual production platform and manager lifecycle
         run: cargo test --manifest-path src-tauri/test-fixtures/xdmcp-platform-harness/Cargo.toml -- --nocapture
       - name: Require harness dependencies to stay inside the application lockfile
         if: always()

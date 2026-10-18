@@ -2,6 +2,8 @@
 
 状态：2026-10-16 已获开工授权；X1 运行核心已实现，X0 组件审查推进中。任务整体保持 in_progress；X2/X3 尚未交付。
 
+2026-10-18续作：先修复应用退出的实际完成屏障。旧shutdown在两秒后忽略timeout并返回，可能让Tauri进程在worker/认证目录仍被持有时退出；改为关闭入口、快照有界completion watch并在锁外等待真实清理，保留用户stop的两秒stop_pending。三平台fixture同时覆盖实际进程树、阻塞spawn前worker及清理目录前worker，不能用延长退出超时掩盖。此修复不代表随包组件/桌面或Unix宿主SIGKILL回收已完成。
+
 - [ ] X0：精确源码/许可/依赖已部分核对，继续缩小运行组件闭包，建立可复现构建与分发 manifest；候选不等于采用。
 - [x] X1：受管 runner、独立 display、状态与取消/关闭所有权，以及真实 native 进程 fixture。
 - [ ] X2：Windows 随包组件、安装/签名和 direct-query 真实桌面；会话配置、原型与能力入口。
