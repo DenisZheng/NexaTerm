@@ -15,3 +15,14 @@
 全量前端131文件1104通过/1既有todo，新增45项行为回归，无新增skip/todo。新增真实shell脚本回归覆盖native close屏障/失败保留、public ID trap拒绝、saved/new/split/restore路由、隐私sink、split失败保留及新保存对象立即连接。既有本地状态面板先做4项回归后抽取为共享状态面板，未提高行数预算。
 
 本地脚本188通过/3既有环境skip；CI清单中全部source gates、独立协议切换source check、line budget、diff和Trellis上下文检查通过。完整构建及三平台CI最终结果待下文记录。原生WebView焦点、显式暗色/system-dark视觉及真实rlogind互通仍按统一验收安排；DOM/组件测试不替代它们。DNS、Windows精确urgent/flush、XDMCP随包Xserver及Rsh仍有开发工作，主任务in_progress。
+
+
+## 最终 CI（代码13eb8d9041bdee00c16a96a167b415bbfd9ab5ee）
+
+[Draft #77](https://github.com/DenisZheng/NexaTerm/pull/77)基于#76；[完整CI649](https://github.com/DenisZheng/NexaTerm/actions/runs/39105567113)全部7个执行job SUCCESS，条件打包未触发。Rust library Linux561（另4既有ignored）/macOS562/Windows561，binary19、integration1和doc0全部通过；新增逻辑Rlogin快照正例与递归拒绝许可/运行字段的负例均执行。前端131文件1104 passed/1既有todo，新增45项无skip/todo；脚本188 passed/3既有环境skip，新增8项实际shell行为测试。类型、标准build、全部source gates、安全、许可证和实际fixtures通过。
+
+[原生协议30](https://github.com/DenisZheng/NexaTerm/actions/runs/39105567116)三平台全部SUCCESS：wire各10、socket/core Linux66/macOS67/Windows65，0失败/0忽略。Windows继续负向能力验证，不称为已支持精确flush。原生loopback不等于真实rlogind互通。
+
+本地默认2GB Node堆初次build内存不足；使用CI既有`NODE_OPTIONS=--max-old-space-size=4096`重跑标准build通过，未修改配置/阈值。产物RloginTerminalPane2.67kB、rloginRuntime18.51kB及TerminalPanel428.74kB独立chunk；既有large-chunk提示保留，启动模块边界通过。
+
+当前可审查交付是Unix数值IPv4实际原生终端入口；DNS后续切片已在独立worktree开始开发，尚未纳入本PR。仍有DNS/Windows精确边界/XDMCP随包引擎/Rsh开发，以及真实rlogind/WebView与主题统一验收；任务不归档、不合并、不发布。
