@@ -15,8 +15,8 @@
   "branch": "feat/wf09-08a-rlogin-dns",
   "base_branch": "feat/wf09-08a-rlogin-entry",
   "worktree_path": null,
-  "commit": null,
-  "pr_url": null,
+  "commit": "e491646d985a1a7202b8c93f7edc2c5f88a96571",
+  "pr_url": "https://github.com/DenisZheng/NexaTerm/pull/78",
   "subtasks": [],
   "children": [],
   "parent": "09-23-nexaterm-workflow-mainline",
@@ -24,6 +24,6 @@
     "docs/plans/WF09-PROTOCOL-IMPLEMENTATION-PLAN.md",
     "docs/WORKFLOW_SPEC.md"
   ],
-  "notes": "DNS integrated locally into actual metadata/DTO/session actor and existing form; bounded4 resolver workers retain real quota and close lifetime. Entry Draft77 full CI649/native30 verified, DNS native/full CI pending. 1105 frontend passed/1 existingtodo and188 scriptpassed/3existing envskip, build/source gates passed. No merge/release.",
+  "notes": "Rlogin Unix mounted entry and DNS verified: Draft77 CI649/native30, Draft78 CI651/native32 allSUCCESS. DNS native11 plus actualSQLite hostname roundtrip passed all3, frontend1105/1existingtodo scripts188/3envskip. Windows exact urgent/flush and real rlogind/WebView pending. Main task remainsin_progress; Rsh S0 continues independently. No merge/release.",
   "meta": {}
 }

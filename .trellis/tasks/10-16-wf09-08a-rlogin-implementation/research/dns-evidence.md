@@ -11,3 +11,12 @@ Destination统一验证远端canonical IPv4/ASCII主机名、端口与本地IPv4
 本地前端131文件1105通过/1既有todo，脚本188通过/3既有环境skip，类型/4GB标准build/CI全部source门禁/协议切换/line-budget/diff与30项Trellis上下文通过。母版DOM验证固定hostname许可、变更表单不改本次目标、DNS说明和实际清理状态；不是WebView或主题视觉验收。首次DOM测试选错动作container ID，修正harness后通过，未改变产品代码以迁就断言。
 
 完整三平台Rust/native、安全、许可证和fixture证据待本切片Draft结果。DNS成功不等于rlogind互通；Windows精确flush、真实服务端、XDMCP随包引擎及Rsh仍有开发/验收工作。
+
+
+## 最终CI（代码e491646d985a1a7202b8c93f7edc2c5f88a96571）
+
+[Draft #78](https://github.com/DenisZheng/NexaTerm/pull/78)基于#77。[完整CI651](https://github.com/DenisZheng/NexaTerm/actions/runs/39106363452)全部7执行job SUCCESS，条件打包未触发：Rust library Linux573（另4既有ignored）/macOS574/Windows573，binary19/integration1/doc0全部通过；新增真实SQLite hostname CRUD/sync/reopen在三平台执行通过。前端131文件1105通过/1既有todo，脚本188通过/3既有环境skip；类型、构建、source、安全、许可证和实际fixtures通过。
+
+[原生32](https://github.com/DenisZheng/NexaTerm/actions/runs/39106363454)三平台全部SUCCESS：wire各10、core Linux77/macOS78/Windows76，新增11项DNS原生回归全部实际运行，0失败/0ignore。取消保留额度、caller drop额度、共享原截止、真实SessionManager close屏障和localhost解析均通过。Windows仍负向验证exact flush不可用，不表示已开放其Rlogin入口。
+
+DNS实现切片自动化收口；真实rlogind/WebView和三主题验收仍单独记录。剩余Windows边界依据及下一阶段可执行矩阵见windows-urgent-next-step.md，未扩大或伪造能力。Rsh S0已在独立Draft #79开工并过原生33三平台，完整CI652继续；没有让Windows gap阻塞普通双流开发。

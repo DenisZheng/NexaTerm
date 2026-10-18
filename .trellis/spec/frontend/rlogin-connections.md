@@ -12,7 +12,7 @@ Pure connectionForm.ts owns existing formFromConnection, duplicateFormFromConnec
 
 ## 3. Contracts
 
-Reuse shared Radix/AppSelect/Lucide, form classes and --mx-* tokens. Numeric IPv4 and separate local/remote users are explicit. No fake successful connection test in browser preview. Save works without a platform IO capability; connection permission and capability apply when starting. Runtime capability remains disabled until the actual owner/renderer is connected.
+Reuse shared Radix/AppSelect/Lucide, form classes and --mx-* tokens. Remote IPv4/ASCII hostname, numeric local IPv4 and separate local/remote users are explicit. No fake successful connection test in browser preview. Save works without a platform IO capability; connection permission and capability apply when starting. Runtime capability remains disabled until the actual owner/renderer is connected.
 
 Each attempt freezes deep target/config/encoding/window before transient consent. Cancel/reconnect/close belong to the workspace instance rather than pane mount. Late reserve after cancel only closes the old UUID. Cleanup failure retains visible ownership and retry. Reconnect obtains new consent after actual old cleanup. Restore never restores authorization or starts IO automatically. Input text/raw shares one bounded owner; output bypasses public events/log/history/MultiExec and returns credit only after parsing/disposal.
 
