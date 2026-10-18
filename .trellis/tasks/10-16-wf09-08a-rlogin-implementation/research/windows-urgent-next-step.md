@@ -2,6 +2,8 @@
 
 2026-10-18继续核验；Windows exact_flush/runtime/terminal仍为false。该缺口不阻塞已完成Unix真实入口/DNS，也不阻塞Rsh的普通双流。不能把缺口写成已实现或仅剩人工验收，也不据此断言Windows永远不能支持。
 
+本轮实际Windows API续作已进入Draft #82，执行代码99bffa6、原生45三平台全通过；新增反例证明WSARecv/WSARecvEx输出标志、两种SIOCATMARK入口和按普通peek长度丢弃的组合仍不提供可靠边界，见[windows-urgent-evidence.md](windows-urgent-evidence.md)。不要重复把这些已测路径作为未验证的新方案；替代backend首先必须区分“全部普通字节在urgent之前/之后”的强反例。原生通过是缺口证据，不是Windows精确flush完成。
+
 ## 官方API约束
 
 - [Winsock OOB说明](https://learn.microsoft.com/en-us/windows/win32/winsock/protocol-independent-out-of-band-data-2)分别描述OOB队列与流中位置；其TCP注意项明确inline模式下SIOCATMARK不能充当Unix式当前位置检测。这与既有Windows原生probe中inline位置不可用的结果一致。页面通用段落与TCP注意项应一起读，不能只摘取前者。

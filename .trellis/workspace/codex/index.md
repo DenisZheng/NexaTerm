@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 8
+- **Total Sessions**: 9
 - **Last Active**: 2026-10-18
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~382 | Active |
+| `journal-1.md` | ~417 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 9 | 2026-10-18 | WF-09 Windows urgent native API counterexamples | `778604c`, `3aea78d`, `99bffa6` | `feat/wf09-08a-windows-flush` |
 | 8 | 2026-10-18 | WF-09 Rsh S2 command task delivery | `295a2f5`, `aec0676`, `4482bba`, `44529a0` | `feat/wf09-08b-rsh-owner` |
 | 7 | 2026-10-04 | 恢复 Claude 中断会话并完成 MultiExec 顶层底栏 | - | `feat/wf04c-multiexec-entry` |
 | 6 | 2026-10-02 | WF-04A 原生补验与合并收尾 | `d0357a6` | `feat/wf04a-session-tree-consistency` |
