@@ -2911,5 +2911,18 @@
   "terminal.log.retry": "Check status",
   "terminal.log.choose": "Choose new file",
   "terminal.log.warning": "Save future output from this session as UTF-8, including ANSI sequences and echoed input. Output may contain passwords or other secrets; it is not redacted. Only a new file is allowed. Recording stops at 100 MiB, on disconnect, or if the write queue fills. Choose a trusted private folder.",
-  "terminal.log.unsupported": "Logging is available for SSH and Local/WSL sessions"
+  "terminal.log.unsupported": "Logging is available for SSH and Local/WSL sessions",
+  "connectionDialog.rlogin.description": "Direct numeric IPv4; local and remote users are independent.",
+  "connectionDialog.rlogin.remoteAddress": "Remote IPv4",
+  "connectionDialog.rlogin.localAddress": "Local IPv4",
+  "connectionDialog.rlogin.remoteUser": "Remote user",
+  "connectionDialog.rlogin.localUser": "Local user",
+  "connectionDialog.rlogin.terminal": "Terminal type",
+  "connectionDialog.rlogin.speed": "Terminal speed",
+  "connectionDialog.rlogin.permissionHint": "Rlogin is unencrypted. Each connection needs permission; binding a restricted source port never triggers automatic elevation.",
+  "connectionDialog.rlogin.checkTitle": "Verify when connecting",
+  "connectionDialog.rlogin.checkDetail": "Saving only stores the configuration. Connection checks require this-run plaintext permission and report the actual protocol result.",
+  "connectionDialog.description.rlogin": "Configure a native Rlogin terminal",
+  "newSession.rlogin": "Rlogin",
+  "workspace.rlogin.nativeRequired": "Rlogin requires its native terminal; this connection entry is not available yet."
 }

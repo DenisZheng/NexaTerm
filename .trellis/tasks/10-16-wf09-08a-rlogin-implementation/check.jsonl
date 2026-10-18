@@ -22,3 +22,5 @@
 {"file": ".trellis/spec/backend/sqlite-initialization.md", "reason": "Full CI exposed concurrent initial DDL ownership; preserve atomic rollback and immediate write admission"}
 {"file": ".trellis/spec/backend/xdmcp-runner.md", "reason": "Retain actual pre-stop process identity in native and application cleanup evidence"}
 {"file": ".trellis/spec/backend/rlogin-connections.md", "reason": "Independent config/schema5/serialization compatibility, transient consent, UI and owner contracts"}
+{"file": ".trellis/spec/frontend/rlogin-connections.md", "reason": "Rlogin form/terminal UI and lifecycle contracts"}
+{"file": ".trellis/spec/frontend/rlogin-attempt.md", "reason": "Generation owner cancellation/cleanup and bounded scheduler contracts"}

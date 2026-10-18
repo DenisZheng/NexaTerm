@@ -1,4 +1,4 @@
-import { RLOGIN_MAX_TEXT_BYTES } from "./rloginTypes";
+import { RLOGIN_MAX_CHUNK, RLOGIN_MAX_TEXT_BYTES } from "./rloginTypes";
 import { RloginTerminalError } from "./rloginTerminalError";
 import type { RloginTerminalErrorCode } from "./rloginTerminalError";
 export const RLOGIN_INPUT_BYTES=128*1024;
@@ -31,8 +31,20 @@ export function prepareRloginInput(text: string, byteBudget: number, itemBudget:
   const chunks=ends.map(end => {const part=text.slice(start,end); start=end; return part;});
   return {bytes,chunks};
 }
+export function prepareRloginBinaryInput(data:string,byteBudget:number,itemBudget:number) {
+  if (typeof data !== "string") throw new RloginTerminalError("rlogin_terminal_input_invalid");
+  if (data.length>byteBudget || Math.ceil(data.length/RLOGIN_MAX_CHUNK)>itemBudget) throw new RloginTerminalError("rlogin_terminal_input_full");
+  for (let i=0;i<data.length;i++) if (data.charCodeAt(i)>255) throw new RloginTerminalError("rlogin_terminal_input_invalid");
+  const chunks:number[][]=[];
+  for (let start=0;start<data.length;start+=RLOGIN_MAX_CHUNK) {
+    const chunk:number[]=[];
+    for (let i=start;i<Math.min(data.length,start+RLOGIN_MAX_CHUNK);i++) chunk.push(data.charCodeAt(i));
+    chunks.push(chunk);
+  }
+  return {bytes:data.length,chunks};
+}
 type Batch = { remaining:number; resolve:()=>void; reject:(error:RloginTerminalError)=>void };
-type Chunk = { data:string; bytes:number; batch:Batch };
+type Chunk = { data:string|readonly number[]; bytes:number; batch:Batch };
 export class RloginInputQueue {
   private accepting=true;
   private error: RloginTerminalErrorCode="rlogin_terminal_closed";
@@ -41,20 +53,24 @@ export class RloginInputQueue {
   private batches=new Set<Batch>();
   private queue: Chunk[]=[];
   private running: Promise<void> | null=null;
-  constructor(private readonly write:(data:string)=>Promise<void>,private readonly onError:(code:RloginTerminalErrorCode)=>void) {}
+  constructor(private readonly write:(data:string)=>Promise<void>,private readonly onError:(code:RloginTerminalErrorCode)=>void,private readonly writeBinary?: (data:readonly number[])=>Promise<void>) {}
   snapshot() { return {bytes:this.bytes,items:this.items,calls:this.batches.size}; }
-  send(data:string): Promise<void> {
+  send(data:string):Promise<void> { return this.admit(data,false); }
+  sendBinary(data:string):Promise<void> { return this.admit(data,true); }
+  private admit(data:string,raw:boolean): Promise<void> {
     if (!this.accepting) return Promise.reject(new RloginTerminalError(this.error));
     try {
       if (this.batches.size>=RLOGIN_INPUT_ITEMS) throw new RloginTerminalError("rlogin_terminal_input_full");
-      const prepared=prepareRloginInput(data,RLOGIN_INPUT_BYTES-this.bytes,RLOGIN_INPUT_ITEMS-this.items);
+      if (raw && !this.writeBinary) throw new RloginTerminalError("rlogin_terminal_input_invalid");
+      const prepared=raw ? prepareRloginBinaryInput(data,RLOGIN_INPUT_BYTES-this.bytes,RLOGIN_INPUT_ITEMS-this.items)
+        : prepareRloginInput(data,RLOGIN_INPUT_BYTES-this.bytes,RLOGIN_INPUT_ITEMS-this.items);
       if (!prepared.chunks.length) return Promise.resolve();
       const result=new Promise<void>((resolve,reject) => {
         const batch={remaining:prepared.chunks.length,resolve,reject}; this.batches.add(batch);
         this.bytes+=prepared.bytes; this.items+=prepared.chunks.length;
         // 每块很小；总预算预检完成后才计算各块UTF-8长度。
         const encoder=new TextEncoder();
-        this.queue.push(...prepared.chunks.map(text => ({data:text,bytes:encoder.encode(text).length,batch})));
+        this.queue.push(...prepared.chunks.map(data => ({data,bytes:typeof data === "string" ? encoder.encode(data).length : data.length,batch})));
       });
       this.pump(); return result;
     } catch (error) {
@@ -68,7 +84,9 @@ export class RloginInputQueue {
       while (this.accepting && this.queue.length) {
         const item=this.queue.shift()!;
         try {
-          await this.write(item.data);
+          if (typeof item.data === "string") await this.write(item.data);
+          else if (this.writeBinary) await this.writeBinary(item.data);
+          else throw new RloginTerminalError("rlogin_terminal_input_invalid");
           if (this.batches.has(item.batch) && --item.batch.remaining===0) {
             this.batches.delete(item.batch); item.batch.resolve();
           }

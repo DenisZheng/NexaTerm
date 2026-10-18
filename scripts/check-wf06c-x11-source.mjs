@@ -12,6 +12,7 @@ const dialog = readFileSync(
   new URL("../src/features/connections/ConnectionDialog.tsx", import.meta.url),
   "utf8",
 );
+const form = readFileSync(new URL("../src/features/connections/connectionForm.ts", import.meta.url), "utf8");
 const useConnections = readFileSync(
   new URL("../src/features/connections/useConnections.ts", import.meta.url),
   "utf8",
@@ -55,7 +56,7 @@ for (const needle of [
   't("connection.x11.enable")',
   't("connection.x11.display")',
 ]) {
-  if (!dialog.includes(needle)) {
+  if (!(dialog + form).includes(needle)) {
     throw new Error(`WF-06C dialog X11 persistence/UX seam missing: ${needle}`);
   }
 }

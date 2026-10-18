@@ -12,8 +12,8 @@
   "assignee": "codex",
   "createdAt": "2026-10-16",
   "completedAt": null,
-  "branch": "feat/wf09-08a-rlogin-connections",
-  "base_branch": "feat/wf09-08a-rlogin-terminal",
+  "branch": "feat/wf09-08a-rlogin-ui",
+  "base_branch": "feat/wf09-08a-rlogin-connections",
   "worktree_path": null,
   "commit": null,
   "pr_url": null,
@@ -24,6 +24,6 @@
     "docs/plans/WF09-PROTOCOL-IMPLEMENTATION-PLAN.md",
     "docs/WORKFLOW_SPEC.md"
   ],
-  "notes": "Connection model/storage/prototype/mounted terminal slice in_progress, based on verified PR74 docs head7cdeccb5. Backend model and schema5 migration being implemented; no new capability or completed UI claim. No merge/release.",
+  "notes": "UI foundation in_progress based on PR75 fix90a95b6 (full CI645 pending Windows). Mother prototype, independent form components, ordered binary/text input and attempt owner implemented; TerminalPanel/workspace/native entry still pending and capability disabled. Local1059/1 existingtodo; no merge/release.",
   "meta": {}
 }

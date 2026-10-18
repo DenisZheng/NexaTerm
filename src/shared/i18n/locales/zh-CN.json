@@ -2911,5 +2911,18 @@
   "terminal.log.retry": "查询状态",
   "terminal.log.choose": "选择新文件",
   "terminal.log.warning": "将此会话后续输出保存为 UTF-8，包含 ANSI 控制序列和回显输入。输出可能含密码或其他敏感信息，不会自动脱敏。仅允许新建文件；达到 100 MiB、断线或写入队列满时停止记录。请选择可信的私有文件夹。",
-  "terminal.log.unsupported": "日志支持 SSH 和 Local/WSL 会话"
+  "terminal.log.unsupported": "日志支持 SSH 和 Local/WSL 会话",
+  "connectionDialog.rlogin.description": "数字 IPv4 直连；本地用户与远端用户分别填写。",
+  "connectionDialog.rlogin.remoteAddress": "远端 IPv4",
+  "connectionDialog.rlogin.localAddress": "本地 IPv4",
+  "connectionDialog.rlogin.remoteUser": "远端用户",
+  "connectionDialog.rlogin.localUser": "本地用户",
+  "connectionDialog.rlogin.terminal": "终端类型",
+  "connectionDialog.rlogin.speed": "终端速率",
+  "connectionDialog.rlogin.permissionHint": "Rlogin 不加密。每次连接需单独许可；绑定受限源端口失败时不会自动提权。",
+  "connectionDialog.rlogin.checkTitle": "请在连接时验证",
+  "connectionDialog.rlogin.checkDetail": "保存只写入配置；连接检查需要本次明文许可，并由实际协议连接返回结果。",
+  "connectionDialog.description.rlogin": "配置原生 Rlogin 终端",
+  "newSession.rlogin": "Rlogin",
+  "workspace.rlogin.nativeRequired": "Rlogin 需要独立原生终端；此连接入口暂不可用。"
 }

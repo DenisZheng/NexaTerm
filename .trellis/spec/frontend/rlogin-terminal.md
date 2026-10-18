@@ -46,3 +46,8 @@ Native: eight labels/strict rejection/default, exact GBK/Big5/Japanese/Korean/co
 ## 7. Wrong vs correct
 
 Wrong: TextEncoder for GBK, decoder.decode(frame) without stream, send(text).catch(()=>{}), or renderer cleanup that ACKs before dispose. Correct: freeze the selected encoding at reserve, use strict backend encoding, keep a bounded incremental decoder, fail visibly on delivery uncertainty, and discard only after renderer disposal. Never put this IO through log/history/broadcast hooks.
+
+
+## Mounted input extension
+
+`RloginInputQueue.sendBinary(data:string)` accepts xterm binary strings only when every UTF-16 code unit is0..255. Preflight the whole call, count actual raw bytes and chunk at32KiB. Text and binary share the same128KiB/256chunk/256call budget, ordered single pump and actual close barrier. Never text-encode mouse/control bytes or call bridge.write concurrently outside that owner. Controller.sendBinary delegates to this same queue; invalid raw input/overflow closes the generation before partial admission.
