@@ -3,7 +3,7 @@
   "name": "wf09-08b-rsh-implementation",
   "title": "WF-09-08B native Rsh implementation",
   "description": "",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": "fullstack",
   "scope": null,
   "package": null,
@@ -12,11 +12,11 @@
   "assignee": "codex",
   "createdAt": "2026-10-16",
   "completedAt": null,
-  "branch": null,
-  "base_branch": "docs/wf09-protocol-implementation-plan",
+  "branch": "feat/wf09-08b-rsh-wire",
+  "base_branch": "feat/wf09-08a-rlogin-dns",
   "worktree_path": null,
-  "commit": null,
-  "pr_url": null,
+  "commit": "3c37125fc4797e5e47e2e8e3219dce698b2da4d5",
+  "pr_url": "https://github.com/DenisZheng/NexaTerm/pull/79",
   "subtasks": [],
   "children": [],
   "parent": "09-23-nexaterm-workflow-mainline",
@@ -24,6 +24,6 @@
     "docs/plans/WF09-PROTOCOL-IMPLEMENTATION-PLAN.md",
     "docs/WORKFLOW_SPEC.md"
   ],
-  "notes": "Implementation planned (S0–S2); explicitly not started in the documentation-only turn. Acceptance: S01–S03、C01/C02.",
+  "notes": "S0 wire core verified by complete CI652 and all3 native33; S1 reserved dual transport starts next. No Rsh IPC/UI capability yet.",
   "meta": {}
 }

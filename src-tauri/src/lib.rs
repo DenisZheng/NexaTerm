@@ -46,6 +46,7 @@ mod terminal;
 mod workspace_snapshot;
 mod temporary_connections;
 pub mod rlogin;
+pub mod rsh;
 pub mod legacy_socket;
 pub mod rlogin_native;
 pub mod rlogin_connect;

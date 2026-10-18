@@ -62,3 +62,5 @@ The goal is to help AI assistants and new team members understand how YOUR proje
 - [Rlogin Connections](./rlogin-connections.md) — schema5 and exact config round trips, transient consent and terminal entry integration.
 
 - [Rlogin DNS](./rlogin-dns.md) — frozen destinations, owned bounded OS resolution and cancellation before dial.
+
+- [Rsh Protocol](./rsh-protocol.md) — S0 split request framing, callback ownership and remote BSD signals.
