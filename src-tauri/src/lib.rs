@@ -66,6 +66,7 @@ use storage_vault::VaultState;
 use tauri::Manager;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let legacy_resources=std::sync::Arc::new(legacy_session::Resources::default());
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
@@ -80,7 +81,8 @@ pub fn run() {
         .manage(connection_probe_runtime::LocalProbeManager::default())
         .manage(file_service::FileServiceManager::default())
         .manage(xdmcp::XdmcpManager::default())
-        .manage(rlogin_session::SessionManager::default())
+        .manage(rlogin_session::SessionManager::with_resources(legacy_resources.clone()))
+        .manage(rsh_session::TaskManager::with_resources(legacy_resources))
         .manage(performance_probe::PerformanceProbeState::default())
         .manage(remote_files::RemoteFileManager::default())
         .manage(terminal::manager::TerminalManager::default())
@@ -99,6 +101,7 @@ pub fn run() {
                 window.state::<file_service::FileServiceManager>().cancel_window(window.label());
                 window.state::<xdmcp::XdmcpManager>().cancel_window(window.label());
                 window.state::<rlogin_session::SessionManager>().cancel_window(window.label());
+                window.state::<rsh_session::TaskManager>().cancel_window(window.label());
             }
         })
         .setup(|app| {
@@ -262,6 +265,17 @@ pub fn run() {
             xdmcp_runtime::xdmcp_start,
             xdmcp_runtime::xdmcp_stop,
             xdmcp_runtime::xdmcp_status,
+            rsh_runtime::rsh_capabilities,
+            rsh_runtime::rsh_reserve,
+            rsh_runtime::rsh_start,
+            rsh_runtime::rsh_write,
+            rsh_runtime::rsh_write_text,
+            rsh_runtime::rsh_stdin_eof,
+            rsh_runtime::rsh_signal,
+            rsh_runtime::rsh_read,
+            rsh_runtime::rsh_status,
+            rsh_runtime::rsh_cancel,
+            rsh_runtime::rsh_close,
             rlogin_runtime::rlogin_capabilities,
             rlogin_runtime::rlogin_reserve,
             rlogin_runtime::rlogin_start,
@@ -325,9 +339,10 @@ pub fn run() {
                     let files = app.state::<file_service::FileServiceManager>();
                     let desktops = app.state::<xdmcp::XdmcpManager>();
                     let legacy = app.state::<rlogin_session::SessionManager>();
-                    if let (_, _, Err(error)) = tokio::join!(files.shutdown(), desktops.shutdown(), legacy.shutdown_wait()) {
-                        eprintln!("rlogin_shutdown_failed code={}",error.code());
-                    }
+                    let commands=app.state::<rsh_session::TaskManager>();
+                    let (_,_,rlogin,rsh)=tokio::join!(files.shutdown(),desktops.shutdown(),legacy.shutdown_wait(),commands.shutdown_wait());
+                    if let Err(error)=rlogin{eprintln!("rlogin_shutdown_failed code={}",error.code());}
+                    if let Err(error)=rsh{eprintln!("rsh_shutdown_failed code={}",error.code());}
                 });
                 app.state::<mcp::McpRemoteServiceManager>().shutdown();
             }
@@ -336,3 +351,7 @@ pub fn run() {
 
 mod legacy_text;
 pub mod rsh_session;
+
+mod legacy_ipc;
+mod rsh_ipc;
+mod rsh_runtime;
