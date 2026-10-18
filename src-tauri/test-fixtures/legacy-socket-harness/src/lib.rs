@@ -7,3 +7,9 @@
 #[path = "../../../src/rlogin_ipc/mod.rs"] mod rlogin_ipc;
 
 #[path = "../../../src/rsh/mod.rs"] pub mod rsh;
+
+#[path = "../../../src/legacy_dns/mod.rs"] pub mod legacy_dns;
+#[path = "../../../src/legacy_session.rs"] mod legacy_session;
+
+#[path = "../../../src/legacy_text.rs"] mod legacy_text;
+#[path = "../../../src/rsh_session/mod.rs"] pub mod rsh_session;

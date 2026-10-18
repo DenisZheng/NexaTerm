@@ -4,6 +4,12 @@ on:
     paths:
       - 'src-tauri/src/rlogin/**'
       - 'src-tauri/src/rsh/**'
+      - 'src-tauri/src/rsh_session/**'
+      - 'src-tauri/src/rsh_ipc/**'
+      - 'src-tauri/src/rsh_runtime.rs'
+      - 'src-tauri/src/legacy_dns/**'
+      - 'src-tauri/src/legacy_session.rs'
+      - 'src-tauri/src/legacy_text.rs'
       - 'src-tauri/src/legacy_socket/**'
       - 'src-tauri/src/rlogin_native/**'
       - 'src-tauri/src/rlogin_connect/**'

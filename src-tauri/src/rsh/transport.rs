@@ -15,7 +15,7 @@ impl std::fmt::Debug for RshTransport {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { f.write_str("RshTransport{..}") }
 }
 impl RshTransport {
-    pub(super) fn new(main: NativeSocket, secondary: NativeSocket, initial: Vec<u8>) -> Self {
+    pub(crate) fn new(main: NativeSocket, secondary: NativeSocket, initial: Vec<u8>) -> Self {
         Self { main, secondary, initial, initial_offset: 0, stdout_eof: false, stderr_eof: false, stdin_closed: false }
     }
     pub fn read_stdout(&mut self, buffer: &mut [u8]) -> Result<Option<usize>, NativeError> {

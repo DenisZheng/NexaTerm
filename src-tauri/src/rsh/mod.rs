@@ -3,6 +3,7 @@ use std::net::{Ipv4Addr, SocketAddr};
 mod connect;
 mod transport;
 pub use connect::{connect, ConnectOptions, NativeError};
+pub(crate) use connect::connect_until;
 pub use transport::RshTransport;
 pub const DEFAULT_PORT: u16 = 514;
 pub const MAX_USER_BYTES: usize = 16;

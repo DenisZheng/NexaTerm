@@ -23,3 +23,11 @@
 - 执行现有三平台native harness和完整应用CI，证据明确区分普通socket夹具/保留双流/真实rshd。S1仍不宣称UI已可用。
 
 S1收口：Draft#80 code11f9e3d，完整CI655七项全过、原生36三平台全过，13项新增行为测试实际执行。下一步owner/IPC/UI见research/task-owner-next-step.md；整个Rsh任务仍in_progress，未把真实rshd或GUI验收写成通过。
+
+## S2当前执行
+
+- [ ] 提取共用lease/registry和DNS，保留Rlogin全部回归与错误映射。
+- [ ] Rsh任务actor：公平双流/有界flight、串行输入EOF、独立信号、可选运行超时及真实清理。
+- [ ] 主窗口typed IPC及应用生命周期，真实socket/lease/DNS/DTO负向行为测试。
+- [ ] 同一原型母版/现有UI规范审查后接入实际命令任务，命令和输出瞬态且不自动重放。
+- [ ] 原生三平台、完整应用CI及相关前端/启动/安全/许可门禁，记录代码SHA与真实环境缺口。
