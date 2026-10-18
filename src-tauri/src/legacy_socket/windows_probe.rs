@@ -3,7 +3,7 @@ use super::{fixture::{pair, until}, platform, send_urgent_fixture, NativeSocket}
 use std::{io::{self, Write}, net::{Shutdown, TcpStream}, os::windows::io::AsRawSocket};
 use windows_sys::Win32::Networking::WinSock::*;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Api { Receive, ReceiveEx }
 
 fn receive(api: Api, stream: &TcpStream, bytes: &mut [u8], input_flags: u32) -> io::Result<(usize, u32)> {
@@ -40,6 +40,7 @@ fn observe(api: Api, inline: bool, peek: bool, chunk: usize) {
     until(|| (platform::pending_bytes_fixture(&socket.stream).unwrap() as usize == expected.len()).then_some(()));
     let mut bytes = [0_u8; 128];
     if peek {
+        assert_eq!(api, Api::Receive, "WSARecvEx ignores input flags and cannot peek");
         let first = receive(api, &socket.stream, &mut bytes, MSG_PEEK as _).unwrap();
         let second = receive(api, &socket.stream, &mut bytes, MSG_PEEK as _).unwrap();
         assert_eq!(first, second, "peek observations changed without consumption");
@@ -74,9 +75,52 @@ fn observe(api: Api, inline: bool, peek: bool, chunk: usize) {
 fn windows_receive_apis_preserve_fixture_bytes_and_record_native_flags() {
     for api in [Api::Receive, Api::ReceiveEx] {
         for inline in [false, true] {
-            for peek in [false, true] {
+            let peeks: &[bool] = if api == Api::Receive { &[false, true] } else { &[false] };
+            for &peek in peeks {
                 for chunk in [1, 128] { observe(api, inline, peek, chunk); }
             }
         }
+    }
+}
+
+#[test]
+fn windows_peek_observes_before_mark_at_mark_and_after_consumption() {
+    for prefix_len in [0, 1, 4, 8193] {
+        let (mut socket, mut peer) = pair();
+        let prefix = vec![0x82; prefix_len];
+        let tail = [0x82, 0, 0x02, 0x80, 0xff, b'z'];
+        peer.write_all(&prefix).unwrap(); send_urgent_fixture(&peer, 0x82); peer.write_all(&tail).unwrap();
+        peer.shutdown(Shutdown::Write).unwrap();
+        until(|| (platform::pending_bytes_fixture(&socket.stream).unwrap() as usize == prefix_len + tail.len()).then_some(()));
+        let mut buffer = vec![0; 32768];
+        let initial = receive(Api::Receive, &socket.stream, &mut buffer, MSG_PEEK as _);
+        let std_initial = socket.stream.peek(&mut buffer);
+        println!("windows_peek_cursor prefix={prefix_len} initial={initial:?} std_initial={std_initial:?}");
+        let mut received = Vec::new();
+        until(|| {
+            if received.len() == prefix_len { return Some(()); }
+            if let Some(count) = socket.read(&mut buffer[..(prefix_len-received.len()).min(32768)]).unwrap() {
+                assert_ne!(count, 0); received.extend_from_slice(&buffer[..count]);
+            }
+            None
+        });
+        assert_eq!(received, prefix);
+        let at = receive(Api::Receive, &socket.stream, &mut buffer, MSG_PEEK as _);
+        let repeated = receive(Api::Receive, &socket.stream, &mut buffer, MSG_PEEK as _);
+        let std_at = socket.stream.peek(&mut buffer);
+        println!("windows_peek_cursor prefix={prefix_len} at={at:?} repeated={repeated:?} std_at={std_at:?} mark={:?}", platform::at_mark(&socket.stream));
+        assert_eq!(socket.urgent(false).unwrap(), Some(0x82));
+        let after = receive(Api::Receive, &socket.stream, &mut buffer, MSG_PEEK as _);
+        println!("windows_peek_cursor prefix={prefix_len} after={after:?}");
+        let mut received = Vec::new();
+        until(|| {
+            if let Some(count) = socket.read(&mut buffer).unwrap() {
+                if count == 0 { return Some(()); }
+                received.extend_from_slice(&buffer[..count]);
+            }
+            None
+        });
+        assert_eq!(received, tail);
+        socket.close().unwrap();
     }
 }
