@@ -1,21 +1,28 @@
-use crate::legacy_socket::SocketError;
+use crate::legacy_socket::{valid, SocketError};
+use super::Destination;
 use crate::rlogin_connect::{ConnectError, ConnectOptions, WindowSize};
 use std::net::{Ipv4Addr, SocketAddrV4};
 
 pub struct SessionRequest {
-    pub local: Ipv4Addr, pub target: SocketAddrV4,
+    pub local: Ipv4Addr, pub target: Destination,
     pub local_user: String, pub remote_user: String, pub terminal: String, pub speed: u32, pub window: WindowSize,
     pub terminal_encoding: String,
 }
 impl SessionRequest {
-    pub(super) fn options(&self) -> ConnectOptions<'_> {
-        ConnectOptions { local: self.local, target: self.target, local_user: &self.local_user,
+    pub(crate) fn validate(&self) -> Result<(), SessionError> {
+        self.target.validate()?;
+        if !valid(self.local) { return Err(SocketError::InvalidAddress.into()); }
+        crate::rlogin_connect::prepare_fields(&self.local_user, &self.remote_user, &self.terminal, self.speed, self.window)?;
+        Ok(())
+    }
+    pub(super) fn options(&self, target: SocketAddrV4) -> ConnectOptions<'_> {
+        ConnectOptions { local: self.local, target, local_user: &self.local_user,
             remote_user: &self.remote_user, terminal: &self.terminal, speed: self.speed, window: self.window }
     }
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SessionError { Denied, ConsentRequired, Busy, Expired, Duplicate, InvalidChunk, InvalidAck, NotReady, Unavailable,
-    InvalidEncoding, EncodingFailed, Connect(ConnectError) }
+    InvalidEncoding, EncodingFailed, DnsFailed, DnsNoIpv4, Connect(ConnectError) }
 impl SessionError {
     pub fn code(self) -> &'static str {
         match self {
@@ -24,6 +31,7 @@ impl SessionError {
             Self::InvalidChunk => "rlogin_session_invalid_chunk", Self::InvalidAck => "rlogin_session_invalid_ack",
             Self::NotReady => "rlogin_session_not_ready", Self::Unavailable => "rlogin_session_unavailable",
             Self::InvalidEncoding => "rlogin_encoding_invalid", Self::EncodingFailed => "rlogin_encoding_failed",
+            Self::DnsFailed => "rlogin_dns_failed", Self::DnsNoIpv4 => "rlogin_dns_no_ipv4",
             Self::Connect(error) => error.code(),
         }
     }

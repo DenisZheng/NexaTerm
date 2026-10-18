@@ -1,6 +1,6 @@
 use crate::{rlogin_connect::WindowSize, rlogin_session::{Ack, Phase, ReadReply, SessionError, SessionRequest, SessionStatus}};
 use serde::{Deserialize, Serialize};
-use std::net::{Ipv4Addr, SocketAddrV4};
+use std::net::Ipv4Addr;
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -25,7 +25,7 @@ fn utf8() -> String { "utf-8".into() }
 impl ReserveRequest {
     pub fn into_core(self) -> Result<(SessionRequest, bool), SessionError> {
         let address = |s: &str| -> Result<Ipv4Addr, SessionError> { s.parse::<Ipv4Addr>().map_err(|_| crate::legacy_socket::SocketError::InvalidAddress.into()) };
-        Ok((SessionRequest { local:address(&self.local_address)?, target:SocketAddrV4::new(address(&self.target_address)?,self.port),
+        Ok((SessionRequest { local:address(&self.local_address)?, target:crate::rlogin_session::Destination::parse(&self.target_address,self.port)?,
             local_user:self.local_user,remote_user:self.remote_user,terminal:self.terminal,speed:self.speed,window:self.window.into_core(),
             terminal_encoding:self.terminal_encoding },self.allow_plaintext))
     }

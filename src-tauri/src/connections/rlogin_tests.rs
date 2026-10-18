@@ -17,10 +17,14 @@ fn rlogin_defaults_are_independent_of_ssh_and_config_round_trips_without_consent
 }
 #[test]
 fn rlogin_uses_the_actual_bsd_and_numeric_ipv4_validation_before_persistence() {
-    for address in ["example.invalid","::1","0.0.0.0","224.0.0.1","255.255.255.255"] {
+    for address in ["bad host","::1","0.0.0.0","224.0.0.1","255.255.255.255"] {
         let mut request=input();request.host=address.into();assert_eq!(validate_profile_input(&request).unwrap_err().code,"legacy_socket_invalid_address");
         let mut request=input();request.rlogin.as_mut().unwrap().local_address=address.into();assert_eq!(validate_profile_input(&request).unwrap_err().code,"legacy_socket_invalid_address");
     }
+    let mut hostname=input();hostname.host="Example.invalid.".into();
+    assert_eq!(validate_profile_input(&hostname).unwrap().host,"Example.invalid.");
+    hostname.rlogin.as_mut().unwrap().local_address="example.invalid".into();
+    assert_eq!(validate_profile_input(&hostname).unwrap_err().code,"legacy_socket_invalid_address");
     for user in ["".to_owned(),"x".repeat(31),"中".repeat(11),"nul\0user".into(),"line\nuser".into()] {
         let mut request=input();request.username=user;assert_eq!(validate_profile_input(&request).unwrap_err().code,"rlogin_invalid_user");
     }

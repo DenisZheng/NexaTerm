@@ -2912,8 +2912,8 @@
   "terminal.log.choose": "选择新文件",
   "terminal.log.warning": "将此会话后续输出保存为 UTF-8，包含 ANSI 控制序列和回显输入。输出可能含密码或其他敏感信息，不会自动脱敏。仅允许新建文件；达到 100 MiB、断线或写入队列满时停止记录。请选择可信的私有文件夹。",
   "terminal.log.unsupported": "日志支持 SSH 和 Local/WSL 会话",
-  "connectionDialog.rlogin.description": "数字 IPv4 直连；本地用户与远端用户分别填写。",
-  "connectionDialog.rlogin.remoteAddress": "远端 IPv4",
+  "connectionDialog.rlogin.description": "远端支持 IPv4 或主机名；本地用户与远端用户分别填写。",
+  "connectionDialog.rlogin.remoteAddress": "远端 IPv4 或主机名",
   "connectionDialog.rlogin.localAddress": "本地 IPv4",
   "connectionDialog.rlogin.remoteUser": "远端用户",
   "connectionDialog.rlogin.localUser": "本地用户",
@@ -2941,7 +2941,7 @@
   "workspace.rlogin.phase.failed": "连接失败",
   "workspace.rlogin.phase.cleanupFailed": "关闭未完成",
   "workspace.rlogin.reason.permission": "无法绑定受限源端口，请检查当前用户权限。",
-  "workspace.rlogin.reason.address": "需要有效的本地和远端数字 IPv4 地址。",
+  "workspace.rlogin.reason.address": "请填写有效的远端 IPv4/主机名和本地数字 IPv4。",
   "workspace.rlogin.reason.ports": "没有可用的受限源端口，请关闭占用后重试。",
   "workspace.rlogin.reason.platform": "本机尚不支持所需的原生终端能力。",
   "workspace.rlogin.reason.busy": "连接或许可数量已达上限，请稍后重试。",
@@ -2956,5 +2956,7 @@
   "workspace.rlogin.connect": "连接…",
   "workspace.rlogin.reconnect": "重新连接…",
   "workspace.rlogin.retryClose": "重试关闭",
-  "workspace.rlogin.readyHint": "协议 ACK 只表示初始交换完成，不代表已登录；请继续查看远端提示。"
+  "workspace.rlogin.readyHint": "协议 ACK 只表示初始交换完成，不代表已登录；请继续查看远端提示。",
+  "workspace.rlogin.reason.dns": "主机名解析失败。",
+  "workspace.rlogin.reason.noIpv4": "主机名没有返回可用的 IPv4 地址。"
 }

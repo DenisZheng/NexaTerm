@@ -1,5 +1,7 @@
-//! 有界原生会话 owner；IPC由rlogin_runtime接入，DNS/终端UI仍待实现。
+//! 有界原生会话 owner；IPC由rlogin_runtime接入，终端UI已接入，DNS与start actor共同归属。
 mod actor;
+mod dns;
+pub use dns::Destination;
 mod buffers;
 mod manager;
 mod types;
@@ -16,13 +18,13 @@ use std::sync::{atomic::{AtomicBool, Ordering}, Arc, Mutex, MutexGuard};
 use tokio::sync::watch;
 
 struct Shared {
-    queues: Mutex<Queues>, cancel: AtomicBool, abandoned: AtomicBool, done: watch::Sender<bool>,
+    queues: Mutex<Queues>, cancel: Arc<AtomicBool>, abandoned: AtomicBool, done: watch::Sender<bool>,
     encoding: text::SessionEncoding,
 }
 impl Shared {
     fn new(encoding: text::SessionEncoding) -> Arc<Self> {
         let (done, _) = watch::channel(false);
-        Arc::new(Self { queues: Mutex::new(Queues::new()), cancel: AtomicBool::new(false),
+        Arc::new(Self { queues: Mutex::new(Queues::new()), cancel: Arc::new(AtomicBool::new(false)),
             abandoned: AtomicBool::new(false), done, encoding })
     }
     fn lock(&self) -> Result<MutexGuard<'_, Queues>, SessionError> { self.queues.lock().map_err(|_| SessionError::Unavailable) }

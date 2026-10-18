@@ -40,7 +40,7 @@ fn capability_and_boundary_deny_foreign_labels_before_any_operation() {
         assert_eq!(capability(label).err().unwrap(),SessionError::Denied);
     }
     let cap=capability("main").unwrap();
-    assert!(cap.native_core); assert_eq!(cap.terminal_available,cfg!(unix)); assert!(!cap.dns_available);
+    assert!(cap.native_core); assert_eq!(cap.terminal_available,cfg!(unix)); assert_eq!(cap.dns_available,cfg!(unix));
     assert_eq!(cap.exact_flush,cfg!(unix)); assert_eq!(cap.runtime_available,cfg!(unix));
     assert_eq!(cap.reason,if cfg!(unix) {None} else {Some("legacy_socket_urgent_boundary_unavailable")});
 }
@@ -76,12 +76,16 @@ fn reserve_validates_consent_profile_and_numeric_addresses_or_refuses_platform_b
     }
     let mut value=request(); value["allow_plaintext"]=json!(false);
     assert_eq!(boundary.reserve(decode(value)),Err(SessionError::ConsentRequired));
-    for address in ["example.invalid","0.0.0.0","224.0.0.1","255.255.255.255","::1","127.0.0.1 "] {
+    for address in ["bad host","0.0.0.0","224.0.0.1","255.255.255.255","::1","127.0.0.1 "] {
         for field in ["local_address","target_address"] {
             let mut value=request(); value[field]=json!(address);
             assert_eq!(boundary.reserve(decode(value)),Err(SocketError::InvalidAddress.into()));
         }
     }
+    let mut value=request(); value["local_address"]=json!("example.invalid");
+    assert_eq!(boundary.reserve(decode(value)),Err(SocketError::InvalidAddress.into()));
+    let mut value=request(); value["target_address"]=json!("Example.invalid.");
+    let hostname=boundary.reserve(decode(value)).unwrap(); boundary.cancel(&hostname).unwrap();
     let mut value=request(); value["remote_user"]=json!("x".repeat(31));
     assert_eq!(boundary.reserve(decode(value)).err().unwrap().code(),"rlogin_invalid_user");
     let id=boundary.reserve(decode(request())).unwrap();

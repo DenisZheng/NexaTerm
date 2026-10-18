@@ -12,7 +12,7 @@ pub(crate) struct Capability {
 }
 pub(crate) fn capability(origin: &str) -> Result<Capability, SessionError> {
     require_main(origin)?; let exact = NativeSocket::supports_urgent_boundary();
-    Ok(Capability {native_core:true,exact_flush:exact,runtime_available:exact,terminal_available:exact,dns_available:false,
+    Ok(Capability {native_core:true,exact_flush:exact,runtime_available:exact,terminal_available:exact,dns_available:exact,
         reason:(!exact).then_some(SocketError::UrgentBoundaryUnavailable.code())})
 }
 fn require_main(origin: &str) -> Result<(), SessionError> { if origin=="main" { Ok(()) } else { Err(SessionError::Denied) } }

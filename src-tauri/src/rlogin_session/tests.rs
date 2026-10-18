@@ -5,7 +5,7 @@ use crate::rlogin_native::RloginReader;
 use std::{io::{self, Read, Write}, net::{Ipv4Addr, SocketAddrV4, TcpStream}, time::{Duration, Instant}};
 use tokio::sync::oneshot;
 pub(super) fn request() -> SessionRequest {
-    SessionRequest { local: Ipv4Addr::LOCALHOST, target: SocketAddrV4::new(Ipv4Addr::LOCALHOST,513),
+    SessionRequest { local: Ipv4Addr::LOCALHOST, target: SocketAddrV4::new(Ipv4Addr::LOCALHOST,513).into(),
         local_user:"local".into(), remote_user:"remote".into(), terminal:"xterm".into(), speed:38400,
         window:WindowSize { rows:24,columns:80,x_pixels:0,y_pixels:0 }, terminal_encoding:"utf-8".into() }
 }

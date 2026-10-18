@@ -7,6 +7,7 @@ const phaseKeys=new Map<string,MessageKey>([
   ["closed","workspace.rlogin.phase.closed"],["cancelled","workspace.rlogin.phase.cancelled"],["failed","workspace.rlogin.phase.failed"],["cleanup_failed","workspace.rlogin.phase.cleanupFailed"],
 ]);
 const reasons=new Map<string,MessageKey>([
+  ["rlogin_dns_failed","workspace.rlogin.reason.dns"],["rlogin_dns_no_ipv4","workspace.rlogin.reason.noIpv4"],
   ["legacy_socket_access_denied","workspace.rlogin.reason.permission"],["legacy_socket_invalid_address","workspace.rlogin.reason.address"],
   ["legacy_socket_ports_busy","workspace.rlogin.reason.ports"],["legacy_socket_ports_unavailable","workspace.rlogin.reason.ports"],
   ["legacy_socket_urgent_boundary_unavailable","workspace.rlogin.reason.platform"],["rlogin_attempt_unavailable","workspace.rlogin.reason.platform"],

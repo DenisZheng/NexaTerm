@@ -48,3 +48,15 @@ fn sqlite_rlogin_does_not_persist_permission_or_secret_references_and_rejects_in
     assert_eq!(repo.connection_upsert(invalid,"bad").unwrap_err().code,"rlogin_config_unsupported");assert_eq!(secrets.0.load(Ordering::SeqCst),0);
     assert_eq!(repo.connection_get(&saved.id).unwrap().unwrap().rlogin,saved.rlogin);drop(repo);fs::remove_dir_all(root).unwrap();
 }
+
+#[test]
+fn rlogin_hostname_crud_sync_and_reopen_preserve_nonresolving_metadata() {
+    let root=root();let secrets=Arc::new(UnavailableSecrets::default());
+    let mut request=input();request.host="Desktop.Example.invalid.".into();
+    let mut repo=StorageRepository::open_root(&root,secrets.clone()).unwrap();let saved=repo.connection_upsert(request,"t").unwrap();
+    assert_eq!(saved.host,"Desktop.Example.invalid.");
+    let data=repo.export_sync_data().unwrap();assert_eq!(data.connections[0].host,saved.host);
+    repo.replace_sync_data(&data,false).unwrap();assert_eq!(repo.connection_get(&saved.id).unwrap().unwrap().host,saved.host);drop(repo);
+    let repo=StorageRepository::open_root(&root,secrets.clone()).unwrap();assert_eq!(repo.connection_get(&saved.id).unwrap().unwrap().host,saved.host);
+    assert_eq!(secrets.0.load(Ordering::SeqCst),0);drop(repo);fs::remove_dir_all(root).unwrap();
+}

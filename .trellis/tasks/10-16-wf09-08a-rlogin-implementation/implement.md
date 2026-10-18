@@ -109,3 +109,8 @@ ui-ux-pro-max已核对官方MIT来源并执行针对focus/modal与React异步cle
 ### 实际入口本轮进展（2026-10-18）
 
 #75配置存储完整CI645与#76表单/attempt组件完整CI646已通过。当前入口已实现：实际菜单/协议表单、保存后立即连接、saved/new/split/batch、冻结许可队列、动态owner、取消、重连、失败重试关闭、工作区恢复不自动连接，以及公共终端/日志/历史/宏/广播/Files/AI隔离。Unix terminal_available按exact_flush启用，Windows继续真实不可用。实际TerminalPanel私有解析交付、输入/原始字节/resize复用有界controller；EOF保留既有显示，pane卸载只detach。新增45项前端行为回归及8项真实shell脚本回归；本地全量1104通过/1既有todo。完整build/source及GitHub三平台CI证据在research/mounted-entry-evidence.md收口；未将组件测试称为原生WebView/主题/真实rlogind互通。
+
+
+## L1 DNS 接入（2026-10-18 当前）
+
+沿用已批准协议计划和L01–L03/C01–C02，#77真实数值地址入口CI运行期间独立推进。保存/导入只校验ASCII hostname或IPv4，不执行解析。复用现有OS resolver策略但在Rlogin session manager内共享独立4项额度；取消/截止阻止后续拨号，不能因丢弃JoinHandle释放尚未结束的blocking worker额度。DNS与connect/握手共享15s截止，OS调用无法强制中断时保留真实清理状态和配额，等实际完成再完成close，不虚报即刻结束。固定首个有效IPv4，仅一次解析/拨号，不自动回退其它端点；不引入依赖、提权或高端口。先落实backend/rlogin-dns.md，随后端点/有界resolver/actor、配置与typed DTO、UI字段/固定错误、native/full CI。Windows仍受exact flush缺口限制。

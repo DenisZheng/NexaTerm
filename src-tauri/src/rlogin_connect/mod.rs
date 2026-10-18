@@ -28,19 +28,23 @@ impl From<ProtocolError> for ConnectError { fn from(error: ProtocolError) -> Sel
 struct Prepared { request: Vec<u8>, window: WindowSize }
 impl ConnectOptions<'_> {
     fn prepare(&self) -> Result<Prepared, ConnectError> {
-        let request = encode_request(self.local_user, self.remote_user, self.terminal, self.speed)?;
-        if [self.local_user, self.remote_user].iter().any(|user| user.len() > BSD_USER_BYTES) {
-            return Err(ProtocolError::InvalidUser.into());
-        }
-        if self.terminal.len() + 1 + self.speed.to_string().len() > BSD_TERMINAL_SPEED_BYTES {
-            return Err(ProtocolError::InvalidTerminal.into());
-        }
-        let w = self.window; window_size_frame(w.rows, w.columns, w.x_pixels, w.y_pixels)?;
+        let request = prepare_fields(self.local_user, self.remote_user, self.terminal, self.speed, self.window)?;
         if !valid(self.local) || !valid(*self.target.ip()) || self.target.port() == 0 {
             return Err(SocketError::InvalidAddress.into());
         }
-        Ok(Prepared { request, window: w })
+        Ok(Prepared { request, window: self.window })
     }
+}
+pub(crate) fn prepare_fields(local_user: &str, remote_user: &str, terminal: &str, speed: u32, window: WindowSize) -> Result<Vec<u8>, ConnectError> {
+    let request = encode_request(local_user, remote_user, terminal, speed)?;
+    if [local_user, remote_user].iter().any(|user| user.len() > BSD_USER_BYTES) {
+        return Err(ProtocolError::InvalidUser.into());
+    }
+    if terminal.len() + 1 + speed.to_string().len() > BSD_TERMINAL_SPEED_BYTES {
+        return Err(ProtocolError::InvalidTerminal.into());
+    }
+    let w = window; window_size_frame(w.rows, w.columns, w.x_pixels, w.y_pixels)?;
+    Ok(request)
 }
 pub async fn connect(options: ConnectOptions<'_>, cancel: &AtomicBool) -> Result<RloginReader, ConnectError> {
     connect_until(options, cancel, Instant::now() + CONNECT_TIMEOUT).await

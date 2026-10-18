@@ -6,7 +6,10 @@ use std::sync::atomic::Ordering;
 use tokio::sync::oneshot;
 
 pub(super) async fn connect(mut lease: WorkerLease, request: SessionRequest, ready: oneshot::Sender<Result<(), SessionError>>) {
-    let connected = rlogin_connect::connect_until(request.options(), &lease.state.cancel, lease.deadline).await;
+    let connected = match lease.resolve(&request.target).await {
+        Ok(target) => rlogin_connect::connect_until(request.options(target), &lease.state.cancel, lease.deadline).await.map_err(SessionError::from),
+        Err(error) => Err(error),
+    };
     drop(request);
     match connected {
         Ok(reader) => established(reader, lease, Some(ready)).await,
