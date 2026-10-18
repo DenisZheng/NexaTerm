@@ -34,7 +34,7 @@ pub(super) fn validate_rlogin_profile_input(input:&ConnectionProfileInput,host:S
     config.local_address=config.local_address.trim().to_owned(); config.local_user=config.local_user.trim().to_owned();
     config.terminal=config.terminal.trim().to_owned(); let username=input.username.trim().to_owned();
     let address=|value:&str|value.parse::<std::net::Ipv4Addr>().map_err(|_|rlogin_config_error("legacy_socket_invalid_address"));
-    crate::rlogin_session::Destination::parse(&host,input.port).map_err(|error|rlogin_config_error(error.code()))?;
+    crate::rlogin_session::Destination::parse(&host,input.port).map_err(|error|rlogin_config_error(crate::rlogin_session::SessionError::from(error).code()))?;
     let local=address(&config.local_address)?;
     if !crate::legacy_socket::valid(local) { return Err(rlogin_config_error("legacy_socket_invalid_address")); }
     crate::rlogin_connect::prepare_fields(&config.local_user,&username,&config.terminal,config.speed,
