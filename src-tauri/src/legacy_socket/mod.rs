@@ -127,6 +127,10 @@ impl NativeSocket {
         if bytes.len() > MAX_CHUNK { return Err(SocketError::InvalidChunk); }
         progress(self.stream.write(bytes))
     }
+    /// 仅结束本端输入；Rsh 仍须读取主连接 stdout 和次连接 stderr。
+    pub(crate) fn shutdown_write(&self) -> Result<(), SocketError> {
+        self.stream.shutdown(Shutdown::Write).map_err(|_| SocketError::IoFailed)
+    }
     pub fn close(self) -> Result<(), SocketError> {
         match self.stream.shutdown(Shutdown::Both) {
             Ok(()) => Ok(()), Err(error) if error.kind() == io::ErrorKind::NotConnected => Ok(()), Err(_) => Err(SocketError::IoFailed),

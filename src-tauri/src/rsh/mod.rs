@@ -1,5 +1,9 @@
 //! BSD wire/profile core. No external client, IPC, local execution or exit-code claim.
 use std::net::{Ipv4Addr, SocketAddr};
+mod connect;
+mod transport;
+pub use connect::{connect, ConnectOptions, NativeError};
+pub use transport::RshTransport;
 pub const DEFAULT_PORT: u16 = 514;
 pub const MAX_USER_BYTES: usize = 16;
 pub const MAX_COMMAND_BYTES: usize = 64 * 1024;

@@ -5,3 +5,4 @@
 {"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Shared component, prototype and lazy module conventions"}
 {"file": ".trellis/spec/backend/security-evidence.md", "reason": "Preserve full scanner and evidence gates"}
 {"file":".trellis/spec/backend/rsh-protocol.md","reason":"S0 BSD framing, callback ownership and fixed signal/ACK contracts"}
+{"file":".trellis/spec/backend/rsh-native.md","reason":"S1 actual dual reserved streams, cancellation, half-close and signal contracts"}
