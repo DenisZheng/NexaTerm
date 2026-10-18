@@ -114,3 +114,6 @@ ui-ux-pro-max已核对官方MIT来源并执行针对focus/modal与React异步cle
 ## L1 DNS 接入（2026-10-18 当前）
 
 沿用已批准协议计划和L01–L03/C01–C02，#77真实数值地址入口CI运行期间独立推进。保存/导入只校验ASCII hostname或IPv4，不执行解析。复用现有OS resolver策略但在Rlogin session manager内共享独立4项额度；取消/截止阻止后续拨号，不能因丢弃JoinHandle释放尚未结束的blocking worker额度。DNS与connect/握手共享15s截止，OS调用无法强制中断时保留真实清理状态和配额，等实际完成再完成close，不虚报即刻结束。固定首个有效IPv4，仅一次解析/拨号，不自动回退其它端点；不引入依赖、提权或高端口。先落实backend/rlogin-dns.md，随后端点/有界resolver/actor、配置与typed DTO、UI字段/固定错误、native/full CI。Windows仍受exact flush缺口限制。
+
+
+DNS执行e491646，Draft #78：完整CI651全部7执行job与原生32全部3平台通过，Rust573/574/573（Linux另4既有ignored）、前端1105/1todo、脚本188/3envskip。DNS切片自动化完成，真实服务端/WebView与Windows精确边界仍待完成；Rsh S0独立Draft #79已启动，不归档整个Rlogin或父任务。
