@@ -4,3 +4,4 @@
 {"file": ".trellis/spec/backend/tauri-command-contracts.md", "reason": "Review actual signatures and owner validation before registering IPC"}
 {"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Shared component, prototype and lazy module conventions"}
 {"file": ".trellis/spec/backend/security-evidence.md", "reason": "Preserve full scanner and evidence gates"}
+{"file":".trellis/spec/backend/rsh-protocol.md","reason":"S0 BSD framing, callback ownership and fixed signal/ACK contracts"}

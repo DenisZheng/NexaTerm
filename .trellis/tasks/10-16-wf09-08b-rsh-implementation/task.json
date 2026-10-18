@@ -3,7 +3,7 @@
   "name": "wf09-08b-rsh-implementation",
   "title": "WF-09-08B native Rsh implementation",
   "description": "",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": "fullstack",
   "scope": null,
   "package": null,
@@ -12,8 +12,8 @@
   "assignee": "codex",
   "createdAt": "2026-10-16",
   "completedAt": null,
-  "branch": null,
-  "base_branch": "docs/wf09-protocol-implementation-plan",
+  "branch": "feat/wf09-08b-rsh-wire",
+  "base_branch": "feat/wf09-08a-rlogin-dns",
   "worktree_path": null,
   "commit": null,
   "pr_url": null,
@@ -24,6 +24,6 @@
     "docs/plans/WF09-PROTOCOL-IMPLEMENTATION-PLAN.md",
     "docs/WORKFLOW_SPEC.md"
   ],
-  "notes": "Implementation planned (S0–S2); explicitly not started in the documentation-only turn. Acceptance: S01–S03、C01/C02.",
+  "notes": "S0 native wire/profile core started after Rlogin mounted entry verified; hostname DNS native32 passed all3, full CI651 running. No Rsh IPC/UI capability until actual dual-stream owner is connected.",
   "meta": {}
 }
