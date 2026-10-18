@@ -112,7 +112,7 @@ export function NewSessionMenuItems({ variant = "dropdown", ...props }: NewSessi
           className="dropdown-menu-item"
           onSelect={() => props.onCreateConnection(entry.protocol)}
         >
-          {entry.protocol === "telnet" ? (
+          {entry.protocol !== "serial" ? (
             <TerminalSquare className="ui-icon" aria-hidden="true" />
           ) : (
             <Cable className="ui-icon" aria-hidden="true" />

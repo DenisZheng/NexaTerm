@@ -3,10 +3,11 @@ import { describe, expect, it } from "vitest";
 import { newSessionCharacterEntries } from "./newSessionCharacterEntries";
 
 describe("WF-05B character new-session entries", () => {
-  it("exposes Telnet and Serial as explicit protocol presets", () => {
+  it("exposes Telnet, Serial and native Rlogin as explicit protocol presets", () => {
     expect(newSessionCharacterEntries).toEqual([
       { labelKey: "newSession.telnet", protocol: "telnet" },
       { labelKey: "newSession.serial", protocol: "serial" },
+      { labelKey: "newSession.rlogin", protocol: "rlogin" },
     ]);
   });
 

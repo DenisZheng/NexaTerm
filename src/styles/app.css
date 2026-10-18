@@ -11144,6 +11144,24 @@ button {
   color: #d1d5db;
 }
 
+/* Shared compact instance status/actions above a privately owned terminal. */
+.terminal-instance-bar {
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--mx-line);
+  color: var(--mx-text);
+  background: var(--mx-panel-soft);
+  font-size: 12px;
+}
+.terminal-instance-bar.is-error { color: var(--mx-danger); }
+.terminal-instance-bar-copy { min-width: 0; overflow-wrap: anywhere; }
+.terminal-instance-bar .local-terminal-status-actions { padding-top: 0; flex-shrink: 0; }
+
 .terminal-panel.is-hidden {
   visibility: hidden;
   pointer-events: none;
@@ -16169,6 +16187,7 @@ body[data-platform="macos"] .dialog-backdrop {
 }
 
 .confirm-dialog-description {
+  white-space: pre-line;
   margin: 0;
   color: var(--mx-muted);
   font-size: 12px;

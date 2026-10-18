@@ -244,6 +244,7 @@ function resolveGroupPath(groups: readonly BatchConnectGroup[], groupId: string)
 function requiresInteractiveCredential(
   connection: Pick<ConnectionProfile, "credential_mode" | "protocol" | "rdp" | "vnc">,
 ) {
+  if (connection.protocol === "rlogin") return true;
   if (connection.protocol === "rdp") {
     return (
       connection.rdp?.security.credential_mode === "prompt" ||

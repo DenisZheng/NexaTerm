@@ -12,11 +12,11 @@
   "assignee": "codex",
   "createdAt": "2026-10-16",
   "completedAt": null,
-  "branch": "feat/wf09-08a-rlogin-ui",
-  "base_branch": "feat/wf09-08a-rlogin-connections",
+  "branch": "feat/wf09-08a-rlogin-entry",
+  "base_branch": "feat/wf09-08a-rlogin-ui",
   "worktree_path": null,
-  "commit": "9a92f487f806519789453b7b4febf1ff1e4e10e0",
-  "pr_url": "https://github.com/DenisZheng/NexaTerm/pull/76",
+  "commit": null,
+  "pr_url": null,
   "subtasks": [],
   "children": [],
   "parent": "09-23-nexaterm-workflow-mainline",
@@ -24,6 +24,6 @@
     "docs/plans/WF09-PROTOCOL-IMPLEMENTATION-PLAN.md",
     "docs/WORKFLOW_SPEC.md"
   ],
-  "notes": "PR76 UI foundation verified by full CI646 (7 executed jobs success): frontend1059/1 existingtodo, Rust560/561/560, scripts180/3 existingenvironment skips. PR75 storage verified CI645. Task/L1 remain in_progress; actual Workspace/TerminalPanel entry continues on next stacked branch; capability disabled. No merge/release.",
+  "notes": "Mounted native workspace entry implemented; Unix terminal capability follows exact_flush, Windows unavailable. 45 added frontend tests plus real-shell lifecycle/privacy regressions pass locally; full CI pending Draft PR. DNS, Windows urgent boundary and real rlogind interop remain in_progress. No merge/release.",
   "meta": {}
 }

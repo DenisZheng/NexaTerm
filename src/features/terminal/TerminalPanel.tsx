@@ -1,3 +1,6 @@
+import { rloginReasonLabel } from "./rloginStatus";
+import { mountRloginTerminal } from "./rloginMountedTerminal";
+import type { RloginTerminalAdapter, RloginTerminalSurface } from "./rloginMountedTerminal";
 import type { TerminalKeywordRule } from "./terminalKeywordRules";
 import { isSensitiveCommand } from "../commands/commandPrivacy";
 import { FitAddon } from "@xterm/addon-fit";
@@ -13,7 +16,7 @@ import {
   RefreshCw,
   ScanText,
 } from "lucide-react";
-import { type CSSProperties, useEffect, useRef, useState } from "react";
+import { type CSSProperties, type ReactNode, useEffect, useRef, useState } from "react";
 import "@xterm/xterm/css/xterm.css";
 
 import { useI18n, t as currentT } from "../../shared/i18n";
@@ -70,7 +73,9 @@ const TERMINAL_RESIZE_SYNC_DEBOUNCE_MS = 120;
 
 export type TerminalPromptDirectorySnapshotReader = () => string | null;
 
-interface TerminalPanelProps {
+export interface TerminalPanelProps {
+  rlogin?: RloginTerminalAdapter;
+  rloginHeader?: ReactNode;
   active: boolean;
   className?: string;
   clearRequestId?: number;
@@ -120,6 +125,8 @@ interface TerminalPanelProps {
 }
 
 export function TerminalPanel({
+  rlogin,
+  rloginHeader,
   active,
   className,
   clearRequestId = 0,
@@ -238,21 +245,24 @@ export function TerminalPanel({
     listenersReadyRef.current = listenersReady;
   }, [listenersReady]);
 
-  useEffect(() => {
-    onStatusChange(tabId, status);
-  }, [onStatusChange, status, tabId]);
+  const [rloginRendererError, setRloginRendererError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!rlogin) onStatusChange(tabId, status);
+  }, [onStatusChange, status, tabId, rlogin]);
+
+  useEffect(() => {
+    if (rlogin) return;
     const homeDirectory = inferRemoteHomeDirectory(connection?.username);
     homeDirectoryRef.current = homeDirectory;
     inputDirectoryStateRef.current = createTerminalInputDirectoryState({
       currentDirectory: null,
       homeDirectory,
     });
-  }, [connection?.id, connection?.username]);
+  }, [connection?.id, connection?.username, rlogin]);
 
   useEffect(() => {
-    if (!onPromptDirectorySnapshotChange) {
+    if (rlogin || !onPromptDirectorySnapshotChange) {
       return;
     }
 
@@ -264,7 +274,7 @@ export function TerminalPanel({
       ),
     );
     return () => onPromptDirectorySnapshotChange(tabId, null);
-  }, [onPromptDirectorySnapshotChange, tabId]);
+  }, [onPromptDirectorySnapshotChange, tabId, rlogin]);
 
   useEffect(() => {
     if (!hostRef.current) {
@@ -327,7 +337,7 @@ export function TerminalPanel({
       }, 0);
       void readTextFromClipboard()
         .then((text) => {
-          if (text) {
+          if (text && terminalRef.current === terminal) {
             terminal.paste(text);
           }
         })
@@ -341,8 +351,12 @@ export function TerminalPanel({
         window.setTimeout(() => {
           suppressNextNativePasteRef.current = false;
         }, 0);
+        const native = rlogin;
         const activeSessionId = sessionIdRef.current;
-        if (activeSessionId) {
+        if (native) {
+          // The dedicated owner exposes fixed failures; input never enters public history/macro hooks.
+          if (native.inputAvailable()) void native.controller.send("\x16").catch(() => {});
+        } else if (activeSessionId) {
           void terminalWrite(activeSessionId, "\x16").catch(() => {});
         }
         return false;
@@ -365,7 +379,48 @@ export function TerminalPanel({
       rules: keywordRules,
     });
     semanticHighlighterRef.current = semanticHighlighter;
+    const searchController = createTerminalSearchController(searchAddon, terminal, setSearchResult);
+    searchControllerRef.current = searchController;
     fitAndSyncTerminalSize(terminal, fitAddon, sessionIdRef.current, lastSyncedSizeRef);
+    const native = rlogin;
+    if (native) {
+      setRloginRendererError(null);
+      // Native output reaches xterm/parser credit before any generic queue, listener or history setup.
+      const surface: RloginTerminalSurface = {
+        get cols() { return terminal.cols; }, get rows() { return terminal.rows; },
+        write: (text, onParsed) => terminal.write(text, onParsed),
+        dispose: () => { searchController.dispose(); semanticHighlighter.dispose(); terminal.dispose(); },
+        onData: (callback) => terminal.onData(callback), onBinary: (callback) => terminal.onBinary(callback),
+        onResize: (callback) => terminal.onResize(callback),
+      };
+      let detach: () => void;
+      try {
+        detach = mountRloginTerminal(surface, native, {
+          canResize: () => activeRef.current,
+          onFailure: code => setRloginRendererError(code),
+        });
+      } catch {
+        hostRef.current?.removeEventListener("paste", blockSuppressedNativePaste, true);
+        hostRef.current?.removeEventListener("keydown", interceptCtrlVPaste, true);
+        terminalRef.current = null; fitAddonRef.current = null;
+        searchControllerRef.current = null; semanticHighlighterRef.current = null;
+        setRloginRendererError("rlogin_terminal_renderer_failed");
+        return;
+      }
+      const observer = new ResizeObserver(() => {
+        if (activeRef.current) scheduleFitAndSyncTerminalSize(terminal, fitAddon, null, lastSyncedSizeRef, pendingResizeTimerRef);
+      });
+      observer.observe(hostRef.current);
+      return () => {
+        observer.disconnect(); clearPendingTerminalResizeSync(pendingResizeTimerRef);
+        suppressNextNativePasteRef.current = false;
+        hostRef.current?.removeEventListener("paste", blockSuppressedNativePaste, true);
+        hostRef.current?.removeEventListener("keydown", interceptCtrlVPaste, true);
+        detach();
+        terminalRef.current = null; fitAddonRef.current = null;
+        searchControllerRef.current = null; semanticHighlighterRef.current = null;
+      };
+    }
     startedRef.current = false;
     initialOutputWrittenLengthRef.current = 0;
     startupOutputBufferRef.current = "";
@@ -412,8 +467,6 @@ export function TerminalPanel({
     };
 
     terminalOutputWriterRef.current = writeDecodedOutput;
-    const searchController = createTerminalSearchController(searchAddon, terminal, setSearchResult);
-    searchControllerRef.current = searchController;
     if (startupOutputBufferingRef.current) {
       startupOutputFlushTimerRef.current = window.setTimeout(
         flushStartupOutput,
@@ -606,7 +659,7 @@ export function TerminalPanel({
       searchControllerRef.current = null;
       semanticHighlighterRef.current = null;
     };
-  }, [tabId]);
+  }, [tabId, rlogin?.controller]);
 
   useEffect(() => {
     const refresh = () => searchControllerRef.current?.configure(
@@ -648,7 +701,7 @@ export function TerminalPanel({
 
   useEffect(() => {
     const terminal = terminalRef.current;
-    if (!terminal || !initialSessionId) {
+    if (rlogin || !terminal || !initialSessionId) {
       return;
     }
 
@@ -666,7 +719,7 @@ export function TerminalPanel({
       terminal.write(decoded);
     }
     initialOutputWrittenLengthRef.current = initialOutput.length;
-  }, [initialOutput, initialSessionId]);
+  }, [initialOutput, initialSessionId, rlogin]);
 
   useEffect(() => {
     const terminal = terminalRef.current;
@@ -727,6 +780,7 @@ export function TerminalPanel({
       !terminal ||
       !fitAddon ||
       !connection ||
+      rlogin ||
       !autoConnect ||
       !listenersReady ||
       startedRef.current ||
@@ -773,7 +827,7 @@ export function TerminalPanel({
         setStatus("连接失败");
         terminal.writeln(`\r\n${currentT("terminal.output.connectFailed", { message: formatError(error) })}`);
       });
-  }, [autoConnect, connection, listenersReady, tabId]);
+  }, [autoConnect, connection, listenersReady, tabId, rlogin]);
 
   useEffect(() => {
     activeRef.current = active;
@@ -799,8 +853,8 @@ export function TerminalPanel({
   }, [layoutRevision, visible]);
 
   const hasContextMenuSelection = contextMenuSelection.trim().length > 0;
-  const canPasteFromMenu = Boolean(sessionId);
-  const canReconnectFromMenu = Boolean(connection) && hasTauriRuntime() && listenersReady && !reconnecting;
+  const canPasteFromMenu = rlogin ? rlogin.inputAvailable() : Boolean(sessionId);
+  const canReconnectFromMenu = rlogin ? Boolean(rlogin.requestReconnect) && (rlogin.reconnectAvailable?.() ?? true) : Boolean(connection) && hasTauriRuntime() && listenersReady && !reconnecting;
 
   function copyContextMenuSelection() {
     if (!contextMenuSelection) {
@@ -810,13 +864,14 @@ export function TerminalPanel({
   }
 
   function pasteFromContextMenu() {
-    if (!sessionId) {
+    if (!canPasteFromMenu) {
       return;
     }
+    const target = terminalRef.current;
     void readTextFromClipboard()
       .then((text) => {
-        if (text) {
-          terminalRef.current?.paste(text);
+        if (text && target && terminalRef.current === target && (!rlogin || rlogin.inputAvailable())) {
+          target.paste(text);
         }
       })
       .catch(() => {});
@@ -827,6 +882,7 @@ export function TerminalPanel({
   }
 
   function sendContextMenuSelectionToAi() {
+    if (rlogin) return;
     const selectedText = contextMenuSelection.trim();
     if (selectedText) {
       onSendSelectionToAi?.(tabId, selectedText);
@@ -834,6 +890,7 @@ export function TerminalPanel({
   }
 
   async function reconnectCurrentTerminal() {
+    if (rlogin) { rlogin.requestReconnect?.(); return; }
     const terminal = terminalRef.current;
     const fitAddon = fitAddonRef.current;
     if (!terminal || !fitAddon || !connection || !hasTauriRuntime() || reconnectingRef.current) {
@@ -927,7 +984,8 @@ export function TerminalPanel({
       style={style}
       onPointerDown={onPaneFocus}
     >
-      <TerminalLogControls sessionId={sessionId} supported={logSupported} />
+      {rlogin ? rloginHeader ?? <div className="terminal-instance-bar">Rlogin</div> : <TerminalLogControls sessionId={sessionId} supported={logSupported} />}
+      {rlogin && rloginRendererError ? <div className="terminal-instance-bar is-error" role="alert">{rloginReasonLabel(rloginRendererError, t)}</div> : null}
       {searchOpen ? (
         <TerminalSearchBar query={searchQuery} caseSensitive={searchCaseSensitive} wholeWord={searchWholeWord}
           result={searchResult} onQueryChange={(query) => onSearchQueryChange?.(tabId, query)}
@@ -971,7 +1029,7 @@ export function TerminalPanel({
               <ScanText className="ui-icon" aria-hidden="true" />
               <span>{t("terminal.menu.selectAll")}</span>
             </ContextMenu.Item>
-            {connection ? (
+            {connection || rlogin?.requestReconnect ? (
               <>
                 <ContextMenu.Separator className="context-menu-separator" />
                 <ContextMenu.Item
@@ -987,7 +1045,7 @@ export function TerminalPanel({
             <ContextMenu.Separator className="context-menu-separator" />
             <ContextMenu.Item
               className="context-menu-item"
-              disabled={!hasContextMenuSelection || !onSendSelectionToAi}
+              disabled={Boolean(rlogin) || !hasContextMenuSelection || !onSendSelectionToAi}
               onSelect={sendContextMenuSelectionToAi}
             >
               <Bot className="ui-icon" aria-hidden="true" />

@@ -40,7 +40,7 @@ fn capability_and_boundary_deny_foreign_labels_before_any_operation() {
         assert_eq!(capability(label).err().unwrap(),SessionError::Denied);
     }
     let cap=capability("main").unwrap();
-    assert!(cap.native_core); assert!(!cap.terminal_available && !cap.dns_available);
+    assert!(cap.native_core); assert_eq!(cap.terminal_available,cfg!(unix)); assert!(!cap.dns_available);
     assert_eq!(cap.exact_flush,cfg!(unix)); assert_eq!(cap.runtime_available,cfg!(unix));
     assert_eq!(cap.reason,if cfg!(unix) {None} else {Some("legacy_socket_urgent_boundary_unavailable")});
 }

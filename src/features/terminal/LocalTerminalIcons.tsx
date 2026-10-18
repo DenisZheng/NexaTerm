@@ -56,7 +56,7 @@ export function LocalTerminalIcon({
     return <MonitorCog className={className} aria-hidden="true" />;
   }
 
-  if (kind === "telnet") {
+  if (kind === "telnet" || kind === "rlogin") {
     return <TerminalSquare className={className} aria-hidden="true" />;
   }
 

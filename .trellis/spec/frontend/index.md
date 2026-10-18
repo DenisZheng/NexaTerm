@@ -83,10 +83,14 @@ The goal is to help AI assistants and new team members understand how YOUR proje
 
 - [Loopback File Service](./loopback-file-service.md) — local-only file serving, transient ownership and explicit clipboard flow.
 
-- [Rlogin Delivery](./rlogin-delivery.md) — canonical byte DTOs, one credited frame, flush/render boundary and actual close barrier; mounted UI pending.
+- [Rlogin Delivery](./rlogin-delivery.md) — canonical byte DTOs, one credited frame, flush/render boundary and actual close barrier; actual mounted binding lives in rlogin-mounted-terminal.md.
 
-- [Rlogin Terminal IO](./rlogin-terminal.md) — frozen strict encoding, bounded input and renderer lifecycle; mounted UI pending.
+- [Rlogin Terminal IO](./rlogin-terminal.md) — frozen strict encoding, bounded input and renderer lifecycle; actual mounted binding lives in rlogin-mounted-terminal.md.
 
 - [Rlogin Connections](./rlogin-connections.md) — independent saved config, prototype/form and attempt ownership contracts.
 
 - [Rlogin Attempt](./rlogin-attempt.md) — per-run consent, late reserve/start cancellation and retryable native cleanup.
+
+- [Rlogin Mounted Terminal](./rlogin-mounted-terminal.md) — private actual xterm binding; native workspace entry, actual xterm isolation and fixed failure rendering.
+
+- [Rlogin Workspace](./rlogin-workspace.md) — transient permits, native logical instances and restore/privacy boundaries.

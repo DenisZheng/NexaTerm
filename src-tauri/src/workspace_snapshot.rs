@@ -87,6 +87,8 @@ fn is_sensitive_key(key: &str) -> bool {
             | "privatekey"
             | "privatekeypassphrase"
             | "sessionid"
+            | "reservationid"
+            | "allowplaintext"
             | "x11cookie"
             | "runtimecredentials"
             | "broadcaststate"
@@ -128,8 +130,16 @@ mod tests {
     }
 
     #[test]
+    fn accepts_logical_rlogin_instance_without_runtime_or_consent() {
+        validate_workspace_snapshot_value(&json!({"version": 1, "instances": [{
+            "id": "local:logical-rlogin", "kind": "local", "source": "rlogin", "ordinal": 0,
+            "target": {"kind": "profile", "profileId": "saved-rlogin"}
+        }]})).unwrap();
+    }
+
+    #[test]
     fn rejects_runtime_and_secret_fields_recursively() {
-        for key in ["password", "sessionId", "private_key", "x11Cookie", "runtime_credentials", "broadcastState", "token"] {
+        for key in ["password", "sessionId", "private_key", "x11Cookie", "runtime_credentials", "broadcastState", "token", "reservation_id", "allow_plaintext", "allowPlaintext"] {
             let mut nested = serde_json::Map::new();
             nested.insert(key.to_string(), json!("forbidden"));
             let value = json!({"version": 1, "nested": nested});

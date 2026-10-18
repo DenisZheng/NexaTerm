@@ -39,6 +39,11 @@ describe("Rlogin workspace attempt lifecycle",()=>{
     const f=fixture();f.consent.mockResolvedValue(false);await f.owner.connect(f.profile,f.window);
     expect(f.owner.getSnapshot().phase).toBe("cancelled");expect(f.client.reserve).not.toHaveBeenCalled();expect(f.client.close).not.toHaveBeenCalled();
   });
+  it("retains a fixed consent infrastructure failure instead of treating it as user approval",async()=>{
+    const f=fixture();f.consent.mockRejectedValue({code:"rlogin_session_busy",raw_message:"private consent fixture"});await f.owner.connect(f.profile,f.window);
+    expect(f.owner.getSnapshot()).toMatchObject({phase:"failed",reason:"rlogin_session_busy"});expect(f.client.reserve).not.toHaveBeenCalled();
+    expect(JSON.stringify(f.owner.getSnapshot())).not.toContain("private");
+  });
   it("cancels an unresolved consent and ignores its late approval",async()=>{
     const f=fixture(),allow=gate(false);f.consent.mockReturnValue(allow.promise);const connected=f.owner.connect(f.profile,f.window);await turn();
     const signal=f.consent.mock.calls[0][1];await f.owner.cancel();await connected;expect(signal.aborted).toBe(true);
@@ -80,11 +85,11 @@ describe("Rlogin workspace attempt lifecycle",()=>{
   });
   it("coalesces connect and keeps one timer/poll without publishing unchanged snapshots",async()=>{
     const f=fixture(),capability=await f.client.capabilities(),cap=gate(capability);f.client.capabilities.mockReturnValueOnce(cap.promise);
-    const first=f.owner.connect(f.profile,f.window);expect(f.owner.connect(f.profile,f.window)).toBe(first);cap.resolve(capability);await first;
+    const first=f.owner.connect(f.profile,f.window);expect(f.owner.connect(f.profile,f.window)).toBe(first);cap.resolve(capability);await first;expect(f.owner.getSnapshot().phase).toBe("initial_exchange_ready");
     const read=gate(reply());f.client.read.mockReturnValueOnce(read.promise);const notify=vi.fn();f.owner.subscribe(notify);const stable=f.owner.getSnapshot();
     expect(vi.getTimerCount()).toBe(1);await vi.advanceTimersByTimeAsync(25);await vi.advanceTimersByTimeAsync(1000);expect(f.client.read).toHaveBeenCalledTimes(1);expect(vi.getTimerCount()).toBe(0);
     read.resolve(reply());await turn();expect(f.owner.getSnapshot()).toBe(stable);expect(notify).not.toHaveBeenCalled();expect(vi.getTimerCount()).toBe(1);
-    f.client.read.mockResolvedValue(reply({phase:"initial_exchange_ready"}));await vi.advanceTimersByTimeAsync(25);expect(f.owner.getSnapshot().phase).toBe("initial_exchange_ready");expect(notify).toHaveBeenCalledTimes(1);
+    f.client.read.mockResolvedValue(reply({phase:"initial_exchange_ready"}));await vi.advanceTimersByTimeAsync(25);expect(f.owner.getSnapshot().phase).toBe("initial_exchange_ready");expect(notify).not.toHaveBeenCalled();
     await f.owner.close();expect(vi.getTimerCount()).toBe(0);
   });
   it("reports EOF as closed without inventing authentication or exit status",async()=>{

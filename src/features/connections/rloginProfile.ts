@@ -16,3 +16,13 @@ export function normalizeRloginInput(input: ConnectionProfileInput | ConnectionP
     remote_os_id: trim(input.remote_os_id), remote_os_name: trim(input.remote_os_name), remote_os_version: trim(input.remote_os_version),
   };
 }
+
+/** Pin before lazy loading/cleanup; copy only metadata and never carry SSH secrets. */
+export function pinRloginProfile(profile:ConnectionProfile):ConnectionProfile {
+  if(profile.protocol!=="rlogin" || !profile.rlogin)throw Error("rlogin_entry_invalid_config");
+  const input=normalizeRloginInput(profile),config=input.rlogin;
+  if(!config)throw Error("rlogin_entry_invalid_config");
+  return Object.freeze({...input,id:profile.id,name:input.name || profile.name,protocol:"rlogin",credential_mode:"prompt",
+    proxy:Object.freeze({kind:"none"}),jump:Object.freeze({kind:"none"}),advanced:Object.freeze({...input.advanced}),
+    rlogin:Object.freeze({...config}),is_favorite:profile.is_favorite,created_at:profile.created_at,updated_at:profile.updated_at});
+}
