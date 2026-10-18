@@ -7,6 +7,7 @@ use std::time::{Duration, Instant};
 use tokio::net::{TcpListener, TcpSocket};
 mod platform;
 #[cfg(test)] mod tests;
+#[cfg(all(test, windows))] mod windows_probe;
 #[cfg(test)] pub(crate) mod fixture;
 pub const MAX_CHUNK: usize = 32 * 1024;
 pub const CONNECT_TIMEOUT: Duration = Duration::from_secs(15);
