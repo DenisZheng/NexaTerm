@@ -1,4 +1,4 @@
-//! 仅自造loopback数据的原生API对照；观察结果不启用生产精确flush能力。
+//! 自造loopback数据的原生API反例；不能将观察/字节保留当成精确flush通过。
 use super::{fixture::{pair, until}, platform, send_urgent_fixture, NativeSocket};
 use std::{io::{self, Write}, net::{Shutdown, TcpStream}, os::windows::io::AsRawSocket};
 use windows_sys::Win32::Networking::WinSock::*;
@@ -28,6 +28,18 @@ fn receive(api: Api, stream: &TcpStream, bytes: &mut [u8], input_flags: u32) -> 
     Ok((count, flags))
 }
 
+fn ioctl_mark(stream: &TcpStream) -> io::Result<bool> {
+    let mut mark = 0_u32;
+    let mut returned = 0_u32;
+    let result = unsafe {
+        WSAIoctl(stream.as_raw_socket() as _, SIOCATMARK as _, std::ptr::null(), 0,
+            (&mut mark as *mut u32).cast(), std::mem::size_of_val(&mark) as _,
+            &mut returned, std::ptr::null_mut(), None)
+    };
+    if result == SOCKET_ERROR { Err(io::Error::from_raw_os_error(unsafe { WSAGetLastError() })) }
+    else { Ok(mark != 0) }
+}
+
 fn observe(api: Api, inline: bool, peek: bool, chunk: usize) {
     let (socket, mut peer) = pair();
     if inline { platform::inline_fixture(&socket.stream).unwrap(); }
@@ -52,10 +64,12 @@ fn observe(api: Api, inline: bool, peek: bool, chunk: usize) {
         let mark = platform::at_mark(&socket.stream).unwrap();
         match receive(api, &socket.stream, &mut bytes[..chunk], 0) {
             Ok((0, flags)) => {
+                assert_eq!(flags, 0, "provider changed; re-evaluate the exact-boundary adapter");
                 observations.push((output.len(), 0, flags, mark));
                 Some(())
             },
             Ok((count, flags)) => {
+                assert_eq!(flags, 0, "provider changed; re-evaluate the exact-boundary adapter");
                 observations.push((output.len(), count, flags, mark));
                 output.extend_from_slice(&bytes[..count]);
                 None
@@ -72,7 +86,7 @@ fn observe(api: Api, inline: bool, peek: bool, chunk: usize) {
 }
 
 #[test]
-fn windows_receive_apis_preserve_fixture_bytes_and_record_native_flags() {
+fn windows_receive_apis_preserve_bytes_without_returning_boundary_flags() {
     for api in [Api::Receive, Api::ReceiveEx] {
         for inline in [false, true] {
             let peeks: &[bool] = if api == Api::Receive { &[false, true] } else { &[false] };
@@ -108,7 +122,12 @@ fn windows_peek_observes_before_mark_at_mark_and_after_consumption() {
         let at = receive(Api::Receive, &socket.stream, &mut buffer, MSG_PEEK as _);
         let repeated = receive(Api::Receive, &socket.stream, &mut buffer, MSG_PEEK as _);
         let std_at = socket.stream.peek(&mut buffer);
-        println!("windows_peek_cursor prefix={prefix_len} at={at:?} repeated={repeated:?} std_at={std_at:?} mark={:?}", platform::at_mark(&socket.stream));
+        let ioctl_at = ioctl_mark(&socket.stream).unwrap();
+        println!("windows_peek_cursor prefix={prefix_len} at={at:?} repeated={repeated:?} std_at={std_at:?} mark={:?} ioctl_at={ioctl_at}", platform::at_mark(&socket.stream));
+        assert_eq!(at.unwrap(), (tail.len(), 0));
+        assert_eq!(repeated.unwrap(), (tail.len(), 0));
+        assert_eq!(std_at.unwrap(), tail.len());
+        assert!(!ioctl_at, "provider changed; re-evaluate the exact-boundary adapter");
         assert_eq!(socket.urgent(false).unwrap(), Some(0x82));
         let after = receive(Api::Receive, &socket.stream, &mut buffer, MSG_PEEK as _);
         println!("windows_peek_cursor prefix={prefix_len} after={after:?}");
@@ -122,5 +141,50 @@ fn windows_peek_observes_before_mark_at_mark_and_after_consumption() {
         });
         assert_eq!(received, tail);
         socket.close().unwrap();
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct Snapshot { queued: u32, peek: (usize, u32), bytes: Vec<u8>, ioctl_mark: bool, socket_mark: bool, urgent: u8 }
+
+fn indistinguishable_snapshot(urgent_first: bool, eof: bool) -> Snapshot {
+    let (mut socket, mut peer) = pair();
+    let ordinary = [0x82; 6];
+    if urgent_first { send_urgent_fixture(&peer, 0x82); }
+    peer.write_all(&ordinary).unwrap();
+    if !urgent_first { send_urgent_fixture(&peer, 0x82); }
+    if eof { peer.shutdown(Shutdown::Write).unwrap(); }
+    until(|| (socket.poll_ready().unwrap().urgent && platform::pending_bytes_fixture(&socket.stream).unwrap() == 6).then_some(()));
+    let mut buffer = [0; 128];
+    let peek = receive(Api::Receive, &socket.stream, &mut buffer, MSG_PEEK as _).unwrap();
+    let bytes = buffer[..peek.0].to_vec();
+    let snapshot = Snapshot {
+        queued: platform::pending_bytes_fixture(&socket.stream).unwrap(), peek, bytes,
+        ioctl_mark: ioctl_mark(&socket.stream).unwrap(), socket_mark: platform::at_mark(&socket.stream).unwrap(),
+        urgent: socket.urgent(true).unwrap().unwrap(),
+    };
+    assert_eq!(socket.urgent(false).unwrap(), Some(0x82));
+    let mut received = Vec::new();
+    until(|| {
+        if let Some(count) = socket.read(&mut buffer).unwrap() { assert_ne!(count, 0); received.extend_from_slice(&buffer[..count]); }
+        (received.len() == ordinary.len()).then_some(())
+    });
+    assert_eq!(received, ordinary, "observation must preserve all ordinary bytes");
+    if eof { until(|| socket.read(&mut buffer).unwrap().filter(|&count| count == 0)); }
+    socket.close().unwrap(); snapshot
+}
+
+#[test]
+fn windows_peek_and_both_mark_queries_cannot_distinguish_opposite_flush_boundaries() {
+    for eof in [false, true] {
+        // 正确flush分别应保留6字节/0字节；以下观察却完全相同，不能据此选择丢弃长度。
+        let urgent_before_all = indistinguishable_snapshot(true, eof);
+        let urgent_after_all = indistinguishable_snapshot(false, eof);
+        assert_eq!(urgent_before_all, urgent_after_all);
+        assert_eq!(urgent_before_all.peek, (6, 0));
+        assert_eq!(urgent_before_all.queued, 6);
+        assert!(!urgent_before_all.ioctl_mark && !urgent_before_all.socket_mark);
+        assert!(!NativeSocket::supports_urgent_boundary());
+        println!("windows_boundary_counterexample eof={eof} normal=6 pending_urgent=1 identical=true required_keep=6_or_0");
     }
 }
