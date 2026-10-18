@@ -1,6 +1,6 @@
 # WF-09-08B Rsh 原生协议实现
 
-状态：IN_PROGRESS（S0协议核已实现；当前S1双连接；尚无实际Rsh命令入口）。父任务：09-23-nexaterm-workflow-mainline。
+状态：IN_PROGRESS（S0协议核及S1双连接已通过原生/完整CI；S2 owner/UI待继续；尚无实际Rsh命令入口）。父任务：09-23-nexaterm-workflow-mainline。
 
 用户流程：在 NexaTerm 内明确执行远端 Rsh 命令，查看分离输出、发送输入/信号并取消或重跑。
 

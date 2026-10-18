@@ -15,8 +15,8 @@
   "branch": "feat/wf09-08b-rsh-connect",
   "base_branch": "feat/wf09-08b-rsh-wire",
   "worktree_path": null,
-  "commit": null,
-  "pr_url": null,
+  "commit": "11f9e3d521da84bbc0eb72c305045f1ae8287729",
+  "pr_url": "https://github.com/DenisZheng/NexaTerm/pull/80",
   "subtasks": [],
   "children": [],
   "parent": "09-23-nexaterm-workflow-mainline",
@@ -24,6 +24,6 @@
     "docs/plans/WF09-PROTOCOL-IMPLEMENTATION-PLAN.md",
     "docs/WORKFLOW_SPEC.md"
   ],
-  "notes": "S0 wire verified by full CI652 and all3 native33 (Draft#79). S1 actual reserved dual transport in progress; no IPC/UI capability yet.",
+  "notes": "S1 actual dual transport verified by full CI655 all7 and native36 all3; Windows reserved positive, Unix permission negative. S0 Draft#79 verified CI652/native33. S2 task owner/IPC/UI and real rshd remain; task stays in_progress.",
   "meta": {}
 }
