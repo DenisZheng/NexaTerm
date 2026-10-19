@@ -77,6 +77,27 @@ class WindowsBuildTests(unittest.TestCase):
         path.write_bytes(data)
         self.assertCode("PE_ARCHITECTURE", build.pe_imports, path, self.root)
 
+    def test_source_patch_rejects_changed_input_and_output_before_mutation(self):
+        path = self.root / "input.c"
+        path.write_bytes(b"old")
+        patch_spec = {"path": "input.c", "beforeSha256": build.digest(b"old"),
+                      "afterSha256": build.digest(b"new"), "reason": "fixture",
+                      "replacements": [{"before": "old", "after": "new"}]}
+        for key in ["beforeSha256", "afterSha256"]:
+            with self.subTest(key=key):
+                bad = {**patch_spec, key: "0" * 64}
+                self.assertCode("PATCH_INPUT" if key == "beforeSha256" else "PATCH_OUTPUT",
+                                build.apply_source_patches, self.root, [bad])
+                self.assertEqual(path.read_bytes(), b"old")
+        result = build.apply_source_patches(self.root, [patch_spec])
+        self.assertEqual(path.read_bytes(), b"new")
+        self.assertEqual(result[0]["beforeSha256"], build.digest(b"old"))
+
+    def test_source_patch_path_cannot_escape_private_source(self):
+        for path in ["../outside.c", "/outside.c", "root\\outside.c"]:
+            with self.subTest(path=path):
+                self.assertCode("PATCH_PATH", build.apply_source_patches, self.root, [{"path": path}])
+
     def test_generator_path_probe_does_not_execute_state_without_generator_context(self):
         prefix = self.root / "prefix"
         package = prefix / "lib/python3/site-packages/xcbgen"

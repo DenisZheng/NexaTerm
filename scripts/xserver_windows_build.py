@@ -138,6 +138,26 @@ def pe_imports(path, work):
     return parse_pe(path.read_bytes())["imports"]
 
 
+def apply_source_patches(source, patches):
+    evidence = []
+    for patch in patches:
+        relative = PurePosixPath(patch["path"])
+        require(not relative.is_absolute() and ".." not in relative.parts
+                and str(relative) == patch["path"] and "\\" not in patch["path"], "PATCH_PATH")
+        path = source.joinpath(*relative.parts)
+        before = path.read_bytes()
+        require(digest(before) == patch["beforeSha256"], "PATCH_INPUT")
+        after = before
+        for replacement in patch["replacements"]:
+            old, new = replacement["before"].encode(), replacement["after"].encode()
+            require(old and after.count(old) == 1, "PATCH_MATCH")
+            after = after.replace(old, new)
+        require(digest(after) == patch["afterSha256"], "PATCH_OUTPUT")
+        path.write_bytes(after)
+        evidence.append({key: patch[key] for key in ["path", "beforeSha256", "afterSha256", "reason"]})
+    return evidence
+
+
 def inspect_closure(server, providers, work):
     pending, visited, result = [server], set(), []
     while pending:
@@ -201,6 +221,7 @@ def build(work, report):
         build_directory = builds / component["name"]
         build_directory.mkdir()
         source = sources / component["root"]
+        entry["appliedPatches"] = apply_source_patches(source, component.get("patches", []))
         report["stage"] = "configure"
         before = snapshot(prefix)
         if component["buildSystem"] == "meson":
