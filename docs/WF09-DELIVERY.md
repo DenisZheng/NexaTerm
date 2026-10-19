@@ -1,6 +1,6 @@
 # WF-09 开发交付与统一验收
 
-更新：2026-10-18。唯一主线仍为 `09-23-nexaterm-workflow-mainline`。依据维护者连续开发至09完成、后续统一验收的授权，所有成果保留为堆叠 Draft PR；不合并、不发布，不变更 PR #12/#54。
+更新：2026-10-19。唯一主线仍为 `09-23-nexaterm-workflow-mainline`。依据维护者连续开发至09完成、后续统一验收的授权，所有成果保留为堆叠 Draft PR；不合并、不发布，不变更 PR #12/#54。
 
 ## 后续范围变更：三个协议计划实现
 
@@ -46,3 +46,5 @@ CI602 首轮 macOS/Windows Rust 通过，Linux 同端口释放测试失败；原
 这些检查统一后续进行，不用单元测试或 CI 编译替代。此前 A15 安装、签名、升级回滚等发布缺口也不因 WF-09 开发而自动关闭。
 
 Windows Rlogin续作见Draft [#82](https://github.com/DenisZheng/NexaTerm/pull/82)及[原生API证据](../.trellis/tasks/10-16-wf09-08a-rlogin-implementation/research/windows-urgent-evidence.md)：代码99bffa6/原生45三平台通过，证明本轮接收API组合仍不能定位精确边界，Windows能力继续关闭，不能记为协议功能完成。
+
+XDMCP正常应用退出屏障已开发交付到Draft [#83](https://github.com/DenisZheng/NexaTerm/pull/83)：code d1bc04f通过完整CI666与原生10三平台各10项；应用退出等待实际worker、进程树和认证目录清理，用户stop仍保留两秒stop_pending。详见[退出证据](../.trellis/tasks/10-16-wf09-07-xdmcp-implementation/research/shutdown-evidence.md)。随包X server、打包/桌面和Unix宿主SIGKILL监督仍是开发项，XDMCP整体不标记完成。

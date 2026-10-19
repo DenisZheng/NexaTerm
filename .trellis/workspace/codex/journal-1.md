@@ -415,3 +415,37 @@ Draft #82 native45 all three platforms passed; Windows exact flush remains unfin
 ### Next Steps
 
 - 替代backend须先通过本轮不可区分反例，随后补齐原精确flush矩阵；真实服务端/WebView统一后置。
+
+
+## Session 10: WF-09 XDMCP actual application exit completion
+
+**Date**: 2026-10-18
+**Task**: WF-09 XDMCP actual application exit completion
+**Branch**: `fix/wf09-07-xdmcp-shutdown`
+
+### Summary
+
+Draft #83 code d1bc04f verified: CI666 all7 jobs and native10 all3 OS each10 tests passed; bundled engine/desktop and Unix hard-crash supervision remain open.
+
+### Main Changes
+
+修复退出的成功超时：快照有界真实完成watch并在锁外等待，保留stop_pending语义。新增实际进程树、阻塞启动及认证目录清理回归；native harness导入同一manager。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `d1bc04f` | (see git log) |
+
+### Testing
+
+- 完整CI666七执行job全SUCCESS；Rust617/618/620（Linux另4既有ignored），前端1160/1既有todo，脚本191/3既有环境skip。
+- XDMCP原生10三平台各10项通过，新增退出回归均执行；本地类型、脚本及source/权限/任务/diff检查通过。
+
+### Status
+
+本轮退出修复开发交付；XDMCP整体仍in_progress，未归档，不宣称随包或桌面完成。
+
+### Next Steps
+
+- 按原X0/X2/X3继续精确组件/构建/许可闭包、随包/打包/桌面及Unix宿主硬崩溃监督；Windows Rlogin精确flush仍待替代backend。
