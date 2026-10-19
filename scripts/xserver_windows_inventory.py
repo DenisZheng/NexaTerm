@@ -91,3 +91,30 @@ def link_inputs(map_file, link_directory, builds, prefix, owners, work, run, pac
         records[record["origin"] + "/" + record["path"]] = record
     require(records and any(value["origin"] == "target-toolchain" for value in records.values()), "LINK_INPUTS_MISSING")
     return {"mapSha256": digest(map_file.read_bytes()), "inputs": list(records.values())}
+
+
+def native_header_evidence(build_directory, sdk_header, work, run, packages):
+    depfiles = sorted([*build_directory.rglob("*.Po"), *build_directory.rglob("*.Plo")])
+    require(0 < len(depfiles) <= 2000, "NATIVE_HEADER_DEPENDENCIES")
+    records, total = [], 0
+    for path in depfiles:
+        total += path.stat().st_size
+        require(total <= 64 * 1024 * 1024, "NATIVE_HEADER_BUDGET")
+        records.append((path, path.read_text().replace("\\\n", " ")))
+    winmsg = [(path, content) for path, content in records
+              if re.search(r"(?:^|[/\\])winmsg\.c(?:\s|$)", content)]
+    require(winmsg and all("winmessages.h" not in content for _, content in winmsg), "NATIVE_DEBUG_HEADER")
+    native_sdk = run(["cygpath", "-m", sdk_header], work, capture=True).strip().lower()
+    sdk_names = {native_sdk, str(sdk_header).lower()}
+    users = [path for path, content in records
+             if any(re.search(re.escape(name) + r"(?:\s|$)", content.replace("\\:", ":").replace("\\", "/").lower())
+                    for name in sdk_names)]
+    require(users and sdk_header.is_file(), "NATIVE_DIRECTDRAW_HEADER")
+    package = run(["pacman", "-Qqo", sdk_header], work, capture=True).strip()
+    if package not in packages:
+        packages[package] = package_evidence(package, work, run)
+    return {"scope": "observed-server-automake-dependencies", "dependencyFiles": len(depfiles),
+            "debugMessageTableIncluded": False,
+            "winmsgDependencies": [{"path": str(path.relative_to(build_directory)), "sha256": digest(path.read_bytes())} for path, _ in winmsg],
+            "directDrawSdk": {"name": sdk_header.name, "sha256": digest(sdk_header.read_bytes()), "package": package,
+                              "users": [str(path.relative_to(build_directory)) for path in users]}}

@@ -3,7 +3,7 @@ import tempfile
 import unittest
 
 from xserver_source_review import ReviewError
-from xserver_windows_inventory import add_runtime_provenance, installed_delta, link_inputs, package_evidence, snapshot
+from xserver_windows_inventory import add_runtime_provenance, installed_delta, link_inputs, native_header_evidence, package_evidence, snapshot
 
 
 class InventoryTests(unittest.TestCase):
@@ -63,6 +63,35 @@ class InventoryTests(unittest.TestCase):
         library.write_bytes(b"fixture")
         path.write_text(f"LOAD {library}\nOUTPUT(XWin.exe pei-x86-64)\n")
         self.assertCode("LINK_SOURCE_OWNER", link_inputs, path, self.root, self.root / "build", self.prefix, {}, self.root, None, {})
+
+    def header_fixture(self):
+        build = self.root / "build"
+        deps = build / "hw/xwin/.deps"
+        deps.mkdir(parents=True)
+        sdk = self.root / "sdk/ddraw.h"
+        sdk.parent.mkdir()
+        sdk.write_bytes(b"SDK fixture")
+        (deps / "winmsg.Po").write_text("winmsg.o: /source/hw/xwin/winmsg.c /source/win.h\n")
+        (deps / "winshaddd.Po").write_text(f"winshaddd.o: /source/hw/xwin/winshaddd.c \\\n {sdk}\n")
+        return build, sdk, deps
+
+    def test_observed_native_headers_bind_sdk_and_exclude_unlicensed_debug_table(self):
+        build, sdk, deps = self.header_fixture()
+        packages = {"mingw-w64-ucrt-x86_64-headers": {"fixture": True}}
+        result = native_header_evidence(build, sdk, self.root,
+                                       lambda args, *more, **kwargs: str(sdk) if args[0] == "cygpath" else next(iter(packages)), packages)
+        self.assertFalse(result["debugMessageTableIncluded"])
+        self.assertEqual(result["directDrawSdk"]["sha256"], snapshot(sdk.parent)[sdk.name]["sha256"])
+        self.assertEqual(result["dependencyFiles"], 2)
+
+    def test_debug_table_or_missing_sdk_observation_cannot_pass(self):
+        build, sdk, deps = self.header_fixture()
+        run = lambda *args, **kwargs: str(sdk)
+        (deps / "winmsg.Po").write_text("winmsg.o: /source/winmsg.c /source/winmessages.h\n")
+        self.assertCode("NATIVE_DEBUG_HEADER", native_header_evidence, build, sdk, self.root, run, {})
+        (deps / "winmsg.Po").write_text("winmsg.o: /source/winmsg.c\n")
+        (deps / "winshaddd.Po").write_text("winshaddd.o: /source/local/ddraw.h\n")
+        self.assertCode("NATIVE_DIRECTDRAW_HEADER", native_header_evidence, build, sdk, self.root, run, {})
 
 
 if __name__ == "__main__":

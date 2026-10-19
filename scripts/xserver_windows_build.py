@@ -12,12 +12,14 @@ import re
 import subprocess
 import sys
 import tarfile
+import time
 from urllib.parse import urlsplit
 from urllib.request import build_opener, HTTPRedirectHandler
 
 from xserver_source_review import ArchiveBudget, ASSETS, ReviewError, collect, digest, require, verify_file, write_report
-from xserver_windows_inventory import add_runtime_provenance, installed_delta, link_inputs, snapshot
+from xserver_windows_inventory import add_runtime_provenance, installed_delta, link_inputs, native_header_evidence, snapshot
 from xserver_windows_pe import MAX_PE_BYTES, parse_pe
+from xserver_windows_signatures import verify_dependency
 
 
 MAX_ENTRIES = 5000
@@ -61,16 +63,21 @@ def run(arguments, cwd, *, timeout=900, capture=False):
     return result.stdout + result.stderr if capture else ""
 
 
-def download_component(component, cache):
-    path = cache / (component["root"] + ".tar.xz")
+def download_component(component, cache, filename=None):
+    filename = filename or component["root"] + ".tar.xz"
+    require(filename not in {".", ".."} and PurePosixPath(filename).name == filename
+            and "\\" not in filename, "SOURCE_FILENAME")
+    path = cache / filename
     if not path.exists():
         check_source_url(component["url"])
         temporary = path.with_suffix(".part")
         try:
+            deadline = time.monotonic() + 120
             with build_opener(SourceRedirect()).open(component["url"], timeout=30) as response, temporary.open("wb") as output:
                 check_source_url(response.url)
                 size = 0
                 while chunk := response.read(65536):
+                    require(time.monotonic() < deadline, "SOURCE_TIMEOUT")
                     size += len(chunk)
                     require(size <= component["size"], "SOURCE_SIZE")
                     output.write(chunk)
@@ -188,6 +195,9 @@ def build(work, report):
     require(os.environ.get("MSYSTEM") == "UCRT64", "WINDOWS_TOOLCHAIN")
     source_manifest = (ASSETS / "windows-sources.json").read_bytes()
     manifest = json.loads(source_manifest)
+    for license_item in manifest["generatorLicenseEvidence"]:
+        verify_file(ASSETS / license_item["file"], license_item["size"], license_item["sha256"])
+    report["generatorLicenseEvidence"] = manifest["generatorLicenseEvidence"]
     report["manifestSha256"] = digest(source_manifest)
     report["recipeSha256"] = digest(Path(__file__).read_bytes())
     cache, sources, builds, prefix = [work / name for name in ["cache", "sources", "build", "prefix"]]
@@ -199,7 +209,9 @@ def build(work, report):
         "gcc": run(["gcc", "--version"], work, capture=True).splitlines()[0],
         "target": run(["gcc", "-dumpmachine"], work, capture=True).strip(),
         "packages": run(["pacman", "-Q"], work, capture=True).splitlines(),
+        "buildJobs": min(4, os.cpu_count() or 1),
     }
+    jobs = str(report["toolchain"]["buildJobs"])
     require(report["toolchain"]["target"] == manifest["target"], "WINDOWS_TARGET")
     os.environ["PATH"] = str(prefix / "bin") + os.pathsep + os.environ["PATH"]
     os.environ["PKG_CONFIG_PATH"] = os.pathsep.join([str(prefix / "lib/pkgconfig"), str(prefix / "share/pkgconfig"), "/ucrt64/lib/pkgconfig", "/ucrt64/share/pkgconfig"])
@@ -215,8 +227,11 @@ def build(work, report):
         report["component"] = component["name"]
         report["stage"] = "source"
         archive = download_component(component, cache)
+        signing = component["signature"]
+        signature = download_component(signing, cache, component["root"] + ".tar.xz.sig")
+        signature_evidence = verify_dependency(archive, signature, manifest["certificates"][signing["certificate"]], signing)
         evidence = extract_component(archive, sources, component["root"], component["licenseFiles"])
-        entry = {**component, "sourceEvidence": evidence, "built": False}
+        entry = {**component, "signatureEvidence": signature_evidence, "sourceEvidence": evidence, "built": False}
         report["components"].append(entry)
         build_directory = builds / component["name"]
         build_directory.mkdir()
@@ -227,12 +242,12 @@ def build(work, report):
         if component["buildSystem"] == "meson":
             run(["meson", "setup", build_directory, source, "--prefix=" + str(prefix), "--libdir=lib", "--buildtype=release", "--default-library=shared"], work)
             report["stage"] = "compile-install"
-            run(["meson", "compile", "-C", build_directory, "-j", "2"], work)
+            run(["meson", "compile", "-C", build_directory, "-j", jobs], work)
             run(["meson", "install", "-C", build_directory], work)
         else:
             run(["bash", source / "configure", "--prefix=" + str(prefix), "--host=" + manifest["target"], "--disable-dependency-tracking", *component["options"]], build_directory)
             report["stage"] = "compile-install"
-            run(["make", "-j2"], build_directory)
+            run(["make", "-j" + jobs], build_directory)
             run(["make", "install"], build_directory)
         entry["built"] = True
         entry["installedFiles"] = installed_delta(prefix, before, component["name"], owners)
@@ -243,7 +258,10 @@ def build(work, report):
     report["stage"] = "server-source"
     server_manifest = json.loads((ASSETS / "upstream-source.json").read_text())
     root = server_manifest["source"]["root"]
-    extract_component(cache / server_manifest["archive"]["name"], sources, root, {"COPYING": server_manifest["source"]["anchors"]["COPYING"]})
+    server_anchors = {"COPYING": server_manifest["source"]["anchors"]["COPYING"],
+                      **{item["path"]: item["sha256"] for item in manifest["serverFileReview"]}}
+    report["serverFileReview"] = manifest["serverFileReview"]
+    extract_component(cache / server_manifest["archive"]["name"], sources, root, server_anchors)
     server_build = builds / "xorg-server"
     server_build.mkdir()
     report["stage"] = "server-configure"
@@ -251,17 +269,18 @@ def build(work, report):
     maps.mkdir()
     native_maps = run(["cygpath", "-m", maps], work, capture=True).strip()
     os.environ["LDFLAGS"] += " -Wl,-Map=" + native_maps
-    run(["bash", sources / root / "configure", "--prefix=" + str(prefix), "--host=" + manifest["target"], "--disable-dependency-tracking", *manifest["serverOptions"]], server_build)
+    run(["bash", sources / root / "configure", "--prefix=" + str(prefix), "--host=" + manifest["target"], "--enable-dependency-tracking", *manifest["serverOptions"]], server_build)
     core_bytes = (server_build / "include/dix-config.h").read_bytes()
     native_bytes = (server_build / "include/xwin-config.h").read_bytes()
     core_config, native_config = core_bytes.decode(), native_bytes.decode()
     require(re.search(r"^#define XDMCP 1$", core_config, re.MULTILINE), "SERVER_XDMCP")
     require(all(re.search(r"^#define " + name + r" 1$", native_config, re.MULTILINE)
                 for name in ["HAS_WINSOCK", "RELOCATE_PROJECTROOT"]), "SERVER_NATIVE_CONFIG")
+    require(not re.search(r"^#define CYGDEBUG 1$", native_config, re.MULTILINE), "SERVER_DEBUG_PROFILE")
     report["serverConfig"] = {"xdmcp": True, "winsock": True, "relocateProjectRoot": True,
                               "coreSha256": digest(core_bytes), "nativeSha256": digest(native_bytes)}
     report["stage"] = "server-compile"
-    run(["make", "-j2"], server_build, timeout=1800)
+    run(["make", "-j" + jobs], server_build, timeout=1800)
     before = snapshot(prefix)
     run(["make", "install"], server_build)
     report["serverInstalledFiles"] = installed_delta(prefix, before, "xorg-server", owners)
@@ -271,6 +290,8 @@ def build(work, report):
     report["peClosure"] = inspect_closure(server, [prefix / "bin", Path("/ucrt64/bin")], work)
     report["peImportScope"] = ["normal", "delay"]
     packages = add_runtime_provenance(report["peClosure"], prefix, owners, work, run)
+    report["stage"] = "native-headers"
+    report["nativeHeaderEvidence"] = native_header_evidence(server_build, Path("/ucrt64/include/ddraw.h"), work, run, packages)
     report["stage"] = "static-link-inputs"
     report["staticLink"] = link_inputs(maps / "XWin.exe.map", server_build / "hw/xwin", builds, prefix, owners, work, run, packages)
     report["runtimePackages"] = list(packages.values())
@@ -305,7 +326,7 @@ def main(arguments=None):
     report = {"schema": 1, "status": "FAIL", "nativeBuildVerified": False,
               "nativeVersionVerified": False, "distributionApproved": False,
               "bundled": False, "desktopVerified": False,
-              "pendingReview": ["dependency-signatures", "per-file-licenses-and-generator-exceptions", "compiler-runtime-obligations", "runtime-resources", "packaging-signing-and-desktop"]}
+              "pendingReview": ["legacy-signing-algorithms-and-maintainer-identity", "per-file-licenses-and-generator-exceptions", "compiler-runtime-obligations", "runtime-resources", "packaging-signing-and-desktop"]}
     code = 1
     try:
         args.work.mkdir(parents=True, exist_ok=True)

@@ -2,7 +2,7 @@
   "schema": 1,
   "target": "x86_64-w64-mingw32",
   "profile": "ucrt64-2d-xdmcp-development",
-  "sourceSignatures": "dependencies-not-yet-verified",
+  "sourceSignatures": "required-full-primary-and-signing-fingerprints",
   "components": [
     {
       "root": "util-macros-1.20.2",
@@ -14,6 +14,16 @@
       "options": [],
       "licenseFiles": {
         "COPYING": "7db0516389152a90c20ea910e8839d10204ebc25ccbc71fc7f5809dfb98e80ac"
+      },
+      "signature": {
+        "url": "https://xorg.freedesktop.org/releases/individual/util/util-macros-1.20.2.tar.xz.sig",
+        "size": 566,
+        "sha256": "b7226b77576842222f3087f9ddd42af72ad50b5b560414c26617c098754baa05",
+        "algorithm": 1,
+        "digest": 10,
+        "epoch": 1731540205,
+        "fingerprint": "2F7DBCAD5B30E668BBD516C1CFDF148828C642A7",
+        "certificate": "4A193C06D35E7C670FA4EF0BA2FB9E081F2D130E"
       }
     },
     {
@@ -64,6 +74,16 @@
         "COPYING-xcmiscproto": "5531d18cfcc944dab39991f63f182cbbce3fe493ba0c7cf08a25c0d01ee84482",
         "COPYING-recordproto": "e37891ac36e827611d6e7ae51ddb14a9cc9ba56f6cc87c55b6ce3b6d76cd2bf4",
         "COPYING-inputproto": "5e083a2ace0215a6084c877c023a6079952ba803d692488203ba4269196debe3"
+      },
+      "signature": {
+        "url": "https://xorg.freedesktop.org/releases/individual/proto/xorgproto-2026.1.tar.xz.sig",
+        "size": 594,
+        "sha256": "5551ac3d462c583037209cfd905c8b04c8e585b4c6d59dc032719c1c1f638f90",
+        "algorithm": 1,
+        "digest": 10,
+        "epoch": 1791049981,
+        "fingerprint": "3AB285232C46AE43D8E192F4DAB0F78EA6E7E2D2",
+        "certificate": "3AB285232C46AE43D8E192F4DAB0F78EA6E7E2D2"
       }
     },
     {
@@ -76,6 +96,16 @@
       "options": [],
       "licenseFiles": {
         "COPYING": "3fe68a84ab89e82947e560316ab70cf2d02a8b978ae5cf4fbdfd53fc5b917308"
+      },
+      "signature": {
+        "url": "https://xorg.freedesktop.org/releases/individual/lib/xtrans-1.6.0.tar.xz.sig",
+        "size": 566,
+        "sha256": "fd24b80cdcbeb03b582623bf9f770004a66473b17d5b3163301915794acc3c35",
+        "algorithm": 1,
+        "digest": 10,
+        "epoch": 1741479206,
+        "fingerprint": "2F7DBCAD5B30E668BBD516C1CFDF148828C642A7",
+        "certificate": "4A193C06D35E7C670FA4EF0BA2FB9E081F2D130E"
       }
     },
     {
@@ -88,6 +118,16 @@
       "options": [],
       "licenseFiles": {
         "COPYING": "56abe29bb1d9806a9e04fa9f80fed2c0f18027594df3f098148d814aef6bddfa"
+      },
+      "signature": {
+        "url": "https://xorg.freedesktop.org/releases/individual/lib/libXau-1.0.12.tar.xz.sig",
+        "size": 566,
+        "sha256": "7f8953455d6e8838cc4adb8d83f7c72498c6c8a1641b0e7396de2d6fe8e42219",
+        "algorithm": 1,
+        "digest": 10,
+        "epoch": 1734140008,
+        "fingerprint": "2F7DBCAD5B30E668BBD516C1CFDF148828C642A7",
+        "certificate": "4A193C06D35E7C670FA4EF0BA2FB9E081F2D130E"
       }
     },
     {
@@ -100,6 +140,16 @@
       "options": [],
       "licenseFiles": {
         "COPYING": "8a3c3f35b0dbcb60a4e242b9e4394a352a65bb27deb2938ea1e2e62a626e16e9"
+      },
+      "signature": {
+        "url": "https://xorg.freedesktop.org/releases/individual/lib/libXdmcp-1.1.5.tar.xz.sig",
+        "size": 566,
+        "sha256": "d1d724f603af4cf86e3603f95bf39f77b22a7c2897c2a667ff1a5d216e24e7a6",
+        "algorithm": 1,
+        "digest": 10,
+        "epoch": 1709415471,
+        "fingerprint": "2F7DBCAD5B30E668BBD516C1CFDF148828C642A7",
+        "certificate": "4A193C06D35E7C670FA4EF0BA2FB9E081F2D130E"
       }
     },
     {
@@ -112,6 +162,16 @@
       "options": [],
       "licenseFiles": {
         "COPYING": "78c20706e799f2b8f445e71d3d2ade6ba23b3388fd6cbeed7d71796623febde8"
+      },
+      "signature": {
+        "url": "https://xcb.freedesktop.org/dist/libpthread-stubs-0.5.tar.xz.sig",
+        "size": 543,
+        "sha256": "5a669e5d454b8c323adc90cb52d2f03e3c5943cf5bc51e1d1dec8c11c11b89de",
+        "algorithm": 1,
+        "digest": 10,
+        "epoch": 1689713547,
+        "fingerprint": "2F7DBCAD5B30E668BBD516C1CFDF148828C642A7",
+        "certificate": "4A193C06D35E7C670FA4EF0BA2FB9E081F2D130E"
       }
     },
     {
@@ -124,6 +184,16 @@
       "options": [],
       "licenseFiles": {
         "COPYING": "c5ffbfeaa501071ceeb97b7de2c0d703fdaa35de01c0fb6cbac1c28453a3e9fd"
+      },
+      "signature": {
+        "url": "https://xcb.freedesktop.org/dist/xcb-proto-1.17.0.tar.xz.sig",
+        "size": 215,
+        "sha256": "7d057fc8432560b81e10b61f8ac1f646977f5dc1e2b5d4149b823c6966fbd561",
+        "algorithm": 22,
+        "digest": 10,
+        "epoch": 1713191947,
+        "fingerprint": "16238A7D92448B02B7B10344B6B1CEAE5103DB07",
+        "certificate": "3BB639E56F861FA2E86505690FDD682D974CA72A"
       }
     },
     {
@@ -158,7 +228,17 @@
             }
           ]
         }
-      ]
+      ],
+      "signature": {
+        "url": "https://xcb.freedesktop.org/dist/libxcb-1.17.0.tar.xz.sig",
+        "size": 215,
+        "sha256": "2829ef79617e521913e7ed36cd7c494f1300f901e2e9d1bd6795ecf212bd7ebf",
+        "algorithm": 22,
+        "digest": 10,
+        "epoch": 1713193868,
+        "fingerprint": "16238A7D92448B02B7B10344B6B1CEAE5103DB07",
+        "certificate": "3BB639E56F861FA2E86505690FDD682D974CA72A"
+      }
     },
     {
       "root": "xcb-util-0.4.1",
@@ -170,6 +250,16 @@
       "options": [],
       "licenseFiles": {
         "COPYING": "325b64f0b0284e08bbb7a78ae3e55c1edc2a7cd77f603225ae4b8ffc35423e37"
+      },
+      "signature": {
+        "url": "https://xorg.freedesktop.org/releases/individual/lib/xcb-util-0.4.1.tar.xz.sig",
+        "size": 543,
+        "sha256": "612a1b84e815f50832061668fe8f7f1ae4c3c1f28dd6e2d92ad53cee7d099864",
+        "algorithm": 1,
+        "digest": 10,
+        "epoch": 1671502340,
+        "fingerprint": "2F7DBCAD5B30E668BBD516C1CFDF148828C642A7",
+        "certificate": "4A193C06D35E7C670FA4EF0BA2FB9E081F2D130E"
       }
     },
     {
@@ -182,6 +272,16 @@
       "options": [],
       "licenseFiles": {
         "COPYING": "19672c6153d8c4870abe734fa4dd2197481a311f4788d02ad729be07e116b26b"
+      },
+      "signature": {
+        "url": "https://xorg.freedesktop.org/releases/individual/lib/xcb-util-image-0.4.1.tar.xz.sig",
+        "size": 543,
+        "sha256": "89934c101ba19619e26b0c9ca5407ee8d5cca5873b7b16108eb03f9f71ca5bd3",
+        "algorithm": 1,
+        "digest": 10,
+        "epoch": 1666122659,
+        "fingerprint": "2F7DBCAD5B30E668BBD516C1CFDF148828C642A7",
+        "certificate": "4A193C06D35E7C670FA4EF0BA2FB9E081F2D130E"
       }
     },
     {
@@ -194,6 +294,16 @@
       "options": [],
       "licenseFiles": {
         "COPYING": "12ab3559977a4b22ae3030b90c64a386e6ec51ab0e4eab1ff530f81a2639400a"
+      },
+      "signature": {
+        "url": "https://xorg.freedesktop.org/releases/individual/lib/xcb-util-wm-0.4.2.tar.xz.sig",
+        "size": 543,
+        "sha256": "9a21d3c27273c6ab340b9b93b4ab1a084a8a28bf39a84b1013c57aaf04e7a2da",
+        "algorithm": 1,
+        "digest": 10,
+        "epoch": 1666145064,
+        "fingerprint": "2F7DBCAD5B30E668BBD516C1CFDF148828C642A7",
+        "certificate": "4A193C06D35E7C670FA4EF0BA2FB9E081F2D130E"
       }
     },
     {
@@ -212,6 +322,16 @@
       ],
       "licenseFiles": {
         "COPYING": "eda0c2ed1cae0280c7fe79762eaad8ad31c044afc64e71e92ef2c6f3cd7bc395"
+      },
+      "signature": {
+        "url": "https://xorg.freedesktop.org/releases/individual/lib/libX11-1.8.14.tar.xz.sig",
+        "size": 594,
+        "sha256": "96634abc2fb2e46b56d907d0c43109137ebac6c2dcd20d9e5707cf6cc53dabea",
+        "algorithm": 1,
+        "digest": 10,
+        "epoch": 1792179000,
+        "fingerprint": "3AB285232C46AE43D8E192F4DAB0F78EA6E7E2D2",
+        "certificate": "3AB285232C46AE43D8E192F4DAB0F78EA6E7E2D2"
       }
     },
     {
@@ -224,6 +344,16 @@
       "options": [],
       "licenseFiles": {
         "COPYING": "e1b3fdad8037ab3f986ef9caaa7c8da47d8d55875e680c7d6011f6c07363ea7c"
+      },
+      "signature": {
+        "url": "https://xorg.freedesktop.org/releases/individual/lib/libxkbfile-1.2.0.tar.xz.sig",
+        "size": 566,
+        "sha256": "29d99d31510ab32ce4d4c061dd1cb673e69a5b09783822082888b0599cf0b95a",
+        "algorithm": 1,
+        "digest": 10,
+        "epoch": 1769385411,
+        "fingerprint": "3AB285232C46AE43D8E192F4DAB0F78EA6E7E2D2",
+        "certificate": "3AB285232C46AE43D8E192F4DAB0F78EA6E7E2D2"
       }
     },
     {
@@ -236,6 +366,16 @@
       "options": [],
       "licenseFiles": {
         "COPYING": "a4dda7a643b517794bfa23dc9605da030055df38ac8a5b9e1905e690975a59c4"
+      },
+      "signature": {
+        "url": "https://xorg.freedesktop.org/releases/individual/lib/libfontenc-1.1.9.tar.xz.sig",
+        "size": 566,
+        "sha256": "480820d0a6690fd3eaa946734006f3e03472d838e34eafd75cb02b62c11178d8",
+        "algorithm": 1,
+        "digest": 10,
+        "epoch": 1770514803,
+        "fingerprint": "3AB285232C46AE43D8E192F4DAB0F78EA6E7E2D2",
+        "certificate": "3AB285232C46AE43D8E192F4DAB0F78EA6E7E2D2"
       }
     },
     {
@@ -252,6 +392,16 @@
       ],
       "licenseFiles": {
         "COPYING": "3b1047f0d45584973866a40e3eedc74aea4c6ac636960d650ae05af603e6d1a8"
+      },
+      "signature": {
+        "url": "https://xorg.freedesktop.org/releases/individual/lib/libXfont2-2.0.9.tar.xz.sig",
+        "size": 95,
+        "sha256": "7c0d4b5a8e51565ddd51c0aad0bfeab798ce28c9cb2eaa7df3dcf9670b03defc",
+        "algorithm": 17,
+        "digest": 2,
+        "epoch": 1785891596,
+        "fingerprint": "3C2C43D9447D5938EF4551EBE23B7E70B467F0BF",
+        "certificate": "3C2C43D9447D5938EF4551EBE23B7E70B467F0BF"
       }
     }
   ],
@@ -278,7 +428,141 @@
     "--disable-docs",
     "--disable-devel-docs",
     "--with-sha1=CryptoAPI",
-    "--with-default-font-path=built-ins"
+    "--with-default-font-path=built-ins",
+    "--disable-debug"
   ],
-  "serverExecutable": "XWin.exe"
+  "serverExecutable": "XWin.exe",
+  "certificates": {
+    "4A193C06D35E7C670FA4EF0BA2FB9E081F2D130E": {
+      "file": "dependency-keys/4A193C06D35E7C670FA4EF0BA2FB9E081F2D130E.asc",
+      "size": 11298,
+      "sha256": "4bb44c8e72e3e27b7b690458fd3c0adb8e1ca8fa7c6911a607e8512fe5088383",
+      "primaryFingerprint": "4A193C06D35E7C670FA4EF0BA2FB9E081F2D130E",
+      "primaryBits": 1024,
+      "primaryAlgorithm": 17,
+      "source": "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x4A193C06D35E7C670FA4EF0BA2FB9E081F2D130E",
+      "transportSize": 11299,
+      "transportSha256": "cac9ff620d3c3b984b5f72d674adb8cfd728cc796c0bae96ccc77c346d220c74",
+      "normalization": "Removed one trailing ASCII space from the unauthenticated armor Comment header; decoded public certificate is unchanged."
+    },
+    "3AB285232C46AE43D8E192F4DAB0F78EA6E7E2D2": {
+      "file": "dependency-keys/3AB285232C46AE43D8E192F4DAB0F78EA6E7E2D2.asc",
+      "size": 6599,
+      "sha256": "539086534f086f03f40de70ce5133cad94a013877f1b36a41e7cd663272d8752",
+      "primaryFingerprint": "3AB285232C46AE43D8E192F4DAB0F78EA6E7E2D2",
+      "primaryBits": 4096,
+      "primaryAlgorithm": 1,
+      "source": "https://keys.openpgp.org/vks/v1/by-fingerprint/3AB285232C46AE43D8E192F4DAB0F78EA6E7E2D2"
+    },
+    "3BB639E56F861FA2E86505690FDD682D974CA72A": {
+      "file": "dependency-keys/3BB639E56F861FA2E86505690FDD682D974CA72A.asc",
+      "size": 45557,
+      "sha256": "be61fb4b9f8b8f4b9600585a59290931fdfb4ad3d7302b29cf29f376fa028c23",
+      "primaryFingerprint": "3BB639E56F861FA2E86505690FDD682D974CA72A",
+      "primaryBits": 4096,
+      "primaryAlgorithm": 1,
+      "source": "https://keys.openpgp.org/vks/v1/by-fingerprint/16238A7D92448B02B7B10344B6B1CEAE5103DB07"
+    },
+    "3C2C43D9447D5938EF4551EBE23B7E70B467F0BF": {
+      "file": "release-key.asc",
+      "size": 1598,
+      "sha256": "bc15a0a9ef7cf3d7e8290db3a280caf4440f74aa00d6f08e2ec00ef08486d081",
+      "primaryFingerprint": "3C2C43D9447D5938EF4551EBE23B7E70B467F0BF",
+      "primaryBits": 1024,
+      "primaryAlgorithm": 17,
+      "source": "https://keys.openpgp.org/vks/v1/by-fingerprint/3C2C43D9447D5938EF4551EBE23B7E70B467F0BF"
+    }
+  },
+  "serverFileReview": [
+    {
+      "path": "hw/xwin/winprefsyacc.c",
+      "sha256": "77b1fa1220e6db6cb8bba5a8e3d826f8289f6b198bdf0b1757fd7aa284c67ec8",
+      "size": 66840,
+      "review": "Generated Bison 3.8.2 parser: GPL-3.0-or-later with the intact Bison-exception-2.2 text; retain exception/grammar provenance, not a blanket MIT label."
+    },
+    {
+      "path": "hw/xwin/winprefslex.c",
+      "sha256": "794416e609a0d814e1d656dcb26b741e43491eb6419e3292c24955ede7604ed7",
+      "size": 59504,
+      "review": "Generated Flex 2.6.4 scanner with original permissive grammar notice at byte 24230; Flex tag COPYING states its scanner skeleton/output is not bound by the tool copyright."
+    },
+    {
+      "path": "hw/xwin/winprefslex.l",
+      "sha256": "09ecdbd4ed192d8978b763d0fc91bcad05dc44e6d9b6fc56228870ac7bed18f2",
+      "size": 3994,
+      "review": "Read actual file copyright and permission grant; retain its notice and name-use restrictions with distribution. Root COPYING alone is insufficient."
+    },
+    {
+      "path": "hw/xwin/winprefsyacc.y",
+      "sha256": "3bc5f6de700df0c0c05f3372bd1bbb1e55a3e74b40ae0200da89956e57e4d1f5",
+      "size": 10722,
+      "review": "Read actual file copyright and permission grant; retain its notice and name-use restrictions with distribution. Root COPYING alone is insufficient."
+    },
+    {
+      "path": "hw/xwin/ddraw.h",
+      "sha256": "619b300ab6061c6739b1c9f05f21e1e86eb5f909337cabc27845a1802e4d02a8",
+      "size": 132733,
+      "review": "Local fallback has no complete license notice; target must observe include_next to the owned MinGW-w64 SDK header. Do not adopt the fallback body."
+    },
+    {
+      "path": "hw/xwin/winmessages.h",
+      "sha256": "5ebe556e3ed291ad716ae246f87efadad42bfbcafc05313caf7c6822995a63a6",
+      "size": 13392,
+      "review": "Message table has no file license header; release profile must prove absence from winmsg compiled dependencies. No source redistribution approval."
+    },
+    {
+      "path": "hw/xwin/winmsg.c",
+      "sha256": "90f550406c2df0773b9457a2864c4d33a4dd323de06869a989d9dc53dc91c210",
+      "size": 4347,
+      "review": "Read actual file copyright and permission grant; retain its notice and name-use restrictions with distribution. Root COPYING alone is insufficient."
+    },
+    {
+      "path": "hw/xwin/InitInput.c",
+      "sha256": "e0fc2a7e4858cd26ed05d1b141577e6beb758ae55a01815948757b0dce170d01",
+      "size": 3609,
+      "review": "Read actual file copyright and permission grant; retain its notice and name-use restrictions with distribution. Root COPYING alone is insufficient."
+    },
+    {
+      "path": "hw/xwin/InitOutput.c",
+      "sha256": "a7fb48af9e07baa257d90daba039a847b1df155a2f825db557bf48b3501bfc67",
+      "size": 31310,
+      "review": "Read actual file copyright and permission grant; retain its notice and name-use restrictions with distribution. Root COPYING alone is insufficient."
+    },
+    {
+      "path": "hw/xwin/winmonitors.c",
+      "sha256": "27d6f747372e34293ce0f9efc4e3ee57f8de0e5d0778dc2e074068c0177e9363",
+      "size": 2377,
+      "review": "Read actual file copyright and permission grant; retain its notice and name-use restrictions with distribution. Root COPYING alone is insufficient."
+    },
+    {
+      "path": "hw/xwin/winmonitors.h",
+      "sha256": "3ce07ac1ea65ddcb427aa8f930fd5d368b9f41506c4ddd43ea15ec7739ee5d57",
+      "size": 1551,
+      "review": "Read actual file copyright and permission grant; retain its notice and name-use restrictions with distribution. Root COPYING alone is insufficient."
+    },
+    {
+      "path": "hw/xwin/winprocarg.c",
+      "sha256": "3ab6a48e0d95d23b61eb4f6f37638cdd5e9bf279c5bf4d52dac21502bf36e0f2",
+      "size": 35797,
+      "review": "Read actual file copyright and permission grant; retain its notice and name-use restrictions with distribution. Root COPYING alone is insufficient."
+    },
+    {
+      "path": "hw/xwin/winkeynames.h",
+      "sha256": "8ec8c2dd7f84eeb0be9eeb0608bad128d4d2353da7cc77f5813257af4dd94bac",
+      "size": 11394,
+      "review": "Read actual file copyright and permission grant; retain its notice and name-use restrictions with distribution. Root COPYING alone is insufficient."
+    }
+  ],
+  "generatorLicenseEvidence": [
+    {
+      "name": "Flex",
+      "version": "2.6.4",
+      "file": "license-evidence/flex-2.6.4-COPYING.txt",
+      "size": 1855,
+      "sha256": "97fd685958d93be7f8dab939bb8161dbd6afb0718c63bfc337c24321aea44273",
+      "source": "https://github.com/westes/flex/blob/v2.6.4/COPYING",
+      "gitBlob": "684b011026dd719137ef01764f002c2c27a2bb52",
+      "scope": "The generated scanner retains the grammar notice; this tool license explicitly excludes scanner skeleton/output from the tool copyright. Not approval to bundle the generator."
+    }
+  ]
 }
