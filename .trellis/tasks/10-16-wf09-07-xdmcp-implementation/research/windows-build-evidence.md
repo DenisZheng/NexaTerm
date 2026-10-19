@@ -4,7 +4,7 @@
 
 ## 当前继续入口
 
-先核对[Draft #85](https://github.com/DenisZheng/NexaTerm/pull/85)最新HEAD和原生workflow，不把下文历史失败当作最新结果。code2d0b9a0的source CI15及完整应用CI682七执行job均成功（条件打包为既有skip）；原生12的46项反例、真实IPv6探针及前14个依赖编译/安装通过，确认同名geometry头安装隔离生效，最终libXfont2在文件描述符/指针转换处失败。当前继续intptr_t修正、属性表许可排除及完整引擎/PE/运行库验证，不能标记native build完成。原生12 artifact12170486419已实际下载：仅一个JSON，归档SHA256 f83cc618a23dddf4d998a3835e88d16b2fc175c2206d418d1ab60e2bb882decd；libX11公共头为预期420d8335，xorgproto未安装该公共头。source15 artifact12169194136也已实际核对，仅两个JSON，SHA256 0e5ca6f0a3fa0521db96add982888baee84d29d0158387d03dd4430d459a38dd，15项pin与code2d0b9a0清单一致；所有发行/桌面标志仍false。
+先核对[Draft #85](https://github.com/DenisZheng/NexaTerm/pull/85)最新HEAD和原生workflow，不把历史失败当作最新结果。code872dac6的source CI16及完整应用CI683七执行job均成功（条件打包为既有skip）。原生13的47项反例、全部15依赖构建安装、IPv6/AppID/font二进制I/O实际探针及引擎XDMCP/Winsock/relocate配置均通过；完整server make随后在LLP64地址/标量桥、SDK命名空间、缺失winauth.h及Unix测试程序处FAIL。继续实际引擎编译和PE/运行库/编译输入许可闭包，不能标记native build完成。原生13 artifact12171955533已实际下载：仅一JSON，SHA256 ba5f7a5f0a6318e983e5f9a01c384897bdabfedc33f847a9979272afc23cc406。source16 artifact12169904620也核对仅两JSON，SHA256 625d0aa17bab970c866d7309e6975e31e7c3b0c1a24de963064743e1544ab1b0，15项与code872dac6清单一致；所有分发/随包/桌面标志仍false。
 
 ## 首次真实Windows构建
 
@@ -107,3 +107,25 @@ propsys.h由WIDL生成（blobc8764f4f3e77adecff4731dc2b477cc9308ed500），IDL�
 仅把有符号CRT文件描述符与既有opaque private字段之间的long桥换为intptr_t，并显式包含stdint.h；不改变字段/API宽度、I/O、缓冲或close语义，保留Open Group许可并固定原始/结果hash与两处入口发生次数。新增真实target archive的二进制写入/flush/read/EOF探针，覆盖CRLF、0x1a、NUL与0xff及临时文件清理；不把编译成功替代实际回调执行。
 
 code2d0b9a0完整CI682：Rust Linux617/4既有ignored、macOS618、Windows620，二进制各19、集成各1均通过；前端1160/1todo、脚本193/3既有环境skip、安全18/0skip，七实际执行job全部成功。source CI15为21源码+46 Windows证据回归及真实15依赖签名通过。新增属性表/font补丁和探针为后续代码，须重新取得原生和完整CI；本地68项无skip，不借用旧CI结论。
+
+
+## 实际编译输入的来源清单
+
+仅有包级许可或少数renderer依赖不足以核对所有C编译输入。下一轮为目标库及server保留Automake依赖跟踪，对libxkbfile读取实际Ninja节点；固定的header/host-generator-only组件另标范围，不伪造C编译记录。保留依赖记录hash、每个实际文件的hash/size、来源组件或pacman实际owner以及使用它的组件；安装头不能凭目录猜owner，私有geometry头还必须符合具体manifest pin。未知根在读取文件内容前失败。
+
+解析器处理原生盘符、转义空格/井号、续行、phony目标及nonrecursive Makefile工作目录；已知bootstrap注释不计为编译观察，缺观察仍FAIL。Ninja节点要求VALID且依赖数精确一致；[固定工具版本1.13.2实现](https://github.com/ninja-build/ninja/blob/v1.13.2/src/ninja.cc)（blob92d0761aa38e5b866dc1118f62c3974539665b44）已核对格式及工具模式不输出Entering directory。SDK文件只查询一次实际包owner，再从该包完整文件清单绑定其余文件，附实际许可文本与包版本/归档hash，不按目录统一定性。
+
+范围明确为实际观察到的C构建输入（也包含本次构建的开发用target utilities），不从“编译过”推断“随包分发”，也不覆盖windres资源或宣布逐文件许可审查全部完成。DirectDraw与propkey已知排除项在整个观察集合继续拒绝。新增真实GCC测试实际生成含空格/井号文件名的依赖记录，不仅依靠手写fixture；失败保留先前已完成组件的实际输入记录，并标明当前失败组件；不会用旧报告补成功。本地80项无skip。该新清单仍需下一轮Windows执行验证，不借用code872dac6的结果。
+
+
+## 原生13：全部15依赖及实际探针通过，进入完整server编译
+
+[原生13](https://github.com/DenisZheng/NexaTerm/actions/runs/39218312478)（code872dac6）确认libXfont2 intptr_t适配、真实目标archive的二进制write/flush/read/EOF与清理均成功；早期AppID接口与IPv6探针也成功。完整server configure已实证XDMCP/HAS_WINSOCK/RELOCATE_PROJECTROOT启用、debug关闭。随后make -k收集179条诊断，来自有限根因，不按条数视为独立任务或工时：
+
+- core的32位long承担地址对齐或opaque标量桥。地址运算改为uintptr_t保持完整地址，负的共享pixmap句柄/iterator用intptr_t保持符号；public XID/标量宽度不变，诊断指针改用%p，不关闭警告。misc.h原本已包含stdint.h。
+- XCB-first头链直接解析原生Winsock导致BOOL/INT32与X11冲突；晚解析COM又遇到Status及原生INT64/LONG64。固定profile让XCB使用已拥有的xorgproto保护包装头，先在一致命名空间加载Windows/COM，再恢复X11类型。保留调用方WIN32_LEAN_AND_MEAN，排除Winsock1；将propertystore已有宽松许可IID及单个PKEY声明共享，不链接整张LGPL属性表。新增实际XCB-first静态类型/执行探针，AppID探针改为真实Xproto/Xwindows上下文，在xorgproto安装后、重库编译前运行。
+- 固定归档确实没有winauth.h，仅补本来winauth.c实现的两个函数声明，create必须显式、目标必须不存在且overlay字节精确固定；不替换认证、cookie或安全实现。
+- 既有select fallback的pollfd与SDK WSAPoll结构tag冲突。先加载受保护Winsock，再将server私有结构名/既有事件位隔离；不把私有int fd结构当作SDK SOCKET结构。新增实际os archive的单个UDP回环就绪/非阻塞超时探针，使用真实socket前验证其值可由既有int fd表示，不声称所有Windows句柄均可截断。
+- 上游test/tests和simple-xinit均依赖sys/wait/fork，当前profile使用官方--disable-unit-tests排除这两个Unix测试可执行文件，明确不记为通过。项目三平台完整CI、Python反例及真实Windows目标探针保留；没有禁用国际化、运行时、编译诊断或把失败改绿。
+
+本地81项无skip；固定源码全部组件适配及21项server适配（含一个缺失声明文件的显式创建）均已实际逐字节核验。后续实际Windows仍须验证，不继承code872dac6结果。完整编译输入清单为新代码，亦待同次真实执行。

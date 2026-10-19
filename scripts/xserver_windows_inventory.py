@@ -30,7 +30,7 @@ def installed_delta(prefix, before, owner, owners):
     return result
 
 
-def package_evidence(package, work, run):
+def package_evidence(package, work, run, file_owners=None):
     require(re.fullmatch(r"mingw-w64-ucrt-x86_64-[A-Za-z0-9+_.-]+", package), "TOOLCHAIN_PACKAGE")
     info = run(["pacman", "-Qi", package], work, capture=True)
     version = re.search(r"^Version\s*:\s*(\S+)", info, re.MULTILINE)
@@ -43,6 +43,10 @@ def package_evidence(package, work, run):
         if not match:
             continue
         path = Path(match[1])
+        if file_owners is not None and not match[1].endswith("/"):
+            identity = str(path.resolve()).casefold()
+            require(identity not in file_owners or file_owners[identity] == package, "TOOLCHAIN_OWNER_AMBIGUOUS")
+            file_owners[identity] = package
         if "/share/licenses/" in str(path) and path.is_file():
             require(path.stat().st_size <= 1024 * 1024, "TOOLCHAIN_LICENSE")
             anchors[str(path.relative_to("/ucrt64"))] = digest(path.read_bytes())

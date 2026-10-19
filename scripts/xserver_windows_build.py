@@ -18,6 +18,8 @@ from xserver_windows_inventory import InventoryCollision, add_runtime_provenance
 from xserver_windows_pe import MAX_PE_BYTES, parse_pe
 from xserver_windows_signatures import verify_dependency
 from xserver_windows_sources import check_source_url, download_component
+from xserver_windows_compilation import observed_inputs
+from xserver_windows_probes import font_probe, header_probes, poll_probe, xcb_probe
 
 
 MAX_ENTRIES = 5000
@@ -112,8 +114,12 @@ def apply_source_patches(source, patches):
         require(not relative.is_absolute() and ".." not in relative.parts
                 and str(relative) == patch["path"] and "\\" not in patch["path"], "PATCH_PATH")
         path = source.joinpath(*relative.parts)
-        before = path.read_bytes()
-        require(digest(before) == patch["beforeSha256"], "PATCH_INPUT")
+        if patch.get("create", False):
+            require(patch["beforeSha256"] is None and not path.exists() and "overlay" in patch, "PATCH_CREATE")
+            before = b""
+        else:
+            before = path.read_bytes()
+            require(digest(before) == patch["beforeSha256"], "PATCH_INPUT")
         after = before
         require(("overlay" in patch) != ("replacements" in patch), "PATCH_METHOD")
         if "overlay" in patch:
@@ -127,6 +133,7 @@ def apply_source_patches(source, patches):
                 require(isinstance(count, int) and count > 0 and old and after.count(old) == count, "PATCH_MATCH")
                 after = after.replace(old, new)
         require(digest(after) == patch["afterSha256"], "PATCH_OUTPUT")
+        path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(after)
         evidence.append({key: patch[key] for key in ["path", "beforeSha256", "afterSha256", "reason"]})
     return evidence
@@ -202,15 +209,6 @@ def build(work, report):
     report["serverFileReview"] = manifest["serverFileReview"]
     extract_component(cache / server_manifest["archive"]["name"], sources, root, server_anchors)
     report["appliedServerPatches"] = apply_source_patches(sources / root, manifest["serverPatches"])
-    report["stage"] = "native-appid-headers"
-    appid_source = ASSETS / "overlays/appid-property-probe.c"
-    appid_binary = builds / "appid-property-probe.exe"
-    run(["gcc", "-std=gnu11", "-Wall", "-Wextra", "-Werror", "-I", sources / root / "hw/xwin",
-         appid_source, "-o", appid_binary], work)
-    run([appid_binary], work, timeout=10)
-    report["nativeAppIdHeaders"] = {"verified": True, "sdkInterfaceOnly": True,
-                                    "sourceSha256": digest(appid_source.read_bytes()),
-                                    "headerSha256": digest((sources / root / "hw/xwin/propertystore.h").read_bytes())}
     for component in manifest["components"]:
         report["component"] = component["name"]
         report["stage"] = "source"
@@ -233,7 +231,7 @@ def build(work, report):
             run(["meson", "compile", "-C", build_directory, "-j", jobs], work)
             run(["meson", "install", "-C", build_directory], work)
         else:
-            run(["bash", source / "configure", "--prefix=" + str(prefix), "--host=" + manifest["target"], "--disable-dependency-tracking", *component["options"]], build_directory)
+            run(["bash", source / "configure", "--prefix=" + str(prefix), "--host=" + manifest["target"], "--enable-dependency-tracking", *component["options"]], build_directory)
             report["stage"] = "compile-install"
             run(["make", "-k", "-j" + jobs], build_directory)
             run(["make", "install"], build_directory)
@@ -242,26 +240,13 @@ def build(work, report):
         for relative, anchor in component.get("installedAnchors", {}).items():
             verify_file(prefix / relative, anchor["size"], anchor["sha256"])
         if component["name"] == "xorgproto":
-            report["stage"] = "native-ipv6-headers"
-            probe_source = ASSETS / "overlays/winsock-ipv6-probe.c"
-            probe_binary = builds / "winsock-ipv6-probe.exe"
-            run(["gcc", "-std=gnu11", "-Wall", "-Wextra", "-Werror", "-I", prefix / "include",
-                 probe_source, "-o", probe_binary, "-lws2_32"], work)
-            run([probe_binary], work, timeout=10)
-            report["nativeIpv6Headers"] = {"verified": True, "numericLoopbackOnly": True,
-                                           "sourceSha256": digest(probe_source.read_bytes()),
-                                           "wrapperSha256": digest((prefix / "include/X11/Xwinsock.h").read_bytes())}
+            header_probes(prefix, sources / root, builds, work, report, run)
+        if component["name"] == "libxcb":
+            xcb_probe(prefix, builds, work, report, run)
         if component["name"] == "xcb-proto":
             report["hostGenerator"] = verify_host_generator(prefix, source, work)
         if component["name"] == "libXfont2":
-            report["stage"] = "native-font-buffer"
-            probe_source = ASSETS / "overlays/font-buffer-probe.c"
-            probe_binary = builds / "font-buffer-probe.exe"
-            run(["gcc", "-std=gnu11", "-Wall", "-Wextra", "-Werror", "-I", source / "include",
-                 "-I", prefix / "include", probe_source, "-o", probe_binary, prefix / "lib/libXfont2.a"], work)
-            run([probe_binary], work, timeout=10)
-            report["nativeFontBuffer"] = {"verified": True, "binaryReadWriteAndEof": True,
-                                          "sourceSha256": digest(probe_source.read_bytes())}
+            font_probe(prefix, source, builds, work, report, run)
         write_report(work / "progress.json", report)
     report["component"] = "xorg-server"
     server_headers = builds / "xorg-server-headers"
@@ -286,6 +271,7 @@ def build(work, report):
                               "coreSha256": digest(core_bytes), "nativeSha256": digest(native_bytes)}
     report["stage"] = "server-compile"
     run(["make", "-k", "-j" + jobs], server_build, timeout=1800)
+    poll_probe(prefix, sources / root, server_build, builds, work, report, run)
     before = snapshot(prefix)
     run(["make", "install"], server_build)
     report["serverInstalledFiles"] = installed_delta(prefix, before, "xorg-server", owners)
@@ -299,6 +285,8 @@ def build(work, report):
     report["nativeHeaderEvidence"] = native_header_evidence(server_build)
     report["stage"] = "static-link-inputs"
     report["staticLink"] = link_inputs(maps / "XWin.exe.map", server_build / "hw/xwin", builds, prefix, owners, work, run, packages)
+    report["stage"] = "compiler-inputs"
+    report["compilerInputs"] = observed_inputs(builds, sources, prefix, manifest, root, owners, packages, work, run, report)
     report["runtimePackages"] = list(packages.values())
     report["stage"] = "native-version"
     version = run([server, "-version"], work, timeout=20, capture=True)

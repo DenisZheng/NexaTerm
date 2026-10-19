@@ -24,7 +24,8 @@
         "epoch": 1731540205,
         "fingerprint": "2F7DBCAD5B30E668BBD516C1CFDF148828C642A7",
         "certificate": "4A193C06D35E7C670FA4EF0BA2FB9E081F2D130E"
-      }
+      },
+      "compileInputs": "headers-only"
     },
     {
       "root": "xorgproto-2026.1",
@@ -89,16 +90,41 @@
         {
           "path": "include/X11/Xwinsock.h",
           "beforeSha256": "8b782cf21f6b1cc1f0b190a73061144c75a1ce5519ffa46302e291d87a83f212",
-          "afterSha256": "f16465bd611fa3eab5148e2d48ebf2ae23a7e1220f0902a37120e300e023c15c",
-          "reason": "Include IPv6/socket-length/address-resolution declarations inside the existing Windows namespace wrapper, before its renaming macros are restored. Preserve the Open Group license.",
+          "afterSha256": "37614a2e2d91a8c939505b28a6fd35b4a765464a5b0dad694f09355a13e109bb",
+          "reason": "Load base Windows/COM declarations through the matching protected namespace first; wrap IPv6 and native 64-bit names before restoring X11 identifiers. Preserve the Open Group notice.",
           "replacements": [
             {
               "before": "#include <winsock2.h>\n",
               "after": "#include <winsock2.h>\n#include <ws2tcpip.h>\n"
+            },
+            {
+              "before": "#undef _XFree86Server\n",
+              "after": "#include <X11/Xwindows.h>\n\n#undef _XFree86Server\n"
+            },
+            {
+              "before": "#define INT32 wINT32\n",
+              "after": "#define INT32 wINT32\n#ifdef __x86_64__\n#define INT64 wINT64\n#define LONG64 wLONG64\n#endif\n"
+            },
+            {
+              "before": "#undef INT32\n",
+              "after": "#undef INT32\n#undef INT64\n#undef LONG64\n"
+            }
+          ]
+        },
+        {
+          "path": "include/X11/Xwindows.h",
+          "beforeSha256": "f325abc2e6e77e3a747bc89c45d5dbb4b8ba6c473793a6aa0bd28dddc64d327b",
+          "afterSha256": "edb4b6808d5d233315f60e2127ee04b90b1e85797e4eec2108524273ec2bbb24",
+          "reason": "Load COM base declarations while SDK aliases are active, avoiding late Status/INT64 conflicts and Winsock1 inclusion; preserve the caller lean-header macro and original notice.",
+          "replacements": [
+            {
+              "before": "#include <windows.h>\n",
+              "after": "#pragma push_macro(\"WIN32_LEAN_AND_MEAN\")\n#ifndef WIN32_LEAN_AND_MEAN\n#define WIN32_LEAN_AND_MEAN\n#endif\n#include <windows.h>\n#include <objbase.h>\n#include <shlwapi.h>\n#include <propsys.h>\n#pragma pop_macro(\"WIN32_LEAN_AND_MEAN\")\n"
             }
           ]
         }
-      ]
+      ],
+      "compileInputs": "headers-only"
     },
     {
       "root": "xtrans-1.6.0",
@@ -120,7 +146,22 @@
         "epoch": 1741479206,
         "fingerprint": "2F7DBCAD5B30E668BBD516C1CFDF148828C642A7",
         "certificate": "4A193C06D35E7C670FA4EF0BA2FB9E081F2D130E"
-      }
+      },
+      "compileInputs": "headers-only",
+      "patches": [
+        {
+          "path": "Xtranssock.c",
+          "beforeSha256": "bc444f17ac712460c2bdabaae1aab4b5ee48ac5e2d29b72716af7e4d76b9fa6a",
+          "afterSha256": "d5c9ec050608952bf23ec6b20b48bbd94585be902e16a431d294dcac9beed60a",
+          "reason": "Use the Winsock byte-buffer signature for the same integer IPv6-only option and length; preserve the original notice.",
+          "replacements": [
+            {
+              "before": "IPV6_V6ONLY, &one, sizeof(int)",
+              "after": "IPV6_V6ONLY, (const char *)&one, sizeof(int)"
+            }
+          ]
+        }
+      ]
     },
     {
       "root": "libXau-1.0.12",
@@ -142,7 +183,8 @@
         "epoch": 1734140008,
         "fingerprint": "2F7DBCAD5B30E668BBD516C1CFDF148828C642A7",
         "certificate": "4A193C06D35E7C670FA4EF0BA2FB9E081F2D130E"
-      }
+      },
+      "compileInputs": "compiler"
     },
     {
       "root": "libXdmcp-1.1.5",
@@ -164,7 +206,8 @@
         "epoch": 1709415471,
         "fingerprint": "2F7DBCAD5B30E668BBD516C1CFDF148828C642A7",
         "certificate": "4A193C06D35E7C670FA4EF0BA2FB9E081F2D130E"
-      }
+      },
+      "compileInputs": "compiler"
     },
     {
       "root": "libpthread-stubs-0.5",
@@ -186,7 +229,8 @@
         "epoch": 1689713547,
         "fingerprint": "2F7DBCAD5B30E668BBD516C1CFDF148828C642A7",
         "certificate": "4A193C06D35E7C670FA4EF0BA2FB9E081F2D130E"
-      }
+      },
+      "compileInputs": "headers-only"
     },
     {
       "root": "xcb-proto-1.17.0",
@@ -208,7 +252,8 @@
         "epoch": 1713191947,
         "fingerprint": "16238A7D92448B02B7B10344B6B1CEAE5103DB07",
         "certificate": "3BB639E56F861FA2E86505690FDD682D974CA72A"
-      }
+      },
+      "compileInputs": "headers-only"
     },
     {
       "root": "libxcb-1.17.0",
@@ -241,6 +286,18 @@
               "after": "SO_KEEPALIVE, (const char *)&on, sizeof(on)"
             }
           ]
+        },
+        {
+          "path": "src/xcb_windefs.h",
+          "beforeSha256": "ca940d79a1a6234263b966a095358fbbc0f1c34bc892112520ef91bc9ad08c90",
+          "afterSha256": "a32ecdd971c47ae1d1c84fdb702e91b46133299ce8b29724adb94c36b5097833",
+          "reason": "This integrated native profile already owns fixed xorgproto headers. Use its protected Winsock namespace so XCB-first consumers retain distinct Windows and X11 BOOL/INT32 types; preserve the original permission notice.",
+          "replacements": [
+            {
+              "before": "#include <winsock2.h>\n#include <ws2tcpip.h>\n#include <windef.h>\n",
+              "after": "#include <X11/Xwinsock.h>\n"
+            }
+          ]
         }
       ],
       "signature": {
@@ -252,7 +309,8 @@
         "epoch": 1713193868,
         "fingerprint": "16238A7D92448B02B7B10344B6B1CEAE5103DB07",
         "certificate": "3BB639E56F861FA2E86505690FDD682D974CA72A"
-      }
+      },
+      "compileInputs": "compiler"
     },
     {
       "root": "xcb-util-0.4.1",
@@ -274,7 +332,8 @@
         "epoch": 1671502340,
         "fingerprint": "2F7DBCAD5B30E668BBD516C1CFDF148828C642A7",
         "certificate": "4A193C06D35E7C670FA4EF0BA2FB9E081F2D130E"
-      }
+      },
+      "compileInputs": "compiler"
     },
     {
       "root": "xcb-util-image-0.4.1",
@@ -296,7 +355,8 @@
         "epoch": 1666122659,
         "fingerprint": "2F7DBCAD5B30E668BBD516C1CFDF148828C642A7",
         "certificate": "4A193C06D35E7C670FA4EF0BA2FB9E081F2D130E"
-      }
+      },
+      "compileInputs": "compiler"
     },
     {
       "root": "xcb-util-wm-0.4.2",
@@ -318,7 +378,8 @@
         "epoch": 1666145064,
         "fingerprint": "2F7DBCAD5B30E668BBD516C1CFDF148828C642A7",
         "certificate": "4A193C06D35E7C670FA4EF0BA2FB9E081F2D130E"
-      }
+      },
+      "compileInputs": "compiler"
     },
     {
       "root": "libX11-1.8.14",
@@ -539,7 +600,8 @@
           "size": 13758,
           "sha256": "420d8335306aad84fde239eba310e7da5ffaecb572111ce78e42736fba77828f"
         }
-      }
+      },
+      "compileInputs": "compiler"
     },
     {
       "root": "libxkbfile-1.2.0",
@@ -561,7 +623,8 @@
         "epoch": 1769385411,
         "fingerprint": "3AB285232C46AE43D8E192F4DAB0F78EA6E7E2D2",
         "certificate": "3AB285232C46AE43D8E192F4DAB0F78EA6E7E2D2"
-      }
+      },
+      "compileInputs": "compiler"
     },
     {
       "root": "libfontenc-1.1.9",
@@ -583,7 +646,8 @@
         "epoch": 1770514803,
         "fingerprint": "3AB285232C46AE43D8E192F4DAB0F78EA6E7E2D2",
         "certificate": "3AB285232C46AE43D8E192F4DAB0F78EA6E7E2D2"
-      }
+      },
+      "compileInputs": "compiler"
     },
     {
       "root": "libXfont2-2.0.9",
@@ -632,7 +696,8 @@
             }
           ]
         }
-      ]
+      ],
+      "compileInputs": "compiler"
     }
   ],
   "serverOptions": [
@@ -659,7 +724,8 @@
     "--disable-devel-docs",
     "--with-sha1=CryptoAPI",
     "--with-default-font-path=built-ins",
-    "--disable-debug"
+    "--disable-debug",
+    "--disable-unit-tests"
   ],
   "serverExecutable": "XWin.exe",
   "certificates": {
@@ -954,8 +1020,8 @@
     {
       "path": "hw/xwin/propertystore.h",
       "beforeSha256": "4460d61ae1a3c24b27aaea497493cbf0006e11e7c9a36b8278b51603a99ef7ec",
-      "afterSha256": "ffbb65dc2530749c3387b3c23ce82be8fe62bb165c2179d579a04b7125b496a1",
-      "reason": "Exclude the LGPL MinGW propkey.h table. Move the existing permissive single AppUserModel property declaration into the common branch; retain the real IPropertyStore SDK interface and taskbar behavior. GUID/PID independently matched to Microsoft System.AppUserModel.ID documentation.",
+      "afterSha256": "27602844b02f3db5d84a83f4d4c7487e15ac12846c51f61898e42a8040430973",
+      "reason": "Exclude the LGPL MinGW propkey.h table. Move the existing permissive single AppUserModel property declaration into the common branch; retain the real IPropertyStore SDK interface and taskbar behavior. GUID/PID independently matched to Microsoft System.AppUserModel.ID documentation. Share the existing IID declaration as well because the protected SDK interface is parsed before INITGUID.",
       "replacements": [
         {
           "before": "#include <propkey.h>\n",
@@ -964,8 +1030,196 @@
         {
           "before": "DEFINE_PROPERTYKEY(PKEY_AppUserModel_ID, 0x9F4C2855, 0x9F79, 0x4B39, 0xA8, 0xD0,\n                   0xE1, 0xD4, 0x2D, 0xE1, 0xD5, 0xF3, 5);\n\n#endif /* !__MINGW64_VERSION_MAJOR */\n",
           "after": "#endif /* !__MINGW64_VERSION_MAJOR */\n\nDEFINE_PROPERTYKEY(PKEY_AppUserModel_ID, 0x9F4C2855, 0x9F79, 0x4B39, 0xA8, 0xD0,\n                   0xE1, 0xD4, 0x2D, 0xE1, 0xD5, 0xF3, 5);\n"
+        },
+        {
+          "before": "DEFINE_GUID(IID_IPropertyStore, 0x886d8eeb, 0x8cf2, 0x4446, 0x8d, 0x02, 0xcd,\n            0xba, 0x1d, 0xbd, 0xcf, 0x99);\n\n",
+          "after": ""
+        },
+        {
+          "before": "#endif /* !__MINGW64_VERSION_MAJOR */\n\n",
+          "after": "#endif /* !__MINGW64_VERSION_MAJOR */\n\nDEFINE_GUID(IID_IPropertyStore, 0x886d8eeb, 0x8cf2, 0x4446, 0x8d, 0x02, 0xcd,\n            0xba, 0x1d, 0xbd, 0xcf, 0x99);\n\n"
         }
       ]
+    },
+    {
+      "path": "dix/events.c",
+      "beforeSha256": "bf005379d69b21e84d9c5ca9b40c485f21cbf252ffcedd454f82de88be7a25f3",
+      "afterSha256": "8779166593c32594c3de6316fcd6e5f9b25638f1e6c370173260630dd467b45b",
+      "reason": "Preserve pointer-width address alignment and signed/unsigned scalar-token semantics on LLP64; retain public widths, original notices and diagnostics. Diagnostic pointers use %p; XDMCP keeps the same option payload/length.",
+      "replacements": [
+        {
+          "before": "(WindowPtr) (long) focusID",
+          "after": "(WindowPtr) (uintptr_t) focusID"
+        }
+      ]
+    },
+    {
+      "path": "dix/pixmap.c",
+      "beforeSha256": "fce70438225d4d90ad9b8e6546d2be9423ad8bb997cfcea5204a57895ce22bae",
+      "afterSha256": "cccc6aec9046011c66ba43d1f9cb23451227bec1647c0ac0178bd50ab1fa8c7b",
+      "reason": "Preserve pointer-width address alignment and signed/unsigned scalar-token semantics on LLP64; retain public widths, original notices and diagnostics. Diagnostic pointers use %p; XDMCP keeps the same option payload/length.",
+      "replacements": [
+        {
+          "before": "((void *)(long)ihandle)",
+          "after": "((void *)(intptr_t)ihandle)"
+        }
+      ]
+    },
+    {
+      "path": "dix/resource.c",
+      "beforeSha256": "70c7b8a9ef57284db729af2641001b31046a78c5a219953153e8bf9a297bf551",
+      "afterSha256": "878c937a8ccff16269173a4d79f6ba8e5c70ac955dd29f6364cb3153340b54a2",
+      "reason": "Preserve pointer-width address alignment and signed/unsigned scalar-token semantics on LLP64; retain public widths, original notices and diagnostics. Diagnostic pointers use %p; XDMCP keeps the same option payload/length.",
+      "replacements": [
+        {
+          "before": "AddResource(%lx, %x, %lx)",
+          "after": "AddResource(%lx, %x, %p)"
+        },
+        {
+          "before": "(unsigned long) value",
+          "after": "value"
+        }
+      ]
+    },
+    {
+      "path": "mi/miline.h",
+      "beforeSha256": "70cf58a36c620f3cc644ead7fd56305944de2076fa84ebc4c59c6eb63c92df00",
+      "afterSha256": "942b21397ecbbdca60ce3b6ac524301371a1c1483a5431d3db5d08b8b5d8080e",
+      "reason": "Preserve pointer-width address alignment and signed/unsigned scalar-token semantics on LLP64; retain public widths, original notices and diagnostics. Diagnostic pointers use %p; XDMCP keeps the same option payload/length.",
+      "replacements": [
+        {
+          "before": "((unsigned long) (unsigned long*)",
+          "after": "((unsigned long) (uintptr_t)"
+        }
+      ]
+    },
+    {
+      "path": "fb/fbgetsp.c",
+      "beforeSha256": "66a2a5c92ee113ccf1e03043c6e8eeb9cf9dd3515fcc937d1fefdabbfe06515a",
+      "afterSha256": "1169db67804244ed685aa31ea9b82d38c6ad37330a8c6fb3097a6703a7a3a19c",
+      "reason": "Preserve pointer-width address alignment and signed/unsigned scalar-token semantics on LLP64; retain public widths, original notices and diagnostics. Diagnostic pointers use %p; XDMCP keeps the same option payload/length.",
+      "replacements": [
+        {
+          "before": "((long) pchardstStart)",
+          "after": "((uintptr_t) pchardstStart)"
+        }
+      ]
+    },
+    {
+      "path": "fb/fboverlay.c",
+      "beforeSha256": "92e93956ad93c552b6aa8ca893fd0983d1d6be64b37ec9286a4f11de73d0c46a",
+      "afterSha256": "379b028cf291946ae67604dd0e0b775c9f34cd3a8c9304830c95aa25d60d4ef0",
+      "reason": "Preserve pointer-width address alignment and signed/unsigned scalar-token semantics on LLP64; retain public widths, original notices and diagnostics. Diagnostic pointers use %p; XDMCP keeps the same option payload/length.",
+      "replacements": [
+        {
+          "before": "(void *) (long) i",
+          "after": "(void *) (intptr_t) i"
+        }
+      ]
+    },
+    {
+      "path": "fb/fbsetsp.c",
+      "beforeSha256": "fa7f95e58ab6dd901c2700759d4914efc5f0952ff325385ff60e4cf9cd70c303",
+      "afterSha256": "756ee8834e2ed347a7f6b705f8559bc28802203042eb4bb7e607dc02d4356da9",
+      "reason": "Preserve pointer-width address alignment and signed/unsigned scalar-token semantics on LLP64; retain public widths, original notices and diagnostics. Diagnostic pointers use %p; XDMCP keeps the same option payload/length.",
+      "replacements": [
+        {
+          "before": "((long) src)",
+          "after": "((uintptr_t) src)"
+        }
+      ]
+    },
+    {
+      "path": "mi/miscrinit.c",
+      "beforeSha256": "45065d2ccf2687dcddbe0c30620b67c74845e76fb0c02113c27b5688ed5ae236",
+      "afterSha256": "039139f5a52dec94a9b24b5ebedf7f85cb8d805dc521ad364ad37da87497d0c5",
+      "reason": "Preserve pointer-width address alignment and signed/unsigned scalar-token semantics on LLP64; retain public widths, original notices and diagnostics. Diagnostic pointers use %p; XDMCP keeps the same option payload/length.",
+      "replacements": [
+        {
+          "before": "(unsigned long *) (unsigned long) bias",
+          "after": "(void *) (uintptr_t) bias"
+        }
+      ]
+    },
+    {
+      "path": "miext/shadow/sh3224.c",
+      "beforeSha256": "6783c86a7532b1afe8e34abb7be29197c8353064508a3b02cf8f752300416bdb",
+      "afterSha256": "c6d055204094f1034c3d0cac0456f5227bbc0db774883857959308756a63b076",
+      "reason": "Preserve pointer-width address alignment and signed/unsigned scalar-token semantics on LLP64; retain public widths, original notices and diagnostics. Diagnostic pointers use %p; XDMCP keeps the same option payload/length.",
+      "replacements": [
+        {
+          "before": "((long)dst & 3)",
+          "after": "((uintptr_t)dst & 3)"
+        }
+      ]
+    },
+    {
+      "path": "record/set.c",
+      "beforeSha256": "5687f22df347f772a6d28b3aab644fa9ba20e7bb4ed932d3dac561ec9fdfd908",
+      "afterSha256": "fdfda964d4f2fa6ff4c0d5c64aac893d08dcda765a383e258ff303d521038e91",
+      "reason": "Preserve pointer-width address alignment and signed/unsigned scalar-token semantics on LLP64; retain public widths, original notices and diagnostics. Diagnostic pointers use %p; XDMCP keeps the same option payload/length.",
+      "replacements": [
+        {
+          "before": "(int) (long) pIter",
+          "after": "(int) (intptr_t) pIter"
+        },
+        {
+          "before": "(RecordSetIteratePtr) (long) (pInterval->last + 1)",
+          "after": "(RecordSetIteratePtr) (intptr_t) (pInterval->last + 1)"
+        },
+        {
+          "before": "((long) pMem & (alignment - 1))",
+          "after": "((uintptr_t) pMem & (alignment - 1))"
+        }
+      ]
+    },
+    {
+      "path": "exa/exa_offscreen.c",
+      "beforeSha256": "d01ab750eacf42544d927cf397a33d0477fd040cfaa5cf1d6b881a82859832c0",
+      "afterSha256": "4fabad462beae4b12e4b14240ec42cce430d6a046d1cac9d96515e079c6c633f",
+      "reason": "Preserve pointer-width address alignment and signed/unsigned scalar-token semantics on LLP64; retain public widths, original notices and diagnostics. Diagnostic pointers use %p; XDMCP keeps the same option payload/length.",
+      "replacements": [
+        {
+          "before": "(unsigned long) pExaDstPix->fb_ptr",
+          "after": "(uintptr_t) pExaDstPix->fb_ptr"
+        }
+      ]
+    },
+    {
+      "path": "os/xdmcp.c",
+      "beforeSha256": "979ae7c29f1e91d9e82ebfc2b473cb16826c1ff3c06cc981e3cc8dd503c370aa",
+      "afterSha256": "24aa2f5bf463e98abb4c52cdf7d44521a131540d5844c94d55c278ae20c57dea",
+      "reason": "Preserve pointer-width address alignment and signed/unsigned scalar-token semantics on LLP64; retain public widths, original notices and diagnostics. Diagnostic pointers use %p; XDMCP keeps the same option payload/length.",
+      "replacements": [
+        {
+          "before": "&hopflag6, sizeof(hopflag6)",
+          "after": "(const char *)&hopflag6, sizeof(hopflag6)"
+        }
+      ]
+    },
+    {
+      "path": "include/xserver_poll.h",
+      "beforeSha256": "9edf4c720b32c56a4fcba5f87e84459f820c6c6ce9c33e1ad9d7fe939cd61e8d",
+      "afterSha256": "7768d8ec3a1934b3e3a6128d7be8201dd82e1497cc1c95251faa2684f25f17cf",
+      "reason": "Keep the existing select fallback structure/flags distinct from the SDK WSAPoll structure. Load protected Winsock first; do not change poll waiting or FD semantics. Preserve the original notice.",
+      "replacements": [
+        {
+          "before": "#else\n\n#define POLLIN",
+          "after": "#else\n\n#if defined(WIN32) && !defined(__CYGWIN__)\n#include <X11/Xwinsock.h>\n#define pollfd xserver_pollfd\n#undef POLLIN\n#undef POLLPRI\n#undef POLLOUT\n#undef POLLERR\n#undef POLLHUP\n#undef POLLNVAL\n#endif\n\n#define POLLIN"
+        }
+      ]
+    },
+    {
+      "path": "hw/xwin/winauth.h",
+      "create": true,
+      "beforeSha256": null,
+      "afterSha256": "f5bb812ded2e4083062a0eb9fee3bb5245e047ced5499c8c4c4631239054acd5",
+      "reason": "The fixed release omits this header. Add only declarations for its existing authorization implementation; do not replace authentication or cookie generation.",
+      "overlay": {
+        "file": "overlays/winauth.h",
+        "size": 257,
+        "sha256": "f5bb812ded2e4083062a0eb9fee3bb5245e047ced5499c8c4c4631239054acd5"
+      }
     }
   ],
   "excludedHeaderReview": [

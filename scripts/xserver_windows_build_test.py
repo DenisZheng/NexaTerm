@@ -138,6 +138,19 @@ class WindowsBuildTests(unittest.TestCase):
             result = build.verify_host_generator(prefix, source.parent, self.root)
         self.assertEqual(result["moduleSha256"], build.digest((source / "__init__.py").read_bytes()))
 
+    def test_explicit_pinned_missing_header_creation_cannot_overwrite_existing_input(self):
+        assets = self.root / "assets"
+        assets.mkdir()
+        (assets / "header.h").write_bytes(b"declarations")
+        target = self.root / "include/header.h"
+        spec = {"path": "include/header.h", "create": True, "beforeSha256": None,
+                "afterSha256": build.digest(b"declarations"), "reason": "missing release declaration fixture",
+                "overlay": {"file": "header.h", "size": 12, "sha256": build.digest(b"declarations")}}
+        with patch.object(build, "ASSETS", assets):
+            build.apply_source_patches(self.root, [spec])
+            self.assertEqual(target.read_bytes(), b"declarations")
+            self.assertCode("PATCH_CREATE", build.apply_source_patches, self.root, [spec])
+
     def test_actual_posix_runtime_import_is_rejected(self):
         server = self.root / "server.exe"
         server.write_bytes(b"fixture")

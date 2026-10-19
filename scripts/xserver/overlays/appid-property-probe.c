@@ -1,5 +1,6 @@
 /* Exercise the patched header's real Windows SDK interface and property key. */
-#include <windows.h>
+#include <X11/Xproto.h>
+#include <X11/Xwindows.h>
 #include <string.h>
 #include <wchar.h>
 #define INITGUID
