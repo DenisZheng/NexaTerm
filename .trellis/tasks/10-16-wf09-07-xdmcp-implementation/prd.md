@@ -6,7 +6,7 @@
 
 同日X0续作：Draft #84已交付固定官方21.1.25源码/签名/公钥核验入口，专用CI2的21项测试和真实在线GPG验证通过。采集仅为REVIEW-REQUIRED，发行批准与bundled仍为false；继续原生Windows构建、逐文件/依赖许可及PE/资源闭包，不重复源码核验入口。精确完整CI结果与下一刀见research/source-review-evidence.md。
 
-同日Windows续作Draft #85：code6e1f8fd的source CI19及完整应用CI686七执行job成功；原生16已完成15依赖、五项实际目标探针、完整引擎编译/链接/安装和递归PE导入，随后geometry来源门禁FAIL。检查假定的legacy副本未被使用，已改为核对server自身两份固定geometry/结构头，并新增真实GCC及缺失/客户端替代反例；本地83回归通过，待新原生执行。静态map、完整编译输入、最终版本probe、完整许可/资源、随包和桌面仍未关闭，继续research/windows-build-evidence.md。
+同日Windows续作Draft #85：codec2ca16f已过source CI20和完整应用CI687七执行job；原生17完成15依赖、五探针、完整引擎/PE及真实geometry/GDI/AppID来源门禁，静态map在default-manifest.o缺安装notice处FAIL。四工具链DLL的五份实际许可hash已匹配原文，精确对象与固定发布/源许可证据已补，本地89回归通过，待新原生执行。完整C输入/最终版本、xkbcomp/XKB数据、DLL内部静态/资源、随包/桌面仍须开发，见research/windows-build-evidence.md与research/windows-runtime-license-review.md。
 
 用户流程：选择 XDMCP 目标后启动远程桌面，查看状态，取消/重连/关闭并回收所属 X server。
 

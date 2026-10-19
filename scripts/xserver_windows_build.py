@@ -282,7 +282,7 @@ def build(work, report):
     report["stage"] = "native-headers"
     report["nativeHeaderEvidence"] = native_header_evidence(server_build)
     report["stage"] = "static-link-inputs"
-    report["staticLink"] = link_inputs(maps / "XWin.exe.map", server_build / "hw/xwin", builds, prefix, owners, work, run, packages)
+    report["staticLink"] = link_inputs(maps / "XWin.exe.map", server_build / "hw/xwin", builds, prefix, owners, work, run, packages, report)
     report["stage"] = "compiler-inputs"
     report["compilerInputs"] = observed_inputs(builds, sources, prefix, manifest, root, owners, packages, work, run, report)
     report["runtimePackages"] = list(packages.values())

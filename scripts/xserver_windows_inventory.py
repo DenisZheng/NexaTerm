@@ -4,6 +4,7 @@ from pathlib import Path
 import re
 
 from xserver_source_review import ReviewError, digest, require
+from xserver_windows_licenses import source_license_evidence
 
 
 class InventoryCollision(ReviewError):
@@ -37,12 +38,14 @@ def package_evidence(package, work, run, file_owners=None):
     license_value = re.search(r"^Licenses\s*:\s*(.+)", info, re.MULTILINE)
     require(version and license_value and license_value[1].strip() != "None", "TOOLCHAIN_LICENSE")
     listing = run(["pacman", "-Ql", package], work, capture=True)
-    anchors = {}
+    anchors, installed_files = {}, []
     for line in listing.splitlines():
         match = re.fullmatch(re.escape(package) + r"\s+(.+)", line)
         if not match:
             continue
         path = Path(match[1])
+        if not match[1].endswith("/"):
+            installed_files.append(path)
         if file_owners is not None and not match[1].endswith("/"):
             identity = str(path.resolve()).casefold()
             require(identity not in file_owners or file_owners[identity] == package, "TOOLCHAIN_OWNER_AMBIGUOUS")
@@ -50,12 +53,16 @@ def package_evidence(package, work, run, file_owners=None):
         if "/share/licenses/" in str(path) and path.is_file():
             require(path.stat().st_size <= 1024 * 1024, "TOOLCHAIN_LICENSE")
             anchors[str(path.relative_to("/ucrt64"))] = digest(path.read_bytes())
-    require(anchors, "TOOLCHAIN_LICENSE")
+    source_evidence = source_license_evidence(package, version[1], license_value[1].strip(), installed_files) if not anchors else None
+    require(anchors or source_evidence, "TOOLCHAIN_LICENSE")
     archives = []
     for path in Path("/var/cache/pacman/pkg").glob(package + "-" + version[1] + "-*.pkg.tar.zst"):
         archives.append({"name": path.name, "sha256": digest(path.read_bytes()), "size": path.stat().st_size})
-    return {"package": package, "version": version[1], "declaredLicense": license_value[1].strip(),
-            "licenseFiles": anchors, "cachedArchives": archives, "distributionApproved": False}
+    result = {"package": package, "version": version[1], "declaredLicense": license_value[1].strip(),
+              "licenseFiles": anchors, "cachedArchives": archives, "distributionApproved": False}
+    if source_evidence:
+        result["sourceLicenseEvidence"] = source_evidence
+    return result
 
 
 def add_runtime_provenance(closure, prefix, owners, work, run):
@@ -74,16 +81,21 @@ def add_runtime_provenance(closure, prefix, owners, work, run):
     return packages
 
 
-def link_inputs(map_file, link_directory, builds, prefix, owners, work, run, packages):
+def link_inputs(map_file, link_directory, builds, prefix, owners, work, run, packages, report=None):
     require(map_file.is_file() and map_file.stat().st_size <= 64 * 1024 * 1024, "LINK_MAP_MISSING")
     content = map_file.read_text(encoding="utf-8", errors="strict")
     require(re.search(r"^OUTPUT\([^\n]*XWin\.exe\b", content, re.MULTILINE), "LINK_MAP_TARGET")
     records = {}
+    result = {"mapSha256": digest(map_file.read_bytes()), "inputs": [], "observationsComplete": False}
+    if report is not None:
+        report["staticLink"] = result
     for name in re.findall(r"^LOAD (.+)$", content, re.MULTILINE):
         if re.match(r"^[A-Za-z]:", name):
             name = run(["cygpath", "-u", name], work, capture=True).strip()
         path = Path(name)
         path = (link_directory / path).resolve() if not path.is_absolute() else path.resolve()
+        if report is not None:
+            report["staticLinkCurrentInput"] = str(path)[:4096]
         require(path.is_file(), "LINK_INPUT_MISSING")
         require(not re.search(r"(?:winshadddnl\.|libdxguid\.)", path.name, re.IGNORECASE), "LINK_DIRECTDRAW_INPUT")
         record = {"sha256": digest(path.read_bytes()), "size": path.stat().st_size}
@@ -100,8 +112,14 @@ def link_inputs(map_file, link_directory, builds, prefix, owners, work, run, pac
                 packages[package] = package_evidence(package, work, run)
             record.update({"origin": "target-toolchain", "path": str(path.relative_to("/ucrt64")), "package": package})
         records[record["origin"] + "/" + record["path"]] = record
+        result["inputs"] = list(records.values())
+        if report is not None:
+            report["runtimePackages"] = list(packages.values())
     require(records and any(value["origin"] == "target-toolchain" for value in records.values()), "LINK_INPUTS_MISSING")
-    return {"mapSha256": digest(map_file.read_bytes()), "inputs": list(records.values())}
+    result["observationsComplete"] = True
+    if report is not None:
+        report.pop("staticLinkCurrentInput", None)
+    return result
 
 
 def native_header_evidence(build_directory):

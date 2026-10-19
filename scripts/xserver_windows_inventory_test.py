@@ -65,6 +65,19 @@ class InventoryTests(unittest.TestCase):
         path.write_text(f"LOAD {library}\nOUTPUT(XWin.exe pei-x86-64)\n")
         self.assertCode("LINK_SOURCE_OWNER", link_inputs, path, self.root, self.root / "build", self.prefix, {}, self.root, None, {})
 
+    def test_link_failure_preserves_completed_inputs_and_current_file(self):
+        library = self.prefix / "library.a"
+        library.write_bytes(b"fixture")
+        missing = self.prefix / "missing.a"
+        mapping = self.root / "server.map"
+        mapping.write_text(f"LOAD {library}\nLOAD {missing}\nOUTPUT(XWin.exe pei-x86-64)\n")
+        report = {}
+        self.assertCode("LINK_INPUT_MISSING", link_inputs, mapping, self.root, self.root / "build",
+                        self.prefix, {"library.a": "source"}, self.root, None, {}, report)
+        self.assertFalse(report["staticLink"]["observationsComplete"])
+        self.assertEqual(report["staticLink"]["inputs"][0]["component"], "source")
+        self.assertEqual(report["staticLinkCurrentInput"], str(missing))
+
     def header_fixture(self):
         build = self.root / "build"
         deps = build / "hw/xwin/.deps"

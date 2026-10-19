@@ -15,7 +15,7 @@
   "branch": "build/wf09-07-xserver-windows",
   "base_branch": "build/wf09-07-xserver-source-review",
   "worktree_path": null,
-  "commit": "6e1f8fd7ef7793085f490c7f8c62e092a6b2a285",
+  "commit": "c2ca16f7f1487c65756aa65ed6c081f94b74cb75",
   "pr_url": "https://github.com/DenisZheng/NexaTerm/pull/85",
   "subtasks": [],
   "children": [],
@@ -28,8 +28,11 @@
     ".trellis/spec/backend/xserver-source-review.md",
     "scripts/xserver_windows_build.py",
     "scripts/xserver/windows-sources.json",
-    ".trellis/spec/backend/xserver-windows-build.md"
+    ".trellis/spec/backend/xserver-windows-build.md",
+    "scripts/xserver_windows_licenses.py",
+    "scripts/xserver/toolchain-license-sources.json",
+    ".trellis/tasks/10-16-wf09-07-xdmcp-implementation/research/windows-runtime-license-review.md"
   ],
-  "notes": "Draft #85 stacked on #84. Verified code6e1f8fd: source CI19 and full app CI686 all7 executing jobs SUCCESS; conditional package skipped. Native16 passed60 regressions, all15 dependencies, real IPv6/AppID/XCB/font/poll probes, full XWin compile/link/install and recursive AMD64 normal/delay PE closure; later geometry provenance gate FAIL, with static map/compiler inputs/final version not yet executed. Fixed-source inspection proves this release uses its own xkb/xkbgeom.h and include/xkbstr.h, not the unused legacy copy; remove that tree and require both actual core units and pinned source headers. Local83 regressions include real GCC dependency output and missing/client/unused-copy negatives; new code needs fresh Windows CI. Added embedded PCF/font and BSD fallback license evidence; full per-file/generator/compiler-runtime/resource adoption, X2/X3 and Unix hard-crash supervision remain open. No distribution/bundled/desktop approval, merge or release.",
+  "notes": "Draft #85 stacked on #84. Verified codec2ca16f: source CI20 and full CI687 all7 executing jobs SUCCESS; package skipped. Native17 passed62 regressions,15 dependencies,5 real probes,full XWin/PE and actual geometry/GDI/AppID/debug/header provenance; static map then FAIL because the auto-inserted default-manifest.o package has no installed notice. Four DLL provider versions and five installed license hashes matched fixed primary texts. Exact default-manifest20260815-1 official archive/object/build-recipe/generator and repository BSD notice collected; strict source receipt requires exact version/declaration/full file set/object/notice pins, keeps installed notice absent and adoption false. Local89 no-skip regressions; new code needs fresh Windows CI. Full C inputs/final version, each DLL static/resource closure, xkbcomp/XKB data, runtime GPL obligations,X2/X3 and Unix hard-crash supervision remain open. No distribution/bundled/desktop approval, merge or release.",
   "meta": {}
 }

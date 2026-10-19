@@ -167,3 +167,11 @@ code6e1f8fd对应的15个归档均再次先匹配manifest大小/SHA256，再逐�
 此次失败来自本刀错误的检查假设：强制观察xorgproto legacy私有副本，而固定server全部include实际指向自身xkb/xkbgeom.h（17461字节、SHA256 770c4b7d41b7d87300c8b092afd0c1190a528750349befcc7bbf7e2c1ba32d8f）及include/xkbstr.h（20471字节、SHA256 74805f13f671025a231792abb07546c7f0efe250aee535362e4586d0e1eda6a3），均保留完整SGI宽松许可。移除未使用的legacy副本/额外include树，公共客户端头仍归libX11；新增两份真实server文件锚点（总21），分别要求xkb.c与xkbUtils.c的实际依赖包含它们，并拒绝客户端头替代。真实GCC回归生成同一in-tree包含链，另覆盖未用legacy副本、缺结构头或缺编译单元不能通过。
 
 编译输入失败现在保留受限的当前raw/resolved路径；已完成DLL包许可证据在进入后续门禁前写入报告，避免后序失败丢失。新门禁仍须完整Windows执行，不覆盖原生16的FAIL，也不借用其旧结果完成新代码。
+
+## 原生17：真实server头通过，补默认manifest的源证据
+
+[原生17](https://github.com/DenisZheng/NexaTerm/actions/runs/39259636713)（codec2ca16f）完成62项Windows回归、15依赖、五探针、完整编译/链接/安装及16文件PE递归。771份真实Automake记录证明GDI、AppID、winmsg和两个核心XKB单元已编译，内置server geometry/结构头被实际使用，DirectDraw、propkey和无许可调试表均未包含。修正后的geometry门禁已通过；最终静态map随后在工具链自动带入的default-manifest.o处缺少随包notice而FAIL，完整C输入/最终版本probe未执行。
+
+实际下载单JSON artifact，ZIP242336字节、SHA256 efabecaadaeda3550555080cd64d31de54c804bb5b671d53d982cbd7f08ee72b。四个目标工具链DLL的实际包版本与五份许可hash均已同固定官方原文匹配；不能用此匹配替代完整来源/发行批准。code c2ca16f的source CI20（21+62）与完整CI687七执行job全部成功；source20两JSON归档85272字节、SHA256 1d32d7dab7c09dad858dc37f6eb9254d32d29ecc0bc09d1cbbc76091d77ae9b9，全部15源码/签名与manifest一致。
+
+default-manifest包无安装notice，但固定发布包、配方/生成器hash、完整文件集合和源仓库BSD许可已取得；新增严格单对象sourceLicenseEvidence，保留其与包声明的Public Domain不同层次及未批准发行。未知包/版本/声明/额外文件/字节漂移继续失败，没有通用缺许可豁免，也不虚构已安装的许可证。静态map现同编译输入一样保留前序结果及当前失败输入。本地89回归无skip，新代码须重新取得Windows结果。逐项主来源与实际许可hash、新发现的xkbcomp/XKB数据缺口、DLL内部静态/资源及GPL运行库本体义务见[运行库许可实证](windows-runtime-license-review.md)。整体任务仍in_progress。
