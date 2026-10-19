@@ -129,3 +129,11 @@ code2d0b9a0完整CI682：Rust Linux617/4既有ignored、macOS618、Windows620，
 - 上游test/tests和simple-xinit均依赖sys/wait/fork，当前profile使用官方--disable-unit-tests排除这两个Unix测试可执行文件，明确不记为通过。项目三平台完整CI、Python反例及真实Windows目标探针保留；没有禁用国际化、运行时、编译诊断或把失败改绿。
 
 本地81项无skip；固定源码全部组件适配及21项server适配（含一个缺失声明文件的显式创建）均已实际逐字节核验。后续实际Windows仍须验证，不继承code872dac6结果。完整编译输入清单为新代码，亦待同次真实执行。
+
+## 原生14：修正INITGUID后的属性键定义宏
+
+[原生14](https://github.com/DenisZheng/NexaTerm/actions/runs/39222995223)（code41b1965）已通过受保护Windows/COM头链的实际IPv6编译/执行；真实Xproto/Xwindows上下文的AppID探针也已越过类型编译错误，但链接缺少PKEY_AppUserModel_ID，整次仍为FAIL。早期加载propsys.h时，propkeydef.h已经将DEFINE_PROPERTYKEY设为extern；后来initguid.h只刷新DEFINE_GUID，不能令此前的属性键宏自动变为定义。
+
+已核对的Public Domain propkeydef.h没有header guard，按当前INITGUID重新定义DEFINE_PROPERTYKEY。仅在propertystore.h的propsys.h之后显式再次包含该SDK头，遵循其既有宏契约；保留原有单键声明、真实接口与排除LGPL属性表的要求，不复制SDK宏实现或靠额外库掩盖缺定义。固定补丁结果hash随实际字节更新，本地81项回归无skip。新代码仍须取得实际Windows结果。
+
+code41b1965的[source CI17](https://github.com/DenisZheng/NexaTerm/actions/runs/39222995201)及[完整应用CI684](https://github.com/DenisZheng/NexaTerm/actions/runs/39222995202)均成功，后者七个实际执行job全通过；这些结果不包含本节后续链接修正，也不将原生14失败覆盖为成功。

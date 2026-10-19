@@ -1020,8 +1020,8 @@
     {
       "path": "hw/xwin/propertystore.h",
       "beforeSha256": "4460d61ae1a3c24b27aaea497493cbf0006e11e7c9a36b8278b51603a99ef7ec",
-      "afterSha256": "27602844b02f3db5d84a83f4d4c7487e15ac12846c51f61898e42a8040430973",
-      "reason": "Exclude the LGPL MinGW propkey.h table. Move the existing permissive single AppUserModel property declaration into the common branch; retain the real IPropertyStore SDK interface and taskbar behavior. GUID/PID independently matched to Microsoft System.AppUserModel.ID documentation. Share the existing IID declaration as well because the protected SDK interface is parsed before INITGUID.",
+      "afterSha256": "363f0c25ee9af00da4ef6932d864129fd14fe6f7296541aa4bc09e315f66537d",
+      "reason": "Exclude the LGPL MinGW propkey.h table. Move the existing permissive single AppUserModel property declaration into the common branch; retain the real IPropertyStore SDK interface and taskbar behavior. GUID/PID independently matched to Microsoft System.AppUserModel.ID documentation. Share the existing IID declaration as well because the protected SDK interface is parsed before INITGUID. Re-include the unguarded public-domain propkeydef.h after INITGUID to refresh DEFINE_PROPERTYKEY, as the SDK intends.",
       "replacements": [
         {
           "before": "#include <propkey.h>\n",
@@ -1038,6 +1038,10 @@
         {
           "before": "#endif /* !__MINGW64_VERSION_MAJOR */\n\n",
           "after": "#endif /* !__MINGW64_VERSION_MAJOR */\n\nDEFINE_GUID(IID_IPropertyStore, 0x886d8eeb, 0x8cf2, 0x4446, 0x8d, 0x02, 0xcd,\n            0xba, 0x1d, 0xbd, 0xcf, 0x99);\n\n"
+        },
+        {
+          "before": "#include <propsys.h>\n",
+          "after": "#include <propsys.h>\n#include <propkeydef.h>\n"
         }
       ]
     },
