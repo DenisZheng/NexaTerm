@@ -1,0 +1,36 @@
+name: X server fixed source review
+on:
+  pull_request:
+    paths:
+      - 'scripts/xserver/**'
+      - 'scripts/xserver_source_review*'
+      - '.github/workflows/xserver-source.yml'
+permissions:
+  contents: read
+concurrency:
+  group: xserver-source-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  source:
+    name: Fixed upstream integrity (review only)
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verification failure regressions
+        run: python -m unittest discover -s scripts -p xserver_source_review_test.py -v
+      - name: Verify real fixed official source and detached signature
+        run: python scripts/xserver_source_review.py --report xserver-review.json
+      - name: Keep only source evidence JSON
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xserver-source-review
+          path: xserver-review.json
+          if-no-files-found: error
+          retention-days: 14

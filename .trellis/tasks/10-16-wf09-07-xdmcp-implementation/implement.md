@@ -14,6 +14,13 @@
 
 ## X1 implementation and validation
 
+本次X0核验小步（2026-10-19）：
+
+- [ ] 固定源码、分离签名、公钥和构建/许可文件锚点；新增标准库核验入口及具体code-spec。
+- [ ] 反例覆盖损坏cache/签名、错误签署者、失效签名、非零退出、恶意tar和旧报告；真实官方输入本地及专用CI执行。
+- [ ] JSON-only审查artifact，保留REVIEW-REQUIRED及所有发行/原生构建缺口；不改既有许可证门禁。
+- [ ] 堆叠Draft到#83，保留精确代码/CI证据，任务整体保持in_progress。
+
 代码基准：`1a5b7cd40a175fb67cba4914dbc82bbe704eb108`；[Draft #67](https://github.com/DenisZheng/NexaTerm/pull/67)，基于计划 #66，不合并、不发布。八项真实 native fixture/契约测试包括独立运行及后代、旧句柄/外部 owner 隔离、自然/失败退出、配额/过期、端口占满、窗口关闭/shutdown、字段/许可校验及实际 start future abort。worker 在异步调用被取消或超时后仍持有租约，直到阻塞 OS 操作、进程及私有认证目录真正回收。
 
 | 证据 | 精确结果 |
