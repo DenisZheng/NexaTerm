@@ -84,7 +84,21 @@
         "epoch": 1791049981,
         "fingerprint": "3AB285232C46AE43D8E192F4DAB0F78EA6E7E2D2",
         "certificate": "3AB285232C46AE43D8E192F4DAB0F78EA6E7E2D2"
-      }
+      },
+      "patches": [
+        {
+          "path": "include/X11/Xwinsock.h",
+          "beforeSha256": "8b782cf21f6b1cc1f0b190a73061144c75a1ce5519ffa46302e291d87a83f212",
+          "afterSha256": "f16465bd611fa3eab5148e2d48ebf2ae23a7e1220f0902a37120e300e023c15c",
+          "reason": "Include IPv6/socket-length/address-resolution declarations inside the existing Windows namespace wrapper, before its renaming macros are restored. Preserve the Open Group license.",
+          "replacements": [
+            {
+              "before": "#include <winsock2.h>\n",
+              "after": "#include <winsock2.h>\n#include <ws2tcpip.h>\n"
+            }
+          ]
+        }
+      ]
     },
     {
       "root": "xtrans-1.6.0",

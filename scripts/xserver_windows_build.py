@@ -216,10 +216,20 @@ def build(work, report):
         else:
             run(["bash", source / "configure", "--prefix=" + str(prefix), "--host=" + manifest["target"], "--disable-dependency-tracking", *component["options"]], build_directory)
             report["stage"] = "compile-install"
-            run(["make", "-j" + jobs], build_directory)
+            run(["make", "-k", "-j" + jobs], build_directory)
             run(["make", "install"], build_directory)
         entry["built"] = True
         entry["installedFiles"] = installed_delta(prefix, before, component["name"], owners)
+        if component["name"] == "xorgproto":
+            report["stage"] = "native-ipv6-headers"
+            probe_source = ASSETS / "overlays/winsock-ipv6-probe.c"
+            probe_binary = builds / "winsock-ipv6-probe.exe"
+            run(["gcc", "-std=gnu11", "-Wall", "-Wextra", "-Werror", "-I", prefix / "include",
+                 probe_source, "-o", probe_binary, "-lws2_32"], work)
+            run([probe_binary], work, timeout=10)
+            report["nativeIpv6Headers"] = {"verified": True, "numericLoopbackOnly": True,
+                                           "sourceSha256": digest(probe_source.read_bytes()),
+                                           "wrapperSha256": digest((prefix / "include/X11/Xwinsock.h").read_bytes())}
         if component["name"] == "xcb-proto":
             report["hostGenerator"] = verify_host_generator(prefix, source, work)
         write_report(work / "progress.json", report)
@@ -250,7 +260,7 @@ def build(work, report):
     report["serverConfig"] = {"xdmcp": True, "winsock": True, "relocateProjectRoot": True,
                               "coreSha256": digest(core_bytes), "nativeSha256": digest(native_bytes)}
     report["stage"] = "server-compile"
-    run(["make", "-j" + jobs], server_build, timeout=1800)
+    run(["make", "-k", "-j" + jobs], server_build, timeout=1800)
     before = snapshot(prefix)
     run(["make", "install"], server_build)
     report["serverInstalledFiles"] = installed_delta(prefix, before, "xorg-server", owners)

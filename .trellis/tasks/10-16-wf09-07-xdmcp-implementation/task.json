@@ -15,7 +15,7 @@
   "branch": "build/wf09-07-xserver-windows",
   "base_branch": "build/wf09-07-xserver-source-review",
   "worktree_path": null,
-  "commit": "20e657b5fd8a37ad393d4dbb774873acf8a46e77",
+  "commit": "4010ff09f225ed8427ea523385b10b1f19244cc1",
   "pr_url": "https://github.com/DenisZheng/NexaTerm/pull/85",
   "subtasks": [],
   "children": [],
@@ -27,6 +27,6 @@
     "scripts/xserver/upstream-source.json",
     ".trellis/spec/backend/xserver-source-review.md"
   ],
-  "notes": "Draft #85 stacked on #84. Code 20e657b passed full application CI676 (all executing jobs), but native Windows build6 failed at libX11 LLP64 scalar casts and source CI9 rejected an unrecognized GPG status. These are unfinished development gates, not acceptance-only. Fixed official dependency archives, certificates, license/file anchors and PE/link/runtime inventory are implemented; continue actual Windows build and dependency/license closure. No engine adoption, bundled/desktop approval, merge or release; X0/X2/X3 and Unix hard-crash supervision remain open.",
+  "notes": "Draft #85 stacked on #84; code4010ff0 source CI12 SUCCESS (21 source +43 Windows evidence regressions, real15 dependency signatures, JSON-only artifact inspected; gpg/gpgv2.2.27). Windows native evidence43 including real C GDI selector SUCCESS; native9 failed at Xtrans missing Winsock IPv6 declarations; fix the namespace wrapper and add a native numeric-loopback preflight before continuing full engine/PE/runtime build. Full app CI679 all7 executing jobs SUCCESS on4010ff0 (conditional package job remains skipped). DirectDraw SDK header was observed LGPL, so GDI profile removes local/SDK header, backend, loader and dxguid rather than approving SDK origin. Native8 preserved a further XIM scalar/NULL failure, now fixed with exact source/result hashes. No distribution/bundled/desktop approval, merge or release; X0/X2/X3 and Unix hard-crash supervision stay open.",
   "meta": {}
 }

@@ -2,6 +2,10 @@
 
 本刀沿Draft #84固定输入继续，不重做源码采集入口。Draft #85堆叠#84，仍为开发构建；发行批准、bundled、desktop均false。15个依赖官方归档及51项许可文件hash见`scripts/xserver/windows-sources.json`。这些锚点证明核查了哪些文本，不是整个编译/运行闭包的MIT结论。
 
+## 当前继续入口
+
+先核对[Draft #85](https://github.com/DenisZheng/NexaTerm/pull/85)最新HEAD和原生workflow，不把下文历史失败当作最新结果。当前code4010ff0的source CI12全通过，Windows43项证据反例（含同一GDI C选择器）通过；原生9已在Xtrans的Winsock IPv6声明处失败，继续头文件/probe修正和完整引擎/PE/运行库验证；code4010ff0的应用CI679全部7个执行job已成功（条件打包为既有skip），不能标记native build完成。source12 artifact12166878111已实际下载：仅两个JSON，SHA256 ca1a2adf3f660b3e959a46ec29e2eac05cfb3a123992075a750db3196dcf096b，15项pin与当前manifest一致，实际gpg/gpgv均2.2.27，未批准分发。
+
 ## 首次真实Windows构建
 
 代码`d86be6bb6968ce0468d8557b48094614008072af`，[原生构建1](https://github.com/DenisZheng/NexaTerm/actions/runs/39186069194)。Windows UCRT64环境安装成功，真实server归档/GPG核验通过，MinGW目标工具链已读取；util-macros configure/make/install通过。xorgproto configure通过，但make试图调用不存在的aclocal-1.19而失败，整次保持FAIL，不宣称原生server构建成功。
@@ -62,3 +66,9 @@ code3ac679a的[source CI11](https://github.com/DenisZheng/NexaTerm/actions/runs/
 ## 原生8继续推进XIM编译
 
 [原生8](https://github.com/DenisZheng/NexaTerm/actions/runs/39208343489)（code3ac679a）确认最初imDefIc标量转换错误已越过；随后imRm暴露三处把Windows指针NULL转Window整数及另一处XIMStyle标量入口。前者改为X11的数值None，后者纳入同一uintptr_t桥；保留全部编译诊断与精确发生次数/hash。此次仍为FAIL，尚未产出server原生成功证据。
+
+## 原生9：XIM转换已越过，修正Winsock IPv6声明
+
+[原生9](https://github.com/DenisZheng/NexaTerm/actions/runs/39209753199)（code4010ff0）已通过全部43项Windows证据测试和真实GDI C选择器，XIM标量/None错误已越过；libX11随后在编译Xtrans的xim_trans时缺socklen_t/addrinfo/IPv6及地址转换声明而失败。固定xorgproto的Xwinsock包装头在原有namespace保护内包含ws2tcpip.h，保留前后hash和Open Group许可；在安装该头后立即编译并执行数值IPv6回环探针，覆盖真实WSAStartup/inet_pton/inet_ntop/getaddrinfo/freeaddrinfo/WSACleanup，不建立连接。
+
+编译阶段改为GNU make -k，收集同一组件的独立错误；make非零仍立即使整个构建FAIL，失败组件不会进入install。没有关闭诊断或把错误改为成功。
