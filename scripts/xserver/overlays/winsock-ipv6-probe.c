@@ -11,7 +11,8 @@ int main(void)
     socklen_t size = (socklen_t)sizeof(struct sockaddr_in6);
     int status = 1;
 
-    if (WSAStartup(MAKEWORD(2, 2), &data) != 0)
+    /* X11包装头恢复BYTE命名；直接传入Winsock 2.2的版本WORD。 */
+    if (WSAStartup((WORD)0x0202, &data) != 0)
         return 2;
     hints.ai_family = AF_INET6;
     hints.ai_socktype = SOCK_STREAM;
