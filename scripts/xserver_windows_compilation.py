@@ -129,7 +129,11 @@ def observed_inputs(builds, sources, prefix, manifest, server_root, owners, pack
         observation = {"component": component["name"], "dependencyRecords": dep_count, "evidence": evidence, "complete": False}
         observations.append(observation)
         for name, working_directory in dependencies:
+            if report is not None:
+                report["compilerInputCurrent"] = {"dependency": name[:4096], "directory": str(working_directory)[:4096]}
             path = dependency_path(name, working_directory, windows_roots)
+            if report is not None:
+                report["compilerInputCurrent"]["resolved"] = str(path)[:4096]
             require(path.is_file(), "COMPILE_INPUT_MISSING")
             require(path.name.lower() not in {"ddraw.h", "propkey.h"}, "COMPILE_EXCLUDED_HEADER")
             identity = str(path).casefold()
@@ -141,7 +145,7 @@ def observed_inputs(builds, sources, prefix, manifest, server_root, owners, pack
             total += size
             require(len(records) < 10000 and size <= 8 * 1024 * 1024
                     and total <= MAX_INPUT_BYTES, "COMPILE_INPUT_BUDGET")
-            record, private_header = {"size": size, "observedBy": [component["name"]]}, None
+            record = {"size": size, "observedBy": [component["name"]]}
             if path.is_relative_to(sources):
                 relative = path.relative_to(sources)
                 require(relative.parts[0] in source_owners, "COMPILE_SOURCE_OWNER")
@@ -155,12 +159,6 @@ def observed_inputs(builds, sources, prefix, manifest, server_root, owners, pack
             elif path.is_relative_to(builds):
                 relative = path.relative_to(builds)
                 owner = next((item["name"] for item in components if item["name"] == relative.parts[0]), None)
-                if relative.parts[0] == "xorg-server-headers":
-                    private_header = next((item for item in manifest["serverHeaders"]
-                                           if item["target"] == str(Path(*relative.parts[1:]))), None)
-                    require(private_header, "COMPILE_PRIVATE_HEADER")
-                    owner = private_header["component"]
-                    require(owner in component_names, "COMPILE_PRIVATE_HEADER")
                 require(owner is not None, "COMPILE_GENERATED_OWNER")
                 record.update({"origin": "build-generated-or-private-header", "path": str(relative), "component": owner})
             else:
@@ -174,14 +172,12 @@ def observed_inputs(builds, sources, prefix, manifest, server_root, owners, pack
                 record.update({"origin": "target-toolchain", "path": str(path.relative_to(toolchain_root)),
                                "package": package_files[identity]})
             record["sha256"] = digest(path.read_bytes())
-            if private_header:
-                require(record["sha256"] == private_header["sha256"]
-                        and size == private_header["size"], "COMPILE_PRIVATE_HEADER")
             records[identity] = record
         observation["complete"] = True
         result.update({"regularBytes": total, "files": sorted(records.values(), key=lambda item: (item["origin"], item["path"]))})
     require(records, "COMPILE_INPUTS_EMPTY")
     if report is not None:
         report.pop("compilerInputComponent", None)
+        report.pop("compilerInputCurrent", None)
     result["observationsComplete"] = True
     return result

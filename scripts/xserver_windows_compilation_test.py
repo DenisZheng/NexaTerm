@@ -19,7 +19,7 @@ class CompilationTests(unittest.TestCase):
         self.manifest = {"components": [
             {"name": "library", "root": "library-1", "buildSystem": "autotools", "compileInputs": "compiler"},
             {"name": "protocol", "root": "protocol-1", "buildSystem": "autotools", "compileInputs": "headers-only"}
-        ], "serverHeaders": []}
+        ]}
         self.library_source = self.file(self.sources / "library-1/unit.c", "library")
         self.server_source = self.file(self.sources / "server-1/unit.c", "server")
         self.deps("library", [self.library_source])
@@ -94,14 +94,15 @@ class CompilationTests(unittest.TestCase):
         self.assertEqual(result["observations"][0]["dependencyRecords"], 1)
         self.assertCode("COMPILE_INSTALL_OWNER", self.collect)
 
-    def test_private_server_header_needs_its_exact_manifest_identity(self):
-        header = self.file(self.builds / "xorg-server-headers/X11/extensions/XKBgeom.h", "server header")
+    def test_actual_server_headers_keep_their_source_owner_and_unused_copies_are_unowned(self):
+        header = self.file(self.sources / "server-1/xkb/xkbgeom.h", "server header")
         self.deps("xorg-server", [self.server_source, header])
-        self.assertCode("COMPILE_PRIVATE_HEADER", self.collect)
-        self.manifest["serverHeaders"] = [{"component": "protocol", "target": "X11/extensions/XKBgeom.h", "size": 13, "sha256": digest(header.read_bytes())}]
-        self.collect()
-        header.write_text("changed")
-        self.assertCode("COMPILE_PRIVATE_HEADER", self.collect)
+        result = self.collect()
+        record = next(item for item in result["files"] if item["path"].endswith("xkbgeom.h"))
+        self.assertEqual((record["component"], record["sha256"]), ("xorg-server", digest(header.read_bytes())))
+        copy = self.file(self.builds / "xorg-server-headers/X11/extensions/XKBgeom.h", "server header")
+        self.deps("xorg-server", [self.server_source, copy])
+        self.assertCode("COMPILE_GENERATED_OWNER", self.collect)
 
     def test_nonrecursive_automake_dependencies_use_the_nearest_makefile_directory(self):
         self.file(self.builds / "library/src/fontfile/.deps/other.Plo", "src/fontfile/other.o: ../../sources/library-1/unit.c\n")
@@ -138,6 +139,8 @@ class CompilationTests(unittest.TestCase):
         self.assertEqual(len(report["compilerInputs"]["files"]), 1)
         self.assertTrue(report["compilerInputs"]["observations"][0]["complete"])
         self.assertFalse(report["compilerInputs"]["observationsComplete"])
+        self.assertEqual(report["compilerInputCurrent"]["dependency"], str(other))
+        self.assertEqual(report["compilerInputCurrent"]["resolved"], str(other))
 
     def test_excluded_header_and_missing_compiler_observation_fail(self):
         excluded = self.file(self.sdk / "propkey.h", "excluded")

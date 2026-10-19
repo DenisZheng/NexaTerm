@@ -14,7 +14,7 @@ import sys
 import tarfile
 
 from xserver_source_review import ArchiveBudget, ASSETS, ReviewError, collect, digest, require, verify_file, write_report
-from xserver_windows_inventory import InventoryCollision, add_runtime_provenance, installed_delta, link_inputs, native_header_evidence, prepare_server_headers, snapshot
+from xserver_windows_inventory import InventoryCollision, add_runtime_provenance, installed_delta, link_inputs, native_header_evidence, snapshot
 from xserver_windows_pe import MAX_PE_BYTES, parse_pe
 from xserver_windows_signatures import verify_dependency
 from xserver_windows_sources import check_source_url, download_component
@@ -249,9 +249,6 @@ def build(work, report):
             font_probe(prefix, source, builds, work, report, run)
         write_report(work / "progress.json", report)
     report["component"] = "xorg-server"
-    server_headers = builds / "xorg-server-headers"
-    report["serverHeaders"] = prepare_server_headers(sources, server_headers, manifest)
-    os.environ["CPPFLAGS"] = "-I" + str(server_headers) + " " + os.environ["CPPFLAGS"]
     server_build = builds / "xorg-server"
     server_build.mkdir()
     report["stage"] = "server-configure"
@@ -281,6 +278,7 @@ def build(work, report):
     report["peClosure"] = inspect_closure(server, [prefix / "bin", Path("/ucrt64/bin")], work)
     report["peImportScope"] = ["normal", "delay"]
     packages = add_runtime_provenance(report["peClosure"], prefix, owners, work, run)
+    report["runtimePackages"] = list(packages.values())
     report["stage"] = "native-headers"
     report["nativeHeaderEvidence"] = native_header_evidence(server_build)
     report["stage"] = "static-link-inputs"

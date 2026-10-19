@@ -147,3 +147,23 @@ code41b1965的[source CI17](https://github.com/DenisZheng/NexaTerm/actions/runs/
 ## 内嵌字体的数据级许可核对
 
 固定libXfont2归档的src/builtins/fonts.c为82957字节、SHA256 db6746ae498e77d57647fb803b3c895cfc5745801864d1b5ed992ce28b83eccd，含SuSE完整宽松许可。另按C八进制字节字面量读取两个数组，限额解gzip并读取真实PCF属性，避免只按生成C文件头推定字体数据权限：cursor的COPYRIGHT为`These "glyphs" are unencumbered`，6x13为`Public domain font.  Share and enjoy.`。前者gzip5105字节/hash ad32fe68634080cd494758bee0026f7a940bce0bbd2a1d9bddac7578e319c519，PCF14208字节/hash 1f853aba64596f1acb8e48750aff11ed139d93423baf9a172ffc654f22cd7494；后者gzip4385字节/hash 7734d9d7ba75f1c0dea76aaf4782ffd86b8aef7f00a1cb3c0ef127586e27fa9c，PCF19584字节/hash 6f1bc71fb2fd55b70b07a6d59df6ee5a2bb8bd3e052b6f08925db54fed65b339。此为固定profile的内嵌资源来源核对，实际编译/链接相关性和最终分发义务仍须结合原生清单，不批准外部字体或整体组件采用。
+
+## select fallback的独立BSD许可
+
+固定server归档的os/xserver_poll.c为8662字节、SHA256 cbbac20292c46e1cae52deb89bb0b489eb961d49c19e2e02c63167d5e85b2350。实际文件明确为Brian M. Clapper 1995–2011的BSD三条款：源码保留版权/条件/免责声明，二进制分发材料也须复制这些内容，并限制以版权方或贡献者名义背书。此项不能合并成统一MIT标签；保留精确文件身份与原声明，后续结合真实os archive/链接输入和分发notice落实。本轮仅隔离私有pollfd与SDK WSAPoll的声明，未替换这份fallback实现或抹掉其条款。
+
+## 固定依赖归档的候选源码标记核查
+
+code6e1f8fd对应的15个归档均再次先匹配manifest大小/SHA256，再逐文件读取C/H/L/Y/S/inc及C/H模板候选，合计843份：xorgproto156、xtrans7、libXau11、libXdmcp13、libxcb16、xcb-util8、image10、wm3、libX11 504、libxkbfile20、libfontenc7、libXfont2 88；其余三个header/host-only归档没有这类候选。未发现GNU General/Lesser/Library/Affero Public License或GPL系SPDX标记。
+
+该结果仅记录固定归档中这些候选文本的标记检索，不是逐文件权限批准，也不是实际编译/链接清单。尚未包含libxcb等构建生成输出、Python/XML生成器输入、SDK/编译器文件及资源；这些仍须结合实际依赖记录、源许可和生成器条件逐项核对，不能由零标记推定完整闭包。
+
+## 原生16：完整引擎及poll/PE通过，修正geometry来源检查
+
+[原生16](https://github.com/DenisZheng/NexaTerm/actions/runs/39255798956)（code6e1f8fd）实际完成全部15依赖、IPv6/AppID/XCB-first/font探针、XDMCP/Winsock/relocate配置、完整server make及XWin.exe链接。实际os archive的UDP回环就绪/零超时、make install及递归普通/延迟AMD64 PE导入和DLL提供者归属均通过；随后geometry来源门禁失败，整次仍为FAIL。静态map、完整编译输入与最终-version尚未运行，不能把此处的编译里程碑称为全部原生门禁成功。
+
+实际下载单JSON artifact：ZIP241406字节、SHA256 b3eff269a5c6f86c804d411a4513f561ead61e546b5043b1975e012c81842153。XWin.exe为2451933字节、SHA256 da253d418dbe2ceff1abb4aed52978ba6abba15e6bf6acdfef9c17c9b1b35de1，未发布二进制；配置hash与五项真实目标探针已核对。code6e1f8fd同时已过source CI19（21+60）及完整应用CI686七执行job：Rust617/618/620、二进制各19/集成各1，前端1160/1todo、脚本193/3既有环境skip、安全18/0skip；条件打包跳过。source19两JSON归档85272字节、SHA256 ba566bcc44cd1caad0dfb580b359234d8d683aee6ff82d93459d93216a301407，全部15项源码/签名及manifest pin一致。
+
+此次失败来自本刀错误的检查假设：强制观察xorgproto legacy私有副本，而固定server全部include实际指向自身xkb/xkbgeom.h（17461字节、SHA256 770c4b7d41b7d87300c8b092afd0c1190a528750349befcc7bbf7e2c1ba32d8f）及include/xkbstr.h（20471字节、SHA256 74805f13f671025a231792abb07546c7f0efe250aee535362e4586d0e1eda6a3），均保留完整SGI宽松许可。移除未使用的legacy副本/额外include树，公共客户端头仍归libX11；新增两份真实server文件锚点（总21），分别要求xkb.c与xkbUtils.c的实际依赖包含它们，并拒绝客户端头替代。真实GCC回归生成同一in-tree包含链，另覆盖未用legacy副本、缺结构头或缺编译单元不能通过。
+
+编译输入失败现在保留受限的当前raw/resolved路径；已完成DLL包许可证据在进入后续门禁前写入报告，避免后序失败丢失。新门禁仍须完整Windows执行，不覆盖原生16的FAIL，也不借用其旧结果完成新代码。

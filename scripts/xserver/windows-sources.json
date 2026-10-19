@@ -887,6 +887,18 @@
       "size": 3581,
       "sha256": "ca65e3afdbdf8a601dc5ffee469529070218a1490c0fa268e95a72cd5dc87c73",
       "review": "Example configuration names its author but has no independent permission grant observed; installation identity retained, resource adoption unresolved."
+    },
+    {
+      "path": "xkb/xkbgeom.h",
+      "sha256": "770c4b7d41b7d87300c8b092afd0c1190a528750349befcc7bbf7e2c1ba32d8f",
+      "size": 17461,
+      "review": "Native server geometry uses these in-tree SGI permissive declarations, not the xorgproto legacy or public libX11 client geometry header. Retain the original notice and verify observed core compilation context."
+    },
+    {
+      "path": "include/xkbstr.h",
+      "sha256": "74805f13f671025a231792abb07546c7f0efe250aee535362e4586d0e1eda6a3",
+      "size": 20471,
+      "review": "Native server geometry uses these in-tree SGI permissive declarations, not the xorgproto legacy or public libX11 client geometry header. Retain the original notice and verify observed core compilation context."
     }
   ],
   "generatorLicenseEvidence": [
@@ -1242,16 +1254,6 @@
       "gitBlob": "729a0bda2364fc92337b18ced095d63326ad7165",
       "declaredLicense": "LGPL-2.1-or-later",
       "resolution": "Exclude the SDK property table and retain the upstream permissive single AppUserModel key declaration verified against Microsoft documentation; actual server compiler dependencies must prove absence."
-    }
-  ],
-  "serverHeaders": [
-    {
-      "component": "xorgproto",
-      "source": "include/X11/extensions/XKBgeom.h",
-      "target": "X11/extensions/XKBgeom.h",
-      "size": 15808,
-      "sha256": "84413c7719ed49453cb543454fa84a48dceefb866790e48c871b43cbff16d089",
-      "reason": "Legacy server geometry declarations and SrvXkb aliases are private to the server; public client header is owned by libX11."
     }
   ]
 }

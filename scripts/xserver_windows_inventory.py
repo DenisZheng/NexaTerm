@@ -3,7 +3,7 @@
 from pathlib import Path
 import re
 
-from xserver_source_review import ReviewError, digest, require, verify_file
+from xserver_source_review import ReviewError, digest, require
 
 
 class InventoryCollision(ReviewError):
@@ -104,22 +104,6 @@ def link_inputs(map_file, link_directory, builds, prefix, owners, work, run, pac
     return {"mapSha256": digest(map_file.read_bytes()), "inputs": list(records.values())}
 
 
-def prepare_server_headers(sources, target, manifest):
-    components = {item["name"]: item for item in manifest["components"]}
-    result = []
-    for item in manifest["serverHeaders"]:
-        require(item["component"] in components, "SERVER_HEADER_OWNER")
-        source = sources / components[item["component"]]["root"] / item["source"]
-        verify_file(source, item["size"], item["sha256"])
-        destination = target / item["target"]
-        require(not destination.exists(), "SERVER_HEADER_EXISTS")
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        destination.write_bytes(source.read_bytes())
-        verify_file(destination, item["size"], item["sha256"])
-        result.append(item)
-    return result
-
-
 def native_header_evidence(build_directory):
     depfiles = sorted([*build_directory.rglob("*.Po"), *build_directory.rglob("*.Plo")])
     require(0 < len(depfiles) <= 2000, "NATIVE_HEADER_DEPENDENCIES")
@@ -136,9 +120,16 @@ def native_header_evidence(build_directory):
     gdi = [(path, content) for path, content in records
            if re.search(r"(?:^|[/\\])winshadgdi\.c(?:\s|$)", content)]
     require(gdi, "NATIVE_GDI_DEPENDENCIES")
-    server_header = [(path, content) for path, content in records
-                     if re.search(r"[/\\]xorg-server-headers[/\\]X11[/\\]extensions[/\\]XKBgeom\.h(?:\s|$)", content)]
-    require(server_header, "NATIVE_SERVER_HEADER_CONTEXT")
+    server_header = []
+    for unit in ["xkb.c", "xkbUtils.c"]:
+        observed = [(path, content) for path, content in records
+                    if re.search(r"[/\\]xkb[/\\]" + re.escape(unit) + r"(?:\s|$)", content)]
+        require(observed and all(
+            re.search(r"[/\\]xkb[/\\]xkbgeom\.h(?:\s|$)", content)
+            and re.search(r"[/\\]include[/\\]xkbstr\.h(?:\s|$)", content)
+            and not re.search(r"[/\\]X11[/\\]extensions[/\\]XKBgeom\.h(?:\s|$)", content)
+            for _, content in observed), "NATIVE_SERVER_HEADER_CONTEXT")
+        server_header.extend(observed)
     require(all(not re.search(r"(?:^|[/\\])propkey\.h(?:\s|$)", content, re.IGNORECASE)
                 for _, content in records), "NATIVE_PROPERTY_TABLE")
     appid = [(path, content) for path, content in records
@@ -152,4 +143,5 @@ def native_header_evidence(build_directory):
             "directDrawBackendIncluded": False, "renderer": "gdi",
             "winmsgDependencies": identities(winmsg), "gdiDependencies": identities(gdi),
             "serverGeometryHeaderDependencies": identities(server_header),
+            "serverGeometryHeaders": ["xkb/xkbgeom.h", "include/xkbstr.h"],
             "propertyTableIncluded": False, "appIdDependencies": identities(appid)}

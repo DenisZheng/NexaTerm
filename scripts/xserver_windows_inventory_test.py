@@ -1,9 +1,10 @@
 from pathlib import Path
+import subprocess
 import tempfile
 import unittest
 
 from xserver_source_review import ReviewError
-from xserver_windows_inventory import InventoryCollision, add_runtime_provenance, installed_delta, link_inputs, native_header_evidence, package_evidence, prepare_server_headers, snapshot
+from xserver_windows_inventory import InventoryCollision, add_runtime_provenance, installed_delta, link_inputs, native_header_evidence, package_evidence, snapshot
 
 
 class InventoryTests(unittest.TestCase):
@@ -70,7 +71,8 @@ class InventoryTests(unittest.TestCase):
         deps.mkdir(parents=True)
         (deps / "winmsg.Po").write_text("winmsg.o: /source/hw/xwin/winmsg.c /source/win.h\n")
         (deps / "winshadgdi.Po").write_text("winshadgdi.o: /source/hw/xwin/winshadgdi.c /source/win.h\n")
-        (deps / "geometry.Po").write_text("geometry.o: /build/xorg-server-headers/X11/extensions/XKBgeom.h\n")
+        for unit in ["xkb", "xkbUtils"]:
+            (deps / (unit + ".Plo")).write_text(unit + ".o: /source/xkb/" + unit + ".c /source/xkb/xkbgeom.h /source/include/xkbstr.h\n")
         (deps / "appid.Po").write_text("appid.o: /source/hw/xwin/winSetAppUserModelID.c /source/propertystore.h\n")
         return build, deps
 
@@ -80,7 +82,8 @@ class InventoryTests(unittest.TestCase):
         self.assertFalse(result["debugMessageTableIncluded"])
         self.assertFalse(result["directDrawHeaderIncluded"])
         self.assertEqual(result["renderer"], "gdi")
-        self.assertEqual(result["dependencyFiles"], 4)
+        self.assertEqual(result["dependencyFiles"], 5)
+        self.assertEqual(result["serverGeometryHeaders"], ["xkb/xkbgeom.h", "include/xkbstr.h"])
 
     def test_debug_table_or_directdraw_input_cannot_pass(self):
         build, deps = self.header_fixture()
@@ -103,8 +106,36 @@ class InventoryTests(unittest.TestCase):
 
     def test_server_header_context_is_not_inferred_from_public_client_header(self):
         build, deps = self.header_fixture()
-        (deps / "geometry.Po").write_text("geometry.o: /prefix/include/X11/extensions/XKBgeom.h\n")
+        (deps / "xkb.Plo").write_text("xkb.o: /source/xkb/xkb.c /prefix/include/X11/extensions/XKBgeom.h\n")
         self.assertCode("NATIVE_SERVER_HEADER_CONTEXT", native_header_evidence, build)
+
+    def test_unused_legacy_copy_cannot_replace_actual_server_headers(self):
+        build, deps = self.header_fixture()
+        (deps / "xkb.Plo").write_text("xkb.o: /source/xkb/xkb.c /build/xorg-server-headers/X11/extensions/XKBgeom.h\n")
+        self.assertCode("NATIVE_SERVER_HEADER_CONTEXT", native_header_evidence, build)
+
+    def test_geometry_and_structure_headers_are_required_in_each_core_unit(self):
+        build, deps = self.header_fixture()
+        (deps / "xkbUtils.Plo").write_text("xkbUtils.o: /source/xkb/xkbUtils.c /source/xkb/xkbgeom.h\n")
+        self.assertCode("NATIVE_SERVER_HEADER_CONTEXT", native_header_evidence, build)
+        (deps / "xkbUtils.Plo").unlink()
+        self.assertCode("NATIVE_SERVER_HEADER_CONTEXT", native_header_evidence, build)
+
+    def test_real_gcc_observes_the_in_tree_geometry_include_chain(self):
+        build, deps = self.header_fixture()
+        source = self.root / "source"
+        (source / "xkb").mkdir(parents=True)
+        (source / "include").mkdir()
+        (source / "include/xkbstr.h").write_text("struct keyboard { int keys; };\n")
+        (source / "xkb/xkbgeom.h").write_text('#include "xkbstr.h"\n')
+        for unit in ["xkb", "xkbUtils"]:
+            path = source / "xkb" / (unit + ".c")
+            path.write_text('#include "xkbgeom.h"\nstruct keyboard keyboard;\n')
+            result = subprocess.run(["gcc", "-MD", "-MP", "-MF", str(deps / (unit + ".Plo")),
+                                     "-I", str(source / "include"), "-c", str(path), "-o", str(build / (unit + ".o"))],
+                                    text=True, capture_output=True, timeout=30)
+            self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(len(native_header_evidence(build)["serverGeometryHeaderDependencies"]), 2)
 
     def test_appid_property_table_cannot_hide_in_transitive_compiler_dependencies(self):
         build, deps = self.header_fixture()
@@ -112,22 +143,6 @@ class InventoryTests(unittest.TestCase):
         self.assertCode("NATIVE_PROPERTY_TABLE", native_header_evidence, build)
         (deps / "appid.Po").unlink()
         self.assertCode("NATIVE_APPID_DEPENDENCIES", native_header_evidence, build)
-
-    def test_server_header_copy_verifies_bytes_and_does_not_replace_client_install(self):
-        source = self.root / "sources/protocol/include/XKBgeom.h"
-        source.parent.mkdir(parents=True)
-        source.write_bytes(b"server")
-        client = self.prefix / "XKBgeom.h"
-        client.write_bytes(b"client")
-        manifest = {"components": [{"name": "protocol", "root": "protocol"}],
-                    "serverHeaders": [{"component": "protocol", "source": "include/XKBgeom.h",
-                                       "target": "X11/extensions/XKBgeom.h", "size": 6,
-                                       "sha256": snapshot(source.parent)[source.name]["sha256"]}]}
-        target = self.root / "server-headers"
-        prepare_server_headers(self.root / "sources", target, manifest)
-        self.assertEqual((target / "X11/extensions/XKBgeom.h").read_bytes(), b"server")
-        self.assertEqual(client.read_bytes(), b"client")
-        self.assertCode("SERVER_HEADER_EXISTS", prepare_server_headers, self.root / "sources", target, manifest)
 
     def test_collision_reports_both_hashes_without_waiving_failure(self):
         path = self.prefix / "shared.h"

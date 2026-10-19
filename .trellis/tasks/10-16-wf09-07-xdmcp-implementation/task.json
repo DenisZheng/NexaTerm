@@ -15,7 +15,7 @@
   "branch": "build/wf09-07-xserver-windows",
   "base_branch": "build/wf09-07-xserver-source-review",
   "worktree_path": null,
-  "commit": "872dac61bc9c59084d2107c5358d5645e1143828",
+  "commit": "6e1f8fd7ef7793085f490c7f8c62e092a6b2a285",
   "pr_url": "https://github.com/DenisZheng/NexaTerm/pull/85",
   "subtasks": [],
   "children": [],
@@ -25,8 +25,11 @@
     "docs/WORKFLOW_SPEC.md",
     "scripts/xserver_source_review.py",
     "scripts/xserver/upstream-source.json",
-    ".trellis/spec/backend/xserver-source-review.md"
+    ".trellis/spec/backend/xserver-source-review.md",
+    "scripts/xserver_windows_build.py",
+    "scripts/xserver/windows-sources.json",
+    ".trellis/spec/backend/xserver-windows-build.md"
   ],
-  "notes": "Draft #85 stacked on #84. Verified code872dac6: source CI16 and full app CI683 all7 executing jobs SUCCESS; conditional package skipped. Native13 passed47 regressions, all15 dependency builds/installs, real IPv6/AppID/font binary IO probes and XDMCP/Winsock/relocate configuration; full server compilation then FAIL. JSON-only artifacts downloaded/inspected. Current21 pinned server adaptations preserve address width/scalar sign, separate Windows/COM/XCB/X11 namespaces, add only missing auth declarations, retain select fallback behavior and add actual UDP probe. Official profile excludes Unix fork/wait test executables without claiming test success; project/native gates retained. New bounded GCC/Ninja input ownership inventory and local81 no-skip regressions need fresh Windows CI. Full engine/PE/runtime/per-file/resource adoption, X2/X3 and Unix hard-crash supervision remain open. No distribution/bundled/desktop approval, merge or release.",
+  "notes": "Draft #85 stacked on #84. Verified code6e1f8fd: source CI19 and full app CI686 all7 executing jobs SUCCESS; conditional package skipped. Native16 passed60 regressions, all15 dependencies, real IPv6/AppID/XCB/font/poll probes, full XWin compile/link/install and recursive AMD64 normal/delay PE closure; later geometry provenance gate FAIL, with static map/compiler inputs/final version not yet executed. Fixed-source inspection proves this release uses its own xkb/xkbgeom.h and include/xkbstr.h, not the unused legacy copy; remove that tree and require both actual core units and pinned source headers. Local83 regressions include real GCC dependency output and missing/client/unused-copy negatives; new code needs fresh Windows CI. Added embedded PCF/font and BSD fallback license evidence; full per-file/generator/compiler-runtime/resource adoption, X2/X3 and Unix hard-crash supervision remain open. No distribution/bundled/desktop approval, merge or release.",
   "meta": {}
 }
