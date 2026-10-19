@@ -40,3 +40,5 @@
 本轮完成X1退出清理修复，XDMCP整体仍in_progress，未归档。当前仍是显式选择外部引擎的开发运行核心，bundled=false、desktop_verified=false。没有引入发行X server，也没有取得真实XDMCP桌面证据。
 
 按原计划继续X0精确源归档/哈希/签名、逐文件许可与实际运行链接闭包核验，再进入X2随包资源/构建/安装签名、会话与桌面接入；不要重做本轮退出屏障，也不能把它当作X2交付。Unix宿主被SIGKILL时的监督回收仍须另外开发；本轮只修复正常应用Exit完成等待。Windows Rlogin精确flush仍待替代backend，#82的原生反例不是功能完成。
+
+2026-10-19后续：固定源码/签名核验入口已进入Draft #84，继续时先读[source-review-evidence.md](source-review-evidence.md)，不要重复#83退出屏障或#84采集入口。X0整体及X2/X3未完成。

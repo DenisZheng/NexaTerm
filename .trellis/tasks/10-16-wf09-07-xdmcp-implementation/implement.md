@@ -16,10 +16,10 @@
 
 本次X0核验小步（2026-10-19）：
 
-- [ ] 固定源码、分离签名、公钥和构建/许可文件锚点；新增标准库核验入口及具体code-spec。
-- [ ] 反例覆盖损坏cache/签名、错误签署者、失效签名、非零退出、恶意tar和旧报告；真实官方输入本地及专用CI执行。
-- [ ] JSON-only审查artifact，保留REVIEW-REQUIRED及所有发行/原生构建缺口；不改既有许可证门禁。
-- [ ] 堆叠Draft到#83，保留精确代码/CI证据，任务整体保持in_progress。
+- [x] 固定源码、分离签名、公钥和构建/许可文件锚点；新增标准库核验入口及具体code-spec。
+- [x] 反例覆盖损坏cache/签名、错误签署者、失效签名、非零退出、恶意tar和旧报告；真实官方输入本地及专用CI执行。
+- [x] JSON-only审查artifact，保留REVIEW-REQUIRED及所有发行/原生构建缺口；不改既有许可证门禁。
+- [x] 堆叠Draft到#83，保留精确代码/CI证据，任务整体保持in_progress。
 
 代码基准：`1a5b7cd40a175fb67cba4914dbc82bbe704eb108`；[Draft #67](https://github.com/DenisZheng/NexaTerm/pull/67)，基于计划 #66，不合并、不发布。八项真实 native fixture/契约测试包括独立运行及后代、旧句柄/外部 owner 隔离、自然/失败退出、配额/过期、端口占满、窗口关闭/shutdown、字段/许可校验及实际 start future abort。worker 在异步调用被取消或超时后仍持有租约，直到阻塞 OS 操作、进程及私有认证目录真正回收。
 
@@ -53,3 +53,7 @@ Unix 宿主硬崩溃回收仍需 X2 supervisor/parent-death 策略；当前组�
 - [x] 类型/本地脚本191通过（3既有环境skip）、line-budget/startup/权限/CSP/TOML/任务manifest/diff检查完成。
 
 详细计数、真实资源断言和继续入口见[research/shutdown-evidence.md](research/shutdown-evidence.md)。仅修复正常应用退出；X0组件、X2随包/桌面、X3及Unix宿主硬崩溃监督仍未完成，不归档整体任务。
+
+## X0源码核验入口交付（2026-10-19，Draft #84）
+
+代码bfbd225，专用源码CI2（21项、真实GPG/JSON-only artifact）及完整CI669七执行job均SUCCESS。精确文件树、首次安全误报审查、远端artifact与本地超时边界见[research/source-review-evidence.md](research/source-review-evidence.md)。本刀不是X0整体或随包完成；继续Windows原生构建及逐文件/依赖许可、PE/资源闭包，任务保持in_progress。

@@ -7,3 +7,4 @@
 {"file": ".trellis/spec/backend/xdmcp-runner.md", "reason": "Concrete X1 worker, platform process lifetime, IPC and test contracts"}
 {"file": ".trellis/tasks/10-16-wf09-07-xdmcp-implementation/research/shutdown-evidence.md", "reason": "Exact native/full CI evidence and unfinished X0/X2/X3 boundaries"}
 {"file": ".trellis/spec/backend/xserver-source-review.md", "reason": "Verify fail-closed collection, bounded tar inventory and real GPG evidence"}
+{"file": ".trellis/tasks/10-16-wf09-07-xdmcp-implementation/research/source-review-evidence.md", "reason": "Preserve unapproved component boundary and distinguish integrity collection from bundled/desktop delivery"}
