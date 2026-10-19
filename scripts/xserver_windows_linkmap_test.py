@@ -28,8 +28,15 @@ class LinkerMemoryTests(unittest.TestCase):
         # Explicit in-place addend survives ELF RELA -> COFF conversion; request auto-import independent of host defaults.
         cls.command(["ld", "-mi386pep", "--entry=mainCRTStartup", "--enable-auto-import", "--enable-runtime-pseudo-reloc", "-Map=fixture.map", "-o", "XWin.exe", "caller.o", "fixture.a"])
         cls.mapping = (cls.root / "fixture.map").read_text()
+        # Ubuntu's GNU ld 2.38 emits a literal (null) output prefix. Adapt only this fixture;
+        # production accepts the pinned 2.47 producer and its XWin_exe names exclusively.
+        if re.search(r"^LOAD \(null\)_(?:rtr|ertr)[0-9]{6}\.o$", cls.mapping, re.MULTILINE):
+            version = subprocess.run(["ld", "--version"], capture_output=True, text=True, check=True, timeout=10).stdout.splitlines()[0]
+            if not re.fullmatch(r"GNU ld \(GNU Binutils(?: for Ubuntu)?\) 2\.38", version):
+                raise AssertionError("Unreviewed fixture prefix producer: " + version)
+            cls.mapping = re.sub(r"\(null\)_((?:rtr|ertr)[0-9]{6}\.o)", r"XWin_exe_\1", cls.mapping)
         loads = [line for line in cls.mapping.splitlines() if line.startswith("LOAD ")]
-        if not any("_rtr" in line for line in loads):
+        if "LOAD XWin_exe_rtr000000.o" not in loads:
             raise AssertionError("Fixture did not generate pseudo relocations: " + repr(loads))
         cls.binary = (cls.root / "XWin.exe").read_bytes()
         # Parser policy fixture; actual producer identity is captured in native CI.
@@ -70,6 +77,14 @@ class LinkerMemoryTests(unittest.TestCase):
                           ("GNU ld (GNU Binutils) 2.47.20260727", PRODUCER_RELEASE["binarySha256"]),
                           ("GNU ld (GNU Binutils) 2.47.20260726", "a" * 64)]:
             self.assertCode("LINK_GENERATED_PRODUCER", lambda: validate_producer(text, sha))
+
+    def test_legacy_fixture_prefix_cannot_be_accepted_by_production(self):
+        mapping = self.mapping.replace("XWin_exe_rtr", "(null)_rtr")
+        records = memory_inputs(mapping, self.binary, self.producer)
+        self.assertNotIn("(null)_rtr000000.o", records)
+        path = self.root / "legacy.map"
+        path.write_text(mapping)
+        self.assertCode("LINK_INPUT_MISSING", lambda: link_inputs(path, self.root, self.root, self.root / "prefix", {}, self.root, None, {}, generated_inputs=records))
 
     def test_missing_contribution_cannot_be_replaced_by_a_discarded_section(self):
         name = "XWin_exe_rtr000000.o"
