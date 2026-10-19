@@ -609,7 +609,30 @@
         "epoch": 1785891596,
         "fingerprint": "3C2C43D9447D5938EF4551EBE23B7E70B467F0BF",
         "certificate": "3C2C43D9447D5938EF4551EBE23B7E70B467F0BF"
-      }
+      },
+      "patches": [
+        {
+          "path": "src/fontfile/bufio.c",
+          "beforeSha256": "a43645785c58da03225932bbcfe35bb0411e6b435e66f722bcbbef67a9a34d91",
+          "afterSha256": "aa4256dd104380818a87842e068249bb3659d68c6717ed8403fe49e9f913344f",
+          "reason": "Bridge signed CRT file descriptors through intptr_t instead of LLP64 long when encoding/decoding the existing opaque private field. Retain the Open Group notice and all IO/close behavior.",
+          "replacements": [
+            {
+              "before": "#include <errno.h>\n",
+              "after": "#include <errno.h>\n#include <stdint.h>\n"
+            },
+            {
+              "before": "((int)(long) (f)->private)",
+              "after": "((int)(intptr_t) (f)->private)"
+            },
+            {
+              "before": "(char *)(long) fd",
+              "after": "(char *)(intptr_t) fd",
+              "occurrences": 2
+            }
+          ]
+        }
+      ]
     }
   ],
   "serverOptions": [
@@ -758,6 +781,42 @@
       "sha256": "8ec8c2dd7f84eeb0be9eeb0608bad128d4d2353da7cc77f5813257af4dd94bac",
       "size": 11394,
       "review": "Read actual file copyright and permission grant; retain its notice and name-use restrictions with distribution. Root COPYING alone is insufficient."
+    },
+    {
+      "path": "hw/xwin/winprefsyacc.h",
+      "size": 4765,
+      "sha256": "1299bdbf28d864b450083048475e9cb99dc8500a5b8b054a84a016961c433cf7",
+      "review": "Generated Bison 3.8.2 interface: intact GPL-3.0-or-later WITH Bison-exception-2.2; preserve its exception together with parser/grammar provenance."
+    },
+    {
+      "path": "hw/xwin/propertystore.h",
+      "size": 3117,
+      "sha256": "4460d61ae1a3c24b27aaea497493cbf0006e11e7c9a36b8278b51603a99ef7ec",
+      "review": "Actual permissive notice retained. Existing single documented property key is shared across compiler branches to exclude LGPL propkey.h; SDK generated interface provenance still requires review."
+    },
+    {
+      "path": "hw/xwin/XWin.rc",
+      "size": 3781,
+      "sha256": "45a02e43bb68ae3c923a6f1e8b0f05e93517db54d87bd9ebfc8f0deb550dd4ab",
+      "review": "Read actual permissive notice; resource script embeds X.ico. Script permission does not independently approve the binary icon."
+    },
+    {
+      "path": "hw/xwin/XWin.exe.manifest",
+      "size": 1395,
+      "sha256": "2cdb7dbcfe5fb3dbe13ca333388a1950edb12da0437505b523a8e15543e9dee9",
+      "review": "XML has no independent permission notice; preserve exact input and leave resource adoption unresolved rather than inferring approval from root COPYING."
+    },
+    {
+      "path": "hw/xwin/X.ico",
+      "size": 25214,
+      "sha256": "84ff9b2eb8ce3c3f26072fa367860989f8c900b1fd0aefda6d6f6f1af3ff3597",
+      "review": "Binary icon has no embedded license notice observed; exact resource identity recorded, redistribution provenance unresolved."
+    },
+    {
+      "path": "hw/xwin/system.XWinrc",
+      "size": 3581,
+      "sha256": "ca65e3afdbdf8a601dc5ffee469529070218a1490c0fa268e95a72cd5dc87c73",
+      "review": "Example configuration names its author but has no independent permission grant observed; installation identity retained, resource adoption unresolved."
     }
   ],
   "generatorLicenseEvidence": [
@@ -891,6 +950,22 @@
           "after": "XWIN_SYS_LIBS = @XWIN_SYS_LIBS@"
         }
       ]
+    },
+    {
+      "path": "hw/xwin/propertystore.h",
+      "beforeSha256": "4460d61ae1a3c24b27aaea497493cbf0006e11e7c9a36b8278b51603a99ef7ec",
+      "afterSha256": "ffbb65dc2530749c3387b3c23ce82be8fe62bb165c2179d579a04b7125b496a1",
+      "reason": "Exclude the LGPL MinGW propkey.h table. Move the existing permissive single AppUserModel property declaration into the common branch; retain the real IPropertyStore SDK interface and taskbar behavior. GUID/PID independently matched to Microsoft System.AppUserModel.ID documentation.",
+      "replacements": [
+        {
+          "before": "#include <propkey.h>\n",
+          "after": ""
+        },
+        {
+          "before": "DEFINE_PROPERTYKEY(PKEY_AppUserModel_ID, 0x9F4C2855, 0x9F79, 0x4B39, 0xA8, 0xD0,\n                   0xE1, 0xD4, 0x2D, 0xE1, 0xD5, 0xF3, 5);\n\n#endif /* !__MINGW64_VERSION_MAJOR */\n",
+          "after": "#endif /* !__MINGW64_VERSION_MAJOR */\n\nDEFINE_PROPERTYKEY(PKEY_AppUserModel_ID, 0x9F4C2855, 0x9F79, 0x4B39, 0xA8, 0xD0,\n                   0xE1, 0xD4, 0x2D, 0xE1, 0xD5, 0xF3, 5);\n"
+        }
+      ]
     }
   ],
   "excludedHeaderReview": [
@@ -899,6 +974,12 @@
       "gitBlob": "aa71819423d2f40f748a73cd9b55e77e47926be5",
       "declaredLicense": "LGPL-2.1-or-later",
       "resolution": "Exclude DirectDraw from this 2D development profile; do not infer permissive licensing from SDK origin."
+    },
+    {
+      "source": "https://github.com/mingw-w64/mingw-w64/blob/63ebe6cdb/mingw-w64-headers/include/propkey.h",
+      "gitBlob": "729a0bda2364fc92337b18ced095d63326ad7165",
+      "declaredLicense": "LGPL-2.1-or-later",
+      "resolution": "Exclude the SDK property table and retain the upstream permissive single AppUserModel key declaration verified against Microsoft documentation; actual server compiler dependencies must prove absence."
     }
   ],
   "serverHeaders": [

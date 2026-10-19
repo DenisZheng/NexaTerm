@@ -166,6 +166,7 @@ def build(work, report):
     for license_item in manifest["generatorLicenseEvidence"]:
         verify_file(ASSETS / license_item["file"], license_item["size"], license_item["sha256"])
     report["generatorLicenseEvidence"] = manifest["generatorLicenseEvidence"]
+    report["excludedHeaderReview"] = manifest["excludedHeaderReview"]
     report["manifestSha256"] = digest(source_manifest)
     report["recipeSha256"] = digest(Path(__file__).read_bytes())
     cache, sources, builds, prefix = [work / name for name in ["cache", "sources", "build", "prefix"]]
@@ -192,6 +193,24 @@ def build(work, report):
     os.environ["PYTHON"] = "/usr/bin/python3"
     report["components"] = []
     owners = {}
+    report["component"] = "xorg-server"
+    report["stage"] = "server-source"
+    server_manifest = json.loads((ASSETS / "upstream-source.json").read_text())
+    root = server_manifest["source"]["root"]
+    server_anchors = {"COPYING": server_manifest["source"]["anchors"]["COPYING"],
+                      **{item["path"]: item["sha256"] for item in manifest["serverFileReview"]}}
+    report["serverFileReview"] = manifest["serverFileReview"]
+    extract_component(cache / server_manifest["archive"]["name"], sources, root, server_anchors)
+    report["appliedServerPatches"] = apply_source_patches(sources / root, manifest["serverPatches"])
+    report["stage"] = "native-appid-headers"
+    appid_source = ASSETS / "overlays/appid-property-probe.c"
+    appid_binary = builds / "appid-property-probe.exe"
+    run(["gcc", "-std=gnu11", "-Wall", "-Wextra", "-Werror", "-I", sources / root / "hw/xwin",
+         appid_source, "-o", appid_binary], work)
+    run([appid_binary], work, timeout=10)
+    report["nativeAppIdHeaders"] = {"verified": True, "sdkInterfaceOnly": True,
+                                    "sourceSha256": digest(appid_source.read_bytes()),
+                                    "headerSha256": digest((sources / root / "hw/xwin/propertystore.h").read_bytes())}
     for component in manifest["components"]:
         report["component"] = component["name"]
         report["stage"] = "source"
@@ -234,16 +253,17 @@ def build(work, report):
                                            "wrapperSha256": digest((prefix / "include/X11/Xwinsock.h").read_bytes())}
         if component["name"] == "xcb-proto":
             report["hostGenerator"] = verify_host_generator(prefix, source, work)
+        if component["name"] == "libXfont2":
+            report["stage"] = "native-font-buffer"
+            probe_source = ASSETS / "overlays/font-buffer-probe.c"
+            probe_binary = builds / "font-buffer-probe.exe"
+            run(["gcc", "-std=gnu11", "-Wall", "-Wextra", "-Werror", "-I", source / "include",
+                 "-I", prefix / "include", probe_source, "-o", probe_binary, prefix / "lib/libXfont2.a"], work)
+            run([probe_binary], work, timeout=10)
+            report["nativeFontBuffer"] = {"verified": True, "binaryReadWriteAndEof": True,
+                                          "sourceSha256": digest(probe_source.read_bytes())}
         write_report(work / "progress.json", report)
     report["component"] = "xorg-server"
-    report["stage"] = "server-source"
-    server_manifest = json.loads((ASSETS / "upstream-source.json").read_text())
-    root = server_manifest["source"]["root"]
-    server_anchors = {"COPYING": server_manifest["source"]["anchors"]["COPYING"],
-                      **{item["path"]: item["sha256"] for item in manifest["serverFileReview"]}}
-    report["serverFileReview"] = manifest["serverFileReview"]
-    extract_component(cache / server_manifest["archive"]["name"], sources, root, server_anchors)
-    report["appliedServerPatches"] = apply_source_patches(sources / root, manifest["serverPatches"])
     server_headers = builds / "xorg-server-headers"
     report["serverHeaders"] = prepare_server_headers(sources, server_headers, manifest)
     os.environ["CPPFLAGS"] = "-I" + str(server_headers) + " " + os.environ["CPPFLAGS"]

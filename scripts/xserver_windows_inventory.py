@@ -135,6 +135,11 @@ def native_header_evidence(build_directory):
     server_header = [(path, content) for path, content in records
                      if re.search(r"[/\\]xorg-server-headers[/\\]X11[/\\]extensions[/\\]XKBgeom\.h(?:\s|$)", content)]
     require(server_header, "NATIVE_SERVER_HEADER_CONTEXT")
+    require(all(not re.search(r"(?:^|[/\\])propkey\.h(?:\s|$)", content, re.IGNORECASE)
+                for _, content in records), "NATIVE_PROPERTY_TABLE")
+    appid = [(path, content) for path, content in records
+             if re.search(r"(?:^|[/\\])winSetAppUserModelID\.c(?:\s|$)", content)]
+    require(appid, "NATIVE_APPID_DEPENDENCIES")
     def identities(items):
         return [{"path": str(path.relative_to(build_directory)), "sha256": digest(path.read_bytes())}
                 for path, _ in items]
@@ -142,4 +147,5 @@ def native_header_evidence(build_directory):
             "debugMessageTableIncluded": False, "directDrawHeaderIncluded": False,
             "directDrawBackendIncluded": False, "renderer": "gdi",
             "winmsgDependencies": identities(winmsg), "gdiDependencies": identities(gdi),
-            "serverGeometryHeaderDependencies": identities(server_header)}
+            "serverGeometryHeaderDependencies": identities(server_header),
+            "propertyTableIncluded": False, "appIdDependencies": identities(appid)}

@@ -71,6 +71,7 @@ class InventoryTests(unittest.TestCase):
         (deps / "winmsg.Po").write_text("winmsg.o: /source/hw/xwin/winmsg.c /source/win.h\n")
         (deps / "winshadgdi.Po").write_text("winshadgdi.o: /source/hw/xwin/winshadgdi.c /source/win.h\n")
         (deps / "geometry.Po").write_text("geometry.o: /build/xorg-server-headers/X11/extensions/XKBgeom.h\n")
+        (deps / "appid.Po").write_text("appid.o: /source/hw/xwin/winSetAppUserModelID.c /source/propertystore.h\n")
         return build, deps
 
     def test_observed_gdi_compilation_excludes_debug_table_and_directdraw(self):
@@ -79,7 +80,7 @@ class InventoryTests(unittest.TestCase):
         self.assertFalse(result["debugMessageTableIncluded"])
         self.assertFalse(result["directDrawHeaderIncluded"])
         self.assertEqual(result["renderer"], "gdi")
-        self.assertEqual(result["dependencyFiles"], 3)
+        self.assertEqual(result["dependencyFiles"], 4)
 
     def test_debug_table_or_directdraw_input_cannot_pass(self):
         build, deps = self.header_fixture()
@@ -104,6 +105,13 @@ class InventoryTests(unittest.TestCase):
         build, deps = self.header_fixture()
         (deps / "geometry.Po").write_text("geometry.o: /prefix/include/X11/extensions/XKBgeom.h\n")
         self.assertCode("NATIVE_SERVER_HEADER_CONTEXT", native_header_evidence, build)
+
+    def test_appid_property_table_cannot_hide_in_transitive_compiler_dependencies(self):
+        build, deps = self.header_fixture()
+        (deps / "appid.Po").write_text("appid.o: /source/winSetAppUserModelID.c D:/sdk/propkey.h\n")
+        self.assertCode("NATIVE_PROPERTY_TABLE", native_header_evidence, build)
+        (deps / "appid.Po").unlink()
+        self.assertCode("NATIVE_APPID_DEPENDENCIES", native_header_evidence, build)
 
     def test_server_header_copy_verifies_bytes_and_does_not_replace_client_install(self):
         source = self.root / "sources/protocol/include/XKBgeom.h"

@@ -6,7 +6,7 @@
 
 同日X0续作：Draft #84已交付固定官方21.1.25源码/签名/公钥核验入口，专用CI2的21项测试和真实在线GPG验证通过。采集仅为REVIEW-REQUIRED，发行批准与bundled仍为false；继续原生Windows构建、逐文件/依赖许可及PE/资源闭包，不重复源码核验入口。精确完整CI结果与下一刀见research/source-review-evidence.md。
 
-同日Windows续作Draft #85：code69a1467的source CI14及完整应用CI681七执行job成功；原生11的43项证据反例、真实IPv6探针及libX11完整编译/安装成功，安装owner检查拒绝xorgproto与libX11的同名geometry头覆盖。继续隔离客户端/服务端头上下文后验证剩余库、完整引擎/PE/运行库；本地67项回归无skip。SDK DirectDraw头为LGPL，GDI profile已移除头/后端/loader/dxguid。整体仍须实质开发，继续research/windows-build-evidence.md。
+同日Windows续作Draft #85：code2d0b9a0的source CI15及完整应用CI682七执行job成功；原生12的46反例、真实IPv6探针及前14依赖编译安装成功，同名geometry头安装隔离已通过，最后libXfont2文件描述符/指针宽度转换仍FAIL。继续intptr_t修正及实际二进制I/O探针，并排除新发现的LGPL propkey.h表、保留任务栏AppID功能。原生引擎/PE/运行库与完整许可/资源仍须开发，本地68回归无skip。继续research/windows-build-evidence.md。
 
 用户流程：选择 XDMCP 目标后启动远程桌面，查看状态，取消/重连/关闭并回收所属 X server。
 

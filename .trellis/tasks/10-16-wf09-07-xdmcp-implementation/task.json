@@ -15,7 +15,7 @@
   "branch": "build/wf09-07-xserver-windows",
   "base_branch": "build/wf09-07-xserver-source-review",
   "worktree_path": null,
-  "commit": "69a14676b7ee588574f991552c8a7f16dadb8af2",
+  "commit": "2d0b9a0492cdd7f1a05d754f8e4152253065eec5",
   "pr_url": "https://github.com/DenisZheng/NexaTerm/pull/85",
   "subtasks": [],
   "children": [],
@@ -27,6 +27,6 @@
     "scripts/xserver/upstream-source.json",
     ".trellis/spec/backend/xserver-source-review.md"
   ],
-  "notes": "Draft #85 stacked on #84. Verified code69a1467: source CI14 and full app CI681 all7 executing jobs SUCCESS (conditional package skipped). Native11 real Windows evidence43, IPv6 numeric-loopback probe and complete libX11 compile/install SUCCESS; install inventory rejected conflicting xorgproto/server and libX11/client XKBgeom.h. JSON-only artifact12169040787 downloaded and inspected. Current fix separates pinned private server header from public client installation, keeps collision failure with hashes/owner and requires actual server compile dependencies. Local67 regressions no skips; subsequent code needs fresh CI. DirectDraw LGPL header/backend/loader/dxguid excluded from GDI profile. Full native engine/PE/runtime/license/resource closure, distribution adoption, X2/X3 and Unix hard-crash supervision remain open; no merge/release or bundled/desktop approval.",
+  "notes": "Draft #85 stacked on #84. Verified code2d0b9a0: source CI15 (21+46 evidence tests and real15 dependency signatures) and full app CI682 all7 executing jobs SUCCESS; conditional package skipped. Native12 passed46 regressions, actual IPv6 probe and first14 dependency builds/installs, proving public geometry-header ownership separation; libXfont2 then failed LLP64 descriptor/pointer casts. Both JSON-only artifacts downloaded/inspected. Current exact source adaptations use intptr_t and add real target archive binary IO/EOF probe; remove LGPL SDK propkey.h while preserving the existing permissive AppUserModel key/SDK interface and add an early native ABI probe. Bison interface/resource identities pinned; SDK default ZPL/explicit license exceptions reviewed, not blanket MIT. Local68 regressions no skips; new code needs fresh CI. Full engine/PE/runtime/per-file and resource adoption, X2/X3 and Unix hard-crash supervision remain open. No distribution/bundled/desktop approval, merge or release.",
   "meta": {}
 }

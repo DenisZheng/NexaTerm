@@ -4,7 +4,7 @@
 
 ## 当前继续入口
 
-先核对[Draft #85](https://github.com/DenisZheng/NexaTerm/pull/85)最新HEAD和原生workflow，不把下文历史失败当作最新结果。code69a1467的完整应用CI681全部7个执行job与source CI14已成功（条件打包为既有skip）；原生11的43项证据反例、真实IPv6探针和libX11完整编译/安装已成功，安装owner检查随后发现XKBgeom.h覆盖并保持FAIL。当前修正客户端/服务端头上下文后继续后续库、引擎、PE及运行库验证，不能标记native build完成。原生11 artifact12169040787已实际下载：仅一个JSON，归档SHA256 2517e88da8c008125fe8a7793d5b9616390876515b6e0ddcf079f64fb0d41870；报告确认nativeIpv6Headers.verified=true，distributionApproved/bundled/desktopVerified仍false。
+先核对[Draft #85](https://github.com/DenisZheng/NexaTerm/pull/85)最新HEAD和原生workflow，不把下文历史失败当作最新结果。code2d0b9a0的source CI15及完整应用CI682七执行job均成功（条件打包为既有skip）；原生12的46项反例、真实IPv6探针及前14个依赖编译/安装通过，确认同名geometry头安装隔离生效，最终libXfont2在文件描述符/指针转换处失败。当前继续intptr_t修正、属性表许可排除及完整引擎/PE/运行库验证，不能标记native build完成。原生12 artifact12170486419已实际下载：仅一个JSON，归档SHA256 f83cc618a23dddf4d998a3835e88d16b2fc175c2206d418d1ab60e2bb882decd；libX11公共头为预期420d8335，xorgproto未安装该公共头。source15 artifact12169194136也已实际核对，仅两个JSON，SHA256 0e5ca6f0a3fa0521db96add982888baee84d29d0158387d03dd4430d459a38dd，15项pin与code2d0b9a0清单一致；所有发行/桌面标志仍false。
 
 ## 首次真实Windows构建
 
@@ -87,3 +87,23 @@ code3ac679a的[source CI11](https://github.com/DenisZheng/NexaTerm/actions/runs/
 固定官方源中，xorgproto版本15808字节、SHA256 84413c7719ed49453cb543454fa84a48dceefb866790e48c871b43cbff16d089，含XKB_IN_SERVER的SrvXkb别名与服务端geometry声明；libX11版本13758字节、SHA256 420d8335306aad84fde239eba310e7da5ffaecb572111ce78e42736fba77828f，是客户端API。不能把其中一个全局覆盖另一个。xorgproto关闭legacy公共安装，让libX11拥有公共客户端头并验证安装后原始字节；服务端头从已核验xorgproto源完整复制到私有server include上下文，保留原许可并校验复制前后hash。后续真实服务端编译依赖必须观察到该私有头，公共客户端头不能替代这项证据。
 
 覆盖检查继续FAIL，并把原owner及覆盖前后hash/size写入失败JSON，未引入覆盖白名单。本地67项回归无skip，包括真实GDI C选择器、冲突诊断和两种头上下文隔离；完整原生构建继续验证。source14与应用CI681通过的代码对象为69a1467，后续改动不能继承为已验证。
+
+
+## SDK属性表与生成头/资源逐文件补充
+
+沿实际propertystore.h包含链核对[固定SDK提交的propkey.h](https://github.com/mingw-w64/mingw-w64/blob/63ebe6cdb/mingw-w64-headers/include/propkey.h)（blob729a0bda2364fc92337b18ced095d63326ad7165），该文件也明确为LGPL-2.1-or-later。不能沿用“SDK统一宽松”的推断。上游propertystore.h本身有完整宽松许可，非MinGW分支已含单个PKEY_AppUserModel_ID声明；仅把这项原有声明移到共同分支并移除propkey.h，继续使用真实IPropertyStore接口，保留任务栏AppID功能。该键的GUID/PID已与[Microsoft System.AppUserModel.ID](https://learn.microsoft.com/en-us/windows/win32/properties/props-system-appusermodel-id)独立核对；没有从LGPL属性表复制实现。
+
+propsys.h由WIDL生成（blobc8764f4f3e77adecff4731dc2b477cc9308ed500），IDL原始输入另核对blob650f636226c3ec89d2e3d13fe870a99b28a0fcad。[同一提交根COPYING](https://github.com/mingw-w64/mingw-w64/blob/63ebe6cdb/COPYING)（blob28fa9514c036c2ae6a545fc9fe75c37baecf596d）明确默认ZPL-2.1，PD/BSD/LGPL标记的部分分别例外；该规则支持无独立标记文件的默认许可归属，但不覆盖有例外声明的导入头。继续核对实际编译依赖及生成/导入声明来源，不能把整个SDK贴上统一MIT标签。propkeydef.h（blob3b7750294232ce0625883094d9624eed693e9f39）实际声明Public Domain并指向DISCLAIMER.PD。
+
+新增原生AppID头探针，通过真实SDK IPropertyStore的SetValue函数表调用核对同一键及字符串值；源码GPG/hash核验后、全部依赖编译前先执行，使接口问题提前失败。这是声明/ABI探针，不是实际Windows shell桌面验收。完整服务端编译依赖必须观察到winSetAppUserModelID.c且所有记录均无propkey.h；缺观察或传递包含仍FAIL。
+
+补齐winprefsyacc.h的Bison 3.8.2完整例外、propertystore.h及XWin.rc/XWin.exe.manifest/X.ico/system.XWinrc原始hash/size，server逐文件锚点增至19。资源脚本有宽松许可不自动批准嵌入图标；图标、manifest及示例配置的独立分发来源未关闭，继续作为明确采用缺口。全部7项固定server适配已在真实归档逐字节应用校验，本地68项回归无skip；后续新增代码仍需重新执行Windows及完整应用CI。
+
+
+## 原生12：前14依赖通过，修正font buffer文件描述符桥
+
+[原生12](https://github.com/DenisZheng/NexaTerm/actions/runs/39215982466)（code2d0b9a0）确认xorgproto不再安装legacy公共geometry头，libX11拥有正确客户端头；libxkbfile的真实Meson构建安装及libfontenc也完成。最后libXfont2的bufio.c仍把文件描述符通过LLP64 long在指针间编码/解码，GNU make -k收集到同一宏和两个入口的全部宽度诊断，整次FAIL。
+
+仅把有符号CRT文件描述符与既有opaque private字段之间的long桥换为intptr_t，并显式包含stdint.h；不改变字段/API宽度、I/O、缓冲或close语义，保留Open Group许可并固定原始/结果hash与两处入口发生次数。新增真实target archive的二进制写入/flush/read/EOF探针，覆盖CRLF、0x1a、NUL与0xff及临时文件清理；不把编译成功替代实际回调执行。
+
+code2d0b9a0完整CI682：Rust Linux617/4既有ignored、macOS618、Windows620，二进制各19、集成各1均通过；前端1160/1todo、脚本193/3既有环境skip、安全18/0skip，七实际执行job全部成功。source CI15为21源码+46 Windows证据回归及真实15依赖签名通过。新增属性表/font补丁和探针为后续代码，须重新取得原生和完整CI；本地68项无skip，不借用旧CI结论。
