@@ -9,6 +9,12 @@ from xserver_windows_pe import mapped_ranges
 
 PRODUCER_PACKAGE = "mingw-w64-ucrt-x86_64-binutils"
 PRODUCER_VERSION = "2.47-4"
+PRODUCER_RELEASE = {
+    "versionText": "GNU ld (GNU Binutils) 2.47.20260726",
+    "binarySha256": "a279cc83f198a606f255a597b3a067b51f11a9bbf8fe46de2a0dc8bb71b47f4f",
+    "archive": "https://repo.msys2.org/mingw/ucrt64/mingw-w64-ucrt-x86_64-binutils-2.47-4-any.pkg.tar.zst",
+    "archiveSha256": "c18a40b871bfddb5da030f015003479ca85625afde1cb89f7313945e6151397d",
+    "archiveSize": 6625838, "archiveSignatureIndependentlyVerified": False}
 GENERATOR_SOURCE = {
     "archive": "https://ftp.gnu.org/gnu/binutils/binutils-2.47.tar.bz2",
     "archiveSha256": "3068128c75cda9f898ccb4211d360246e8e195ffcc9dfb655b23ae23a54800e8",
@@ -52,7 +58,7 @@ def memory_inputs(content, data, producer):
     require(len(names) <= 4096 and len(set(names)) == len(names), "LINK_GENERATED_COUNT")
     require(producer and producer.get("package") == PRODUCER_PACKAGE
             and producer.get("version") == PRODUCER_VERSION
-            and re.fullmatch(r"[0-9a-f]{64}", producer.get("binarySha256", "")), "LINK_GENERATED_PRODUCER")
+            and producer.get("binarySha256") == PRODUCER_RELEASE["binarySha256"], "LINK_GENERATED_PRODUCER")
     rows = map_contributions(content, names)
     descriptors = []
     for name, sections in rows.items():

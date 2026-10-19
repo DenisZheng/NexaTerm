@@ -535,7 +535,7 @@ Windows full engine and PE compiled; actual header and runtime license provenanc
 
 - source CI21：21源码+68 Windows证据回归及15项真实签名通过；两JSON artifact已下载，全部pin匹配。
 - 完整CI688：七执行job全部SUCCESS，条件打包跳过；Windows库620、二进制19及集成1通过。
-- 本地98回归无skip；真实GNU PE内存输入及输出贡献格式、公开COFF对象/source receipt核验通过，任务context两清单各13项有效。
+- 本地100回归无skip；真实GNU PE内存输入及输出贡献格式、公开COFF对象/source receipt核验通过，任务context两清单各13项有效。
 - 原生18确认固定manifest source receipt通过；保留102磁盘输入后在GNU内存BFD对象处FAIL。补实际producer/map到PE贡献核对及早期真实Windows DLL运行探针，待新原生执行；既有FAIL保留。
 
 ### Status
@@ -544,6 +544,6 @@ Windows full engine and PE compiled; actual header and runtime license provenanc
 
 ### Next Steps
 
-- 读取新代码原生19最终日志/JSON，修复真实后续失败；不得把既有编译成功冒充整条门禁通过。
+- 原生19的77回归已过，producer完整日期banner假设FAIL；source22主机PE夹具前提FAIL。已补官方发布二进制精确hash/banner及显式非零加数/auto-import，读取下一次完整原生/源码CI；不得把既有编译成功冒充整条门禁通过。
 - 继续DLL内部静态/SDK逐文件/资源与xkbcomp/XKB数据闭包，随后随包/桌面、X3及Unix宿主硬崩溃监督。
 - Windows Rlogin精确flush仍须实际backend；7/9是范围计数，不能换算工时完成度。

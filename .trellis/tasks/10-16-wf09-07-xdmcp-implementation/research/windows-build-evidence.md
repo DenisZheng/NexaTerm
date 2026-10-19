@@ -185,3 +185,9 @@ default-manifest包无安装notice，但固定发布包、配方/生成器hash�
 新门禁采集真实GCC选中的ld程序hash/owner/精确版本/工具许可；只接受已核对的rtr/ertr/dll stuff类型，将非discarded map贡献绑定到实际PE的.rdata/.edata/.reloc字节、RVA/文件偏移和hash，核对V2伪重定位表及实际relocator符号。保留inputFilePresent=false与inputFileSha256Available=false，未知缺文件/producer漂移/磁盘同名影子/缺贡献/重叠/越界或修改数据继续FAIL。
 
 本地真实GNU PE linker已复现内存输入和最终贡献，作为格式回归不执行也不冒充Windows运行证据。新增Windows早期真实数据DLL/非零偏移初始化探针，在重库编译前实际运行并核对同一类map/PE贡献。现本地98项无skip；真实Windows仍须验证，原生18失败保留。完整C输入及最终版本probe仍未运行，整体任务保持in_progress。
+
+## 原生19与source22：早期producer/跨主机夹具修正
+
+code e751827的[原生19](https://github.com/DenisZheng/NexaTerm/actions/runs/39274327395)已通过77项Windows回归，随后在重库构建前的producer版本检查FAIL。实际包仍为2.47-4；独立下载[官方UCRT64发布包](https://packages.msys2.org/package/mingw-w64-ucrt-x86_64-binutils)，6625838字节、SHA256 c18a40b871bfddb5da030f015003479ca85625afde1cb89f7313945e6151397d，与公布hash一致。真实ld.bfd.exe为1930154字节、SHA256 a279cc83f198a606f255a597b3a067b51f11a9bbf8fe46de2a0dc8bb71b47f4f，ld.exe及target路径为其包内硬链接；内置版本为GNU ld (GNU Binutils) 2.47.20260726，不能将包版本与无日期banner等同。现固定完整banner及发布二进制hash，保留归档独立分离签名未核验；失败也保留已采集producer信息。原生19单JSON归档90276字节/hash ab8cd57062b50ad5d2038dcf5b6db94cc5d77358bff629978ecf4f84ccf121f7已下载检查。
+
+[source22](https://github.com/DenisZheng/NexaTerm/actions/runs/39274327348)的主机PE格式夹具没有生成伪重定位，五FAIL/一ERROR均源于正向前提缺失；Windows同一夹具七项已通过。改用显式auto-import，四字节偏移以原始八字节整数和独立BFD_RELOC_64记录保留，避免ELF RELA到COFF时丢失非零加数；实际objdump已核对原始值4及AMD64 ADDR64。GNU as官方.reloc说明明确不同目标对加数的支持不同。本地100项无skip，新增已发布日期/banner与字节漂移回归；新代码仍须完整远端验证。

@@ -5,11 +5,16 @@ import re
 import shutil
 
 from xserver_source_review import ASSETS, digest, require
-from xserver_windows_linkmap import GENERATOR_SOURCE, PRODUCER_PACKAGE, PRODUCER_VERSION, memory_inputs
+from xserver_windows_linkmap import GENERATOR_SOURCE, PRODUCER_PACKAGE, PRODUCER_RELEASE, PRODUCER_VERSION, memory_inputs
 from xserver_windows_pe import MAX_PE_BYTES
 
 
-def linker_producer(work, run, package_evidence):
+def validate_producer(version_text, binary_sha):
+    require(version_text == PRODUCER_RELEASE["versionText"]
+            and binary_sha == PRODUCER_RELEASE["binarySha256"], "LINK_GENERATED_PRODUCER")
+
+
+def linker_producer(work, run, package_evidence, report):
     value = run(["gcc", "-print-prog-name=ld"], work, capture=True).strip()
     if re.match(r"^[A-Za-z]:", value):
         value = run(["cygpath", "-u", value], work, capture=True).strip()
@@ -26,17 +31,20 @@ def linker_producer(work, run, package_evidence):
     evidence = package_evidence(package, work, run)
     require(evidence["version"] == PRODUCER_VERSION, "LINK_GENERATED_PRODUCER")
     version = run([path, "--version"], work, capture=True).splitlines()[0]
-    require(re.fullmatch(r"GNU ld .*\b2\.47", version), "LINK_GENERATED_PRODUCER")
-    return {"scope": "build-tool-not-runtime-candidate", "package": package, "version": evidence["version"],
+    record = {"scope": "build-tool-not-runtime-candidate", "package": package, "version": evidence["version"],
             "binary": str(path.relative_to("/ucrt64")), "binarySha256": digest(path.read_bytes()),
             "versionText": version, "packageEvidence": evidence, "generatorSource": GENERATOR_SOURCE,
+            "publishedBinaryEvidence": PRODUCER_RELEASE, "identityVerified": False,
             "producerLicenseAppliedToOutputInferred": False, "distributionApproved": False}
+    report["linkerProducer"] = record
+    validate_producer(version, record["binarySha256"])
+    record["identityVerified"] = True
+    return record
 
 
 def linker_probe(builds, work, report, run, package_evidence):
     report["stage"] = "native-linker-inputs"
-    producer = linker_producer(work, run, package_evidence)
-    report["linkerProducer"] = producer
+    producer = linker_producer(work, run, package_evidence, report)
     directory = builds / "linker-input-probe"
     directory.mkdir()
     library = ASSETS / "overlays/linker-pseudo-library.c"

@@ -6,7 +6,8 @@ import unittest
 
 from xserver_source_review import ReviewError, digest
 from xserver_windows_inventory import link_inputs
-from xserver_windows_linkmap import PRODUCER_PACKAGE, PRODUCER_VERSION, memory_inputs
+from xserver_windows_linker import validate_producer
+from xserver_windows_linkmap import PRODUCER_PACKAGE, PRODUCER_RELEASE, PRODUCER_VERSION, memory_inputs
 
 
 class LinkerMemoryTests(unittest.TestCase):
@@ -18,17 +19,21 @@ class LinkerMemoryTests(unittest.TestCase):
         # Own format fixture, never executed or counted as Windows runtime proof.
         sources = {
             "library": ".data\n.globl datum\ndatum:\n.long 7,11\n",
-            "caller": ".data\naddress:\n.quad datum+4\n.text\n.globl mainCRTStartup\nmainCRTStartup:\nmovabsq $address,%rax\nmovq (%rax),%rax\nmovl (%rax),%eax\nret\n.globl _pei386_runtime_relocator\n_pei386_runtime_relocator:\nret\n"}
+            "caller": ".data\naddress:\n.quad 4\n.reloc address,BFD_RELOC_64,datum\n.text\n.globl mainCRTStartup\nmainCRTStartup:\nmovabsq $address,%rax\nmovq (%rax),%rax\nmovl (%rax),%eax\nret\n.globl _pei386_runtime_relocator\n_pei386_runtime_relocator:\nret\n"}
         for name, source in sources.items():
             (cls.root / (name + ".s")).write_text(source)
             cls.command(["as", "--64", name + ".s", "-o", name + ".initial.o"])
             cls.command(["objcopy", "-O", "pe-x86-64", name + ".initial.o", name + ".o"])
         cls.command(["ld", "-mi386pep", "--dll", "--export-all-symbols", "--entry=0", "-o", "fixture.dll", "--out-implib=fixture.a", "library.o"])
-        cls.command(["ld", "-mi386pep", "--entry=mainCRTStartup", "--enable-runtime-pseudo-reloc", "-Map=fixture.map", "-o", "XWin.exe", "caller.o", "fixture.a"])
+        # Explicit in-place addend survives ELF RELA -> COFF conversion; request auto-import independent of host defaults.
+        cls.command(["ld", "-mi386pep", "--entry=mainCRTStartup", "--enable-auto-import", "--enable-runtime-pseudo-reloc", "-Map=fixture.map", "-o", "XWin.exe", "caller.o", "fixture.a"])
         cls.mapping = (cls.root / "fixture.map").read_text()
+        loads = [line for line in cls.mapping.splitlines() if line.startswith("LOAD ")]
+        if not any("_rtr" in line for line in loads):
+            raise AssertionError("Fixture did not generate pseudo relocations: " + repr(loads))
         cls.binary = (cls.root / "XWin.exe").read_bytes()
         # Parser policy fixture; actual producer identity is captured in native CI.
-        cls.producer = {"package": PRODUCER_PACKAGE, "version": PRODUCER_VERSION, "binarySha256": "a" * 64}
+        cls.producer = {"package": PRODUCER_PACKAGE, "version": PRODUCER_VERSION, "binarySha256": PRODUCER_RELEASE["binarySha256"]}
 
     @classmethod
     def command(cls, arguments):
@@ -54,8 +59,17 @@ class LinkerMemoryTests(unittest.TestCase):
                 self.assertEqual(section["sha256"], digest(self.binary[start:start + size]))
 
     def test_producer_changes_cannot_use_the_reviewed_constructor_evidence(self):
-        for producer in [None, {}, {**self.producer, "version": "2.48-1"}]:
+        for producer in [None, {}, {**self.producer, "version": "2.48-1"}, {**self.producer, "binarySha256": "a" * 64}]:
             self.assertCode("LINK_GENERATED_PRODUCER", lambda: memory_inputs(self.mapping, self.binary, producer))
+
+    def test_published_dated_release_is_not_confused_with_package_version(self):
+        validate_producer("GNU ld (GNU Binutils) 2.47.20260726", PRODUCER_RELEASE["binarySha256"])
+
+    def test_unreviewed_producer_date_or_binary_is_rejected(self):
+        for text, sha in [("GNU ld (GNU Binutils) 2.47", PRODUCER_RELEASE["binarySha256"]),
+                          ("GNU ld (GNU Binutils) 2.47.20260727", PRODUCER_RELEASE["binarySha256"]),
+                          ("GNU ld (GNU Binutils) 2.47.20260726", "a" * 64)]:
+            self.assertCode("LINK_GENERATED_PRODUCER", lambda: validate_producer(text, sha))
 
     def test_missing_contribution_cannot_be_replaced_by_a_discarded_section(self):
         name = "XWin_exe_rtr000000.o"
