@@ -137,3 +137,13 @@ code2d0b9a0完整CI682：Rust Linux617/4既有ignored、macOS618、Windows620，
 已核对的Public Domain propkeydef.h没有header guard，按当前INITGUID重新定义DEFINE_PROPERTYKEY。仅在propertystore.h的propsys.h之后显式再次包含该SDK头，遵循其既有宏契约；保留原有单键声明、真实接口与排除LGPL属性表的要求，不复制SDK宏实现或靠额外库掩盖缺定义。固定补丁结果hash随实际字节更新，本地81项回归无skip。新代码仍须取得实际Windows结果。
 
 code41b1965的[source CI17](https://github.com/DenisZheng/NexaTerm/actions/runs/39222995201)及[完整应用CI684](https://github.com/DenisZheng/NexaTerm/actions/runs/39222995202)均成功，后者七个实际执行job全通过；这些结果不包含本节后续链接修正，也不将原生14失败覆盖为成功。
+
+## 原生15：AppID实际通过，修正libxcb的Winsock版本宏
+
+[原生15](https://github.com/DenisZheng/NexaTerm/actions/runs/39254455753)（code09faad9）确认真实Xproto/Xwindows上下文的AppID探针已编译、链接并执行成功；对应属性头SHA256为363f0c25ee9af00da4ef6932d864129fd14fe6f7296541aa4bc09e315f66537d。IPv6也通过。libxcb随后仅在WSAStartup的MAKEWORD(2, 2)失败：宏于X11恢复namespace后展开，原生BYTE名已不可见。仅把该固定版本请求改为同值的(WORD)0x0202，保留错误返回与WSACleanup语义，不恢复全局BYTE别名或关闭诊断。Xtrans同类调用原本具有Xmd的CARD8 BYTE声明，不据此扩展改动。
+
+原生15仍为FAIL；实际下载检查单JSON artifact，ZIP112217字节、SHA256 775b8c0a69e539438ca6b2a42f2821a3da35a7b108ce638d403530730f782056，七个前置组件已built，所有采用/随包/桌面标记仍false。[source CI18](https://github.com/DenisZheng/NexaTerm/actions/runs/39254455746)的21+60项回归及全部15签名通过；两JSON归档85274字节、SHA256 66e47e039c5319a1ff3558d8196d253df8263886dca07e7936ddd092adbf0f2e，manifest及全部源码/签名pin已逐项匹配。新版本宏修正不继承这些旧代码结果。
+
+## 内嵌字体的数据级许可核对
+
+固定libXfont2归档的src/builtins/fonts.c为82957字节、SHA256 db6746ae498e77d57647fb803b3c895cfc5745801864d1b5ed992ce28b83eccd，含SuSE完整宽松许可。另按C八进制字节字面量读取两个数组，限额解gzip并读取真实PCF属性，避免只按生成C文件头推定字体数据权限：cursor的COPYRIGHT为`These "glyphs" are unencumbered`，6x13为`Public domain font.  Share and enjoy.`。前者gzip5105字节/hash ad32fe68634080cd494758bee0026f7a940bce0bbd2a1d9bddac7578e319c519，PCF14208字节/hash 1f853aba64596f1acb8e48750aff11ed139d93423baf9a172ffc654f22cd7494；后者gzip4385字节/hash 7734d9d7ba75f1c0dea76aaf4782ffd86b8aef7f00a1cb3c0ef127586e27fa9c，PCF19584字节/hash 6f1bc71fb2fd55b70b07a6d59df6ee5a2bb8bd3e052b6f08925db54fed65b339。此为固定profile的内嵌资源来源核对，实际编译/链接相关性和最终分发义务仍须结合原生清单，不批准外部字体或整体组件采用。

@@ -274,8 +274,8 @@
         {
           "path": "src/xcb_util.c",
           "beforeSha256": "d0af551672787618a65841a4cd474ffcf577d283c591714b04dd079c14a93c57",
-          "afterSha256": "67c2a537292b875a57fb6f2c1423d7ab76be37be09b4eb873d275a498d8f4038",
-          "reason": "Winsock setsockopt accepts a const char buffer; retain the original int value and length without suppressing pointer diagnostics.",
+          "afterSha256": "3fd029a4cbc8bdff0363eb5dac5f00d9484523469fc26f6aa546bda4e467cca1",
+          "reason": "Winsock setsockopt accepts a const char buffer; retain the original int value and length without suppressing pointer diagnostics. Request the same Winsock 2.2 WORD directly because MAKEWORD expands the SDK BYTE name after X11 restores its namespace.",
           "replacements": [
             {
               "before": "TCP_NODELAY, &on, sizeof(on)",
@@ -284,6 +284,10 @@
             {
               "before": "SO_KEEPALIVE, &on, sizeof(on)",
               "after": "SO_KEEPALIVE, (const char *)&on, sizeof(on)"
+            },
+            {
+              "before": "WSAStartup(MAKEWORD(2, 2), &wsaData)",
+              "after": "WSAStartup((WORD)0x0202, &wsaData)"
             }
           ]
         },
