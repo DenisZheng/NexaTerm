@@ -502,3 +502,48 @@ Draft #84 code bfbd225 verified: full CI669 all7 jobs and source CI2 passed; pin
 ### Next Steps
 
 - None - task complete
+
+
+## Session 12: WF-09 Windows native engine and license provenance
+
+**Date**: 2026-10-19
+**Task**: WF-09 Windows native engine and license provenance
+**Branch**: `build/wf09-07-xserver-windows`
+
+### Summary
+
+Windows full engine and PE compiled; actual header and runtime license provenance verified; final native audit pending, XDMCP remains in_progress.
+
+### Main Changes
+
+固定15官方依赖/签名/完整证书及51许可文本、21个server文件锚点；GDI profile排除DirectDraw及SDK propkey表，保留原生接口和编译诊断。修复LLP64地址/有符号标量桥、SDK/COM/XCB/X11 namespace、原归档缺失认证声明及select fallback结构冲突，使用真实IPv6/AppID/XCB/font/poll目标探针。
+
+原生16/17已完成完整XWin编译/链接/安装、16文件PE递归及真实server头来源核对；default-manifest.o缺安装notice使原生17静态map门禁FAIL。source receipt严格绑定唯一版本/声明/完整对象集合/hash及固定BSD源notice，保留installedLicenseTextPresent=false与发行/随包/桌面false；未知或漂移继续失败，不复制生成器实现。
+
+四个工具链DLL实际版本和五份安装许可hash已同固定官方原文逐项匹配，另核对内嵌PCF字体、BSD poll fallback、GCC运行库例外与本体分发义务。新增有界GCC/Ninja实际输入/owner记录，失败保留前序证据。xkbcomp/XKB数据、DLL内部静态/资源、逐文件义务和打包/桌面仍有实质工作。
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `6e1f8fd` | (see git log) |
+| `c2ca16f` | (see git log) |
+| `60ac904` | (see git log) |
+
+### Testing
+
+- source CI21：21源码+68 Windows证据回归及15项真实签名通过；两JSON artifact已下载，全部pin匹配。
+- 完整CI688：七执行job全部SUCCESS，条件打包跳过；Windows库620、二进制19及集成1通过。
+- 本地98回归无skip；真实GNU PE内存输入及输出贡献格式、公开COFF对象/source receipt核验通过，任务context两清单各13项有效。
+- 原生18确认固定manifest source receipt通过；保留102磁盘输入后在GNU内存BFD对象处FAIL。补实际producer/map到PE贡献核对及早期真实Windows DLL运行探针，待新原生执行；既有FAIL保留。
+
+### Status
+
+**IN_PROGRESS**：当前原生核验小步待最终结果；整体XDMCP任务保持in_progress，未归档、合并或发布。
+
+### Next Steps
+
+- 读取新代码原生19最终日志/JSON，修复真实后续失败；不得把既有编译成功冒充整条门禁通过。
+- 继续DLL内部静态/SDK逐文件/资源与xkbcomp/XKB数据闭包，随后随包/桌面、X3及Unix宿主硬崩溃监督。
+- Windows Rlogin精确flush仍须实际backend；7/9是范围计数，不能换算工时完成度。

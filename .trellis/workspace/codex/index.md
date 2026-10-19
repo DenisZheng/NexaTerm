@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 11
-- **Last Active**: 2026-10-18
+- **Total Sessions**: 12
+- **Last Active**: 2026-10-19
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~504 | Active |
+| `journal-1.md` | ~549 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 12 | 2026-10-19 | WF-09 Windows native engine and license provenance | `6e1f8fd`, `c2ca16f`, `60ac904` | `build/wf09-07-xserver-windows` |
 | 11 | 2026-10-18 | WF-09 X server fixed source review inputs | `1a6d899`, `bfbd225` | `build/wf09-07-xserver-source-review` |
 | 10 | 2026-10-18 | WF-09 XDMCP actual application exit completion | `d1bc04f` | `fix/wf09-07-xdmcp-shutdown` |
 | 9 | 2026-10-18 | WF-09 Windows urgent native API counterexamples | `778604c`, `3aea78d`, `99bffa6` | `feat/wf09-08a-windows-flush` |

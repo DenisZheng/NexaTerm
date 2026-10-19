@@ -2,7 +2,7 @@ import struct
 import unittest
 
 from xserver_source_review import ReviewError
-from xserver_windows_pe import parse_pe
+from xserver_windows_pe import mapped_ranges, parse_pe
 
 
 def image(normal=b"kernel32.dll", delay=b"extra.dll"):
@@ -82,6 +82,22 @@ class PeTests(unittest.TestCase):
         data = image()
         struct.pack_into("<I", data, 0x20C, 0x1601)
         self.assertCode("PE_RVA", data)
+
+    def test_mapped_contributions_use_actual_file_bytes_and_section_identity(self):
+        data = image()
+        data[0x98 + 240:0x98 + 248] = b".rdata\0\0"
+        metadata, ranges = mapped_ranges(data, [(0x140001100, 12)])
+        self.assertEqual(metadata["imageBase"], 0x140000000)
+        self.assertEqual(ranges[0]["bytes"], b"kernel32.dll")
+        self.assertEqual(ranges[0]["fileOffset"], 0x300)
+        self.assertEqual(ranges[0]["sectionNameHex"], b".rdata".hex())
+
+    def test_mapped_ranges_reject_headers_zero_fill_and_outside_image(self):
+        for address, size in [(0x140000080, 8), (0x140001601, 1), (0x140003000, 8)]:
+            with self.subTest(address=address):
+                with self.assertRaises(ReviewError) as caught:
+                    mapped_ranges(image(), [(address, size)])
+                self.assertEqual(str(caught.exception), "PE_RVA")
 
 
 if __name__ == "__main__":

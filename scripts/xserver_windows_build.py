@@ -14,12 +14,14 @@ import sys
 import tarfile
 
 from xserver_source_review import ArchiveBudget, ASSETS, ReviewError, collect, digest, require, verify_file, write_report
-from xserver_windows_inventory import InventoryCollision, add_runtime_provenance, installed_delta, link_inputs, native_header_evidence, snapshot
+from xserver_windows_inventory import InventoryCollision, add_runtime_provenance, installed_delta, link_inputs, native_header_evidence, package_evidence, snapshot
 from xserver_windows_pe import MAX_PE_BYTES, parse_pe
 from xserver_windows_signatures import verify_dependency
 from xserver_windows_sources import check_source_url, download_component
 from xserver_windows_compilation import observed_inputs
 from xserver_windows_probes import font_probe, header_probes, poll_probe, xcb_probe
+from xserver_windows_linker import linker_probe
+from xserver_windows_linkmap import memory_inputs
 
 
 MAX_ENTRIES = 5000
@@ -209,6 +211,7 @@ def build(work, report):
     report["serverFileReview"] = manifest["serverFileReview"]
     extract_component(cache / server_manifest["archive"]["name"], sources, root, server_anchors)
     report["appliedServerPatches"] = apply_source_patches(sources / root, manifest["serverPatches"])
+    linker_probe(builds, work, report, run, package_evidence)
     for component in manifest["components"]:
         report["component"] = component["name"]
         report["stage"] = "source"
@@ -282,7 +285,11 @@ def build(work, report):
     report["stage"] = "native-headers"
     report["nativeHeaderEvidence"] = native_header_evidence(server_build)
     report["stage"] = "static-link-inputs"
-    report["staticLink"] = link_inputs(maps / "XWin.exe.map", server_build / "hw/xwin", builds, prefix, owners, work, run, packages, report)
+    mapping = maps / "XWin.exe.map"
+    require(mapping.is_file() and mapping.stat().st_size <= 64 * 1024 * 1024, "LINK_MAP_MISSING")
+    generated = memory_inputs(mapping.read_text(), server.read_bytes(), report["linkerProducer"])
+    report["linkerGeneratedInputs"] = list(generated.values())
+    report["staticLink"] = link_inputs(mapping, server_build / "hw/xwin", builds, prefix, owners, work, run, packages, report, generated)
     report["stage"] = "compiler-inputs"
     report["compilerInputs"] = observed_inputs(builds, sources, prefix, manifest, root, owners, packages, work, run, report)
     report["runtimePackages"] = list(packages.values())

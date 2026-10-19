@@ -81,7 +81,7 @@ def add_runtime_provenance(closure, prefix, owners, work, run):
     return packages
 
 
-def link_inputs(map_file, link_directory, builds, prefix, owners, work, run, packages, report=None):
+def link_inputs(map_file, link_directory, builds, prefix, owners, work, run, packages, report=None, generated_inputs=None):
     require(map_file.is_file() and map_file.stat().st_size <= 64 * 1024 * 1024, "LINK_MAP_MISSING")
     content = map_file.read_text(encoding="utf-8", errors="strict")
     require(re.search(r"^OUTPUT\([^\n]*XWin\.exe\b", content, re.MULTILINE), "LINK_MAP_TARGET")
@@ -89,7 +89,16 @@ def link_inputs(map_file, link_directory, builds, prefix, owners, work, run, pac
     result = {"mapSha256": digest(map_file.read_bytes()), "inputs": [], "observationsComplete": False}
     if report is not None:
         report["staticLink"] = result
+    generated_inputs = generated_inputs or {}
     for name in re.findall(r"^LOAD (.+)$", content, re.MULTILINE):
+        if report is not None:
+            report["staticLinkCurrentInput"] = name[:4096]
+        if name in generated_inputs:
+            require(not (link_directory / name).exists(), "LINK_GENERATED_SHADOW")
+            record = generated_inputs[name]
+            records[record["origin"] + "/" + record["path"]] = record
+            result["inputs"] = list(records.values())
+            continue
         if re.match(r"^[A-Za-z]:", name):
             name = run(["cygpath", "-u", name], work, capture=True).strip()
         path = Path(name)

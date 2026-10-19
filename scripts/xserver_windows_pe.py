@@ -9,6 +9,20 @@ from xserver_source_review import require
 MAX_PE_BYTES = 64 * 1024 * 1024
 
 
+def file_offset(address, size, headers_size, sections):
+    require(size > 0 and 0 <= address < 2 ** 32 and address + size <= 2 ** 32, "PE_RVA")
+    candidates = []
+    if address < headers_size and address + size <= headers_size:
+        candidates.append(address)
+    for section_address, span, pointer, raw_size in sections:
+        if section_address <= address < section_address + span:
+            delta = address - section_address
+            require(delta + size <= raw_size, "PE_RVA")
+            candidates.append(pointer + delta)
+    require(len(candidates) == 1, "PE_RVA")
+    return candidates[0]
+
+
 def parse_pe(data):
     require(64 <= len(data) <= MAX_PE_BYTES and data[:2] == b"MZ", "PE_HEADER")
     pe = struct.unpack_from("<I", data, 60)[0]
@@ -25,31 +39,22 @@ def parse_pe(data):
     image_base = struct.unpack_from("<Q", data, optional + 24)[0]
     headers_size = struct.unpack_from("<I", data, optional + 60)[0]
     require(optional + optional_size + count * 40 <= headers_size <= len(data), "PE_HEADER")
-    sections = []
+    sections, section_names = [], []
     for index in range(count):
         start = optional + optional_size + index * 40
         virtual_size, address, raw_size, raw_pointer = struct.unpack_from("<IIII", data, start + 8)
         require(raw_pointer + raw_size <= len(data) and address + max(virtual_size, raw_size) <= 2 ** 32, "PE_SECTION_RANGE")
         sections.append((address, max(virtual_size, raw_size), raw_pointer, raw_size))
+        section_names.append(data[start:start + 8].split(b"\0", 1)[0].hex())
 
-    def file_offset(address, size):
-        require(size > 0 and 0 <= address < 2 ** 32 and address + size <= 2 ** 32, "PE_RVA")
-        candidates = []
-        if address < headers_size and address + size <= headers_size:
-            candidates.append(address)
-        for section_address, span, pointer, raw_size in sections:
-            if section_address <= address < section_address + span:
-                delta = address - section_address
-                require(delta + size <= raw_size, "PE_RVA")
-                candidates.append(pointer + delta)
-        require(len(candidates) == 1, "PE_RVA")
-        return candidates[0]
+    def offset(address, size):
+        return file_offset(address, size, headers_size, sections)
 
     def dll_name(address):
         for length in range(1, 261):
-            offset = file_offset(address, length)
-            if data[offset + length - 1] == 0:
-                value = data[offset:offset + length - 1]
+            position = offset(address, length)
+            if data[position + length - 1] == 0:
+                value = data[position:position + length - 1]
                 require(re.fullmatch(rb"[A-Za-z0-9_.-]+\.dll", value, re.IGNORECASE), "PE_IMPORT_NAME")
                 return value.decode("ascii").lower()
         require(False, "PE_IMPORT_NAME")
@@ -60,11 +65,11 @@ def parse_pe(data):
             return []
         width = words * 4
         require(address != 0 and width <= size <= 1024 * 1024, "PE_IMPORT_DIRECTORY")
-        file_offset(address, size)
+        offset(address, size)
         result = []
         for position in range(min(size // width, 4096)):
-            offset = file_offset(address + position * width, width)
-            record = struct.unpack_from("<" + "I" * words, data, offset)
+            record_offset = offset(address + position * width, width)
+            record = struct.unpack_from("<" + "I" * words, data, record_offset)
             if not any(record):
                 return sorted(set(result))
             name = record[3] if index == 1 else record[1]
@@ -79,4 +84,21 @@ def parse_pe(data):
     normal = imports(1, 5)
     delay = imports(13, 8)
     return {"machine": "amd64", "normalImports": normal, "delayImports": delay,
-            "imports": sorted(set(normal + delay)), "sectionCount": count}
+            "imports": sorted(set(normal + delay)), "sectionCount": count,
+            "imageBase": image_base, "headersSize": headers_size,
+            "sections": sections, "sectionNamesHex": section_names}
+
+
+def mapped_ranges(data, ranges):
+    require(0 < len(ranges) <= 8192, "PE_RANGE_BUDGET")
+    image, result = parse_pe(data), []
+    for address, size in ranges:
+        rva = address - image["imageBase"]
+        position = file_offset(rva, size, image["headersSize"], image["sections"])
+        matches = [index for index, (start, _, _, length) in enumerate(image["sections"])
+                   if start <= rva and rva + size <= start + length]
+        require(len(matches) == 1, "PE_RVA")
+        result.append({"imageVA": address, "size": size, "rva": rva, "fileOffset": position,
+                       "sectionNameHex": image["sectionNamesHex"][matches[0]],
+                       "bytes": data[position:position + size]})
+    return image, result
