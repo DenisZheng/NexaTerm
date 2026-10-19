@@ -5,3 +5,4 @@
 {"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Shared component, prototype and lazy module conventions"}
 {"file": ".trellis/spec/backend/security-evidence.md", "reason": "Preserve full scanner and evidence gates"}
 {"file": ".trellis/spec/backend/xdmcp-runner.md", "reason": "Concrete X1 worker, platform process lifetime, IPC and test contracts"}
+{"file": ".trellis/tasks/10-16-wf09-07-xdmcp-implementation/research/shutdown-evidence.md", "reason": "Verified exit completion barrier and remaining bundled-engine boundary"}

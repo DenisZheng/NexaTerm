@@ -12,11 +12,11 @@
   "assignee": "codex",
   "createdAt": "2026-10-16",
   "completedAt": null,
-  "branch": "feat/wf09-07-xdmcp-runner",
-  "base_branch": "docs/wf09-protocol-implementation-plan",
+  "branch": "fix/wf09-07-xdmcp-shutdown",
+  "base_branch": "feat/wf09-08a-windows-flush",
   "worktree_path": null,
-  "commit": null,
-  "pr_url": "https://github.com/DenisZheng/NexaTerm/pull/67",
+  "commit": "d1bc04f3f9341422b1a2e3c93ab8d0ba8c8c5928",
+  "pr_url": "https://github.com/DenisZheng/NexaTerm/pull/83",
   "subtasks": [],
   "children": [],
   "parent": "09-23-nexaterm-workflow-mainline",
@@ -24,6 +24,6 @@
     "docs/plans/WF09-PROTOCOL-IMPLEMENTATION-PLAN.md",
     "docs/WORKFLOW_SPEC.md"
   ],
-  "notes": "X1 external-engine native core implemented; code1a5b7cd CI611 all7 executing jobs PASS and native lifecycle run3 all3 OS PASS. Eight XDMCP tests pass on Windows/macOS/Linux. No bundled engine/UI/desktop claim; X0 pinned component audit and X2/X3 remain open. Overall task stays in_progress.",
+  "notes": "X1 external-engine core and actual app-exit completion barrier delivered. Draft #83 code d1bc04f: full CI666 all7 executing jobs SUCCESS, XDMCP native10 all3 OS each10 tests SUCCESS, no new skips/ignores. Exit awaits actual worker/process-tree/auth-directory cleanup; explicit stop keeps2s stop_pending. Bundled engine/packaging/UI/desktop and Unix host SIGKILL supervision remain unfinished. Overall task stays in_progress, no merge/release.",
   "meta": {}
 }

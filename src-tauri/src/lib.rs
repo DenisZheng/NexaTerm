@@ -345,7 +345,8 @@ pub fn run() {
                     let desktops = app.state::<xdmcp::XdmcpManager>();
                     let legacy = app.state::<rlogin_session::SessionManager>();
                     let commands=app.state::<rsh_session::TaskManager>();
-                    let (_,_,rlogin,rsh)=tokio::join!(files.shutdown(),desktops.shutdown(),legacy.shutdown_wait(),commands.shutdown_wait());
+                    let (_,xdmcp,rlogin,rsh)=tokio::join!(files.shutdown(),desktops.shutdown_wait(),legacy.shutdown_wait(),commands.shutdown_wait());
+                    if let Err(error)=xdmcp{eprintln!("xdmcp_shutdown_failed code={}",error.code);}
                     if let Err(error)=rlogin{eprintln!("rlogin_shutdown_failed code={}",error.code());}
                     if let Err(error)=rsh{eprintln!("rsh_shutdown_failed code={}",error.code());}
                 });

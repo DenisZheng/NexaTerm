@@ -51,6 +51,7 @@ struct Inner { entries: HashMap<String, Entry>, recent: VecDeque<(String, Status
 pub(crate) struct XdmcpManager {
     inner: Arc<Mutex<Inner>>,
     #[cfg(test)] gate: Arc<Mutex<Option<(std::sync::mpsc::SyncSender<()>, std::sync::mpsc::Receiver<()>)>>>,
+    #[cfg(test)] cleanup_gate: Arc<Mutex<Option<(std::sync::mpsc::SyncSender<()>, std::sync::mpsc::Receiver<()>)>>>,
 }
 struct Lease { manager: XdmcpManager, id: String, owner: String, cancel: Arc<AtomicBool>, reason: &'static str }
 impl Lease {
@@ -146,15 +147,27 @@ impl XdmcpManager {
             });
         }
     }
-    pub(crate) async fn shutdown(&self) {
-        self.cancel_window("main");
-        let waiting = async {
-            loop {
-                if self.inner.lock().map(|i| i.entries.is_empty()).unwrap_or(true) { break; }
-                tokio::time::sleep(POLL).await;
-            }
+    pub(crate) async fn shutdown_wait(&self) -> Result<(), AppError> {
+        let mut waiting = {
+            let mut inner = self.inner.lock().map_err(|_| error("unavailable"))?;
+            inner.closed = true;
+            let mut waiting = Vec::with_capacity(MAX_RUNS);
+            inner.entries.retain(|_, entry| {
+                entry.cancelled.store(true, Ordering::Release);
+                entry.status.phase = Phase::Stopping;
+                if entry.used { waiting.push(entry.done.subscribe()); }
+                else { entry.done.send_replace(true); }
+                entry.used
+            });
+            waiting
         };
-        let _ = tokio::time::timeout(STOP_TIMEOUT, waiting).await;
+        // 只在真实worker清理完成后发布done；不可中断的OS操作继续持有退出屏障。
+        for receiver in &mut waiting {
+            while !*receiver.borrow_and_update() {
+                receiver.changed().await.map_err(|_| error("unavailable"))?;
+            }
+        }
+        Ok(())
     }
 }
 fn addresses(request: &LaunchRequest) -> Result<(Ipv4Addr, Ipv4Addr), &'static str> {
@@ -224,6 +237,10 @@ fn worker(mut lease: Lease, request: LaunchRequest, tx: oneshot::Sender<Result<S
         std::thread::sleep(POLL);
     }
     drop(process);
+    #[cfg(test)] {
+        let gate = lease.manager.cleanup_gate.lock().unwrap().take();
+        if let Some((entered, proceed)) = gate { let _ = entered.send(()); let _ = proceed.recv(); }
+    }
     while directory.cleanup().is_err() { lease.update(Phase::Stopping, None); std::thread::sleep(POLL); }
     drop(directory); // cleanup precedes the lease acknowledgement.
 }

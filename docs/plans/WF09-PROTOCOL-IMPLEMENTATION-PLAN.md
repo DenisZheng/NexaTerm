@@ -1,6 +1,6 @@
 # WF-09：XDMCP、Rlogin、Rsh 实现计划
 
-日期：2026-10-16。状态：**维护者已于2026-10-16授权开工；XDMCP 的 X1 运行核心与 X0 组件审查推进中，Rlogin 的 L0、L1 socket/控制/建立/会话owner已过三平台原生与完整CI，typed IPC/应用生命周期也已过三平台原生与完整CI，Rsh的S0/S1已过原生及完整CI，S2任务owner、typed IPC和实际命令UI已在Draft #81开发交付，code44529a0已过完整CI660和原生41三平台**。
+日期：2026-10-16，进度更新2026-10-19。状态：**维护者已于2026-10-16授权开工；XDMCP 的 X1 运行核心与 X0 组件审查推进中，Rlogin 的 L0、L1 socket/控制/建立/会话owner已过三平台原生与完整CI，typed IPC/应用生命周期也已过三平台原生与完整CI，Rsh的S0/S1已过原生及完整CI，S2任务owner、typed IPC和实际命令UI已在Draft #81开发交付，code44529a0已过完整CI660和原生41三平台**。
 
 ## 1. 范围与状态变更
 
@@ -10,7 +10,7 @@
 
 | 项目 | 原评估 | 当前开发方向 | 当前实现状态 |
 | --- | --- | --- | --- |
-| WF-09-07 XDMCP | 评估完成，真实集成被环境阻塞 | 集成并随包管理 X server，交付完整桌面会话流程 | IN_PROGRESS（X1）；组件未定、无真实桌面互通证据 |
+| WF-09-07 XDMCP | 评估完成，真实集成被环境阻塞 | 集成并随包管理 X server，交付完整桌面会话流程 | IN_PROGRESS（X1）；#83退出完成屏障code d1bc04f已过完整CI666/原生10三平台；组件未定、随包/打包/桌面与Unix宿主硬崩溃监督仍须开发 |
 | WF-09-08A Rlogin | 原生实现 DEFER | 独立原生协议实现和终端接入 | IN_PROGRESS（L1）；L0 三平台 CI 已过，保留socket/OOB控制组件已过三平台原生与完整应用CI；Unix精确flush通过，Windows精确边界仍待开发；建立/ACK尾部adapter也已过三平台原生与完整应用CI，headless会话owner/有界pull-ACK也已过三平台原生与完整应用CI，typed IPC/应用生命周期已过三平台原生与完整CI；前端有界交付桥已通过行为/类型/构建和完整CI（Draft #73），终端IO适配器（编码/输入背压/renderer生命周期）已过原生与完整CI（Draft #74），配置/存储和表单组件已过完整CI（Draft #75/#76）；真实Workspace入口/许可/取消/重连/关闭/恢复及隐私隔离已实现、本地验证通过，Draft #77完整CI649和三平台原生30均通过；Unix能力按exact_flush开放，DNS已过Draft #78完整CI651/原生32三平台；Windows精确边界仍待开发，#82代码99bffa6/原生45的API反例没有启用能力；真实互通仍待完成 |
 | WF-09-08B Rsh | 原生实现 DEFER | 独立原生命令执行与双流管理 | IN_PROGRESS（S2开发交付）：S0 #79已过CI652/原生33，S1 #80已过CI655/原生36；S2 #81任务owner、typed IPC、实际命令界面、双流背压/ACK/EOF/信号/取消/重跑及隐私隔离已实现，code44529a0已过完整CI660/原生41三平台；真实rshd、Unix低端口正向和WebView仍待验收 |
 

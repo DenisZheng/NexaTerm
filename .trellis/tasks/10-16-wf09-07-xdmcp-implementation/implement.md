@@ -2,6 +2,8 @@
 
 状态：2026-10-16 已获开工授权；X1 运行核心已实现，X0 组件审查推进中。任务整体保持 in_progress；X2/X3 尚未交付。
 
+2026-10-18续作：先修复应用退出的实际完成屏障。旧shutdown在两秒后忽略timeout并返回，可能让Tauri进程在worker/认证目录仍被持有时退出；改为关闭入口、快照有界completion watch并在锁外等待真实清理，保留用户stop的两秒stop_pending。三平台fixture同时覆盖实际进程树、阻塞spawn前worker及清理目录前worker，不能用延长退出超时掩盖。此修复不代表随包组件/桌面或Unix宿主SIGKILL回收已完成。
+
 - [ ] X0：精确源码/许可/依赖已部分核对，继续缩小运行组件闭包，建立可复现构建与分发 manifest；候选不等于采用。
 - [x] X1：受管 runner、独立 display、状态与取消/关闭所有权，以及真实 native 进程 fixture。
 - [ ] X2：Windows 随包组件、安装/签名和 direct-query 真实桌面；会话配置、原型与能力入口。
@@ -34,3 +36,13 @@ CI607 暴露 AppError 代码参数类型问题，已改为引用 String 而不�
 `querying` 仅表示已创建引擎并提交 query，绝不表示登录/桌面成功。当前 bundled=false、desktop_verified=false；external 开发模式只对 Windows/Linux 开放，macOS 的原生 fixture 不开启 macOS 产品能力。未引入任何外部 X server 源码或发行二进制。
 
 Unix 宿主硬崩溃回收仍需 X2 supervisor/parent-death 策略；当前组回收针对显式 stop、窗口销毁和正常退出。Windows job 句柄提供宿主句柄关闭后的回收。真实引擎的认证协商、日志/OS socket 清理、多网卡、桌面和安装签名证据仍未取得。X0 精确审查记录见 docs/decisions/WF09-XSERVER-COMPONENTS.md；X2/X3 未完成。上述缺口仅阻塞相关阶段，按已批准计划继续独立 Rlogin/Rsh 协议核。
+
+
+## 应用退出屏障交付（2026-10-19，Draft #83）
+
+- [x] `shutdown_wait`真实完成watch、锁外等待和Tauri Exit接线，用户stop仍保留两秒stop_pending。
+- [x] 原生harness导入实际manager及同一套9项测试，保留原platform测试与完整依赖锁子集门禁。
+- [x] 代码d1bc04f通过完整CI666全部七执行job、XDMCP原生10三平台各10项；新增超过stop预算的实际退出回归在三平台harness/完整应用均执行通过。
+- [x] 类型/本地脚本191通过（3既有环境skip）、line-budget/startup/权限/CSP/TOML/任务manifest/diff检查完成。
+
+详细计数、真实资源断言和继续入口见[research/shutdown-evidence.md](research/shutdown-evidence.md)。仅修复正常应用退出；X0组件、X2随包/桌面、X3及Unix宿主硬崩溃监督仍未完成，不归档整体任务。

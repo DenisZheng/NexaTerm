@@ -10,7 +10,9 @@ fn fixture() -> PathBuf {
         let dir = std::env::temp_dir().join(format!("nexaterm xdmcp fixture-{}", uuid::Uuid::new_v4()));
         fs::create_dir(&dir).unwrap();
         let binary = dir.join(if cfg!(windows) { "fixture.exe" } else { "fixture" });
-        let source = Path::new(env!("CARGO_MANIFEST_DIR")).join("test-fixtures/xdmcp_process.rs");
+        let source = Path::new(env!("CARGO_MANIFEST_DIR")).ancestors()
+            .map(|root| root.join("test-fixtures/xdmcp_process.rs")).find(|path| path.is_file())
+            .expect("production native fixture source not found in application or harness root");
         let output = Command::new(std::env::var_os("RUSTC").unwrap_or("rustc".into()))
             .args(["--edition=2021", "-o"]).arg(&binary).arg(source).output().unwrap();
         assert!(output.status.success(), "native fixture compilation failed"); binary
@@ -111,7 +113,7 @@ fn cancelled_reservation_and_shutdown_prevent_late_start_and_release_running_tre
         let id = manager.reserve("main").unwrap(); let status = manager.start("main", &id, request.clone()).await.unwrap();
         let marker = markers(status.display.unwrap()); until(|| marker.join("heartbeat").exists()).await;
         let directory = PathBuf::from(fs::read_to_string(marker.join("directory")).unwrap());
-        manager.shutdown().await; assert!(manager.reserve("main").is_err());
+        manager.shutdown_wait().await.unwrap(); assert!(manager.reserve("main").is_err());
         assert!(!directory.exists()); assert!(manager.inner.lock().unwrap().entries.is_empty());
     });
 }
@@ -187,5 +189,57 @@ fn dropping_actual_start_future_cancels_late_worker_without_freeing_its_quota() 
         assert_eq!(terminal(&manager, &id).await.reason, Some("cancelled"));
         assert!(!(100..132).any(|d| markers(d).join("heartbeat").exists()));
         assert!(manager.reserve("main").is_ok());
+    });
+}
+
+#[test]
+fn app_shutdown_waits_past_stop_budget_for_actual_start_and_directory_cleanup() {
+    let (_guard, manager, request) = setup();
+    runtime().block_on(async {
+        let running = manager.reserve("main").unwrap();
+        let started = manager.start("main", &running, request.clone()).await.unwrap();
+        let marker = markers(started.display.unwrap());
+        until(|| marker.join("heartbeat").exists()).await;
+        let directory = PathBuf::from(fs::read_to_string(marker.join("directory")).unwrap());
+        let child = ObservedProcess::capture(fs::read_to_string(marker.join("heartbeat")).unwrap().parse().unwrap());
+        let (cleanup_tx, cleanup_rx) = std::sync::mpsc::sync_channel(1);
+        let (remove_tx, remove_rx) = std::sync::mpsc::channel();
+        *manager.cleanup_gate.lock().unwrap() = Some((cleanup_tx, remove_rx));
+        let (entered_tx, entered_rx) = std::sync::mpsc::sync_channel(1);
+        let (proceed_tx, proceed_rx) = std::sync::mpsc::channel();
+        *manager.gate.lock().unwrap() = Some((entered_tx, proceed_rx));
+        let starting = manager.reserve("main").unwrap();
+        let copy = manager.clone(); let start_id = starting.clone();
+        let start = tokio::spawn(async move { copy.start("main", &start_id, request).await });
+        until(|| entered_rx.try_recv().is_ok()).await;
+        let unused = manager.reserve("main").unwrap();
+        let mut shutdown = Box::pin(manager.shutdown_wait());
+        // 回归旧的两秒成功返回；此处延长的是观察预算，不是生产stop/退出超时。
+        assert!(tokio::time::timeout(STOP_TIMEOUT + Duration::from_millis(150), shutdown.as_mut()).await.is_err(),
+            "application exit returned before the real workers completed");
+        until(|| cleanup_rx.try_recv().is_ok()).await;
+        child.assert_stopped(); assert!(directory.exists());
+        {
+            let inner = manager.inner.lock().unwrap();
+            assert!(inner.closed); assert_eq!(inner.entries.len(), 2);
+            assert!(!inner.entries.contains_key(&unused));
+            for id in [&running, &starting] {
+                let entry = inner.entries.get(id).unwrap();
+                assert!(entry.used && entry.cancelled.load(Ordering::Acquire));
+                assert!(!*entry.done.borrow());
+            }
+        }
+        assert_eq!(manager.reserve("main").unwrap_err().code, "xdmcp_unavailable");
+        proceed_tx.send(()).unwrap();
+        assert_eq!(start.await.unwrap().unwrap_err().code, "xdmcp_cancelled");
+        assert!(tokio::time::timeout(Duration::from_millis(80), shutdown.as_mut()).await.is_err(),
+            "directory ownership was mistaken for completed cleanup");
+        remove_tx.send(()).unwrap();
+        tokio::time::timeout(Duration::from_secs(5), shutdown).await.unwrap().unwrap();
+        assert!(!directory.exists()); assert!(manager.inner.lock().unwrap().entries.is_empty());
+        child.assert_stopped();
+        assert_eq!(manager.begin("main", &unused).err().unwrap().code, "xdmcp_expired");
+        assert!(!(100..132).filter(|&d| Some(d) != started.display).any(|d| markers(d).join("heartbeat").exists()),
+            "cancelled late start launched an engine after shutdown");
     });
 }

@@ -4,6 +4,14 @@
 #[cfg(test)] #[path = "../../../src/xdmcp/platform.rs"] mod platform;
 #[cfg(all(test, windows))] #[path = "../../../src/xdmcp/windows.rs"] mod windows;
 #[cfg(test)] #[path = "../../xdmcp_observed_process.rs"] mod observed_process;
+#[cfg(test)] #[path = "../../../src/xdmcp/mod.rs"] mod xdmcp;
+// Only the fixed error-code boundary is stubbed; full application CI checks real AppError/Tauri.
+#[cfg(test)] mod app_error {
+    #[derive(Debug)] pub struct AppError { pub code: String }
+    impl AppError {
+        pub fn new(code: &str, _: &str, _: &str, _: bool) -> Self { Self { code: code.to_owned() } }
+    }
+}
 
 #[test]
 fn production_platform_stop_and_natural_exit() {
