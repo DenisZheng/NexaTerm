@@ -46,3 +46,7 @@ Alan Coopersmith证书的RSA签署子钥与DSA1024主钥分别记录；完整公
 [原生5](https://github.com/DenisZheng/NexaTerm/actions/runs/39188536857)（code986da69）及[原生6](https://github.com/DenisZheng/NexaTerm/actions/runs/39189475179)（code20e657b）均已完成libxcb及三个xcb-util库的编译/安装，进入libX11后在XIMStyle由指针直接转换时失败。Windows LLP64的long/XID类宽度与指针不同；自写固定补丁仅在已核对的标量varargs/资源ID转换中使用intptr_t/uintptr_t中间层，保留公开标量宽度、负数符号扩展及原始许可声明。没有关闭国际化或pointer诊断。
 
 code20e657b的[完整应用CI676](https://github.com/DenisZheng/NexaTerm/actions/runs/39189475221)全部执行job成功；[source CI9](https://github.com/DenisZheng/NexaTerm/actions/runs/39189475197)的原server输入核验和全部单测通过，但独立15项依赖入口拒绝未知GPG状态，仍为FAIL。补充失败报告中的受限状态名称和当前component/部分已完成证据，先查明具体差异再决定处理，不增加未知状态通配。独立下载逻辑提取为sources模块，消除核验入口与构建入口的循环依赖。
+
+## GnuPG 2.2元数据兼容（2026-10-19下午续作）
+
+codea82652e的[source CI10](https://github.com/DenisZheng/NexaTerm/actions/runs/39208160658)将未知状态精确定位为VERIFICATION_COMPLIANCE_MODE。核对[GnuPG 2.2.27官方DETAILS](https://github.com/gpg/gnupg/blob/gnupg-2.2.27/doc/DETAILS)（blob a02ba35979afc68d50e2373ebeb7801c894af874）：该状态报告数值compliance flags，当前定义8与23。只接受非空、不重复的这两个已知值并原样留证；缺少GOODSIG/VALIDSIG、坏签名、错误身份/算法/有效期或未知flag继续失败，新增独立反例。此兼容没有批准发行或豁免旧算法。

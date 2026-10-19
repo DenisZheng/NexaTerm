@@ -50,9 +50,14 @@ def certificate_keys(output, certificate, signing, now):
 def signature_status(output, certificate, signing, keys):
     records = [line.split()[1:] for line in output.splitlines() if line.startswith("[GNUPG:] ")]
     allowed = {"NEWSIG", "KEY_CONSIDERED", "SIG_ID", "GOODSIG", "VALIDSIG",
-               "NOTATION_NAME", "NOTATION_FLAGS", "NOTATION_DATA", "KEYEXPIRED"}
+               "NOTATION_NAME", "NOTATION_FLAGS", "NOTATION_DATA", "KEYEXPIRED",
+               "VERIFICATION_COMPLIANCE_MODE"}
     if not records or not all(row and row[0] in allowed for row in records):
         raise SignatureStatusError(records)
+    compliance = [row[1:] for row in records if row[0] == "VERIFICATION_COMPLIANCE_MODE"]
+    # GnuPG 2.2 DETAILS只定义8/23；此元数据不能代替有效签名/身份/有效期检查。
+    require(len(compliance) <= 1 and all(row and len(row) == len(set(row))
+            and set(row) <= {"8", "23"} for row in compliance), "DEPENDENCY_COMPLIANCE_STATUS")
     # 固定证书含旧子钥；仅允许确实属于非当前主钥/签署钥的过期时间提示。
     unrelated_expiries = {str(key["expires"]) for fingerprint, key in keys.items()
                           if fingerprint not in {certificate["primaryFingerprint"], signing["fingerprint"]}
@@ -70,6 +75,7 @@ def signature_status(output, certificate, signing, keys):
     return {"fingerprint": row[1], "primaryFingerprint": row[10], "epoch": int(row[3]),
             "algorithm": int(row[7]), "digest": int(row[8]),
             "unrelatedExpiredKeyNotes": [int(note[0]) for note in expiry_notes],
+            "reportedComplianceModes": [int(mode) for row in compliance for mode in row],
             "legacyPrimaryAlgorithm": certificate["primaryAlgorithm"] == 17,
             "legacyDigest": signing["digest"] == 2, "distributionApproved": False}
 

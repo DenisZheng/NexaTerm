@@ -71,6 +71,17 @@ class DependencySignatureTests(unittest.TestCase):
         self.assertEqual(caught.exception.status_kinds, ["GOODSIG", "NEWSIG", "UNEXPECTED", "VALIDSIG"])
         self.assertNotIn("payload", str(caught.exception))
 
+    def test_documented_gpg22_compliance_metadata_cannot_replace_signature(self):
+        metadata = "[GNUPG:] VERIFICATION_COMPLIANCE_MODE 8 23\n"
+        result = signature_status(metadata + STATUS, CERTIFICATE, SIGNING, self.keys())
+        self.assertEqual(result["reportedComplianceModes"], [8, 23])
+        self.assertFalse(result["distributionApproved"])
+        self.assertCode("DEPENDENCY_SIGNATURE_COUNT", signature_status, metadata, CERTIFICATE, SIGNING, self.keys())
+        for modes in ["", "999", "23 arbitrary", "23 23"]:
+            self.assertCode("DEPENDENCY_COMPLIANCE_STATUS", signature_status,
+                            "[GNUPG:] VERIFICATION_COMPLIANCE_MODE " + modes + "\n" + STATUS,
+                            CERTIFICATE, SIGNING, self.keys())
+
     def test_failed_collection_overwrites_old_success_and_exits_nonzero(self):
         with tempfile.TemporaryDirectory() as temporary:
             report = Path(temporary) / "report.json"
