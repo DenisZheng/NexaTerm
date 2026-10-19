@@ -13,6 +13,10 @@ Concrete contracts are in .trellis/spec/backend/xdmcp-runner.md. A worker-owned 
 
 先完成源码核验入口，具体契约见 `.trellis/spec/backend/xserver-source-review.md`。固定官方21.1.25归档、分离签名及公钥；先校验字节/hash，再以隔离gpgv验证签名，最后只读核对完整tar文件清单和构建/许可锚点。旧DSA-1024/SHA-1明确保留审查项。采集完成只输出REVIEW-REQUIRED，不批准发行、不复制外部实现、不执行上游构建脚本。上游已有MinGW目标，但实际编译、依赖许可闭包、PE导入表与资源仍留待后续；不先指定未验证的构建profile。
 
+## X0 Windows native build slice（2026-10-19续作）
+
+沿固定源码继续原生Windows开发构建；具体契约见`.trellis/spec/backend/xserver-windows-build.md`。上游Autotools已有完整MinGW配置及随归档生成的parser；先用UCRT64目标构建2D/XDMCP，显式关闭GLX/DRI/非目标服务器及非必要服务。XCB、X11、字体/键盘依赖由官方固定源码构建至私有prefix，构建工具与实际PE运行库分开记录。优先使用上游代码，不复制聚合候选；任何必要修正单独留差异。真实Windows构建/版本probe、PE导入闭包与许可锚点提供开发证据，未完成的逐文件/生成器例外/运行库及资源义务继续标明，不能据此采用发行组件。
+
 ## Application exit completion barrier（2026-10-18续作）
 
 用户stop的2秒响应预算与应用退出完成分开。`shutdown_wait`在同一registry临界区关闭admission、取消全部条目、移除未使用租约并订阅最多4个真实worker完成watch，随后锁外逐个等待。完成信号仍由worker在process和RunDirectory实际清理后发布，不添加成功超时或轮询空表推断。Tauri Exit与其它资源owner并行await，并只记录固定失败code。阻塞OS操作/目录删除时退出继续等待；这不解决Unix宿主SIGKILL，也不改变尚未采用的发行引擎或桌面能力。

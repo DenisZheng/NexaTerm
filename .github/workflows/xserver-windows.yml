@@ -1,0 +1,48 @@
+name: X server native Windows build
+on:
+  pull_request:
+    paths:
+      - 'scripts/xserver/**'
+      - 'scripts/xserver_windows*'
+      - 'scripts/xserver_source_review*'
+      - '.github/workflows/xserver-windows.yml'
+permissions:
+  contents: read
+concurrency:
+  group: xserver-windows-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  windows:
+    name: Native UCRT64 X server (development only)
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: msys2/setup-msys2@ec48f7c5447b3140e2b088413ae3a55687bccb6e
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            make autoconf automake libtool flex bison python gnupg diffutils
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-pkgconf
+            mingw-w64-ucrt-x86_64-meson
+            mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-pixman
+            mingw-w64-ucrt-x86_64-zlib
+      - name: Build evidence counterexamples
+        shell: msys2 {0}
+        run: /usr/bin/python3 -m unittest discover -s scripts -p xserver_windows_build_test.py -v
+      - name: Compile and inspect fixed native target
+        shell: msys2 {0}
+        run: /usr/bin/python3 scripts/xserver_windows_build.py --work "$(cygpath -u "$RUNNER_TEMP")/xserver-native" --report xserver-windows-review.json
+      - name: Keep only native build evidence JSON
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xserver-windows-review
+          path: xserver-windows-review.json
+          if-no-files-found: error
+          retention-days: 14

@@ -8,3 +8,4 @@
 {"file": ".trellis/tasks/10-16-wf09-07-xdmcp-implementation/research/shutdown-evidence.md", "reason": "Verified exit completion barrier and remaining bundled-engine boundary"}
 {"file": ".trellis/spec/backend/xserver-source-review.md", "reason": "Fixed source integrity collection and explicit pending adoption contract"}
 {"file": ".trellis/tasks/10-16-wf09-07-xdmcp-implementation/research/source-review-evidence.md", "reason": "Verified fixed inputs and exact CI669/source2 evidence; continue native build/license closure without repeating collection"}
+{"file": ".trellis/spec/backend/xserver-windows-build.md", "reason": "Native Windows build, source/license pins and actual PE closure contract"}

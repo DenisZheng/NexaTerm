@@ -1,0 +1,265 @@
+{
+  "schema": 1,
+  "target": "x86_64-w64-mingw32",
+  "profile": "ucrt64-2d-xdmcp-development",
+  "sourceSignatures": "dependencies-not-yet-verified",
+  "components": [
+    {
+      "root": "util-macros-1.20.2",
+      "url": "https://xorg.freedesktop.org/releases/individual/util/util-macros-1.20.2.tar.xz",
+      "size": 83592,
+      "sha256": "9ac269eba24f672d7d7b3574e4be5f333d13f04a7712303b1821b2a51ac82e8e",
+      "name": "util-macros",
+      "buildSystem": "autotools",
+      "options": [],
+      "licenseFiles": {
+        "COPYING": "7db0516389152a90c20ea910e8839d10204ebc25ccbc71fc7f5809dfb98e80ac"
+      }
+    },
+    {
+      "root": "xorgproto-2026.1",
+      "url": "https://xorg.freedesktop.org/releases/individual/proto/xorgproto-2026.1.tar.xz",
+      "size": 771720,
+      "sha256": "f9bfe4a9ed8c8ab9d2a3b0d49797f046052dadd06b7a8b45dbffaffb137e8290",
+      "name": "xorgproto",
+      "buildSystem": "autotools",
+      "options": [
+        "--enable-legacy"
+      ],
+      "licenseFiles": {
+        "COPYING-xf86driproto": "4a05d06752388d9db71ee1006f371d4fb2c316a821fc2fc272db90b3ef978334",
+        "COPYING-renderproto": "e0ca4f1d27a95ef7552ccdfce7e95ddf1e8b10ac713a05b49e8bd82713d7914b",
+        "COPYING-xf86dgaproto": "3591964e01a9cdfc9cc4149a847a431a3f3d98328cc9e5864c7a7831b29c4058",
+        "COPYING-dmxproto": "819e8dcd3dd2a44850c350331aa492230f86bccb0983dd739dec5ba36d7d2b8e",
+        "COPYING-dri3proto": "64a579d1a0b3347301d87c94698a58ea7933d0ae6ca7e8fdd702fde2ea376301",
+        "COPYING-kbproto": "883f26ebeffb29f955c1e2becdee284bce16c7139b1410f6f7331d3bd59bfc78",
+        "COPYING-xineramaproto": "b2d8cda803e900915ce10f0ba735ff2c033b39c7cc5a8a436667ca583d4066fa",
+        "COPYING-presentproto": "64a579d1a0b3347301d87c94698a58ea7933d0ae6ca7e8fdd702fde2ea376301",
+        "COPYING-xf86bigfontproto": "3591964e01a9cdfc9cc4149a847a431a3f3d98328cc9e5864c7a7831b29c4058",
+        "COPYING-compositeproto": "3e980a770506b448897638632974bbcbdf2da3b99191dd0a03d3770097a46738",
+        "COPYING-printproto": "46f599055002bbf3e6ce244bde8d9ebe5ec24ae7906836db186773a9791d0b75",
+        "COPYING-fontsproto": "f4af05774b02ae149357cc26f7bf5ef1116c2e09373c2492081a3a1892c58417",
+        "COPYING-resourceproto": "403e7be948674530ad40669b1e3a31adeddb656502f3b0ef810d5d3cc35d0b52",
+        "COPYING-scrnsaverproto": "fcbd3c628bf4d28ee3e6032054bf44bbe58f3b1a944dad856a8d3eb6b37ea412",
+        "COPYING-evieproto": "9936421f7516f7a17ae560b6989636b493e55c01128b543c7e72441568c3cba4",
+        "COPYING-applewmproto": "aacd931f191b610902aee1e526090c2858aabc07969441fa2537ffd3e7049555",
+        "COPYING-dri2proto": "0c306691492c4d7a8cda1ec3847668b797887dddcd7e986b4c166ae27619af7d",
+        "COPYING-xf86miscproto": "3591964e01a9cdfc9cc4149a847a431a3f3d98328cc9e5864c7a7831b29c4058",
+        "COPYING-lg3dproto": "2467132d97b75edba05d908604124be2f46ee113954f848c99bcd938055e8e4b",
+        "COPYING-windowswmproto": "eb183a00c61bb47992f096b6993ed7ec17518bea9c285fe87efff7f622cc6c12",
+        "COPYING-xf86vidmodeproto": "942bb46a3503a708948491699171b00b9e0dfb47818d9268b160bccc5f51a4b9",
+        "COPYING-videoproto": "f8f49bbad61967ebc890fb79fff5bfb7cfc1c341aa8f8dee13eb3fb534040b47",
+        "COPYING-xwaylandproto": "309bd89bc2b30c6e3d3eb78f5377fa576475499e0ba936a9c3cba50ba5d6375c",
+        "COPYING-x11proto": "da835951edc6e3b8d168d6afe7447c65d0b9a99937293cf3f288bba8244a9f86",
+        "COPYING-pmproto": "8442b5f22f2fb13017a4302a906e7dedc899267b41f613558970941120170128",
+        "COPYING-glproto": "823deb4673d3f26aa8c90e704888299648f00be3262f9363eaeecedcd65b936d",
+        "COPYING-bigreqsproto": "dabc025f93129a0eb2d17f37c719dbe5ecbcb5bc8f7bc7f4ce89fe04576cc0c2",
+        "COPYING-xf86rushproto": "3591964e01a9cdfc9cc4149a847a431a3f3d98328cc9e5864c7a7831b29c4058",
+        "COPYING-xextproto": "9ce418e7d81cb230d8a53b07a7d9d705fc830dd095c104ba5d9405dc98be8357",
+        "COPYING-damageproto": "f67a18cb46c4c203c5122b4a901cfcc3178b2a62f83f31ca5fef5bdca3966094",
+        "COPYING-fixesproto": "fb361c7c4322e4919ae193c5a20055d5190c23aa50480fd0a41f4d439cae2bc6",
+        "COPYING-fontcacheproto": "1ab381e978bff63d68be2e4f235d51935f3f16f3ba3bebf83afa99a70c0484a2",
+        "COPYING-trapproto": "2c1807ecb78dddba1a9cd612a11bfdbc013b77144880ec3c268241495cb022dd",
+        "COPYING-randrproto": "41c13dcd09147ed2440286f2fb8151df8ebee06deee4ed78ddf094601c216d3d",
+        "COPYING-xcmiscproto": "5531d18cfcc944dab39991f63f182cbbce3fe493ba0c7cf08a25c0d01ee84482",
+        "COPYING-recordproto": "e37891ac36e827611d6e7ae51ddb14a9cc9ba56f6cc87c55b6ce3b6d76cd2bf4",
+        "COPYING-inputproto": "5e083a2ace0215a6084c877c023a6079952ba803d692488203ba4269196debe3"
+      }
+    },
+    {
+      "root": "xtrans-1.6.0",
+      "url": "https://xorg.freedesktop.org/releases/individual/lib/xtrans-1.6.0.tar.xz",
+      "size": 177156,
+      "sha256": "faafea166bf2451a173d9d593352940ec6404145c5d1da5c213423ce4d359e92",
+      "name": "xtrans",
+      "buildSystem": "autotools",
+      "options": [],
+      "licenseFiles": {
+        "COPYING": "3fe68a84ab89e82947e560316ab70cf2d02a8b978ae5cf4fbdfd53fc5b917308"
+      }
+    },
+    {
+      "root": "libXau-1.0.12",
+      "url": "https://xorg.freedesktop.org/releases/individual/lib/libXau-1.0.12.tar.xz",
+      "size": 282624,
+      "sha256": "74d0e4dfa3d39ad8939e99bda37f5967aba528211076828464d2777d477fc0fb",
+      "name": "libXau",
+      "buildSystem": "autotools",
+      "options": [],
+      "licenseFiles": {
+        "COPYING": "56abe29bb1d9806a9e04fa9f80fed2c0f18027594df3f098148d814aef6bddfa"
+      }
+    },
+    {
+      "root": "libXdmcp-1.1.5",
+      "url": "https://xorg.freedesktop.org/releases/individual/lib/libXdmcp-1.1.5.tar.xz",
+      "size": 297596,
+      "sha256": "d8a5222828c3adab70adf69a5583f1d32eb5ece04304f7f8392b6a353aa2228c",
+      "name": "libXdmcp",
+      "buildSystem": "autotools",
+      "options": [],
+      "licenseFiles": {
+        "COPYING": "8a3c3f35b0dbcb60a4e242b9e4394a352a65bb27deb2938ea1e2e62a626e16e9"
+      }
+    },
+    {
+      "root": "libpthread-stubs-0.5",
+      "url": "https://xcb.freedesktop.org/dist/libpthread-stubs-0.5.tar.xz",
+      "size": 56980,
+      "sha256": "59da566decceba7c2a7970a4a03b48d9905f1262ff94410a649224e33d2442bc",
+      "name": "libpthread-stubs",
+      "buildSystem": "autotools",
+      "options": [],
+      "licenseFiles": {
+        "COPYING": "78c20706e799f2b8f445e71d3d2ade6ba23b3388fd6cbeed7d71796623febde8"
+      }
+    },
+    {
+      "root": "xcb-proto-1.17.0",
+      "url": "https://xcb.freedesktop.org/dist/xcb-proto-1.17.0.tar.xz",
+      "size": 151748,
+      "sha256": "2c1bacd2110f4799f74de6ebb714b94cf6f80fb112316b1219480fd22562148c",
+      "name": "xcb-proto",
+      "buildSystem": "autotools",
+      "options": [],
+      "licenseFiles": {
+        "COPYING": "c5ffbfeaa501071ceeb97b7de2c0d703fdaa35de01c0fb6cbac1c28453a3e9fd"
+      }
+    },
+    {
+      "root": "libxcb-1.17.0",
+      "url": "https://xcb.freedesktop.org/dist/libxcb-1.17.0.tar.xz",
+      "size": 455208,
+      "sha256": "599ebf9996710fea71622e6e184f3a8ad5b43d0e5fa8c4e407123c88a59a6d55",
+      "name": "libxcb",
+      "buildSystem": "autotools",
+      "options": [
+        "--enable-xinput",
+        "--enable-xkb",
+        "--disable-devel-docs"
+      ],
+      "licenseFiles": {
+        "COPYING": "c5ffbfeaa501071ceeb97b7de2c0d703fdaa35de01c0fb6cbac1c28453a3e9fd"
+      }
+    },
+    {
+      "root": "xcb-util-0.4.1",
+      "url": "https://xorg.freedesktop.org/releases/individual/lib/xcb-util-0.4.1.tar.xz",
+      "size": 267396,
+      "sha256": "5abe3bbbd8e54f0fa3ec945291b7e8fa8cfd3cccc43718f8758430f94126e512",
+      "name": "xcb-util",
+      "buildSystem": "autotools",
+      "options": [],
+      "licenseFiles": {
+        "COPYING": "325b64f0b0284e08bbb7a78ae3e55c1edc2a7cd77f603225ae4b8ffc35423e37"
+      }
+    },
+    {
+      "root": "xcb-util-image-0.4.1",
+      "url": "https://xorg.freedesktop.org/releases/individual/lib/xcb-util-image-0.4.1.tar.xz",
+      "size": 289016,
+      "sha256": "ccad8ee5dadb1271fd4727ad14d9bd77a64e505608766c4e98267d9aede40d3d",
+      "name": "xcb-util-image",
+      "buildSystem": "autotools",
+      "options": [],
+      "licenseFiles": {
+        "COPYING": "19672c6153d8c4870abe734fa4dd2197481a311f4788d02ad729be07e116b26b"
+      }
+    },
+    {
+      "root": "xcb-util-wm-0.4.2",
+      "url": "https://xorg.freedesktop.org/releases/individual/lib/xcb-util-wm-0.4.2.tar.xz",
+      "size": 285152,
+      "sha256": "62c34e21d06264687faea7edbf63632c9f04d55e72114aa4a57bb95e4f888a0b",
+      "name": "xcb-util-wm",
+      "buildSystem": "autotools",
+      "options": [],
+      "licenseFiles": {
+        "COPYING": "12ab3559977a4b22ae3030b90c64a386e6ec51ab0e4eab1ff530f81a2639400a"
+      }
+    },
+    {
+      "root": "libX11-1.8.14",
+      "url": "https://xorg.freedesktop.org/releases/individual/lib/libX11-1.8.14.tar.xz",
+      "size": 1897544,
+      "sha256": "bbc78c46217174655c2b32b138ad119f3ac15f50808b4d0b3a2677a4b1afc950",
+      "name": "libX11",
+      "buildSystem": "autotools",
+      "options": [
+        "--disable-loadable-i18n",
+        "--disable-specs",
+        "--without-xmlto",
+        "--without-fop",
+        "--without-xsltproc"
+      ],
+      "licenseFiles": {
+        "COPYING": "eda0c2ed1cae0280c7fe79762eaad8ad31c044afc64e71e92ef2c6f3cd7bc395"
+      }
+    },
+    {
+      "root": "libxkbfile-1.2.0",
+      "url": "https://xorg.freedesktop.org/releases/individual/lib/libxkbfile-1.2.0.tar.xz",
+      "size": 57856,
+      "sha256": "7f71884e5faf56fb0e823f3848599cf9b5a9afce51c90982baeb64f635233ebf",
+      "name": "libxkbfile",
+      "buildSystem": "meson",
+      "options": [],
+      "licenseFiles": {
+        "COPYING": "e1b3fdad8037ab3f986ef9caaa7c8da47d8d55875e680c7d6011f6c07363ea7c"
+      }
+    },
+    {
+      "root": "libfontenc-1.1.9",
+      "url": "https://xorg.freedesktop.org/releases/individual/lib/libfontenc-1.1.9.tar.xz",
+      "size": 280828,
+      "sha256": "9d8392705cb10803d5fe1d27d236cbab3f664e26841ce01916bbbe430cf273e2",
+      "name": "libfontenc",
+      "buildSystem": "autotools",
+      "options": [],
+      "licenseFiles": {
+        "COPYING": "a4dda7a643b517794bfa23dc9605da030055df38ac8a5b9e1905e690975a59c4"
+      }
+    },
+    {
+      "root": "libXfont2-2.0.9",
+      "url": "https://xorg.freedesktop.org/releases/individual/lib/libXfont2-2.0.9.tar.xz",
+      "size": 478844,
+      "sha256": "f042a370666815e7b941e9b7019024755bd1c6c2954afbfa515af378251799e2",
+      "name": "libXfont2",
+      "buildSystem": "autotools",
+      "options": [
+        "--disable-freetype",
+        "--without-bzip2",
+        "--disable-devel-docs"
+      ],
+      "licenseFiles": {
+        "COPYING": "3b1047f0d45584973866a40e3eedc74aea4c6ac636960d650ae05af603e6d1a8"
+      }
+    }
+  ],
+  "serverOptions": [
+    "--enable-xwin",
+    "--disable-xorg",
+    "--disable-xvfb",
+    "--disable-xnest",
+    "--disable-xquartz",
+    "--enable-xdmcp",
+    "--enable-xdm-auth-1",
+    "--disable-glx",
+    "--disable-glamor",
+    "--disable-dri",
+    "--disable-dri2",
+    "--disable-dri3",
+    "--disable-libdrm",
+    "--disable-config-udev",
+    "--disable-config-udev-kms",
+    "--disable-config-hal",
+    "--disable-systemd-logind",
+    "--disable-secure-rpc",
+    "--disable-input-thread",
+    "--disable-docs",
+    "--disable-devel-docs",
+    "--with-sha1=CryptoAPI",
+    "--with-default-font-path=built-ins"
+  ]
+}
