@@ -34,7 +34,7 @@ jobs:
             mingw-w64-ucrt-x86_64-zlib
       - name: Build evidence counterexamples
         shell: msys2 {0}
-        run: /usr/bin/python3 -m unittest discover -s scripts -p xserver_windows_build_test.py -v
+        run: /usr/bin/python3 -m unittest discover -s scripts -p 'xserver_windows_*test.py' -v
       - name: Compile and inspect fixed native target
         shell: msys2 {0}
         run: /usr/bin/python3 scripts/xserver_windows_build.py --work "$(cygpath -u "$RUNNER_TEMP")/xserver-native" --report xserver-windows-review.json

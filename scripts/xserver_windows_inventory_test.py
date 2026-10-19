@@ -1,0 +1,69 @@
+from pathlib import Path
+import tempfile
+import unittest
+
+from xserver_source_review import ReviewError
+from xserver_windows_inventory import add_runtime_provenance, installed_delta, link_inputs, package_evidence, snapshot
+
+
+class InventoryTests(unittest.TestCase):
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        self.root = Path(self.temporary.name)
+        self.prefix = self.root / "prefix"
+        self.prefix.mkdir()
+
+    def assertCode(self, code, operation, *args):
+        with self.assertRaises(ReviewError) as caught:
+            operation(*args)
+        self.assertEqual(str(caught.exception), code)
+
+    def test_installed_files_are_bound_to_the_component_that_added_them(self):
+        before = snapshot(self.prefix)
+        (self.prefix / "library.dll").write_bytes(b"first")
+        owners = {}
+        result = installed_delta(self.prefix, before, "component", owners)
+        self.assertEqual(owners, {"library.dll": "component"})
+        self.assertEqual(result["library.dll"]["size"], 5)
+
+    def test_install_cannot_silently_replace_another_components_file(self):
+        path = self.prefix / "library.dll"
+        path.write_bytes(b"first")
+        before = snapshot(self.prefix)
+        path.write_bytes(b"changed")
+        self.assertCode("INSTALL_COLLISION", installed_delta, self.prefix, before, "other", {"library.dll": "original"})
+
+    def test_private_dll_needs_an_exact_source_owner(self):
+        entry = {"origin": "private-prefix", "name": "library.dll"}
+        self.assertCode("PE_SOURCE_OWNER", add_runtime_provenance, [entry], self.prefix, {}, self.root, None)
+        packages = add_runtime_provenance([entry], self.prefix, {"bin/Library.dll": "source"}, self.root, None)
+        self.assertEqual(entry["component"], "source")
+        self.assertEqual(packages, {})
+
+    def test_unknown_toolchain_package_or_license_is_rejected(self):
+        self.assertCode("TOOLCHAIN_PACKAGE", package_evidence, "unreviewed-host-library", self.root, None)
+        self.assertCode("TOOLCHAIN_LICENSE", package_evidence, "mingw-w64-ucrt-x86_64-example", self.root,
+                        lambda *args, **kwargs: "Version : 1.0\nLicenses : None\n")
+
+    def test_declared_license_without_installed_text_is_incomplete(self):
+        self.assertCode("TOOLCHAIN_LICENSE", package_evidence, "mingw-w64-ucrt-x86_64-example", self.root,
+                        lambda args, *more, **kwargs: "Version : 1.0\nLicenses : MIT\n" if "-Qi" in args else "")
+
+    def test_link_map_must_describe_the_actual_server(self):
+        path = self.root / "server.map"
+        path.write_text("OUTPUT(other.exe pei-x86-64)\n")
+        self.assertCode("LINK_MAP_TARGET", link_inputs, path, self.root, self.root / "build", self.prefix, {}, self.root, None, {})
+
+    def test_missing_and_unowned_link_inputs_are_rejected(self):
+        path = self.root / "server.map"
+        path.write_text("LOAD missing.a\nOUTPUT(XWin.exe pei-x86-64)\n")
+        self.assertCode("LINK_INPUT_MISSING", link_inputs, path, self.root, self.root / "build", self.prefix, {}, self.root, None, {})
+        library = self.prefix / "library.a"
+        library.write_bytes(b"fixture")
+        path.write_text(f"LOAD {library}\nOUTPUT(XWin.exe pei-x86-64)\n")
+        self.assertCode("LINK_SOURCE_OWNER", link_inputs, path, self.root, self.root / "build", self.prefix, {}, self.root, None, {})
+
+
+if __name__ == "__main__":
+    unittest.main()

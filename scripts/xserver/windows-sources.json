@@ -261,5 +261,6 @@
     "--disable-devel-docs",
     "--with-sha1=CryptoAPI",
     "--with-default-font-path=built-ins"
-  ]
+  ],
+  "serverExecutable": "XWin.exe"
 }

@@ -9,13 +9,14 @@ import lzma
 import os
 from pathlib import Path, PurePosixPath
 import re
-import struct
 import subprocess
 import tarfile
 from urllib.parse import urlsplit
 from urllib.request import build_opener, HTTPRedirectHandler
 
 from xserver_source_review import ArchiveBudget, ASSETS, ReviewError, collect, digest, require, verify_file, write_report
+from xserver_windows_inventory import add_runtime_provenance, installed_delta, link_inputs, snapshot
+from xserver_windows_pe import MAX_PE_BYTES, parse_pe
 
 
 MAX_ENTRIES = 5000
@@ -47,7 +48,8 @@ def run(arguments, cwd, *, timeout=900, capture=False):
     print("BUILD:", " ".join(str(a) for a in arguments), flush=True)
     try:
         result = subprocess.run([str(a) for a in arguments], cwd=cwd, text=True,
-                                capture_output=capture, timeout=timeout, check=False)
+                                capture_output=capture, timeout=timeout, check=False,
+                                env={**os.environ, "LC_ALL": "C"})
     except subprocess.TimeoutExpired as error:
         raise ReviewError("BUILD_TIMEOUT") from error
     except OSError as error:
@@ -131,17 +133,8 @@ def extract_tar(budget, parent, root, licenses):
 
 
 def pe_imports(path, work):
-    data = path.read_bytes()
-    require(len(data) >= 64 and data[:2] == b"MZ", "PE_HEADER")
-    offset = struct.unpack_from("<I", data, 60)[0]
-    require(offset + 26 <= len(data) and data[offset:offset + 4] == b"PE\0\0", "PE_HEADER")
-    require(struct.unpack_from("<H", data, offset + 4)[0] == 0x8664
-            and struct.unpack_from("<H", data, offset + 24)[0] == 0x20B, "PE_ARCHITECTURE")
-    output = run(["objdump", "-p", path], work, capture=True)
-    imports = re.findall(r"^\s*DLL Name:\s*(\S+)\s*$", output, re.MULTILINE)
-    require(imports, "PE_IMPORTS_MISSING")
-    require(all(re.fullmatch(r"[A-Za-z0-9_.-]+\.dll", name, re.IGNORECASE) for name in imports), "PE_IMPORT_NAME")
-    return sorted(set(name.lower() for name in imports))
+    require(path.stat().st_size <= MAX_PE_BYTES, "PE_BUDGET")
+    return parse_pe(path.read_bytes())["imports"]
 
 
 def inspect_closure(server, providers, work):
@@ -153,10 +146,14 @@ def inspect_closure(server, providers, work):
             continue
         visited.add(name)
         imports = pe_imports(path, work)
-        item = {"name": name, "sha256": digest(path.read_bytes()), "size": path.stat().st_size, "imports": imports}
+        item = {"name": name, "sha256": digest(path.read_bytes()), "size": path.stat().st_size, "imports": imports,
+                "origin": "private-prefix" if path.parent == providers[0] else "target-toolchain",
+                "systemImports": []}
         for dependency in imports:
             require(not dependency.startswith(("cyg", "msys-")), "PE_POSIX_RUNTIME")
             if dependency in SYSTEM_DLLS or dependency.startswith(("api-ms-win-", "ext-ms-win-")):
+                require(not any(p.name.lower() == dependency for p in providers[0].iterdir()), "PE_SYSTEM_SHADOW")
+                item["systemImports"].append(dependency)
                 continue
             matches = [p for folder in providers for p in folder.iterdir()
                        if p.is_file() and p.name.lower() == dependency]
@@ -192,6 +189,7 @@ def build(work, report):
     os.environ["LIBS"] = "-lpthread -lws2_32"
     os.environ["PYTHON"] = "/usr/bin/python3"
     report["components"] = []
+    owners = {}
     for component in manifest["components"]:
         report["component"] = component["name"]
         report["stage"] = "source"
@@ -203,6 +201,7 @@ def build(work, report):
         build_directory.mkdir()
         source = sources / component["root"]
         report["stage"] = "configure"
+        before = snapshot(prefix)
         if component["buildSystem"] == "meson":
             run(["meson", "setup", build_directory, source, "--prefix=" + str(prefix), "--libdir=lib", "--buildtype=release", "--default-library=shared"], work)
             report["stage"] = "compile-install"
@@ -214,6 +213,16 @@ def build(work, report):
             run(["make", "-j2"], build_directory)
             run(["make", "install"], build_directory)
         entry["built"] = True
+        entry["installedFiles"] = installed_delta(prefix, before, component["name"], owners)
+        if component["name"] == "xcb-proto":
+            host_paths = [path for path in prefix.glob("lib/python*/site-packages") if (path / "xcbgen/state.py").is_file()]
+            require(len(host_paths) == 1, "HOST_GENERATOR_PATH")
+            os.environ["PYTHONPATH"] = str(host_paths[0])
+            module_path = run(["/usr/bin/python3", "-c", "import xcbgen.state; print(xcbgen.state.__file__)"], work, capture=True).strip()
+            module = host_paths[0] / "xcbgen/state.py"
+            require(Path(module_path).resolve() == module.resolve(), "HOST_GENERATOR_MODULE")
+            report["hostGenerator"] = {"component": "xcb-proto", "moduleSha256": digest(module.read_bytes()),
+                                       "path": str(module.relative_to(prefix))}
         write_report(work / "progress.json", report)
     report["component"] = "xorg-server"
     report["stage"] = "server-source"
@@ -223,21 +232,33 @@ def build(work, report):
     server_build = builds / "xorg-server"
     server_build.mkdir()
     report["stage"] = "server-configure"
+    maps = work / "link-maps"
+    maps.mkdir()
+    native_maps = run(["cygpath", "-m", maps], work, capture=True).strip()
+    os.environ["LDFLAGS"] += " -Wl,-Map=" + native_maps
     run(["bash", sources / root / "configure", "--prefix=" + str(prefix), "--host=" + manifest["target"], "--disable-dependency-tracking", *manifest["serverOptions"]], server_build)
-    core_config = (server_build / "include/dix-config.h").read_text()
-    native_config = (server_build / "include/xwin-config.h").read_text()
+    core_bytes = (server_build / "include/dix-config.h").read_bytes()
+    native_bytes = (server_build / "include/xwin-config.h").read_bytes()
+    core_config, native_config = core_bytes.decode(), native_bytes.decode()
     require(re.search(r"^#define XDMCP 1$", core_config, re.MULTILINE), "SERVER_XDMCP")
     require(all(re.search(r"^#define " + name + r" 1$", native_config, re.MULTILINE)
                 for name in ["HAS_WINSOCK", "RELOCATE_PROJECTROOT"]), "SERVER_NATIVE_CONFIG")
     report["serverConfig"] = {"xdmcp": True, "winsock": True, "relocateProjectRoot": True,
-                              "coreSha256": digest(core_config.encode()), "nativeSha256": digest(native_config.encode())}
+                              "coreSha256": digest(core_bytes), "nativeSha256": digest(native_bytes)}
     report["stage"] = "server-compile"
     run(["make", "-j2"], server_build, timeout=1800)
+    before = snapshot(prefix)
     run(["make", "install"], server_build)
-    server = prefix / "bin/Xming.exe"
+    report["serverInstalledFiles"] = installed_delta(prefix, before, "xorg-server", owners)
+    server = prefix / "bin" / manifest["serverExecutable"]
     require(server.is_file(), "SERVER_BINARY")
     report["stage"] = "pe-closure"
     report["peClosure"] = inspect_closure(server, [prefix / "bin", Path("/ucrt64/bin")], work)
+    report["peImportScope"] = ["normal", "delay"]
+    packages = add_runtime_provenance(report["peClosure"], prefix, owners, work, run)
+    report["stage"] = "static-link-inputs"
+    report["staticLink"] = link_inputs(maps / "XWin.exe.map", server_build / "hw/xwin", builds, prefix, owners, work, run, packages)
+    report["runtimePackages"] = list(packages.values())
     report["stage"] = "native-version"
     version = run([server, "-version"], work, timeout=20, capture=True)
     require("21.1.25" in version, "SERVER_VERSION")
