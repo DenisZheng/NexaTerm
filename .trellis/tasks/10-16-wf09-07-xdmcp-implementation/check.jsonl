@@ -9,3 +9,4 @@
 {"file": ".trellis/spec/backend/xserver-source-review.md", "reason": "Verify fail-closed collection, bounded tar inventory and real GPG evidence"}
 {"file": ".trellis/tasks/10-16-wf09-07-xdmcp-implementation/research/source-review-evidence.md", "reason": "Preserve unapproved component boundary and distinguish integrity collection from bundled/desktop delivery"}
 {"file": ".trellis/spec/backend/xserver-windows-build.md", "reason": "Require real build/probe/import evidence; preserve pending distribution obligations"}
+{"file": ".trellis/tasks/10-16-wf09-07-xdmcp-implementation/research/windows-build-evidence.md", "reason": "Check the exact native and signature results; never infer bundled/desktop or license approval from compilation"}

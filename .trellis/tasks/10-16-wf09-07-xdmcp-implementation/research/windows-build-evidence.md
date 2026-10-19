@@ -50,3 +50,15 @@ code20e657b的[完整应用CI676](https://github.com/DenisZheng/NexaTerm/actions
 ## GnuPG 2.2元数据兼容（2026-10-19下午续作）
 
 codea82652e的[source CI10](https://github.com/DenisZheng/NexaTerm/actions/runs/39208160658)将未知状态精确定位为VERIFICATION_COMPLIANCE_MODE。核对[GnuPG 2.2.27官方DETAILS](https://github.com/gpg/gnupg/blob/gnupg-2.2.27/doc/DETAILS)（blob a02ba35979afc68d50e2373ebeb7801c894af874）：该状态报告数值compliance flags，当前定义8与23。只接受非空、不重复的这两个已知值并原样留证；缺少GOODSIG/VALIDSIG、坏签名、错误身份/算法/有效期或未知flag继续失败，新增独立反例。此兼容没有批准发行或豁免旧算法。
+
+## DirectDraw SDK许可实证与GDI收窄
+
+原生6工具链实际安装`mingw-w64-ucrt-x86_64-headers-14.0.0.r495.g63ebe6cdb-1`。核对[该源码提交的ddraw.h](https://github.com/mingw-w64/mingw-w64/blob/63ebe6cdb/mingw-w64-headers/include/ddraw.h)（blob aa71819423d2f40f748a73cd9b55e77e47926be5），其文件头明确为LGPL-2.1-or-later。因此“已转到SDK”不能关闭许可问题；此前SDK必须出现的检查已被本节的新profile替代。
+
+开发profile收窄为现有GDI：自写小型选择器保留原许可声明，调用原GDI资源回调，拒绝其他显式engine选择，并传播回调失败；删除DirectDraw探测/动态loader入口、专用结构字段、后端编译对象及dxguid链接库。按原始/结果hash固定6项server适配，Makefile.am/in同时维护且不重生成Autotools。编译依赖必须证明GDI实际编译、DirectDraw头/后端及无许可调试表缺席；链接map也拒绝DirectDraw对象/归档。真实C编译执行同一选择器，覆盖不支持engine、未初始化能力及回调失败。原生Windows完整构建仍是独立必需证据，GDI改动不等于桌面互通或发行批准。
+
+code3ac679a的[source CI11](https://github.com/DenisZheng/NexaTerm/actions/runs/39208343422)已全通过；实际下载并核对其仅两个JSON的artifact（归档SHA256 53c383124ad42923a31e6179f9369b04f94a6e5466d0a005e874e15ba48a7c55）：15项组件pin与本地manifest一致，报告REVIEW-REQUIRED、distributionApproved=false，compliance元数据为无或23。旧主钥算法9项、旧摘要1项仍明确记录。
+
+## 原生8继续推进XIM编译
+
+[原生8](https://github.com/DenisZheng/NexaTerm/actions/runs/39208343489)（code3ac679a）确认最初imDefIc标量转换错误已越过；随后imRm暴露三处把Windows指针NULL转Window整数及另一处XIMStyle标量入口。前者改为X11的数值None，后者纳入同一uintptr_t桥；保留全部编译诊断与精确发生次数/hash。此次仍为FAIL，尚未产出server原生成功证据。

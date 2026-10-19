@@ -101,7 +101,9 @@ def collect_dependencies(cache, offline, report=None):
     cache.mkdir(parents=True, exist_ok=True)
     result = []
     if report is not None:
-        report.update({"manifestSha256": digest(raw), "components": result})
+        report.update({"manifestSha256": digest(raw), "components": result,
+                       "verifierVersions": {name: run_tool([name, "--version"]).splitlines()[0]
+                                            for name in ["gpg", "gpgv"]}})
     for component in manifest["components"]:
         if report is not None:
             report.update({"component": component["name"], "stage": "verify-dependency"})

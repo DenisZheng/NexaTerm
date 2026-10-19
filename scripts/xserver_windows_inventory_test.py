@@ -68,30 +68,36 @@ class InventoryTests(unittest.TestCase):
         build = self.root / "build"
         deps = build / "hw/xwin/.deps"
         deps.mkdir(parents=True)
-        sdk = self.root / "sdk/ddraw.h"
-        sdk.parent.mkdir()
-        sdk.write_bytes(b"SDK fixture")
         (deps / "winmsg.Po").write_text("winmsg.o: /source/hw/xwin/winmsg.c /source/win.h\n")
-        (deps / "winshaddd.Po").write_text(f"winshaddd.o: /source/hw/xwin/winshaddd.c \\\n {sdk}\n")
-        return build, sdk, deps
+        (deps / "winshadgdi.Po").write_text("winshadgdi.o: /source/hw/xwin/winshadgdi.c /source/win.h\n")
+        return build, deps
 
-    def test_observed_native_headers_bind_sdk_and_exclude_unlicensed_debug_table(self):
-        build, sdk, deps = self.header_fixture()
-        packages = {"mingw-w64-ucrt-x86_64-headers": {"fixture": True}}
-        result = native_header_evidence(build, sdk, self.root,
-                                       lambda args, *more, **kwargs: str(sdk) if args[0] == "cygpath" else next(iter(packages)), packages)
+    def test_observed_gdi_compilation_excludes_debug_table_and_directdraw(self):
+        build, deps = self.header_fixture()
+        result = native_header_evidence(build)
         self.assertFalse(result["debugMessageTableIncluded"])
-        self.assertEqual(result["directDrawSdk"]["sha256"], snapshot(sdk.parent)[sdk.name]["sha256"])
+        self.assertFalse(result["directDrawHeaderIncluded"])
+        self.assertEqual(result["renderer"], "gdi")
         self.assertEqual(result["dependencyFiles"], 2)
 
-    def test_debug_table_or_missing_sdk_observation_cannot_pass(self):
-        build, sdk, deps = self.header_fixture()
-        run = lambda *args, **kwargs: str(sdk)
+    def test_debug_table_or_directdraw_input_cannot_pass(self):
+        build, deps = self.header_fixture()
         (deps / "winmsg.Po").write_text("winmsg.o: /source/winmsg.c /source/winmessages.h\n")
-        self.assertCode("NATIVE_DEBUG_HEADER", native_header_evidence, build, sdk, self.root, run, {})
+        self.assertCode("NATIVE_DEBUG_HEADER", native_header_evidence, build)
         (deps / "winmsg.Po").write_text("winmsg.o: /source/winmsg.c\n")
-        (deps / "winshaddd.Po").write_text("winshaddd.o: /source/local/ddraw.h\n")
-        self.assertCode("NATIVE_DIRECTDRAW_HEADER", native_header_evidence, build, sdk, self.root, run, {})
+        for header in ["/source/ddraw.h", "D:/sdk/include/ddraw.h", "/source/winshadddnl.c"]:
+            (deps / "winshadgdi.Po").write_text("winshadgdi.o: /source/winshadgdi.c " + header + "\n")
+            self.assertCode("NATIVE_DIRECTDRAW_INPUT", native_header_evidence, build)
+
+    def test_missing_gdi_observation_and_directdraw_link_input_fail(self):
+        build, deps = self.header_fixture()
+        (deps / "winshadgdi.Po").unlink()
+        self.assertCode("NATIVE_GDI_DEPENDENCIES", native_header_evidence, build)
+        library = self.prefix / "libdxguid.a"
+        library.write_bytes(b"fixture")
+        mapping = self.root / "server.map"
+        mapping.write_text(f"LOAD {library}\nOUTPUT(XWin.exe pei-x86-64)\n")
+        self.assertCode("LINK_DIRECTDRAW_INPUT", link_inputs, mapping, self.root, build, self.prefix, {}, self.root, None, {})
 
 
 if __name__ == "__main__":

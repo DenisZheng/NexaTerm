@@ -110,6 +110,22 @@ class WindowsBuildTests(unittest.TestCase):
             with self.subTest(path=path):
                 self.assertCode("PATCH_PATH", build.apply_source_patches, self.root, [{"path": path}])
 
+    def test_authored_overlay_requires_both_exact_asset_and_result_before_write(self):
+        source = self.root / "input.c"
+        source.write_bytes(b"old")
+        assets = self.root / "assets"
+        assets.mkdir()
+        (assets / "overlay.c").write_bytes(b"new")
+        spec = {"path": "input.c", "beforeSha256": build.digest(b"old"),
+                "afterSha256": build.digest(b"new"), "reason": "fixture",
+                "overlay": {"file": "overlay.c", "size": 3, "sha256": build.digest(b"new")}}
+        with patch.object(build, "ASSETS", assets):
+            self.assertCode("PATCH_OUTPUT", build.apply_source_patches, self.root, [{**spec, "afterSha256": "0" * 64}])
+            self.assertEqual(source.read_bytes(), b"old")
+            self.assertCode("PATCH_METHOD", build.apply_source_patches, self.root, [{**spec, "replacements": []}])
+            build.apply_source_patches(self.root, [spec])
+        self.assertEqual(source.read_bytes(), b"new")
+
     def test_generator_path_probe_does_not_execute_state_without_generator_context(self):
         prefix = self.root / "prefix"
         package = prefix / "lib/python3/site-packages/xcbgen"

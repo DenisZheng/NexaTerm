@@ -115,11 +115,17 @@ def apply_source_patches(source, patches):
         before = path.read_bytes()
         require(digest(before) == patch["beforeSha256"], "PATCH_INPUT")
         after = before
-        for replacement in patch["replacements"]:
-            old, new = replacement["before"].encode(), replacement["after"].encode()
-            count = replacement.get("occurrences", 1)
-            require(isinstance(count, int) and count > 0 and old and after.count(old) == count, "PATCH_MATCH")
-            after = after.replace(old, new)
+        require(("overlay" in patch) != ("replacements" in patch), "PATCH_METHOD")
+        if "overlay" in patch:
+            overlay = patch["overlay"]
+            verify_file(ASSETS / overlay["file"], overlay["size"], overlay["sha256"])
+            after = (ASSETS / overlay["file"]).read_bytes()
+        else:
+            for replacement in patch["replacements"]:
+                old, new = replacement["before"].encode(), replacement["after"].encode()
+                count = replacement.get("occurrences", 1)
+                require(isinstance(count, int) and count > 0 and old and after.count(old) == count, "PATCH_MATCH")
+                after = after.replace(old, new)
         require(digest(after) == patch["afterSha256"], "PATCH_OUTPUT")
         path.write_bytes(after)
         evidence.append({key: patch[key] for key in ["path", "beforeSha256", "afterSha256", "reason"]})
@@ -156,6 +162,7 @@ def build(work, report):
     require(os.environ.get("MSYSTEM") == "UCRT64", "WINDOWS_TOOLCHAIN")
     source_manifest = (ASSETS / "windows-sources.json").read_bytes()
     manifest = json.loads(source_manifest)
+    report["profile"] = manifest["profile"]
     for license_item in manifest["generatorLicenseEvidence"]:
         verify_file(ASSETS / license_item["file"], license_item["size"], license_item["sha256"])
     report["generatorLicenseEvidence"] = manifest["generatorLicenseEvidence"]
@@ -168,6 +175,7 @@ def build(work, report):
     report["serverSource"] = collect(cache, False)
     report["toolchain"] = {
         "gcc": run(["gcc", "--version"], work, capture=True).splitlines()[0],
+        "gpgv": run(["gpgv", "--version"], work, capture=True).splitlines()[0],
         "target": run(["gcc", "-dumpmachine"], work, capture=True).strip(),
         "packages": run(["pacman", "-Q"], work, capture=True).splitlines(),
         "buildJobs": min(4, os.cpu_count() or 1),
@@ -223,6 +231,7 @@ def build(work, report):
                       **{item["path"]: item["sha256"] for item in manifest["serverFileReview"]}}
     report["serverFileReview"] = manifest["serverFileReview"]
     extract_component(cache / server_manifest["archive"]["name"], sources, root, server_anchors)
+    report["appliedServerPatches"] = apply_source_patches(sources / root, manifest["serverPatches"])
     server_build = builds / "xorg-server"
     server_build.mkdir()
     report["stage"] = "server-configure"
@@ -252,7 +261,7 @@ def build(work, report):
     report["peImportScope"] = ["normal", "delay"]
     packages = add_runtime_provenance(report["peClosure"], prefix, owners, work, run)
     report["stage"] = "native-headers"
-    report["nativeHeaderEvidence"] = native_header_evidence(server_build, Path("/ucrt64/include/ddraw.h"), work, run, packages)
+    report["nativeHeaderEvidence"] = native_header_evidence(server_build)
     report["stage"] = "static-link-inputs"
     report["staticLink"] = link_inputs(maps / "XWin.exe.map", server_build / "hw/xwin", builds, prefix, owners, work, run, packages)
     report["runtimePackages"] = list(packages.values())

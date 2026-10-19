@@ -75,6 +75,7 @@ def link_inputs(map_file, link_directory, builds, prefix, owners, work, run, pac
         path = Path(name)
         path = (link_directory / path).resolve() if not path.is_absolute() else path.resolve()
         require(path.is_file(), "LINK_INPUT_MISSING")
+        require(not re.search(r"(?:winshadddnl\.|libdxguid\.)", path.name, re.IGNORECASE), "LINK_DIRECTDRAW_INPUT")
         record = {"sha256": digest(path.read_bytes()), "size": path.stat().st_size}
         if path.is_relative_to(prefix):
             relative = str(path.relative_to(prefix))
@@ -93,7 +94,7 @@ def link_inputs(map_file, link_directory, builds, prefix, owners, work, run, pac
     return {"mapSha256": digest(map_file.read_bytes()), "inputs": list(records.values())}
 
 
-def native_header_evidence(build_directory, sdk_header, work, run, packages):
+def native_header_evidence(build_directory):
     depfiles = sorted([*build_directory.rglob("*.Po"), *build_directory.rglob("*.Plo")])
     require(0 < len(depfiles) <= 2000, "NATIVE_HEADER_DEPENDENCIES")
     records, total = [], 0
@@ -104,17 +105,15 @@ def native_header_evidence(build_directory, sdk_header, work, run, packages):
     winmsg = [(path, content) for path, content in records
               if re.search(r"(?:^|[/\\])winmsg\.c(?:\s|$)", content)]
     require(winmsg and all("winmessages.h" not in content for _, content in winmsg), "NATIVE_DEBUG_HEADER")
-    native_sdk = run(["cygpath", "-m", sdk_header], work, capture=True).strip().lower()
-    sdk_names = {native_sdk, str(sdk_header).lower()}
-    users = [path for path, content in records
-             if any(re.search(re.escape(name) + r"(?:\s|$)", content.replace("\\:", ":").replace("\\", "/").lower())
-                    for name in sdk_names)]
-    require(users and sdk_header.is_file(), "NATIVE_DIRECTDRAW_HEADER")
-    package = run(["pacman", "-Qqo", sdk_header], work, capture=True).strip()
-    if package not in packages:
-        packages[package] = package_evidence(package, work, run)
+    require(all(not re.search(r"(?:^|[/\\])(?:ddraw\.h|winshadddnl\.c)(?:\s|$)", content, re.IGNORECASE)
+                for _, content in records), "NATIVE_DIRECTDRAW_INPUT")
+    gdi = [(path, content) for path, content in records
+           if re.search(r"(?:^|[/\\])winshadgdi\.c(?:\s|$)", content)]
+    require(gdi, "NATIVE_GDI_DEPENDENCIES")
+    def identities(items):
+        return [{"path": str(path.relative_to(build_directory)), "sha256": digest(path.read_bytes())}
+                for path, _ in items]
     return {"scope": "observed-server-automake-dependencies", "dependencyFiles": len(depfiles),
-            "debugMessageTableIncluded": False,
-            "winmsgDependencies": [{"path": str(path.relative_to(build_directory)), "sha256": digest(path.read_bytes())} for path, _ in winmsg],
-            "directDrawSdk": {"name": sdk_header.name, "sha256": digest(sdk_header.read_bytes()), "package": package,
-                              "users": [str(path.relative_to(build_directory)) for path in users]}}
+            "debugMessageTableIncluded": False, "directDrawHeaderIncluded": False,
+            "directDrawBackendIncluded": False, "renderer": "gdi",
+            "winmsgDependencies": identities(winmsg), "gdiDependencies": identities(gdi)}

@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "target": "x86_64-w64-mingw32",
-  "profile": "ucrt64-2d-xdmcp-development",
+  "profile": "ucrt64-gdi-xdmcp-development",
   "sourceSignatures": "required-full-primary-and-signing-fingerprints",
   "components": [
     {
@@ -350,7 +350,7 @@
         {
           "path": "modules/im/ximcp/imRm.c",
           "beforeSha256": "1f7d5193bba19d3d8c6ee73ad0ae208016dfa4089349a1e0073857cb50161630",
-          "afterSha256": "cca0f30cc10ffc026b93d210e6d0d77e58b1748e5e3240b20af495f3d029f2b1",
+          "afterSha256": "8f097a102c4dfb767c359a1c7b3cd8bd9dbe03465efe1496db7889257d36f6a2",
           "reason": "Explicit pointer-width scalar bridge for LLP64 XIM/locale varargs and XIDs. Keep public scalar widths, sign extension and original license notices; do not suppress pointer diagnostics.",
           "replacements": [
             {
@@ -412,6 +412,15 @@
               "before": "(long)val",
               "after": "(long)(intptr_t)val",
               "occurrences": 1
+            },
+            {
+              "before": "(Window)NULL",
+              "after": "None",
+              "occurrences": 3
+            },
+            {
+              "before": "(XIMStyle)val",
+              "after": "(XIMStyle)(uintptr_t)val"
             }
           ]
         },
@@ -680,7 +689,7 @@
       "path": "hw/xwin/ddraw.h",
       "sha256": "619b300ab6061c6739b1c9f05f21e1e86eb5f909337cabc27845a1802e4d02a8",
       "size": 132733,
-      "review": "Local fallback has no complete license notice; target must observe include_next to the owned MinGW-w64 SDK header. Do not adopt the fallback body."
+      "review": "Local fallback and LGPL MinGW SDK DirectDraw header/backend/loader are excluded from the GDI profile; actual compiler dependencies and link inputs must prove absence. No source distribution approval."
     },
     {
       "path": "hw/xwin/winmessages.h",
@@ -741,6 +750,135 @@
       "source": "https://github.com/westes/flex/blob/v2.6.4/COPYING",
       "gitBlob": "684b011026dd719137ef01764f002c2c27a2bb52",
       "scope": "The generated scanner retains the grammar notice; this tool license explicitly excludes scanner skeleton/output from the tool copyright. Not approval to bundle the generator."
+    }
+  ],
+  "serverPatches": [
+    {
+      "path": "hw/xwin/winengine.c",
+      "beforeSha256": "49de9b340c8afa9c098249405c9f5d2ea1e476af3f739c7df2d49b77f1d4277d",
+      "afterSha256": "1ca616e5a08a2763e6edcba98d74583fc738ccab8f2d2f540919ca848fa26afd",
+      "reason": "Select only the existing GDI backend and preserve its real callback result; unsupported requested engines fail. No DirectDraw loader or interfaces. Original permissive notice retained.",
+      "overlay": {
+        "file": "overlays/winengine-gdi.c",
+        "size": 2082,
+        "sha256": "1ca616e5a08a2763e6edcba98d74583fc738ccab8f2d2f540919ca848fa26afd"
+      }
+    },
+    {
+      "path": "hw/xwin/winms.h",
+      "beforeSha256": "4ed313369bc0e923549c5488f43d34c46478b6700551b2706a4bf8296904e4e3",
+      "afterSha256": "55b9f151d6f1ef54ec36059ba51b802899d0ae6cbd0e1ffc5c95c1cecb71aebb",
+      "reason": "GDI profile does not include the local or LGPL SDK DirectDraw header.",
+      "replacements": [
+        {
+          "before": "#define DIRECTDRAW_VERSION\t0x0300\n",
+          "after": ""
+        },
+        {
+          "before": "#pragma push_macro(\"Status\")\n#undef Status\n#define Status wStatus\n#include \"ddraw.h\"\n#pragma pop_macro(\"Status\")\n",
+          "after": ""
+        }
+      ]
+    },
+    {
+      "path": "hw/xwin/win.h",
+      "beforeSha256": "7a252fa712bf496e8da602e1b741b6d79864e405e0bca5497e7565154a5a7c0d",
+      "afterSha256": "8fa934aaccf84eed385aa29b3f0bc087a42537dc0fd0388e983b17adee23294c",
+      "reason": "Remove private DirectDraw-only fields and APIs after excluding that backend; shared GDI callbacks and ownership remain intact.",
+      "replacements": [
+        {
+          "before": "    LPDIRECTDRAWPALETTE lpDDPalette;\n",
+          "after": ""
+        },
+        {
+          "before": "    /* Privates used by shadow fb DirectDraw Nonlocking engine */\n    LPDIRECTDRAW pdd;\n    LPDIRECTDRAW4 pdd4;\n    LPDIRECTDRAWSURFACE4 pddsShadow4;\n    LPDIRECTDRAWSURFACE4 pddsPrimary4;\n    LPDIRECTDRAWCLIPPER pddcPrimary;\n    BOOL fRetryCreateSurface;\n",
+          "after": ""
+        },
+        {
+          "before": "extern FARPROC g_fpDirectDrawCreate;\nextern FARPROC g_fpDirectDrawCreateClipper;\n",
+          "after": ""
+        },
+        {
+          "before": "Bool\n winGetDDProcAddresses(void);\n\nvoid\n winReleaseDDProcAddresses(void);\n",
+          "after": ""
+        },
+        {
+          "before": "Bool\n winSetEngineFunctionsShadowDDNL(ScreenPtr pScreen);\n",
+          "after": ""
+        }
+      ]
+    },
+    {
+      "path": "hw/xwin/InitOutput.c",
+      "beforeSha256": "a7fb48af9e07baa257d90daba039a847b1df155a2f825db557bf48b3501bfc67",
+      "afterSha256": "ab57da41fff7518585167d5d6e25252210dfc69a34085ba0de4fa3cfd38a748c",
+      "reason": "No DirectDraw dynamic module is initialized or released in the GDI profile.",
+      "replacements": [
+        {
+          "before": "    winReleaseDDProcAddresses();",
+          "after": "    /* GDI profile owns no dynamically loaded DirectDraw module. */"
+        },
+        {
+          "before": "    /* Load pointers to DirectDraw functions */\n    winGetDDProcAddresses();",
+          "after": "    /* GDI profile needs no DirectDraw initialization. */"
+        },
+        {
+          "before": "           \"\\t\\t4 - Shadow DirectDraw4 Non-Locking\\n\"\n",
+          "after": ""
+        }
+      ]
+    },
+    {
+      "path": "hw/xwin/Makefile.am",
+      "beforeSha256": "be2aac112120976e5b60bbc61f0a137004449da094588f189312e9fb90873c7e",
+      "afterSha256": "07d95d9950164d2403c2a9f554d9548f386b8d66bd03d4a79c100f6f06711196",
+      "reason": "Exclude DirectDraw backend and headers from source targets and remove its GUID import archive.",
+      "replacements": [
+        {
+          "before": "\twinshadddnl.c \\\n",
+          "after": ""
+        },
+        {
+          "before": "\tddraw.h \\\n",
+          "after": ""
+        },
+        {
+          "before": "XWIN_SYS_LIBS += -ldxguid",
+          "after": ""
+        }
+      ]
+    },
+    {
+      "path": "hw/xwin/Makefile.in",
+      "beforeSha256": "301d554dab220e31ab5a299ab3b557c58c1a5b880e5aa311d6c26f1e5791d834",
+      "afterSha256": "e619accc9dc4389c2a1966c8fc3ab8687dc5df82f3dbfb009f727d41e997adf1",
+      "reason": "Keep the shipped generated Makefile consistent without regenerating Autotools; no DirectDraw object/archive linked.",
+      "replacements": [
+        {
+          "before": "winshadddnl.$(OBJEXT) ",
+          "after": ""
+        },
+        {
+          "before": "\twinshadddnl.c \\\n",
+          "after": ""
+        },
+        {
+          "before": "\tddraw.h \\\n",
+          "after": ""
+        },
+        {
+          "before": "XWIN_SYS_LIBS = @XWIN_SYS_LIBS@ -ldxguid",
+          "after": "XWIN_SYS_LIBS = @XWIN_SYS_LIBS@"
+        }
+      ]
+    }
+  ],
+  "excludedHeaderReview": [
+    {
+      "source": "https://github.com/mingw-w64/mingw-w64/blob/63ebe6cdb/mingw-w64-headers/include/ddraw.h",
+      "gitBlob": "aa71819423d2f40f748a73cd9b55e77e47926be5",
+      "declaredLicense": "LGPL-2.1-or-later",
+      "resolution": "Exclude DirectDraw from this 2D development profile; do not infer permissive licensing from SDK origin."
     }
   ]
 }
