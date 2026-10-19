@@ -233,3 +233,21 @@ test("shallow checkout fails explicitly and overwrites a stale success report", 
   assert.equal(isReviewedFixture({ ...finding, file: "src/production.ts" }, source, fixtures), false);
   assert.equal(isReviewedFixture({ ...finding, rule: "other-rule" }, source, fixtures), false);
 });
+
+for (const field of ["keySha256", "os/auth.c"]) {
+  test(`reviewed public X server ${field} hash requires exact bytes, path and rule`, () => {
+    const file = "scripts/xserver/upstream-source.json";
+    const source = readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
+    const fixtures = JSON.parse(readFileSync(new URL("./security-reviewed-fixtures.json", import.meta.url), "utf8"));
+    const lines = source.split("\n");
+    const index = lines.findIndex((line) => line.includes(`"${field}":`));
+    assert.notEqual(index, -1);
+    const sha = JSON.parse(`{${lines[index].trim().replace(/,$/, "")}}`)[field];
+    assert.match(sha, /^[a-f0-9]{64}$/);
+    const finding = { rule: "generic-api-key", file, startLine: index + 1, endLine: index + 1 };
+    assert.equal(isReviewedFixture(finding, source, fixtures), true);
+    assert.equal(isReviewedFixture(finding, source.replace(sha, "0".repeat(64)), fixtures), false);
+    assert.equal(isReviewedFixture({ ...finding, file: "src/production.ts" }, source, fixtures), false);
+    assert.equal(isReviewedFixture({ ...finding, rule: "other-rule" }, source, fixtures), false);
+  });
+}

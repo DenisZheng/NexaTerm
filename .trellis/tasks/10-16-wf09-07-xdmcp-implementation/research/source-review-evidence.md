@@ -42,3 +42,9 @@ python scripts/xserver_source_review.py --cache-dir /tmp/xserver-source-cache --
 结果必须是`REVIEW-REQUIRED`、`integrityVerified=true`、`distributionApproved=false`、`bundled=false`；退出0仅表示采集完成。损坏输入、签名错误/超时/缺工具或归档异常退出1、替换旧报告为FAIL。代码契约见 `.trellis/spec/backend/xserver-source-review.md`。
 
 本地21项单测通过，无skip；真实在线采集与离线复验通过。专用workflow执行同一批单测和真实下载/GPG核验，仅上传一个JSON报告，contents只读、不持久化checkout凭据、无continue-on-error。远端精确提交/CI结果在通过后补记。
+
+## 首次 CI 安全命中审查
+
+CI668的脱敏artifact定位到manifest两行：`keySha256`为公开公钥文件的SHA256，`os/auth.c`为固定官方源码文件的SHA256；原始1a6d899、PR测试merge及当前工作树重复计为6条generic-api-key命中。已逐字核查与上述固定输入一致，无凭据。沿用现有精确规则/路径/完整源码行SHA256审查机制登记两条；未改scanner、历史范围、目录排除或失败策略。
+
+新增两项测试断言改动任一hash字节、文件或规则即失效。使用校验过官方安装包SHA256的Gitleaks8.30.1执行真实安全集成测试：18项通过、0skip；其中包括临时仓库提交后删除、dirty tracked及浅克隆反例。最终完整CI待本次精确审查提交运行。
