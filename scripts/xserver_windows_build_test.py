@@ -93,6 +93,18 @@ class WindowsBuildTests(unittest.TestCase):
         self.assertEqual(path.read_bytes(), b"new")
         self.assertEqual(result[0]["beforeSha256"], build.digest(b"old"))
 
+    def test_repeated_source_patch_requires_explicit_exact_occurrence_count(self):
+        path = self.root / "input.c"
+        path.write_bytes(b"old old")
+        patch_spec = {"path": "input.c", "beforeSha256": build.digest(b"old old"),
+                      "afterSha256": build.digest(b"new new"), "reason": "fixture",
+                      "replacements": [{"before": "old", "after": "new"}]}
+        self.assertCode("PATCH_MATCH", build.apply_source_patches, self.root, [patch_spec])
+        self.assertEqual(path.read_bytes(), b"old old")
+        patch_spec["replacements"][0]["occurrences"] = 2
+        build.apply_source_patches(self.root, [patch_spec])
+        self.assertEqual(path.read_bytes(), b"new new")
+
     def test_source_patch_path_cannot_escape_private_source(self):
         for path in ["../outside.c", "/outside.c", "root\\outside.c"]:
             with self.subTest(path=path):

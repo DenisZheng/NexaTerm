@@ -12,14 +12,12 @@ import re
 import subprocess
 import sys
 import tarfile
-import time
-from urllib.parse import urlsplit
-from urllib.request import build_opener, HTTPRedirectHandler
 
 from xserver_source_review import ArchiveBudget, ASSETS, ReviewError, collect, digest, require, verify_file, write_report
 from xserver_windows_inventory import add_runtime_provenance, installed_delta, link_inputs, native_header_evidence, snapshot
 from xserver_windows_pe import MAX_PE_BYTES, parse_pe
 from xserver_windows_signatures import verify_dependency
+from xserver_windows_sources import check_source_url, download_component
 
 
 MAX_ENTRIES = 5000
@@ -32,19 +30,6 @@ SYSTEM_DLLS = {
     "user32.dll", "userenv.dll", "version.dll", "winmm.dll", "ws2_32.dll",
     "wtsapi32.dll", "normaliz.dll", "dnsapi.dll",
 }
-
-
-def check_source_url(url):
-    parsed = urlsplit(url)
-    allowed = {"xorg.freedesktop.org": "/releases/individual/", "xcb.freedesktop.org": "/dist/"}
-    require(parsed.scheme == "https" and parsed.netloc in allowed and not parsed.query
-            and not parsed.fragment and parsed.path.startswith(allowed[parsed.netloc]), "SOURCE_URL")
-
-
-class SourceRedirect(HTTPRedirectHandler):
-    def redirect_request(self, request, response, code, message, headers, url):
-        check_source_url(url)
-        return super().redirect_request(request, response, code, message, headers, url)
 
 
 def run(arguments, cwd, *, timeout=900, capture=False):
@@ -62,31 +47,6 @@ def run(arguments, cwd, *, timeout=900, capture=False):
     require(result.returncode == 0, "BUILD_EXIT")
     return result.stdout + result.stderr if capture else ""
 
-
-def download_component(component, cache, filename=None):
-    filename = filename or component["root"] + ".tar.xz"
-    require(filename not in {".", ".."} and PurePosixPath(filename).name == filename
-            and "\\" not in filename, "SOURCE_FILENAME")
-    path = cache / filename
-    if not path.exists():
-        check_source_url(component["url"])
-        temporary = path.with_suffix(".part")
-        try:
-            deadline = time.monotonic() + 120
-            with build_opener(SourceRedirect()).open(component["url"], timeout=30) as response, temporary.open("wb") as output:
-                check_source_url(response.url)
-                size = 0
-                while chunk := response.read(65536):
-                    require(time.monotonic() < deadline, "SOURCE_TIMEOUT")
-                    size += len(chunk)
-                    require(size <= component["size"], "SOURCE_SIZE")
-                    output.write(chunk)
-            verify_file(temporary, component["size"], component["sha256"])
-            temporary.replace(path)
-        finally:
-            temporary.unlink(missing_ok=True)
-    verify_file(path, component["size"], component["sha256"])
-    return path
 
 
 def extract_component(archive, parent, root, licenses):
@@ -157,7 +117,8 @@ def apply_source_patches(source, patches):
         after = before
         for replacement in patch["replacements"]:
             old, new = replacement["before"].encode(), replacement["after"].encode()
-            require(old and after.count(old) == 1, "PATCH_MATCH")
+            count = replacement.get("occurrences", 1)
+            require(isinstance(count, int) and count > 0 and old and after.count(old) == count, "PATCH_MATCH")
             after = after.replace(old, new)
         require(digest(after) == patch["afterSha256"], "PATCH_OUTPUT")
         path.write_bytes(after)

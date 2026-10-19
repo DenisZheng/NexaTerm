@@ -4,10 +4,19 @@ import argparse
 from http.client import HTTPException
 import json
 from pathlib import Path
+import re
 import tempfile
 import time
 
 from xserver_source_review import ASSETS, ReviewError, digest, require, run_tool, verify_file, write_report
+from xserver_windows_sources import download_component
+
+
+class SignatureStatusError(ReviewError):
+    def __init__(self, records):
+        super().__init__("DEPENDENCY_SIGNATURE_STATUS")
+        self.status_kinds = sorted({row[0] if row and re.fullmatch(r"[A-Z_]{1,64}", row[0])
+                                    else "INVALID_STATUS" for row in records})
 
 
 def certificate_keys(output, certificate, signing, now):
@@ -42,7 +51,8 @@ def signature_status(output, certificate, signing, keys):
     records = [line.split()[1:] for line in output.splitlines() if line.startswith("[GNUPG:] ")]
     allowed = {"NEWSIG", "KEY_CONSIDERED", "SIG_ID", "GOODSIG", "VALIDSIG",
                "NOTATION_NAME", "NOTATION_FLAGS", "NOTATION_DATA", "KEYEXPIRED"}
-    require(records and all(row and row[0] in allowed for row in records), "DEPENDENCY_SIGNATURE_STATUS")
+    if not records or not all(row and row[0] in allowed for row in records):
+        raise SignatureStatusError(records)
     # 固定证书含旧子钥；仅允许确实属于非当前主钥/签署钥的过期时间提示。
     unrelated_expiries = {str(key["expires"]) for fingerprint, key in keys.items()
                           if fingerprint not in {certificate["primaryFingerprint"], signing["fingerprint"]}
@@ -79,15 +89,16 @@ def verify_dependency(archive, signature, certificate, signing):
         return signature_status(status, certificate, signing, keys)
 
 
-def collect_dependencies(cache, offline):
-    # 延迟导入共享下载入口；Windows构建入口本身不会在import时执行。
-    from xserver_windows_build import download_component
-
+def collect_dependencies(cache, offline, report=None):
     raw = (ASSETS / "windows-sources.json").read_bytes()
     manifest = json.loads(raw)
     cache.mkdir(parents=True, exist_ok=True)
     result = []
+    if report is not None:
+        report.update({"manifestSha256": digest(raw), "components": result})
     for component in manifest["components"]:
+        if report is not None:
+            report.update({"component": component["name"], "stage": "verify-dependency"})
         root = component["root"]
         signing = component["signature"]
         if offline:
@@ -114,13 +125,17 @@ def main(arguments=None):
               "pendingReview": ["legacy-signing-algorithms-and-maintainer-identity", "per-file-licenses", "runtime-and-resource-closure"]}
     code = 1
     try:
-        report.update(collect_dependencies(args.cache, args.offline))
+        report.update(collect_dependencies(args.cache, args.offline, report))
         report.update({"dependencySignaturesVerified": True, "status": "REVIEW-REQUIRED"})
         code = 0
     except (ReviewError, OSError, ValueError, KeyError, HTTPException) as error:
         report["error"] = str(error) if isinstance(error, ReviewError) else "DEPENDENCY_VERIFICATION_FAILED"
+        if isinstance(error, SignatureStatusError):
+            report["signatureStatusKinds"] = error.status_kinds
     write_report(args.report, report)
     print(report["status"], len(report.get("components", [])), report.get("error", ""))
+    if "signatureStatusKinds" in report:
+        print("GPG status kinds:", ",".join(report["signatureStatusKinds"]))
     return code
 
 

@@ -332,7 +332,185 @@
         "epoch": 1792179000,
         "fingerprint": "3AB285232C46AE43D8E192F4DAB0F78EA6E7E2D2",
         "certificate": "3AB285232C46AE43D8E192F4DAB0F78EA6E7E2D2"
-      }
+      },
+      "patches": [
+        {
+          "path": "modules/im/ximcp/imDefIc.c",
+          "beforeSha256": "0436b4a4b006c82eb0b4de6ff9e118d574e6bab9b182d3302c9d297ddf5d8821",
+          "afterSha256": "95faad31fbf8ca579fc1ab19e3ec162cd6347044a978c00ab3317d6273fe87d5",
+          "reason": "Explicit pointer-width scalar bridge for LLP64 XIM/locale varargs and XIDs. Keep public scalar widths, sign extension and original license notices; do not suppress pointer diagnostics.",
+          "replacements": [
+            {
+              "before": "(XIMStyle)p->value",
+              "after": "(XIMStyle)(uintptr_t)p->value",
+              "occurrences": 1
+            }
+          ]
+        },
+        {
+          "path": "modules/im/ximcp/imRm.c",
+          "beforeSha256": "1f7d5193bba19d3d8c6ee73ad0ae208016dfa4089349a1e0073857cb50161630",
+          "afterSha256": "cca0f30cc10ffc026b93d210e6d0d77e58b1748e5e3240b20af495f3d029f2b1",
+          "reason": "Explicit pointer-width scalar bridge for LLP64 XIM/locale varargs and XIDs. Keep public scalar widths, sign extension and original license notices; do not suppress pointer diagnostics.",
+          "replacements": [
+            {
+              "before": "(Window)val",
+              "after": "(Window)(uintptr_t)val",
+              "occurrences": 1
+            },
+            {
+              "before": "(XIMResetState)val",
+              "after": "(XIMResetState)(uintptr_t)val",
+              "occurrences": 1
+            },
+            {
+              "before": "(XIMHotKeyState)val",
+              "after": "(XIMHotKeyState)(uintptr_t)val",
+              "occurrences": 1
+            },
+            {
+              "before": "(Colormap)val",
+              "after": "(Colormap)(uintptr_t)val",
+              "occurrences": 1
+            },
+            {
+              "before": "(Atom)val",
+              "after": "(Atom)(uintptr_t)val",
+              "occurrences": 1
+            },
+            {
+              "before": "(unsigned long)val",
+              "after": "(unsigned long)(uintptr_t)val",
+              "occurrences": 1
+            },
+            {
+              "before": "(Pixmap)val",
+              "after": "(Pixmap)(uintptr_t)val",
+              "occurrences": 1
+            },
+            {
+              "before": "(Cursor)val",
+              "after": "(Cursor)(uintptr_t)val",
+              "occurrences": 1
+            },
+            {
+              "before": "(XIMPreeditState)val",
+              "after": "(XIMPreeditState)(uintptr_t)val",
+              "occurrences": 1
+            },
+            {
+              "before": "(Window)p->value",
+              "after": "(Window)(uintptr_t)p->value",
+              "occurrences": 3
+            },
+            {
+              "before": "(Atom)p->value",
+              "after": "(Atom)(uintptr_t)p->value",
+              "occurrences": 2
+            },
+            {
+              "before": "(long)val",
+              "after": "(long)(intptr_t)val",
+              "occurrences": 1
+            }
+          ]
+        },
+        {
+          "path": "modules/im/ximcp/imRmAttr.c",
+          "beforeSha256": "a54ca9ddb1ac27475c327aaa1cbc371a179d16c617cd32c3ea66cce120eee4d0",
+          "afterSha256": "a379abb206e2a8f44f7faffccfd27e20f1c44d8b2306366bc3916f993be4fa52",
+          "reason": "Explicit pointer-width scalar bridge for LLP64 XIM/locale varargs and XIDs. Keep public scalar widths, sign extension and original license notices; do not suppress pointer diagnostics.",
+          "replacements": [
+            {
+              "before": "(Window)p->value",
+              "after": "(Window)(uintptr_t)p->value",
+              "occurrences": 3
+            },
+            {
+              "before": "(Atom)p->value",
+              "after": "(Atom)(uintptr_t)p->value",
+              "occurrences": 2
+            },
+            {
+              "before": "(long)value",
+              "after": "(long)(intptr_t)value",
+              "occurrences": 3
+            }
+          ]
+        },
+        {
+          "path": "src/xlibi18n/XDefaultIMIF.c",
+          "beforeSha256": "005ea2e42661961c1181b8560da7538b7a1754b0687534f0755f6792df8ab341",
+          "afterSha256": "d7d239413fd14ef3d8bfa8eeadb43568f294a389bad125aa049797883d7c8e7a",
+          "reason": "Explicit pointer-width scalar bridge for LLP64 XIM/locale varargs and XIDs. Keep public scalar widths, sign extension and original license notices; do not suppress pointer diagnostics.",
+          "replacements": [
+            {
+              "before": "(XIMStyle)p->value",
+              "after": "(XIMStyle)(uintptr_t)p->value",
+              "occurrences": 1
+            },
+            {
+              "before": "(Window)p->value",
+              "after": "(Window)(uintptr_t)p->value",
+              "occurrences": 2
+            }
+          ]
+        },
+        {
+          "path": "src/xlibi18n/lcWrap.c",
+          "beforeSha256": "c923f6899831065d4a308a8a10b4c5604cf3277ea456d5fc6ca65f4beafff000",
+          "afterSha256": "a6a4688ab35242c95542e677654730601d98aea7d1cc85c333f0342a639b5bd1",
+          "reason": "Explicit pointer-width scalar bridge for LLP64 XIM/locale varargs and XIDs. Keep public scalar widths, sign extension and original license notices; do not suppress pointer diagnostics.",
+          "replacements": [
+            {
+              "before": "(long) src",
+              "after": "(long)(intptr_t) src",
+              "occurrences": 4
+            }
+          ]
+        },
+        {
+          "path": "src/xlibi18n/IMWrap.c",
+          "beforeSha256": "19525b832acd3b859f883134ad5b23e6dcebc9295ccfe26b2c138b3371093f22",
+          "afterSha256": "d54bcaf1cd5fb02975a90528d73999066d3f6a5abdce13e1c9d0073d13053d40",
+          "reason": "Explicit pointer-width scalar bridge for LLP64 XIM/locale varargs and XIDs. Keep public scalar widths, sign extension and original license notices; do not suppress pointer diagnostics.",
+          "replacements": [
+            {
+              "before": "(XPointer)u.longval",
+              "after": "(XPointer)(intptr_t)u.longval",
+              "occurrences": 1
+            },
+            {
+              "before": "(XPointer)(long)u.intval",
+              "after": "(XPointer)(intptr_t)u.intval",
+              "occurrences": 1
+            },
+            {
+              "before": "(XPointer)(long)u.shortval",
+              "after": "(XPointer)(intptr_t)u.shortval",
+              "occurrences": 1
+            },
+            {
+              "before": "(XPointer)(long)u.charval",
+              "after": "(XPointer)(intptr_t)u.charval",
+              "occurrences": 1
+            }
+          ]
+        },
+        {
+          "path": "src/ParseCmd.c",
+          "beforeSha256": "875a2a227812ff8251399f985464dc1769152fa77fd350d4592af94f03294ee5",
+          "afterSha256": "48c7a1c3e9c9c6c685d3b873c3f1b89861cf60fe18e20b7495a32733222c56ee",
+          "reason": "Explicit pointer-width scalar bridge for LLP64 XIM/locale varargs and XIDs. Keep public scalar widths, sign extension and original license notices; do not suppress pointer diagnostics.",
+          "replacements": [
+            {
+              "before": "(long) options[i].value",
+              "after": "(long)(intptr_t) options[i].value",
+              "occurrences": 1
+            }
+          ]
+        }
+      ]
     },
     {
       "root": "libxkbfile-1.2.0",

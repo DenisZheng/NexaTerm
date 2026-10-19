@@ -65,6 +65,12 @@ class DependencySignatureTests(unittest.TestCase):
             self.assertCode("DEPENDENCY_SIGNATURE_STATUS", signature_status,
                             "[GNUPG:] " + status + "\n" + STATUS, CERTIFICATE, SIGNING, self.keys())
 
+    def test_rejected_status_diagnostics_contain_only_status_names(self):
+        with self.assertRaises(signatures.SignatureStatusError) as caught:
+            signature_status("[GNUPG:] UNEXPECTED arbitrary payload\n" + STATUS, CERTIFICATE, SIGNING, self.keys())
+        self.assertEqual(caught.exception.status_kinds, ["GOODSIG", "NEWSIG", "UNEXPECTED", "VALIDSIG"])
+        self.assertNotIn("payload", str(caught.exception))
+
     def test_failed_collection_overwrites_old_success_and_exits_nonzero(self):
         with tempfile.TemporaryDirectory() as temporary:
             report = Path(temporary) / "report.json"

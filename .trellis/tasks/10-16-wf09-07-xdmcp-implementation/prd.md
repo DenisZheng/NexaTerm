@@ -6,6 +6,8 @@
 
 同日X0续作：Draft #84已交付固定官方21.1.25源码/签名/公钥核验入口，专用CI2的21项测试和真实在线GPG验证通过。采集仅为REVIEW-REQUIRED，发行批准与bundled仍为false；继续原生Windows构建、逐文件/依赖许可及PE/资源闭包，不重复源码核验入口。精确完整CI结果与下一刀见research/source-review-evidence.md。
 
+同日Windows续作Draft #85：code20e657b完整应用CI676全通过；原生6在libX11的LLP64参数转换处失败，源码CI9拒绝未识别GPG状态。真实原生构建与许可闭包仍在开发，继续research/windows-build-evidence.md，不能当作仅剩人工验收。
+
 用户流程：选择 XDMCP 目标后启动远程桌面，查看状态，取消/重连/关闭并回收所属 X server。
 
 范围依据：[三协议实现计划](../../../docs/plans/WF09-PROTOCOL-IMPLEMENTATION-PLAN.md)。本任务交付实际功能，评估报告不替代实现。产品规则仅引用 WS-P01/P02、WS-N03/N04/N05、WS-R01/R02；当前运行时尚不支持该协议。

@@ -15,8 +15,8 @@
   "branch": "build/wf09-07-xserver-windows",
   "base_branch": "build/wf09-07-xserver-source-review",
   "worktree_path": null,
-  "commit": "bfbd2256317bb9144bf764741ef245f5e2a7cd2b",
-  "pr_url": "https://github.com/DenisZheng/NexaTerm/pull/84",
+  "commit": "20e657b5fd8a37ad393d4dbb774873acf8a46e77",
+  "pr_url": "https://github.com/DenisZheng/NexaTerm/pull/85",
   "subtasks": [],
   "children": [],
   "parent": "09-23-nexaterm-workflow-mainline",
@@ -27,6 +27,6 @@
     "scripts/xserver/upstream-source.json",
     ".trellis/spec/backend/xserver-source-review.md"
   ],
-  "notes": "Draft #84 source-review inputs implemented on #83. Code bfbd225; actual upstream source/signature/key hashes pinned, gpgv and complete bounded tar inventory verified. Source review CI2 SUCCESS (21 tests, no skip; real network/GPG; JSON-only artifact inspected). Exact public SHA256 scanner false positives reviewed with two invalidation regressions; CI669 all7 executing jobs SUCCESS (security18/no-skip, full secrets scan0 unreviewed, license/frontend, fixtures and all3 native Rust jobs). No engine adoption or license policy relaxation; X0 full dependency/license/build closure, bundled/packaging/desktop, X3 and Unix hard-crash supervision remain unfinished. Keep in_progress, Draft, no merge/release.",
+  "notes": "Draft #85 stacked on #84. Code 20e657b passed full application CI676 (all executing jobs), but native Windows build6 failed at libX11 LLP64 scalar casts and source CI9 rejected an unrecognized GPG status. These are unfinished development gates, not acceptance-only. Fixed official dependency archives, certificates, license/file anchors and PE/link/runtime inventory are implemented; continue actual Windows build and dependency/license closure. No engine adoption, bundled/desktop approval, merge or release; X0/X2/X3 and Unix hard-crash supervision remain open.",
   "meta": {}
 }
