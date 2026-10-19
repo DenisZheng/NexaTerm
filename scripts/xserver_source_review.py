@@ -163,9 +163,9 @@ def verify_signature(archive, signature, key, signing):
 class ArchiveBudget:
     """同时限制 tar 元数据/填充的实际解压量，而非只统计普通文件。"""
 
-    def __init__(self, stream):
+    def __init__(self, stream, limit=None):
         self.stream = stream
-        self.remaining = MAX_TAR_BYTES
+        self.remaining = MAX_TAR_BYTES if limit is None else limit
 
     def read(self, size=-1):
         maximum = self.remaining + 1

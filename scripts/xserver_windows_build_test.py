@@ -27,6 +27,7 @@ class WindowsBuildTests(unittest.TestCase):
             for name in names:
                 member = tarfile.TarInfo(name)
                 member.type = kind
+                member.mtime = 1700000000
                 member.size = 3 if member.isreg() else 0
                 tar.addfile(member, io.BytesIO(b"abc"))
         return path
@@ -36,6 +37,7 @@ class WindowsBuildTests(unittest.TestCase):
         result = build.extract_component(path, self.root, "root", {"COPYING": build.digest(b"abc")})
         self.assertEqual(result["regularBytes"], 3)
         self.assertEqual((self.root / "root/COPYING").read_bytes(), b"abc")
+        self.assertEqual((self.root / "root/COPYING").stat().st_mtime, 1700000000)
 
     def test_traversal_and_absolute_paths_never_write_outside_root(self):
         for name in ["root/../outside", "/root/a", "other/a", "root//a", "root\\a"]:

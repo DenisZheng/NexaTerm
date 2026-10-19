@@ -3,16 +3,19 @@
 
 import argparse
 import hashlib
+from http.client import HTTPException
 import json
+import lzma
 import os
 from pathlib import Path, PurePosixPath
 import re
 import struct
 import subprocess
 import tarfile
-from urllib.request import urlopen
+from urllib.parse import urlsplit
+from urllib.request import build_opener, HTTPRedirectHandler
 
-from xserver_source_review import ASSETS, ReviewError, collect, digest, require, verify_file, write_report
+from xserver_source_review import ArchiveBudget, ASSETS, ReviewError, collect, digest, require, verify_file, write_report
 
 
 MAX_ENTRIES = 5000
@@ -25,6 +28,19 @@ SYSTEM_DLLS = {
     "user32.dll", "userenv.dll", "version.dll", "winmm.dll", "ws2_32.dll",
     "wtsapi32.dll", "normaliz.dll", "dnsapi.dll",
 }
+
+
+def check_source_url(url):
+    parsed = urlsplit(url)
+    allowed = {"xorg.freedesktop.org": "/releases/individual/", "xcb.freedesktop.org": "/dist/"}
+    require(parsed.scheme == "https" and parsed.netloc in allowed and not parsed.query
+            and not parsed.fragment and parsed.path.startswith(allowed[parsed.netloc]), "SOURCE_URL")
+
+
+class SourceRedirect(HTTPRedirectHandler):
+    def redirect_request(self, request, response, code, message, headers, url):
+        check_source_url(url)
+        return super().redirect_request(request, response, code, message, headers, url)
 
 
 def run(arguments, cwd, *, timeout=900, capture=False):
@@ -45,10 +61,11 @@ def run(arguments, cwd, *, timeout=900, capture=False):
 def download_component(component, cache):
     path = cache / (component["root"] + ".tar.xz")
     if not path.exists():
-        require(component["url"].startswith(("https://xorg.freedesktop.org/releases/individual/", "https://xcb.freedesktop.org/dist/")), "SOURCE_URL")
+        check_source_url(component["url"])
         temporary = path.with_suffix(".part")
         try:
-            with urlopen(component["url"], timeout=30) as response, temporary.open("wb") as output:
+            with build_opener(SourceRedirect()).open(component["url"], timeout=30) as response, temporary.open("wb") as output:
+                check_source_url(response.url)
                 size = 0
                 while chunk := response.read(65536):
                     size += len(chunk)
@@ -64,8 +81,19 @@ def download_component(component, cache):
 
 def extract_component(archive, parent, root, licenses):
     require(not (parent / root).exists(), "SOURCE_ALREADY_EXISTS")
+    with lzma.open(archive, "rb") as raw:
+        budget = ArchiveBudget(raw, MAX_EXPANDED)
+        try:
+            return extract_tar(budget, parent, root, licenses)
+        except ReviewError as error:
+            if str(error) == "ARCHIVE_BUDGET":
+                raise ReviewError("SOURCE_BUDGET") from error
+            raise
+
+
+def extract_tar(budget, parent, root, licenses):
     seen, total, anchors = set(), 0, {}
-    with tarfile.open(archive) as tar:
+    with tarfile.open(fileobj=budget, mode="r|") as tar:
         for member in tar:
             require(len(seen) < MAX_ENTRIES, "SOURCE_BUDGET")
             name = member.name.rstrip("/") if member.isdir() else member.name
@@ -78,6 +106,7 @@ def extract_component(archive, parent, root, licenses):
             require(member.isdir() or member.isreg(), "SOURCE_TYPE")
             target = parent.joinpath(*path.parts)
             if member.isdir():
+                require(member.size == 0, "SOURCE_TYPE")
                 target.mkdir(parents=True, exist_ok=True)
                 continue
             total += member.size
@@ -89,10 +118,14 @@ def extract_component(archive, parent, root, licenses):
                     output.write(chunk)
                     hasher.update(chunk)
             target.chmod(0o755 if member.mode & 0o111 else 0o644)
+            # Autotools发行归档依赖生成文件的相对时间；保留固定输入元数据。
+            os.utime(target, (member.mtime, member.mtime))
             relative = str(path.relative_to(root))
             if relative in licenses:
                 require(hasher.hexdigest() == licenses[relative], "SOURCE_LICENSE")
                 anchors[relative] = hasher.hexdigest()
+    while budget.read(65536):
+        pass
     require(anchors == licenses, "SOURCE_LICENSE")
     return {"members": len(seen), "regularBytes": total, "licenseFiles": anchors}
 
@@ -227,9 +260,10 @@ def main(arguments=None):
     code = 1
     try:
         args.work.mkdir(parents=True, exist_ok=True)
+        require(not any(args.work.iterdir()), "BUILD_WORK_NOT_EMPTY")
         build(args.work.resolve(), report)
         code = 0
-    except (ReviewError, OSError, ValueError, KeyError, tarfile.TarError, EOFError) as error:
+    except (ReviewError, OSError, ValueError, KeyError, tarfile.TarError, EOFError, lzma.LZMAError, HTTPException) as error:
         report["error"] = str(error) if isinstance(error, ReviewError) else "BUILD_FAILED"
     write_report(args.report, report)
     print(report["status"], report.get("component"), report.get("stage"), report.get("error", ""))
