@@ -10,6 +10,7 @@ import os
 from pathlib import Path, PurePosixPath
 import re
 import subprocess
+import sys
 import tarfile
 from urllib.parse import urlsplit
 from urllib.request import build_opener, HTTPRedirectHandler
@@ -215,14 +216,7 @@ def build(work, report):
         entry["built"] = True
         entry["installedFiles"] = installed_delta(prefix, before, component["name"], owners)
         if component["name"] == "xcb-proto":
-            host_paths = [path for path in prefix.glob("lib/python*/site-packages") if (path / "xcbgen/state.py").is_file()]
-            require(len(host_paths) == 1, "HOST_GENERATOR_PATH")
-            os.environ["PYTHONPATH"] = str(host_paths[0])
-            module_path = run(["/usr/bin/python3", "-c", "import xcbgen.state; print(xcbgen.state.__file__)"], work, capture=True).strip()
-            module = host_paths[0] / "xcbgen/state.py"
-            require(Path(module_path).resolve() == module.resolve(), "HOST_GENERATOR_MODULE")
-            report["hostGenerator"] = {"component": "xcb-proto", "moduleSha256": digest(module.read_bytes()),
-                                       "path": str(module.relative_to(prefix))}
+            report["hostGenerator"] = verify_host_generator(prefix, source, work)
         write_report(work / "progress.json", report)
     report["component"] = "xorg-server"
     report["stage"] = "server-source"
@@ -266,6 +260,19 @@ def build(work, report):
     report["nativeBuildVerified"] = True
     report["status"] = "REVIEW-REQUIRED"
     report["stage"] = "complete"
+
+
+def verify_host_generator(prefix, source, work):
+    host_paths = [path for path in prefix.glob("lib/python*/site-packages") if (path / "xcbgen/__init__.py").is_file()]
+    require(len(host_paths) == 1, "HOST_GENERATOR_PATH")
+    os.environ["PYTHONPATH"] = str(host_paths[0])
+    # state子模块依赖真正generator的__main__.output；路径probe只导入包本身。
+    module_path = run([sys.executable, "-c", "import xcbgen; print(xcbgen.__file__)"], work, capture=True).strip()
+    module = host_paths[0] / "xcbgen/__init__.py"
+    require(Path(module_path).resolve() == module.resolve(), "HOST_GENERATOR_MODULE")
+    require(module.read_bytes() == (source / "xcbgen/__init__.py").read_bytes(), "HOST_GENERATOR_CONTENT")
+    return {"component": "xcb-proto", "moduleSha256": digest(module.read_bytes()),
+            "path": str(module.relative_to(prefix))}
 
 
 def main(arguments=None):

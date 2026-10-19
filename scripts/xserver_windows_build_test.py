@@ -1,5 +1,6 @@
 import io
 import json
+import os
 from pathlib import Path
 import struct
 import tarfile
@@ -61,6 +62,11 @@ class WindowsBuildTests(unittest.TestCase):
             self.assertCode("SOURCE_BUDGET", build.extract_component, self.archive(["root/a"]), self.root, "root", {})
         self.assertFalse((self.root / "root/a").exists())
 
+    def test_source_redirects_cannot_leave_the_reviewed_official_hosts(self):
+        for url in ["http://xorg.freedesktop.org/releases/individual/lib/a", "https://xorg.freedesktop.org@other.invalid/a", "https://xcb.freedesktop.org/dist/a?token=unexpected"]:
+            with self.subTest(url=url):
+                self.assertCode("SOURCE_URL", build.check_source_url, url)
+
     def test_wrong_architecture_pe_rejected_before_inspector(self):
         path = self.root / "wrong.exe"
         data = bytearray(128)
@@ -70,6 +76,18 @@ class WindowsBuildTests(unittest.TestCase):
         struct.pack_into("<H", data, 68, 0x14C)
         path.write_bytes(data)
         self.assertCode("PE_ARCHITECTURE", build.pe_imports, path, self.root)
+
+    def test_generator_path_probe_does_not_execute_state_without_generator_context(self):
+        prefix = self.root / "prefix"
+        package = prefix / "lib/python3/site-packages/xcbgen"
+        source = self.root / "source/xcbgen"
+        for directory in [package, source]:
+            directory.mkdir(parents=True)
+            (directory / "__init__.py").write_text("# fixed generator package\n")
+        (package / "state.py").write_text("raise RuntimeError('requires real generator context')\n")
+        with patch.dict(os.environ):
+            result = build.verify_host_generator(prefix, source.parent, self.root)
+        self.assertEqual(result["moduleSha256"], build.digest((source / "__init__.py").read_bytes()))
 
     def test_actual_posix_runtime_import_is_rejected(self):
         server = self.root / "server.exe"
