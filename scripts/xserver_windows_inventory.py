@@ -3,7 +3,13 @@
 from pathlib import Path
 import re
 
-from xserver_source_review import digest, require
+from xserver_source_review import ReviewError, digest, require, verify_file
+
+
+class InventoryCollision(ReviewError):
+    def __init__(self, path, owner, before, after):
+        super().__init__("INSTALL_COLLISION")
+        self.details = {"path": path, "previousOwner": owner, "previous": before, "installed": after}
 
 
 def snapshot(prefix):
@@ -17,8 +23,8 @@ def installed_delta(prefix, before, owner, owners):
     for relative, record in current.items():
         if before.get(relative) == record:
             continue
-        require(relative not in before, "INSTALL_COLLISION")
-        require(relative not in owners, "INSTALL_COLLISION")
+        if relative in before or relative in owners:
+            raise InventoryCollision(relative, owners.get(relative), before.get(relative), record)
         owners[relative] = owner
         result[relative] = record
     return result
@@ -94,6 +100,22 @@ def link_inputs(map_file, link_directory, builds, prefix, owners, work, run, pac
     return {"mapSha256": digest(map_file.read_bytes()), "inputs": list(records.values())}
 
 
+def prepare_server_headers(sources, target, manifest):
+    components = {item["name"]: item for item in manifest["components"]}
+    result = []
+    for item in manifest["serverHeaders"]:
+        require(item["component"] in components, "SERVER_HEADER_OWNER")
+        source = sources / components[item["component"]]["root"] / item["source"]
+        verify_file(source, item["size"], item["sha256"])
+        destination = target / item["target"]
+        require(not destination.exists(), "SERVER_HEADER_EXISTS")
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(source.read_bytes())
+        verify_file(destination, item["size"], item["sha256"])
+        result.append(item)
+    return result
+
+
 def native_header_evidence(build_directory):
     depfiles = sorted([*build_directory.rglob("*.Po"), *build_directory.rglob("*.Plo")])
     require(0 < len(depfiles) <= 2000, "NATIVE_HEADER_DEPENDENCIES")
@@ -110,10 +132,14 @@ def native_header_evidence(build_directory):
     gdi = [(path, content) for path, content in records
            if re.search(r"(?:^|[/\\])winshadgdi\.c(?:\s|$)", content)]
     require(gdi, "NATIVE_GDI_DEPENDENCIES")
+    server_header = [(path, content) for path, content in records
+                     if re.search(r"[/\\]xorg-server-headers[/\\]X11[/\\]extensions[/\\]XKBgeom\.h(?:\s|$)", content)]
+    require(server_header, "NATIVE_SERVER_HEADER_CONTEXT")
     def identities(items):
         return [{"path": str(path.relative_to(build_directory)), "sha256": digest(path.read_bytes())}
                 for path, _ in items]
     return {"scope": "observed-server-automake-dependencies", "dependencyFiles": len(depfiles),
             "debugMessageTableIncluded": False, "directDrawHeaderIncluded": False,
             "directDrawBackendIncluded": False, "renderer": "gdi",
-            "winmsgDependencies": identities(winmsg), "gdiDependencies": identities(gdi)}
+            "winmsgDependencies": identities(winmsg), "gdiDependencies": identities(gdi),
+            "serverGeometryHeaderDependencies": identities(server_header)}

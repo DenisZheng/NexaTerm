@@ -15,7 +15,7 @@
   "branch": "build/wf09-07-xserver-windows",
   "base_branch": "build/wf09-07-xserver-source-review",
   "worktree_path": null,
-  "commit": "4010ff09f225ed8427ea523385b10b1f19244cc1",
+  "commit": "69a14676b7ee588574f991552c8a7f16dadb8af2",
   "pr_url": "https://github.com/DenisZheng/NexaTerm/pull/85",
   "subtasks": [],
   "children": [],
@@ -27,6 +27,6 @@
     "scripts/xserver/upstream-source.json",
     ".trellis/spec/backend/xserver-source-review.md"
   ],
-  "notes": "Draft #85 stacked on #84; code4010ff0 source CI12 SUCCESS (21 source +43 Windows evidence regressions, real15 dependency signatures, JSON-only artifact inspected; gpg/gpgv2.2.27). Windows native evidence43 including real C GDI selector SUCCESS; native9 failed at Xtrans missing Winsock IPv6 declarations; fix the namespace wrapper and add a native numeric-loopback preflight before continuing full engine/PE/runtime build. Full app CI679 all7 executing jobs SUCCESS on4010ff0 (conditional package job remains skipped). DirectDraw SDK header was observed LGPL, so GDI profile removes local/SDK header, backend, loader and dxguid rather than approving SDK origin. Native8 preserved a further XIM scalar/NULL failure, now fixed with exact source/result hashes. No distribution/bundled/desktop approval, merge or release; X0/X2/X3 and Unix hard-crash supervision stay open.",
+  "notes": "Draft #85 stacked on #84. Verified code69a1467: source CI14 and full app CI681 all7 executing jobs SUCCESS (conditional package skipped). Native11 real Windows evidence43, IPv6 numeric-loopback probe and complete libX11 compile/install SUCCESS; install inventory rejected conflicting xorgproto/server and libX11/client XKBgeom.h. JSON-only artifact12169040787 downloaded and inspected. Current fix separates pinned private server header from public client installation, keeps collision failure with hashes/owner and requires actual server compile dependencies. Local67 regressions no skips; subsequent code needs fresh CI. DirectDraw LGPL header/backend/loader/dxguid excluded from GDI profile. Full native engine/PE/runtime/license/resource closure, distribution adoption, X2/X3 and Unix hard-crash supervision remain open; no merge/release or bundled/desktop approval.",
   "meta": {}
 }

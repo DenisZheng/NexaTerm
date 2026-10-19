@@ -4,7 +4,7 @@
 
 ## 当前继续入口
 
-先核对[Draft #85](https://github.com/DenisZheng/NexaTerm/pull/85)最新HEAD和原生workflow，不把下文历史失败当作最新结果。当前code4010ff0的source CI12全通过，Windows43项证据反例（含同一GDI C选择器）通过；原生9已在Xtrans的Winsock IPv6声明处失败，继续头文件/probe修正和完整引擎/PE/运行库验证；code4010ff0的应用CI679全部7个执行job已成功（条件打包为既有skip），不能标记native build完成。source12 artifact12166878111已实际下载：仅两个JSON，SHA256 ca1a2adf3f660b3e959a46ec29e2eac05cfb3a123992075a750db3196dcf096b，15项pin与当前manifest一致，实际gpg/gpgv均2.2.27，未批准分发。
+先核对[Draft #85](https://github.com/DenisZheng/NexaTerm/pull/85)最新HEAD和原生workflow，不把下文历史失败当作最新结果。code69a1467的完整应用CI681全部7个执行job与source CI14已成功（条件打包为既有skip）；原生11的43项证据反例、真实IPv6探针和libX11完整编译/安装已成功，安装owner检查随后发现XKBgeom.h覆盖并保持FAIL。当前修正客户端/服务端头上下文后继续后续库、引擎、PE及运行库验证，不能标记native build完成。原生11 artifact12169040787已实际下载：仅一个JSON，归档SHA256 2517e88da8c008125fe8a7793d5b9616390876515b6e0ddcf079f64fb0d41870；报告确认nativeIpv6Headers.verified=true，distributionApproved/bundled/desktopVerified仍false。
 
 ## 首次真实Windows构建
 
@@ -76,3 +76,14 @@ code3ac679a的[source CI11](https://github.com/DenisZheng/NexaTerm/actions/runs/
 ## 原生10：探针宏的命名空间修正
 
 [原生10](https://github.com/DenisZheng/NexaTerm/actions/runs/39211597892)（codee0f47aa）在安装已修正Xwinsock头后提前执行原生IPv6探针。旧socklen_t/addrinfo/转换函数声明错误未再出现；探针自己的MAKEWORD宏展开引用了已被X11包装头恢复/重命名的BYTE，编译失败。改为等价且明确的Winsock 2.2 WORD值0x0202，继续真实编译/执行；不把这次探针错误当作引擎不支持IPv6的结论。source CI13已成功，完整原生引擎仍未验证完成。
+
+新增IPv6头亦逐文件核对：[同一SDK源码提交的ws2tcpip.h](https://github.com/mingw-w64/mingw-w64/blob/63ebe6cdb/mingw-w64-headers/include/ws2tcpip.h)（blob75ff1fc006e12360f05021509b435bed9691fa01）明确声明Public Domain并指向DISCLAIMER.PD。此处记录具体文件级证据；最终分发仍需结合实际SDK文件/包owner及整体义务，不按SDK统一标签批准。
+
+
+## 原生11：IPv6与libX11通过，隔离客户端/服务端geometry头
+
+[原生11](https://github.com/DenisZheng/NexaTerm/actions/runs/39212134719)（code69a1467）实际编译并执行数值IPv6探针成功；libX11的完整make及make install也成功，未关闭国际化或编译诊断。安装owner检查随后发现xorgproto的legacy XKBgeom.h与libX11公共客户端同名头内容不同，按设计拒绝覆盖；不是新的C编译错误。
+
+固定官方源中，xorgproto版本15808字节、SHA256 84413c7719ed49453cb543454fa84a48dceefb866790e48c871b43cbff16d089，含XKB_IN_SERVER的SrvXkb别名与服务端geometry声明；libX11版本13758字节、SHA256 420d8335306aad84fde239eba310e7da5ffaecb572111ce78e42736fba77828f，是客户端API。不能把其中一个全局覆盖另一个。xorgproto关闭legacy公共安装，让libX11拥有公共客户端头并验证安装后原始字节；服务端头从已核验xorgproto源完整复制到私有server include上下文，保留原许可并校验复制前后hash。后续真实服务端编译依赖必须观察到该私有头，公共客户端头不能替代这项证据。
+
+覆盖检查继续FAIL，并把原owner及覆盖前后hash/size写入失败JSON，未引入覆盖白名单。本地67项回归无skip，包括真实GDI C选择器、冲突诊断和两种头上下文隔离；完整原生构建继续验证。source14与应用CI681通过的代码对象为69a1467，后续改动不能继承为已验证。

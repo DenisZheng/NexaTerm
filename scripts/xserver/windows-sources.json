@@ -34,7 +34,7 @@
       "name": "xorgproto",
       "buildSystem": "autotools",
       "options": [
-        "--enable-legacy"
+        "--disable-legacy"
       ],
       "licenseFiles": {
         "COPYING-xf86driproto": "4a05d06752388d9db71ee1006f371d4fb2c316a821fc2fc272db90b3ef978334",
@@ -533,7 +533,13 @@
             }
           ]
         }
-      ]
+      ],
+      "installedAnchors": {
+        "include/X11/extensions/XKBgeom.h": {
+          "size": 13758,
+          "sha256": "420d8335306aad84fde239eba310e7da5ffaecb572111ce78e42736fba77828f"
+        }
+      }
     },
     {
       "root": "libxkbfile-1.2.0",
@@ -893,6 +899,16 @@
       "gitBlob": "aa71819423d2f40f748a73cd9b55e77e47926be5",
       "declaredLicense": "LGPL-2.1-or-later",
       "resolution": "Exclude DirectDraw from this 2D development profile; do not infer permissive licensing from SDK origin."
+    }
+  ],
+  "serverHeaders": [
+    {
+      "component": "xorgproto",
+      "source": "include/X11/extensions/XKBgeom.h",
+      "target": "X11/extensions/XKBgeom.h",
+      "size": 15808,
+      "sha256": "84413c7719ed49453cb543454fa84a48dceefb866790e48c871b43cbff16d089",
+      "reason": "Legacy server geometry declarations and SrvXkb aliases are private to the server; public client header is owned by libX11."
     }
   ]
 }

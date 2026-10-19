@@ -14,7 +14,7 @@ import sys
 import tarfile
 
 from xserver_source_review import ArchiveBudget, ASSETS, ReviewError, collect, digest, require, verify_file, write_report
-from xserver_windows_inventory import add_runtime_provenance, installed_delta, link_inputs, native_header_evidence, snapshot
+from xserver_windows_inventory import InventoryCollision, add_runtime_provenance, installed_delta, link_inputs, native_header_evidence, prepare_server_headers, snapshot
 from xserver_windows_pe import MAX_PE_BYTES, parse_pe
 from xserver_windows_signatures import verify_dependency
 from xserver_windows_sources import check_source_url, download_component
@@ -220,6 +220,8 @@ def build(work, report):
             run(["make", "install"], build_directory)
         entry["built"] = True
         entry["installedFiles"] = installed_delta(prefix, before, component["name"], owners)
+        for relative, anchor in component.get("installedAnchors", {}).items():
+            verify_file(prefix / relative, anchor["size"], anchor["sha256"])
         if component["name"] == "xorgproto":
             report["stage"] = "native-ipv6-headers"
             probe_source = ASSETS / "overlays/winsock-ipv6-probe.c"
@@ -242,6 +244,9 @@ def build(work, report):
     report["serverFileReview"] = manifest["serverFileReview"]
     extract_component(cache / server_manifest["archive"]["name"], sources, root, server_anchors)
     report["appliedServerPatches"] = apply_source_patches(sources / root, manifest["serverPatches"])
+    server_headers = builds / "xorg-server-headers"
+    report["serverHeaders"] = prepare_server_headers(sources, server_headers, manifest)
+    os.environ["CPPFLAGS"] = "-I" + str(server_headers) + " " + os.environ["CPPFLAGS"]
     server_build = builds / "xorg-server"
     server_build.mkdir()
     report["stage"] = "server-configure"
@@ -315,6 +320,8 @@ def main(arguments=None):
         code = 0
     except (ReviewError, OSError, ValueError, KeyError, tarfile.TarError, EOFError, lzma.LZMAError, HTTPException) as error:
         report["error"] = str(error) if isinstance(error, ReviewError) else "BUILD_FAILED"
+        if isinstance(error, InventoryCollision):
+            report["installCollision"] = error.details
     write_report(args.report, report)
     print(report["status"], report.get("component"), report.get("stage"), report.get("error", ""))
     return code
