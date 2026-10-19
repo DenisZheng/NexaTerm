@@ -12,18 +12,21 @@
   "assignee": "codex",
   "createdAt": "2026-10-16",
   "completedAt": null,
-  "branch": "fix/wf09-07-xdmcp-shutdown",
-  "base_branch": "feat/wf09-08a-windows-flush",
+  "branch": "build/wf09-07-xserver-source-review",
+  "base_branch": "fix/wf09-07-xdmcp-shutdown",
   "worktree_path": null,
-  "commit": "d1bc04f3f9341422b1a2e3c93ab8d0ba8c8c5928",
-  "pr_url": "https://github.com/DenisZheng/NexaTerm/pull/83",
+  "commit": "bfbd2256317bb9144bf764741ef245f5e2a7cd2b",
+  "pr_url": "https://github.com/DenisZheng/NexaTerm/pull/84",
   "subtasks": [],
   "children": [],
   "parent": "09-23-nexaterm-workflow-mainline",
   "relatedFiles": [
     "docs/plans/WF09-PROTOCOL-IMPLEMENTATION-PLAN.md",
-    "docs/WORKFLOW_SPEC.md"
+    "docs/WORKFLOW_SPEC.md",
+    "scripts/xserver_source_review.py",
+    "scripts/xserver/upstream-source.json",
+    ".trellis/spec/backend/xserver-source-review.md"
   ],
-  "notes": "X1 external-engine core and actual app-exit completion barrier delivered. Draft #83 code d1bc04f: full CI666 all7 executing jobs SUCCESS, XDMCP native10 all3 OS each10 tests SUCCESS, no new skips/ignores. Exit awaits actual worker/process-tree/auth-directory cleanup; explicit stop keeps2s stop_pending. Bundled engine/packaging/UI/desktop and Unix host SIGKILL supervision remain unfinished. Overall task stays in_progress, no merge/release.",
+  "notes": "Draft #84 source-review inputs implemented on #83. Code bfbd225; actual upstream source/signature/key hashes pinned, gpgv and complete bounded tar inventory verified. Source review CI2 SUCCESS (21 tests, no skip; real network/GPG; JSON-only artifact inspected). Exact public SHA256 scanner false positives reviewed with two invalidation regressions; CI669 all7 executing jobs SUCCESS (security18/no-skip, full secrets scan0 unreviewed, license/frontend, fixtures and all3 native Rust jobs). No engine adoption or license policy relaxation; X0 full dependency/license/build closure, bundled/packaging/desktop, X3 and Unix hard-crash supervision remain unfinished. Keep in_progress, Draft, no merge/release.",
   "meta": {}
 }

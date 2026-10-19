@@ -449,3 +449,56 @@ Draft #83 code d1bc04f verified: CI666 all7 jobs and native10 all3 OS each10 tes
 ### Next Steps
 
 - 按原X0/X2/X3继续精确组件/构建/许可闭包、随包/打包/桌面及Unix宿主硬崩溃监督；Windows Rlogin精确flush仍待替代backend。
+
+
+## Session 11: WF-09 X server fixed source review inputs
+
+**Date**: 2026-10-18
+**Task**: WF-09 X server fixed source review inputs
+**Branch**: `build/wf09-07-xserver-source-review`
+
+### Summary
+
+Draft #84 code bfbd225 verified: full CI669 all7 jobs and source CI2 passed; pinned source/GPG/inventory entry delivered, X0 build/license and bundled desktop remain open.
+
+### Main Changes
+
+### Main Changes
+
+固定官方xorg-server21.1.25归档、分离签名、公钥及10项构建/许可锚点。标准库入口先校验大小/hash，再隔离gpgv核验、流式生成完整1661文件hash清单；不提取/执行上游源码。保留DSA-1024/SHA-1及组件采用审查项，distributionApproved/bundled仍为false。
+
+### Testing
+
+- 专用源码CI2：21项无skip，真实网络/GPG成功；远端JSON-only artifact与本地离线结果逐字节一致。
+- 完整CI669七执行job全SUCCESS；Rust库617/618/620（Linux另4既有ignored），前端1160/1既有todo，脚本193/3既有环境skip，安全真实集成18/0skip、全历史/current扫描0未豁免命中。
+- CI668公开公钥/源码两行SHA256误报，经脱敏artifact逐项核查，沿既有规则/文件/完整源码行hash精确登记；新增两项改动即失效测试，没有目录豁免或扫描旁路。
+- 本地blob:none克隆全历史扫描300秒超时保持FAIL，未冒充通过；远端完整checkout同版本扫描已通过。类型、line-budget/任务manifest/diff通过。
+
+### Status
+
+源码核验入口开发交付；X0整体、原生构建/依赖许可、PE/资源、随包/打包/桌面、X3和Unix宿主硬崩溃监督未完成。整体in_progress不归档，Draft #84堆叠#83、不合并发布。
+
+### Next Steps
+
+- 从source-review-evidence.md固定输入继续Windows原生构建和逐文件/依赖许可闭包，随后实际PE/资源、打包签名及桌面；不要重复#83/#84。
+- Windows Rlogin精确flush仍须替代backend；7/9为范围计数，不能推算工时完成度。
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `1a6d899` | (see git log) |
+| `bfbd225` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

@@ -22,5 +22,17 @@
     "file": ".trellis/spec/backend/loopback-file-service.md",
     "sourceSha256": "1366c12239f21e65476f3facd771b2f756dbc29ff7a18485d5315bcdef100a70",
     "reason": "CI602脱敏报告定位的文档误报：ab5719ffe3a767d5f55dfd6bd564efce262486b9 中第26行仅列出HTTP测试范围，没有任何凭据值。逐字核查为英语测试说明；仅豁免此规则/文件/完整源码行的SHA256，内容变化即失效。保留完整历史及当前源码扫描。"
+  },
+  {
+    "rule": "generic-api-key",
+    "file": "scripts/xserver/upstream-source.json",
+    "sourceSha256": "485622f0877bbf801d7be9374df32171da2ca33998dbb555155f48d3fe4bc68c",
+    "reason": "CI668脱敏artifact逐项定位并核查：固定公开OpenPGP公钥文件的SHA256，不是API密钥；值由scripts/xserver/release-key.asc逐字节计算并由真实核验workflow复核。 原始提交1a6d899d5d1314562079a84d886ad49db8177bde；仅匹配此规则、此文件和完整源码行SHA256，任意变更须重新审查，保留完整历史及当前源码扫描。"
+  },
+  {
+    "rule": "generic-api-key",
+    "file": "scripts/xserver/upstream-source.json",
+    "sourceSha256": "04a0b5ccc130cc8c01dc068399ba602bda2d5264624457b91f4d6f7f16980e95",
+    "reason": "CI668脱敏artifact逐项定位并核查：官方已签名xorg-server21.1.25归档中os/auth.c的SHA256，不是认证凭据；值由只读源码核验入口复核，文件内容未复制入项目。 原始提交1a6d899d5d1314562079a84d886ad49db8177bde；仅匹配此规则、此文件和完整源码行SHA256，任意变更须重新审查，保留完整历史及当前源码扫描。"
   }
 ]

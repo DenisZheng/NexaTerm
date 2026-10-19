@@ -1,0 +1,50 @@
+{
+  "schema": 1,
+  "component": "xorg-server",
+  "version": "21.1.25",
+  "archive": {
+    "name": "xorg-server-21.1.25.tar.xz",
+    "url": "https://xorg.freedesktop.org/releases/individual/xserver/xorg-server-21.1.25.tar.xz",
+    "size": 5086684,
+    "sha256": "6ad4e3c7b59a309b32c92e5c15ce1267110f9e13f1ac78da62361a628da1a0eb"
+  },
+  "signature": {
+    "name": "xorg-server-21.1.25.tar.xz.sig",
+    "url": "https://xorg.freedesktop.org/releases/individual/xserver/xorg-server-21.1.25.tar.xz.sig",
+    "size": 95,
+    "sha256": "d9a3ddac6b72ad2e0f85ded64f8e9f3e69f889fb4e20c903daf8622123d03a57"
+  },
+  "signing": {
+    "keyFile": "release-key.asc",
+    "keySize": 1598,
+    "keySha256": "bc15a0a9ef7cf3d7e8290db3a280caf4440f74aa00d6f08e2ec00ef08486d081",
+    "fingerprint": "3C2C43D9447D5938EF4551EBE23B7E70B467F0BF",
+    "keyBits": 1024,
+    "publicKeyAlgorithm": 17,
+    "digestAlgorithm": 2,
+    "signatureEpoch": 1791337345,
+    "keySource": "https://keys.openpgp.org/vks/v1/by-fingerprint/3C2C43D9447D5938EF4551EBE23B7E70B467F0BF"
+  },
+  "source": {
+    "root": "xorg-server-21.1.25",
+    "members": 1825,
+    "regularFiles": 1661,
+    "directories": 164,
+    "regularBytes": 35498753,
+    "anchors": {
+      "COPYING": "c9f90a6669109aad6c9a7c3b46cc2c574221a73b792afa419336816b49da5c11",
+      "meson.build": "4a936a98ce2c9117d719ae67d18831ab956073b1c3a579108d0324cb1a974df6",
+      "meson_options.txt": "07dfd369fd56d99f25f482e1486a8b922890bfbb71ce7094702936587239a79c",
+      "configure.ac": "10fe7c6fec4bbcb16cc7c8e1a4c3520bf7de158b77cbf0dd207d60a283dbe7f1",
+      "hw/xwin/meson.build": "c4d5da2ff4dfae7b5e487e7e86f9cad4255741af4fbaa092617fedc5fc1be277",
+      "hw/xwin/Makefile.am": "be2aac112120976e5b60bbc61f0a137004449da094588f189312e9fb90873c7e",
+      "hw/xwin/winclipboard/meson.build": "d3e397a87a83e2be6f951df27305b9400a2492c499ed23adeacc7b401de14206",
+      "os/meson.build": "f922520491439640e752cf4ba73d383497fc986ebe3d6dd33e2bf5ef2c3c6a94",
+      "os/auth.c": "baf70f020c4cac766175d36a95468aa37656a750ab65c1bd240bb2b7b4dd6593",
+      "hw/xwin/winprocarg.c": "3ab6a48e0d95d23b61eb4f6f37638cdd5e9bf279c5bf4d52dac21502bf36e0f2"
+    },
+    "absent": [
+      "hw/xwin/xdmcphostselect.c"
+    ]
+  }
+}
