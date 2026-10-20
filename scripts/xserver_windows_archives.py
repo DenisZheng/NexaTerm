@@ -64,7 +64,7 @@ def map_selections(content, report=None):
             continue
         if report is not None:
             report["archiveMapCurrentRow"] = line[:4096]
-        match = re.fullmatch(r"(.+\.(?:a|lib))\(([^()]+)\)(?:\s+(.*))?", line)
+        match = re.fullmatch(r"(.+?\.(?:a|lib))\(([^()]+)\)(?:\s+(.*))?", line)
         require(match and len(rows) < 10000, "AR_MAP_ROW")
         archive, member = match[1], match[2]
         identity = (archive, member)

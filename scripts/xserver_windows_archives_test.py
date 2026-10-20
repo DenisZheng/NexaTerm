@@ -54,6 +54,22 @@ class ArchiveTests(unittest.TestCase):
         start = member["fileOffset"]
         self.assertEqual(self.archive.read_bytes()[start:start + len(raw)], raw)
 
+    def test_real_inline_archive_reference_is_not_part_of_the_selected_archive_path(self):
+        (self.root / "part.c").write_text("extern int next_part(void); int library_part(void) { return next_part(); }\n")
+        (self.root / "next.c").write_text("int next_part(void) { return 13; }\n")
+        for source in ["part", "next"]:
+            self.command(["gcc", "-fno-stack-protector", "-fno-asynchronous-unwind-tables", "-c", source + ".c", "-o", source + ".o"])
+        self.command(["ar", "rcs", "a.a", "part.o"])
+        self.command(["ar", "rcs", "b.a", "next.o"])
+        self.command(["ld", "--entry=entry", "-Map=chain.map", "-o", "chain.exe", "caller.o", "a.a", "b.a"])
+        mapping = self.root / "chain.map"
+        self.assertRegex(mapping.read_text(), r"b\.a\(next\.o\) +a\.a\(part\.o\)")
+        inputs = [{**self.record, "path": name, "sha256": digest((self.root / name).read_bytes())}
+                  for name in ["a.a", "b.a"]]
+        result = selected_members(mapping, self.root, self.root / "build", self.root, inputs, self.root, None)
+        self.assertEqual([(x["archive"], x["member"]) for x in result["members"]], [("a.a", "part.o"), ("b.a", "next.o")])
+        self.assertIn("a.a(part.o)", result["members"][1]["reference"])
+
     def test_archive_truncation_wrong_magic_and_bad_long_name_offset_fail(self):
         raw = self.archive.read_bytes()
         for data in [raw[:-1], b"!<thin>\n", raw.replace(b"`\n", b"??", 1)]:

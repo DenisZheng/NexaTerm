@@ -221,3 +221,15 @@ code898abaa的[source CI24](https://github.com/DenisZheng/NexaTerm/actions/runs/
 新增成员取证只读取GNU map的archive选择区段，复用实际LOAD输入的路径/owner并重验archive hash，再以有界GNU/COFF读取器绑定唯一非空成员的payload hash、大小和文件偏移；不提取或执行外部对象。支持GNU长名和COFF长名表，未知/薄archive、越界/坏padding/不安全名称、owner缺失、文件漂移、缺失/重名/重复成员均失败；当前行/成员与已完成证据保留。静态库和import library均由真实GNU ar/ld构建后验证，另覆盖未选中对象不会被加入及失败反例；这些格式fixture没有执行，不冒充Windows引擎运行。
 
 当前本地113项无skip，旧GNU2.38工具链的相关成员回归也通过；实际官方CRT的13个已观察archive均可解析。新门禁接在最终LOAD清单后、完整C输入前，仍须整条Windows执行。报告保留finalSectionContributionInferred=false、perFileLicenseReviewComplete=false、dependencyDllInternalsIncluded=false；map选择成员不等同于每段字节最终保留或已具备发行权限。
+
+## 当前代码0b3551f的独立源码与应用CI
+
+[source CI26](https://github.com/DenisZheng/NexaTerm/actions/runs/39355826128)通过21项源码、92项Windows回归和15份真实签名。实际下载的两JSON归档85272字节、SHA256 7136295fc790a27e316087e03056de9874a9199b1519cc4ba74cefce5976c4c6；内容与已复核的source25逐字节一致，server/manifest及15项源码、签名、完整证书与身份pin保持一致。
+
+[完整CI693](https://github.com/DenisZheng/NexaTerm/actions/runs/39355826081)七个实际执行job均SUCCESS，条件打包job跳过。实际Rust日志为Linux617、Windows620、macOS618个库测试、各19个二进制及1个集成测试通过，Linux另4个既有ignored；前端1160通过/1todo，脚本193通过/3个既有环境skip，fixture、安全和许可门禁均成功。它们不代替独立的Windows引擎原生结果。
+
+## 原生23的精确失败：inline引用被贪婪解析吞入路径
+
+[原生23](https://github.com/DenisZheng/NexaTerm/actions/runs/39355826093)（code0b3551f）通过92项回归、15依赖、五探针、完整引擎、PE/头来源及105链接输入；成员门禁在记录242份实际成员后报AR_INPUT_OWNER。失败JSON已实际下载：归档270586字节、SHA256 91c97d17b7ef1df64ce30201b0c8e78a21426d1fd998e9cfcf2e71a08ebabae5。
+
+有界当前记录为archive=`../../os/.libs/libos.a(io.o)  ../../dix/.libs/libdix.a`、member=`dispatch.o`。真实GNU map同一行后半部的引用方也包含archive/member；原贪婪匹配吞入第二个archive，构造了不存在的路径。改为首个完整archive/member配对，其余原样作为reference；仍须已归属archive和唯一payload验证，没有owner豁免。新增实际GCC/ar/ld双archive引用链回归先重现相同AR_INPUT_OWNER，修正后本地114项无skip通过。完整C输入与最终版本未执行，整次仍FAIL，不继承原生22成功；修正代码等待新的Windows全链验证。

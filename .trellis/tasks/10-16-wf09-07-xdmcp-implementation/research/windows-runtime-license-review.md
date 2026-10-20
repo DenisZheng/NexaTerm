@@ -77,3 +77,34 @@ GNU ld创建的rtr/ertr与dll stuff是内存BFD对象。生成器身份记录到
 标记核查已处理C注释行首星号及换行：headers候选中303文件存在GNU许可证文字；CRT的9个文字命中文件均非C/H/汇编实现。具体DirectDraw/propkey原文确为LGPL，继续排除。重新核对15个固定库的843份候选仍无GNU标记；server的1145份候选仅winprefsyacc.c/h命中，完整保留Bison3.8.2附加例外。以上只是固定文本的定位与身份核对，不能代替逐文件权限和实际编译/链接相关性审查。
 
 另独立下载[官方CRT发布包](https://packages.msys2.org/packages/mingw-w64-ucrt-x86_64-crt)，4067902字节、SHA256 5975fa56060f1d428d2369b6be70b1e63c0512c63031c2bae722b45610d1c1ea，与官方包页一致。原生21实际14项CRT链接输入（13个archive及crt2.o）逐个匹配包内字节；新成员读取器已成功解析这些真实GNU/COFF archive，包括名称表及全部成员边界。包的分离签名仍未独立核验；原生报告cachedArchives为空的事实保留，本次独立下载不会伪造其cache内容。实际选择哪些成员由下一次map取证确认。
+
+## 原生22的333份实际工具链C输入：源码与生成差异
+
+333份输入均已定位到以下固定来源或精确生成差异，仍为来源核对，不标记perFileLicenseReviewComplete。
+
+| 实际provider | 份数 | 已核对身份 |
+| --- | --- | --- |
+| SDK headers14.0.0.r495.g63ebe6cdb-1 | 202 | 201份与固定Git源码逐字节一致；_mingw.h.in只按官方配方的DEFAULT_MSVCRT_VERSION=0xE00、DEFAULT_WIN32_WINNT=0xA00替换，输出20097字节/hash f1f6ed2fe17776624707d197905c6bb29881c5dfb8c2f5489b67592a16e0d466，与实际输入一致 |
+| GCC16.2.0-6 | 121 | 固定上游release commit78d4ac73dd391005b895a6148cd9831e28e1208b：116份直接匹配；gmm_malloc.h按同字节安装为mm_malloc.h；float.h后置、stdarg.h/stddef.h前置同名include_next；limits.h由limitx.h/glimits.h/limity.h拼接，所有实际输出hash匹配。官方Makefile.in的USER_H_INC_NEXT_PRE/POST规则已读取核对 |
+| winpthreads固定SDK commit | 6 | pthread.h/compat/signal/time/unistd及sched.h与固定winpthreads/include原文一致 |
+| pixman0.46.4-3 | 2 | pixman.h原文一致；pixman-version.h.in按0/46/4替换后的1786字节/hash eebbff4b66cbcc98b3ffa16c68a919d4a16dfcffb86cd1fb85faea4f07bcd76b与实际一致 |
+| zlib1.3.2-2 | 2 | zlib.h原文一致；zconf.h保留两个configure检测结果和固定largefile patch（SHA256 8e1cdf8edfc6ac08b0e660ca42a977942a88fab3ff59c01c87ba96500e2c3e63），四处精确变换复现16970字节/hash 6f3a8f18eaa62f482d00e4d5b083afe4bbe4ace0864d2b88a78e262680788183 |
+
+GCC的119份输入对应带GPL3及Runtime Library Exception3.1声明的源内容；另两份stdint-wrap.h和gsyslimits.h为不带独立许可文字的短include wrapper，不能自行改标Public Domain。实际SDK stdarg.h则是GPLv2+与原文件独立的GCC header inclusion exception，不是RLE3.1；已完整读取，当前profile实际使用GCC，仍保留例外原文及“不排除其他GPL原因”的边界。源header权限不自动解决运行库DLL本体、其他输入或最终包的义务。
+
+22份实际SDK WIDL生成头继续追到23份可达IDL，路径均存在且有固定源身份。exdisp.idl、objectarray.idl、msxml.idl带LGPL声明，生成header中缺少该段文字不能抹掉来源；需结合实际结构/宏/inline使用、最终贡献及适用条件继续审查。此项不能由“202份头字节已匹配”关单，也没有把这些实现复制到项目。
+
+## 四个实际工具链DLL的官方发布包payload核对
+
+已分别独立下载下列官方UCRT64归档，先匹配包页公布SHA256，再读取实际DLL及所有已采集notice，逐项匹配原生22。没有将安装包名/owner当作二进制字节证明。
+
+| 包/版本 | 归档字节 | 公布且实际匹配的SHA256 |
+| --- | --- | --- |
+| libgcc16.2.0-6 | 77191 | 80b2497f019977dd9528b1abc8621b1328a0115ab1f724047ccbb56bf323f11d |
+| pixman0.46.4-3 | 356199 | 4c01b986563d2b5f7ad6fcec2d0ec9915d2f242ddac5eacddc19971964241cc5 |
+| libwinpthread14.0.0.r495.g63ebe6cdb-1 | 32075 | 1f847f4f5d56d8f54cbc9b5ce339c36f4f208353e813d4b1e5648cf33138b9a2 |
+| zlib1.3.2-2 | 111475 | 841401182976d2f9e17e5c0ebaac51f2a8014140ea53d67625e91c8fb3c85ea0 |
+
+分离签名仍未独立核验，原报告cachedArchives为空仍如实保留。payload/notice一致性不代替GCC库本体的源码/构建素材安排、逐文件权利或分发批准。
+
+下一步按实际范围继续：先用成员证据核对XWin选中的CRT/GCC与源文件及对应声明，再单独补依赖DLL内部静态/资源。SDK生成头的IDL、GCC与SDK两类不同例外和无独立声明wrapper分别审查；完整保留来源与notice条件。xkbcomp及XKB数据尚未进入当前15库构建，不用本轮版本probe代替这些运行依赖。
