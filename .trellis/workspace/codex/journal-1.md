@@ -552,3 +552,43 @@ Windows development build and archive-member evidence passed full native24, sour
 - 继续审核942个实际选择成员的逐文件与生成链条件，落实53份关联CRT主源、SDK IDL/GCC例外、notice与源码供给；不要重做原生24已通过的构建修正。
 - 继续DLL内部静态/资源与xkbcomp/XKB数据，随后随包/桌面、X3及Unix宿主硬崩溃监督。
 - Windows Rlogin精确flush仍须实际backend；7/9是范围计数，不能换算工时完成度。
+
+
+## Session 13: WF-09 Windows XKB tools and keyboard runtime data
+
+**Date**: 2026-10-19
+**Task**: WF-09 Windows XKB tools and keyboard runtime data
+**Branch**: `build/wf09-07-xkb-runtime`
+
+### Summary
+
+Continue verified PR85 in stacked Draft86: fixed XKB sources, private runtime inventory and actual native keymap evidence gates; adoption remains false.
+
+### Main Changes
+
+基线#85 HEAD8c3e90b已完成CI695/source28/原生25全部SUCCESS，原生artifact12238852113下载复核，1720份C输入与原生24逐项一致。
+
+同一XDMCP任务继续Draft #86，代码757c599：固定xkbcomp1.5.0和xkeyboard-config2.48、17实际签名、8严格源码别名与版本化数据根；安装数据与生成输出/owner、11独立生成参考、目标规则库及US/DE XKM语义往返、缺规则/空根负向、第二PE根与工具实际C输入。外部实现未复制。
+
+本地132项Python无skip、脚本回归、TypeScript、line-budget、capability/CSP/startup及实际归档解包/适配通过；11生成参考在三个Python hash seed下相同。项目无lint脚本，采用其现有检查；未把本地静态或旧代码CI当作新增原生证据。
+
+本次新增代码的实际Windows/完整CI及JSON-only artifact由Draft #86正文按精确SHA/run维护；整体X0/X2/X3、工具/DLL静态和资源、逐文件权限、notice/运行库义务、打包/签名/桌面仍未完成，所有采用字段false。保留主任务in_progress，不合并、不发布，不动#12/#54。
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `757c599bab085b5f9a67aec22edbb8e0de69cb05` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

@@ -25,4 +25,4 @@ xkbcomp COPYING为4394字节、SHA256 `6b833fdc05906ce57f016dc791db86830d49ee4da
 
 实际目标探针用私有libxkbfile解析base/evdev、pc105、US/DE五组件名。原生xkbcomp以独立-I清空默认搜索路径，仅给私有根，编译四份XKM、反编译验证AD06/AB01的Y/Z互换；空数据根必须退出1且不生成XKM，不存在规则必须由目标探针退出3。XWin和xkbcomp两个PE根分别递归核对，XWin的既有105输入/成员门禁不被解释成工具或DLL内部链接证据。
 
-本地检查及新代码的真实Windows/完整CI结果，在本分支堆叠Draft正文以精确SHA、run、artifact列出；不得借用8c3e90b或4e4e4a8的原生结果证明新增键盘功能。整体任务保持in_progress，distributionApproved/bundled/desktopVerified仍false；安装/签名、真实桌面、完整notice/运行库/资源闭包与X3继续实质开发。
+本地检查及新代码的真实Windows/完整CI结果，在[Draft #86](https://github.com/DenisZheng/NexaTerm/pull/86)正文以精确SHA、run、artifact列出；不得借用8c3e90b或4e4e4a8的原生结果证明新增键盘功能。整体任务保持in_progress，distributionApproved/bundled/desktopVerified仍false；安装/签名、真实桌面、完整notice/运行库/资源闭包与X3继续实质开发。
