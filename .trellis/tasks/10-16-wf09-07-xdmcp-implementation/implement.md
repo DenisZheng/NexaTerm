@@ -4,6 +4,16 @@
 
 2026-10-19下一刀：Windows原生构建及依赖/许可闭包。
 
+2026-10-20续作：#85最新HEAD8c3e90b的CI695/source28/原生25已全部SUCCESS，原生artifact下载复核；在同一X0任务补Windows XKB编译工具/运行数据，见[精确接续证据](research/windows-xkb-evidence.md)及`.trellis/spec/backend/xserver-windows-xkb.md`。
+
+- [x] 固定官方xkbcomp1.5.0、xkeyboard-config2.48、实际签名/公钥及不同许可声明；17依赖隔离签名本地核验。
+- [x] 版本化私有数据根、严格8别名转换、原始数据/生成输出/owner及11独立生成参考门禁。
+- [x] 实现目标规则库/实际XKM编译与Y/Z语义反编译、空根/缺规则负向、双PE根与C输入接线。
+- [x] 新代码已接入并触发独立Windows与完整CI门禁；实际执行结论只采用[Draft #86](https://github.com/DenisZheng/NexaTerm/pull/86)正文的精确SHA/run/artifact，不能借用#85基线结果。
+- [ ] 工具及DLL内部静态/资源、逐文件权限、notice/运行库本体义务、打包/签名/桌面和X3仍继续，不归档整体任务。
+
+原生28已取得Windows数据293文件/3341129字节及11参考，但xkbcomp/listing.c真实编译暴露SDK TypeString/ERROR宏冲突；先载入SDK/Xlib再定义私有宏的精确修复、提前执行的真实SDK旧/正确顺序探针，以及后续重新取证均见#86正文和research/windows-xkb-evidence.md。
+
 - [x] 固定15项直接/传递X库的官方源码、分离签名、构建参数及51项许可文件hash，区分host工具与target库；source CI27通过（代码4e4e4a8）。
 - [x] 在真实Windows UCRT64完成固定上游的编译/链接/安装：原生16（代码6e1f8fd）已通过，五项探针与递归PE导入也通过；后续曾因来源门禁FAIL；当前原生24已完成整条门禁。
 - [x] 实际AMD64 PE、XDMCP配置、原生版本probe、递归导入与完整C输入及成员门禁已过原生24（code4e4e4a8）。

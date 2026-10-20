@@ -1,6 +1,6 @@
 """执行真实目标头文件/目标库探针；不推断完整桌面能力。"""
 
-from xserver_source_review import ASSETS, digest
+from xserver_source_review import ASSETS, digest, require
 
 
 def execute_probe(name, includes, libraries, builds, work, run):
@@ -23,6 +23,17 @@ def header_probes(prefix, server_source, builds, work, report, run):
         **execute_probe("appid-property-probe", ["-I", prefix / "include", "-I", server_source / "hw/xwin"], [], builds, work, run),
         "sdkInterfaceOnly": True,
         "headerSha256": digest((server_source / "hw/xwin/propertystore.h").read_bytes())}
+    report["stage"] = "native-xkb-sdk-namespace"
+    source = ASSETS / "overlays/xkb-sdk-namespace-probe.c"
+    rejected = builds / "xkb-sdk-bad-order.o"
+    output = run(["gcc", "-std=gnu11", "-Wall", "-Wextra", "-Werror", "-I", prefix / "include",
+                  "-DNEXATERM_XKB_BAD_ORDER=1", "-c", source, "-o", rejected], work,
+                 timeout=30, capture=True, expected_exit=1)
+    require("error:" in output and ("TypeString" in output or "ERROR" in output)
+            and not rejected.exists(), "XKB_SDK_COUNTEREXAMPLE")
+    report["nativeXkbSdkNamespace"] = {
+        **execute_probe("xkb-sdk-namespace-probe", ["-I", prefix / "include"], [], builds, work, run),
+        "knownBadOrderRejected": True, "compilerDiagnosticsPreserved": True}
 
 
 def xcb_probe(prefix, builds, work, report, run):

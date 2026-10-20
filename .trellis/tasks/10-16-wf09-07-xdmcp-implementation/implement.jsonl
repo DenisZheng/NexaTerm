@@ -11,3 +11,5 @@
 {"file": ".trellis/spec/backend/xserver-windows-build.md", "reason": "Native Windows build, source/license pins and actual PE closure contract"}
 {"file": ".trellis/tasks/10-16-wf09-07-xdmcp-implementation/research/windows-build-evidence.md", "reason": "Native Windows failure history, fixed dependency/certificate/file-license evidence and unfinished adoption boundary"}
 {"file": ".trellis/tasks/10-16-wf09-07-xdmcp-implementation/research/windows-runtime-license-review.md", "reason": "Actual DLL providers, fixed packaging sources, license byte identities and unfinished XKB/resource closure"}
+{"file": ".trellis/spec/backend/xserver-windows-xkb.md", "reason": "Fixed XKB source aliases, versioned private data provenance and actual native keymap semantics"}
+{"file": ".trellis/tasks/10-16-wf09-07-xdmcp-implementation/research/windows-xkb-evidence.md", "reason": "Verified PR85 exact HEAD CI695/source28/native25 baseline and XKB primary-source continuation"}
