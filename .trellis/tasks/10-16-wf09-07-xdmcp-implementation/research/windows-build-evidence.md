@@ -4,7 +4,7 @@
 
 ## 当前继续入口
 
-code4108212已通过source CI25、完整CI692七执行job及Windows原生22整条门禁：固定依赖、五目标探针、真实DLL数据导入、完整引擎/PE/头来源、105链接输入、1720份C输入及最终-version均成功。source25与原生22的JSON-only artifact已下载逐项复核。新的archive成员级取证本地113项回归通过，尚待新代码原生验证；从本文末尾该续作继续，不重做旧编译修正。逐文件/SDK生成头/运行库及资源义务、xkbcomp/XKB数据、随包/打包/桌面仍未关闭，所有发行/随包/桌面批准false。
+code4e4e4a8已通过source CI27、完整CI694七执行job及Windows原生24整条门禁：93回归、固定15依赖、五目标探针、真实DLL数据导入、完整引擎/16文件PE/头来源、105链接输入、47归档的942个实际选择成员、1720份C输入及最终-version均成功。source27与原生24的JSON-only artifact已下载复核；544个工具链选择成员匹配官方包payload，全部1720份C身份同原生22，333份工具链头已定位固定来源，56份生成C/头/表已独立重生成。inline引用解析的原生23失败及真实双archive回归按精确代码保留。从本文末尾原生24继续，不重做旧修正。SDK/生成器条件、逐文件权限及运行库本体、DLL内部静态/资源、xkbcomp/XKB数据、随包/打包/桌面仍未关闭，所有发行/随包/桌面批准false。
 
 ## 历史里程碑：原生13
 
@@ -233,3 +233,21 @@ code898abaa的[source CI24](https://github.com/DenisZheng/NexaTerm/actions/runs/
 [原生23](https://github.com/DenisZheng/NexaTerm/actions/runs/39355826093)（code0b3551f）通过92项回归、15依赖、五探针、完整引擎、PE/头来源及105链接输入；成员门禁在记录242份实际成员后报AR_INPUT_OWNER。失败JSON已实际下载：归档270586字节、SHA256 91c97d17b7ef1df64ce30201b0c8e78a21426d1fd998e9cfcf2e71a08ebabae5。
 
 有界当前记录为archive=`../../os/.libs/libos.a(io.o)  ../../dix/.libs/libdix.a`、member=`dispatch.o`。真实GNU map同一行后半部的引用方也包含archive/member；原贪婪匹配吞入第二个archive，构造了不存在的路径。改为首个完整archive/member配对，其余原样作为reference；仍须已归属archive和唯一payload验证，没有owner豁免。新增实际GCC/ar/ld双archive引用链回归先重现相同AR_INPUT_OWNER，修正后本地114项无skip通过。完整C输入与最终版本未执行，整次仍FAIL，不继承原生22成功；修正代码等待新的Windows全链验证。
+
+## 原生24：成员取证与Windows整条门禁完成
+
+代码4e4e4a8d6bd0c6c8a0c486b25bd4d3d85da7844d通过[source CI27](https://github.com/DenisZheng/NexaTerm/actions/runs/39358749046)、[完整CI694](https://github.com/DenisZheng/NexaTerm/actions/runs/39358749111)七执行job及[Windows原生24](https://github.com/DenisZheng/NexaTerm/actions/runs/39358749081)。原生93项回归、15份实际签名/依赖、真实DLL数据导入、五探针、完整引擎编译/链接/安装、16文件PE/头来源、105链接输入、新成员门禁、完整C输入及最终XWin -version全部通过。仅JSON产物，无引擎发布；nativeBuildVerified/nativeVersionVerified=true，distributionApproved/bundled/desktopVerified=false。
+
+| 实证 | 精确结果 |
+| --- | --- |
+| source27两JSON归档 | 85272字节；SHA256 10a7d0c3b2cecb4625d13c37fbbae82f889b448df748c8ee0ec1c91abf9a731b；内容同已逐pin复核的source26/25 |
+| native24单JSON归档 | artifact12237966308，451212字节；SHA256 05285264501255e1b75eaee1fffd060cb2e075dd4a9e04d4665749757e9de3bb；已实际下载核对 |
+| XWin.exe | 2451933字节；SHA256 d3c51faf14fab3727e4ed2653d6de5d1b2f654fa91639627dc371d2e36284740；原生-version成功 |
+| 实际archive成员 | 47个archive，共14798800字节；942份唯一非空选择成员：server-build259、private-prefix139、target-toolchain544；逐个记录payload大小/hash/偏移及owner |
+| 工具链选择成员与发布包 | CRT455、GCC2、pixman73、winpthreads14，共544份；全部逐个匹配对应已核对官方归档字节 |
+| C编译输入 | 1720份唯一文件/32185519字节，全部身份记录与原生22逐字节相同；此前333份工具链头来源与56份生成文件的独立重生成核对适用于本次 |
+| 编译观察 | 各组件complete；libXau空Autest.Po仍仅bootstrap，server387条编译记录/384份bootstrap，未混计 |
+
+完整CI694实际Rust日志仍为Linux617、macOS618、Windows620个库测试，平台各19个二进制/1个集成测试通过；Linux4个既有ignored，条件打包job跳过。source27执行21项源码及93项Windows回归，15份真实签名全部通过。本地114项无skip、旧GNU2.38十项成员回归已通过。HEAD后若仅补文档，不把文档CI当作上述原生执行对象。
+
+archiveMembers.observationsComplete=true；finalSectionContributionInferred、perFileLicenseReviewComplete、dependencyDllInternalsIncluded均false。成员选择不推断最终每段字节保留，也不覆盖依赖DLL内部；53份CRT主源关联与SDK/生成器/运行库义务的后续范围见[许可实证](windows-runtime-license-review.md)。Windows开发构建与本轮成员取证通过，X0整体、X2/X3和随包桌面仍未完成。

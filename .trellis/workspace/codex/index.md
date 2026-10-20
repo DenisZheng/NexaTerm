@@ -29,7 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
-| 12 | 2026-10-20 | WF-09 Windows native engine and license provenance | `6e1f8fd`, `c2ca16f`, `60ac904`, `898abaa`, `4108212` | `build/wf09-07-xserver-windows` |
+| 12 | 2026-10-20 | WF-09 Windows native engine and license provenance | `6e1f8fd`, `c2ca16f`, `60ac904`, `898abaa`, `4108212`, `0b3551f`, `4e4e4a8` | `build/wf09-07-xserver-windows` |
 | 11 | 2026-10-18 | WF-09 X server fixed source review inputs | `1a6d899`, `bfbd225` | `build/wf09-07-xserver-source-review` |
 | 10 | 2026-10-18 | WF-09 XDMCP actual application exit completion | `d1bc04f` | `fix/wf09-07-xdmcp-shutdown` |
 | 9 | 2026-10-18 | WF-09 Windows urgent native API counterexamples | `778604c`, `3aea78d`, `99bffa6` | `feat/wf09-08a-windows-flush` |

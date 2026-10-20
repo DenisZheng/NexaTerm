@@ -15,7 +15,7 @@
   "branch": "build/wf09-07-xserver-windows",
   "base_branch": "build/wf09-07-xserver-source-review",
   "worktree_path": null,
-  "commit": "4108212227769d5635a7d7fc61010745d3a08c73",
+  "commit": "4e4e4a8d6bd0c6c8a0c486b25bd4d3d85da7844d",
   "pr_url": "https://github.com/DenisZheng/NexaTerm/pull/85",
   "subtasks": [],
   "children": [],
@@ -36,6 +36,6 @@
     "scripts/xserver_windows_linkmap.py",
     "scripts/xserver_windows_archives.py"
   ],
-  "notes": "Draft #85 stacked on #84. Code4108212 verified by source CI25, full CI692 all7 executing jobs SUCCESS and full Windows native22 SUCCESS. Native22 passed83 regressions, real DLL data import,15 dependencies,5 probes,full engine/PE/header gates,105 link inputs,1720 unique C inputs and final XWin version. JSON artifacts downloaded/pins checked; all adoption flags false. New archive-member collector binds map selections to exact owned archive/member payloads and preserves fail-closed diagnostics; local113 no-skip regressions, real GNU PE import-library and official13 CRT archive fixtures passed; fresh native pending. Four DLL/five notices, all3 CRT notices and14 CRT installed link inputs match fixed primary source/published package. Actual selected-member rights, SDK/generator conditions,DLL internals/resources,xkbcomp/XKB data,runtime GPL obligations,X2/X3 and Unix hard-crash supervision remain open. No distribution/bundled/desktop approval, merge or release.",
+  "notes": "Draft #85 stacked on #84. Code4e4e4a8 verified by source CI27, full CI694 all7 executing jobs and full Windows native24 SUCCESS. Native24 passed93 regressions,15 dependencies,5 probes,real DLL data import,full engine/16 PE/header gates,105 link inputs,47 archives/942 selected members,1720 C inputs and final version. JSON artifacts downloaded/verified; all C identities equal native22. All544 selected toolchain members match official package payloads (CRT455,GCC2,pixman73,winpthreads14). Fixed source/transforms verified for333 toolchain headers and56 generated files; CRT53 selected implementation sources associated. Native23 inline-reference failure preserved; real two-archive regression,local114 and legacy GNU2.38 ten tests passed. Per-file/SDK IDL/generator conditions,DLL internals/resources,runtime GPL source obligations,notices,xkbcomp/XKB data,X2/X3 and Unix hard-crash supervision remain open. Adoption,bundled,desktop flags remain false. No merge or release.",
   "meta": {}
 }
