@@ -49,6 +49,7 @@ The goal is to help AI assistants and new team members understand how YOUR proje
 
 - [XDMCP Managed Runner](./xdmcp-runner.md) — external development engine ownership, process group/job cleanup and explicit incomplete bundled capability.
 - [X server Source Review](./xserver-source-review.md) — fixed upstream integrity collection, bounded inventory and explicit pending component adoption.
+- [Windows X server Build](./xserver-windows-build.md) — native UCRT64 development recipe, actual PE imports and pending distribution obligations.
 
 - [Rlogin Protocol Core](./rlogin-protocol.md) — L0 request/handshake/window framing, bounded private rejection handling and loopback TCP fixtures; terminal/OOB integration remains L1.
 

@@ -1,0 +1,1259 @@
+{
+  "schema": 1,
+  "target": "x86_64-w64-mingw32",
+  "profile": "ucrt64-gdi-xdmcp-development",
+  "sourceSignatures": "required-full-primary-and-signing-fingerprints",
+  "components": [
+    {
+      "root": "util-macros-1.20.2",
+      "url": "https://xorg.freedesktop.org/releases/individual/util/util-macros-1.20.2.tar.xz",
+      "size": 83592,
+      "sha256": "9ac269eba24f672d7d7b3574e4be5f333d13f04a7712303b1821b2a51ac82e8e",
+      "name": "util-macros",
+      "buildSystem": "autotools",
+      "options": [],
+      "licenseFiles": {
+        "COPYING": "7db0516389152a90c20ea910e8839d10204ebc25ccbc71fc7f5809dfb98e80ac"
+      },
+      "signature": {
+        "url": "https://xorg.freedesktop.org/releases/individual/util/util-macros-1.20.2.tar.xz.sig",
+        "size": 566,
+        "sha256": "b7226b77576842222f3087f9ddd42af72ad50b5b560414c26617c098754baa05",
+        "algorithm": 1,
+        "digest": 10,
+        "epoch": 1731540205,
+        "fingerprint": "2F7DBCAD5B30E668BBD516C1CFDF148828C642A7",
+        "certificate": "4A193C06D35E7C670FA4EF0BA2FB9E081F2D130E"
+      },
+      "compileInputs": "headers-only"
+    },
+    {
+      "root": "xorgproto-2026.1",
+      "url": "https://xorg.freedesktop.org/releases/individual/proto/xorgproto-2026.1.tar.xz",
+      "size": 771720,
+      "sha256": "f9bfe4a9ed8c8ab9d2a3b0d49797f046052dadd06b7a8b45dbffaffb137e8290",
+      "name": "xorgproto",
+      "buildSystem": "autotools",
+      "options": [
+        "--disable-legacy"
+      ],
+      "licenseFiles": {
+        "COPYING-xf86driproto": "4a05d06752388d9db71ee1006f371d4fb2c316a821fc2fc272db90b3ef978334",
+        "COPYING-renderproto": "e0ca4f1d27a95ef7552ccdfce7e95ddf1e8b10ac713a05b49e8bd82713d7914b",
+        "COPYING-xf86dgaproto": "3591964e01a9cdfc9cc4149a847a431a3f3d98328cc9e5864c7a7831b29c4058",
+        "COPYING-dmxproto": "819e8dcd3dd2a44850c350331aa492230f86bccb0983dd739dec5ba36d7d2b8e",
+        "COPYING-dri3proto": "64a579d1a0b3347301d87c94698a58ea7933d0ae6ca7e8fdd702fde2ea376301",
+        "COPYING-kbproto": "883f26ebeffb29f955c1e2becdee284bce16c7139b1410f6f7331d3bd59bfc78",
+        "COPYING-xineramaproto": "b2d8cda803e900915ce10f0ba735ff2c033b39c7cc5a8a436667ca583d4066fa",
+        "COPYING-presentproto": "64a579d1a0b3347301d87c94698a58ea7933d0ae6ca7e8fdd702fde2ea376301",
+        "COPYING-xf86bigfontproto": "3591964e01a9cdfc9cc4149a847a431a3f3d98328cc9e5864c7a7831b29c4058",
+        "COPYING-compositeproto": "3e980a770506b448897638632974bbcbdf2da3b99191dd0a03d3770097a46738",
+        "COPYING-printproto": "46f599055002bbf3e6ce244bde8d9ebe5ec24ae7906836db186773a9791d0b75",
+        "COPYING-fontsproto": "f4af05774b02ae149357cc26f7bf5ef1116c2e09373c2492081a3a1892c58417",
+        "COPYING-resourceproto": "403e7be948674530ad40669b1e3a31adeddb656502f3b0ef810d5d3cc35d0b52",
+        "COPYING-scrnsaverproto": "fcbd3c628bf4d28ee3e6032054bf44bbe58f3b1a944dad856a8d3eb6b37ea412",
+        "COPYING-evieproto": "9936421f7516f7a17ae560b6989636b493e55c01128b543c7e72441568c3cba4",
+        "COPYING-applewmproto": "aacd931f191b610902aee1e526090c2858aabc07969441fa2537ffd3e7049555",
+        "COPYING-dri2proto": "0c306691492c4d7a8cda1ec3847668b797887dddcd7e986b4c166ae27619af7d",
+        "COPYING-xf86miscproto": "3591964e01a9cdfc9cc4149a847a431a3f3d98328cc9e5864c7a7831b29c4058",
+        "COPYING-lg3dproto": "2467132d97b75edba05d908604124be2f46ee113954f848c99bcd938055e8e4b",
+        "COPYING-windowswmproto": "eb183a00c61bb47992f096b6993ed7ec17518bea9c285fe87efff7f622cc6c12",
+        "COPYING-xf86vidmodeproto": "942bb46a3503a708948491699171b00b9e0dfb47818d9268b160bccc5f51a4b9",
+        "COPYING-videoproto": "f8f49bbad61967ebc890fb79fff5bfb7cfc1c341aa8f8dee13eb3fb534040b47",
+        "COPYING-xwaylandproto": "309bd89bc2b30c6e3d3eb78f5377fa576475499e0ba936a9c3cba50ba5d6375c",
+        "COPYING-x11proto": "da835951edc6e3b8d168d6afe7447c65d0b9a99937293cf3f288bba8244a9f86",
+        "COPYING-pmproto": "8442b5f22f2fb13017a4302a906e7dedc899267b41f613558970941120170128",
+        "COPYING-glproto": "823deb4673d3f26aa8c90e704888299648f00be3262f9363eaeecedcd65b936d",
+        "COPYING-bigreqsproto": "dabc025f93129a0eb2d17f37c719dbe5ecbcb5bc8f7bc7f4ce89fe04576cc0c2",
+        "COPYING-xf86rushproto": "3591964e01a9cdfc9cc4149a847a431a3f3d98328cc9e5864c7a7831b29c4058",
+        "COPYING-xextproto": "9ce418e7d81cb230d8a53b07a7d9d705fc830dd095c104ba5d9405dc98be8357",
+        "COPYING-damageproto": "f67a18cb46c4c203c5122b4a901cfcc3178b2a62f83f31ca5fef5bdca3966094",
+        "COPYING-fixesproto": "fb361c7c4322e4919ae193c5a20055d5190c23aa50480fd0a41f4d439cae2bc6",
+        "COPYING-fontcacheproto": "1ab381e978bff63d68be2e4f235d51935f3f16f3ba3bebf83afa99a70c0484a2",
+        "COPYING-trapproto": "2c1807ecb78dddba1a9cd612a11bfdbc013b77144880ec3c268241495cb022dd",
+        "COPYING-randrproto": "41c13dcd09147ed2440286f2fb8151df8ebee06deee4ed78ddf094601c216d3d",
+        "COPYING-xcmiscproto": "5531d18cfcc944dab39991f63f182cbbce3fe493ba0c7cf08a25c0d01ee84482",
+        "COPYING-recordproto": "e37891ac36e827611d6e7ae51ddb14a9cc9ba56f6cc87c55b6ce3b6d76cd2bf4",
+        "COPYING-inputproto": "5e083a2ace0215a6084c877c023a6079952ba803d692488203ba4269196debe3"
+      },
+      "signature": {
+        "url": "https://xorg.freedesktop.org/releases/individual/proto/xorgproto-2026.1.tar.xz.sig",
+        "size": 594,
+        "sha256": "5551ac3d462c583037209cfd905c8b04c8e585b4c6d59dc032719c1c1f638f90",
+        "algorithm": 1,
+        "digest": 10,
+        "epoch": 1791049981,
+        "fingerprint": "3AB285232C46AE43D8E192F4DAB0F78EA6E7E2D2",
+        "certificate": "3AB285232C46AE43D8E192F4DAB0F78EA6E7E2D2"
+      },
+      "patches": [
+        {
+          "path": "include/X11/Xwinsock.h",
+          "beforeSha256": "8b782cf21f6b1cc1f0b190a73061144c75a1ce5519ffa46302e291d87a83f212",
+          "afterSha256": "37614a2e2d91a8c939505b28a6fd35b4a765464a5b0dad694f09355a13e109bb",
+          "reason": "Load base Windows/COM declarations through the matching protected namespace first; wrap IPv6 and native 64-bit names before restoring X11 identifiers. Preserve the Open Group notice.",
+          "replacements": [
+            {
+              "before": "#include <winsock2.h>\n",
+              "after": "#include <winsock2.h>\n#include <ws2tcpip.h>\n"
+            },
+            {
+              "before": "#undef _XFree86Server\n",
+              "after": "#include <X11/Xwindows.h>\n\n#undef _XFree86Server\n"
+            },
+            {
+              "before": "#define INT32 wINT32\n",
+              "after": "#define INT32 wINT32\n#ifdef __x86_64__\n#define INT64 wINT64\n#define LONG64 wLONG64\n#endif\n"
+            },
+            {
+              "before": "#undef INT32\n",
+              "after": "#undef INT32\n#undef INT64\n#undef LONG64\n"
+            }
+          ]
+        },
+        {
+          "path": "include/X11/Xwindows.h",
+          "beforeSha256": "f325abc2e6e77e3a747bc89c45d5dbb4b8ba6c473793a6aa0bd28dddc64d327b",
+          "afterSha256": "edb4b6808d5d233315f60e2127ee04b90b1e85797e4eec2108524273ec2bbb24",
+          "reason": "Load COM base declarations while SDK aliases are active, avoiding late Status/INT64 conflicts and Winsock1 inclusion; preserve the caller lean-header macro and original notice.",
+          "replacements": [
+            {
+              "before": "#include <windows.h>\n",
+              "after": "#pragma push_macro(\"WIN32_LEAN_AND_MEAN\")\n#ifndef WIN32_LEAN_AND_MEAN\n#define WIN32_LEAN_AND_MEAN\n#endif\n#include <windows.h>\n#include <objbase.h>\n#include <shlwapi.h>\n#include <propsys.h>\n#pragma pop_macro(\"WIN32_LEAN_AND_MEAN\")\n"
+            }
+          ]
+        }
+      ],
+      "compileInputs": "headers-only"
+    },
+    {
+      "root": "xtrans-1.6.0",
+      "url": "https://xorg.freedesktop.org/releases/individual/lib/xtrans-1.6.0.tar.xz",
+      "size": 177156,
+      "sha256": "faafea166bf2451a173d9d593352940ec6404145c5d1da5c213423ce4d359e92",
+      "name": "xtrans",
+      "buildSystem": "autotools",
+      "options": [],
+      "licenseFiles": {
+        "COPYING": "3fe68a84ab89e82947e560316ab70cf2d02a8b978ae5cf4fbdfd53fc5b917308"
+      },
+      "signature": {
+        "url": "https://xorg.freedesktop.org/releases/individual/lib/xtrans-1.6.0.tar.xz.sig",
+        "size": 566,
+        "sha256": "fd24b80cdcbeb03b582623bf9f770004a66473b17d5b3163301915794acc3c35",
+        "algorithm": 1,
+        "digest": 10,
+        "epoch": 1741479206,
+        "fingerprint": "2F7DBCAD5B30E668BBD516C1CFDF148828C642A7",
+        "certificate": "4A193C06D35E7C670FA4EF0BA2FB9E081F2D130E"
+      },
+      "compileInputs": "headers-only",
+      "patches": [
+        {
+          "path": "Xtranssock.c",
+          "beforeSha256": "bc444f17ac712460c2bdabaae1aab4b5ee48ac5e2d29b72716af7e4d76b9fa6a",
+          "afterSha256": "d5c9ec050608952bf23ec6b20b48bbd94585be902e16a431d294dcac9beed60a",
+          "reason": "Use the Winsock byte-buffer signature for the same integer IPv6-only option and length; preserve the original notice.",
+          "replacements": [
+            {
+              "before": "IPV6_V6ONLY, &one, sizeof(int)",
+              "after": "IPV6_V6ONLY, (const char *)&one, sizeof(int)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "root": "libXau-1.0.12",
+      "url": "https://xorg.freedesktop.org/releases/individual/lib/libXau-1.0.12.tar.xz",
+      "size": 282624,
+      "sha256": "74d0e4dfa3d39ad8939e99bda37f5967aba528211076828464d2777d477fc0fb",
+      "name": "libXau",
+      "buildSystem": "autotools",
+      "options": [],
+      "licenseFiles": {
+        "COPYING": "56abe29bb1d9806a9e04fa9f80fed2c0f18027594df3f098148d814aef6bddfa"
+      },
+      "signature": {
+        "url": "https://xorg.freedesktop.org/releases/individual/lib/libXau-1.0.12.tar.xz.sig",
+        "size": 566,
+        "sha256": "7f8953455d6e8838cc4adb8d83f7c72498c6c8a1641b0e7396de2d6fe8e42219",
+        "algorithm": 1,
+        "digest": 10,
+        "epoch": 1734140008,
+        "fingerprint": "2F7DBCAD5B30E668BBD516C1CFDF148828C642A7",
+        "certificate": "4A193C06D35E7C670FA4EF0BA2FB9E081F2D130E"
+      },
+      "compileInputs": "compiler"
+    },
+    {
+      "root": "libXdmcp-1.1.5",
+      "url": "https://xorg.freedesktop.org/releases/individual/lib/libXdmcp-1.1.5.tar.xz",
+      "size": 297596,
+      "sha256": "d8a5222828c3adab70adf69a5583f1d32eb5ece04304f7f8392b6a353aa2228c",
+      "name": "libXdmcp",
+      "buildSystem": "autotools",
+      "options": [],
+      "licenseFiles": {
+        "COPYING": "8a3c3f35b0dbcb60a4e242b9e4394a352a65bb27deb2938ea1e2e62a626e16e9"
+      },
+      "signature": {
+        "url": "https://xorg.freedesktop.org/releases/individual/lib/libXdmcp-1.1.5.tar.xz.sig",
+        "size": 566,
+        "sha256": "d1d724f603af4cf86e3603f95bf39f77b22a7c2897c2a667ff1a5d216e24e7a6",
+        "algorithm": 1,
+        "digest": 10,
+        "epoch": 1709415471,
+        "fingerprint": "2F7DBCAD5B30E668BBD516C1CFDF148828C642A7",
+        "certificate": "4A193C06D35E7C670FA4EF0BA2FB9E081F2D130E"
+      },
+      "compileInputs": "compiler"
+    },
+    {
+      "root": "libpthread-stubs-0.5",
+      "url": "https://xcb.freedesktop.org/dist/libpthread-stubs-0.5.tar.xz",
+      "size": 56980,
+      "sha256": "59da566decceba7c2a7970a4a03b48d9905f1262ff94410a649224e33d2442bc",
+      "name": "libpthread-stubs",
+      "buildSystem": "autotools",
+      "options": [],
+      "licenseFiles": {
+        "COPYING": "78c20706e799f2b8f445e71d3d2ade6ba23b3388fd6cbeed7d71796623febde8"
+      },
+      "signature": {
+        "url": "https://xcb.freedesktop.org/dist/libpthread-stubs-0.5.tar.xz.sig",
+        "size": 543,
+        "sha256": "5a669e5d454b8c323adc90cb52d2f03e3c5943cf5bc51e1d1dec8c11c11b89de",
+        "algorithm": 1,
+        "digest": 10,
+        "epoch": 1689713547,
+        "fingerprint": "2F7DBCAD5B30E668BBD516C1CFDF148828C642A7",
+        "certificate": "4A193C06D35E7C670FA4EF0BA2FB9E081F2D130E"
+      },
+      "compileInputs": "headers-only"
+    },
+    {
+      "root": "xcb-proto-1.17.0",
+      "url": "https://xcb.freedesktop.org/dist/xcb-proto-1.17.0.tar.xz",
+      "size": 151748,
+      "sha256": "2c1bacd2110f4799f74de6ebb714b94cf6f80fb112316b1219480fd22562148c",
+      "name": "xcb-proto",
+      "buildSystem": "autotools",
+      "options": [],
+      "licenseFiles": {
+        "COPYING": "c5ffbfeaa501071ceeb97b7de2c0d703fdaa35de01c0fb6cbac1c28453a3e9fd"
+      },
+      "signature": {
+        "url": "https://xcb.freedesktop.org/dist/xcb-proto-1.17.0.tar.xz.sig",
+        "size": 215,
+        "sha256": "7d057fc8432560b81e10b61f8ac1f646977f5dc1e2b5d4149b823c6966fbd561",
+        "algorithm": 22,
+        "digest": 10,
+        "epoch": 1713191947,
+        "fingerprint": "16238A7D92448B02B7B10344B6B1CEAE5103DB07",
+        "certificate": "3BB639E56F861FA2E86505690FDD682D974CA72A"
+      },
+      "compileInputs": "headers-only"
+    },
+    {
+      "root": "libxcb-1.17.0",
+      "url": "https://xcb.freedesktop.org/dist/libxcb-1.17.0.tar.xz",
+      "size": 455208,
+      "sha256": "599ebf9996710fea71622e6e184f3a8ad5b43d0e5fa8c4e407123c88a59a6d55",
+      "name": "libxcb",
+      "buildSystem": "autotools",
+      "options": [
+        "--enable-xinput",
+        "--enable-xkb",
+        "--disable-devel-docs"
+      ],
+      "licenseFiles": {
+        "COPYING": "c5ffbfeaa501071ceeb97b7de2c0d703fdaa35de01c0fb6cbac1c28453a3e9fd"
+      },
+      "patches": [
+        {
+          "path": "src/xcb_util.c",
+          "beforeSha256": "d0af551672787618a65841a4cd474ffcf577d283c591714b04dd079c14a93c57",
+          "afterSha256": "3fd029a4cbc8bdff0363eb5dac5f00d9484523469fc26f6aa546bda4e467cca1",
+          "reason": "Winsock setsockopt accepts a const char buffer; retain the original int value and length without suppressing pointer diagnostics. Request the same Winsock 2.2 WORD directly because MAKEWORD expands the SDK BYTE name after X11 restores its namespace.",
+          "replacements": [
+            {
+              "before": "TCP_NODELAY, &on, sizeof(on)",
+              "after": "TCP_NODELAY, (const char *)&on, sizeof(on)"
+            },
+            {
+              "before": "SO_KEEPALIVE, &on, sizeof(on)",
+              "after": "SO_KEEPALIVE, (const char *)&on, sizeof(on)"
+            },
+            {
+              "before": "WSAStartup(MAKEWORD(2, 2), &wsaData)",
+              "after": "WSAStartup((WORD)0x0202, &wsaData)"
+            }
+          ]
+        },
+        {
+          "path": "src/xcb_windefs.h",
+          "beforeSha256": "ca940d79a1a6234263b966a095358fbbc0f1c34bc892112520ef91bc9ad08c90",
+          "afterSha256": "a32ecdd971c47ae1d1c84fdb702e91b46133299ce8b29724adb94c36b5097833",
+          "reason": "This integrated native profile already owns fixed xorgproto headers. Use its protected Winsock namespace so XCB-first consumers retain distinct Windows and X11 BOOL/INT32 types; preserve the original permission notice.",
+          "replacements": [
+            {
+              "before": "#include <winsock2.h>\n#include <ws2tcpip.h>\n#include <windef.h>\n",
+              "after": "#include <X11/Xwinsock.h>\n"
+            }
+          ]
+        }
+      ],
+      "signature": {
+        "url": "https://xcb.freedesktop.org/dist/libxcb-1.17.0.tar.xz.sig",
+        "size": 215,
+        "sha256": "2829ef79617e521913e7ed36cd7c494f1300f901e2e9d1bd6795ecf212bd7ebf",
+        "algorithm": 22,
+        "digest": 10,
+        "epoch": 1713193868,
+        "fingerprint": "16238A7D92448B02B7B10344B6B1CEAE5103DB07",
+        "certificate": "3BB639E56F861FA2E86505690FDD682D974CA72A"
+      },
+      "compileInputs": "compiler"
+    },
+    {
+      "root": "xcb-util-0.4.1",
+      "url": "https://xorg.freedesktop.org/releases/individual/lib/xcb-util-0.4.1.tar.xz",
+      "size": 267396,
+      "sha256": "5abe3bbbd8e54f0fa3ec945291b7e8fa8cfd3cccc43718f8758430f94126e512",
+      "name": "xcb-util",
+      "buildSystem": "autotools",
+      "options": [],
+      "licenseFiles": {
+        "COPYING": "325b64f0b0284e08bbb7a78ae3e55c1edc2a7cd77f603225ae4b8ffc35423e37"
+      },
+      "signature": {
+        "url": "https://xorg.freedesktop.org/releases/individual/lib/xcb-util-0.4.1.tar.xz.sig",
+        "size": 543,
+        "sha256": "612a1b84e815f50832061668fe8f7f1ae4c3c1f28dd6e2d92ad53cee7d099864",
+        "algorithm": 1,
+        "digest": 10,
+        "epoch": 1671502340,
+        "fingerprint": "2F7DBCAD5B30E668BBD516C1CFDF148828C642A7",
+        "certificate": "4A193C06D35E7C670FA4EF0BA2FB9E081F2D130E"
+      },
+      "compileInputs": "compiler"
+    },
+    {
+      "root": "xcb-util-image-0.4.1",
+      "url": "https://xorg.freedesktop.org/releases/individual/lib/xcb-util-image-0.4.1.tar.xz",
+      "size": 289016,
+      "sha256": "ccad8ee5dadb1271fd4727ad14d9bd77a64e505608766c4e98267d9aede40d3d",
+      "name": "xcb-util-image",
+      "buildSystem": "autotools",
+      "options": [],
+      "licenseFiles": {
+        "COPYING": "19672c6153d8c4870abe734fa4dd2197481a311f4788d02ad729be07e116b26b"
+      },
+      "signature": {
+        "url": "https://xorg.freedesktop.org/releases/individual/lib/xcb-util-image-0.4.1.tar.xz.sig",
+        "size": 543,
+        "sha256": "89934c101ba19619e26b0c9ca5407ee8d5cca5873b7b16108eb03f9f71ca5bd3",
+        "algorithm": 1,
+        "digest": 10,
+        "epoch": 1666122659,
+        "fingerprint": "2F7DBCAD5B30E668BBD516C1CFDF148828C642A7",
+        "certificate": "4A193C06D35E7C670FA4EF0BA2FB9E081F2D130E"
+      },
+      "compileInputs": "compiler"
+    },
+    {
+      "root": "xcb-util-wm-0.4.2",
+      "url": "https://xorg.freedesktop.org/releases/individual/lib/xcb-util-wm-0.4.2.tar.xz",
+      "size": 285152,
+      "sha256": "62c34e21d06264687faea7edbf63632c9f04d55e72114aa4a57bb95e4f888a0b",
+      "name": "xcb-util-wm",
+      "buildSystem": "autotools",
+      "options": [],
+      "licenseFiles": {
+        "COPYING": "12ab3559977a4b22ae3030b90c64a386e6ec51ab0e4eab1ff530f81a2639400a"
+      },
+      "signature": {
+        "url": "https://xorg.freedesktop.org/releases/individual/lib/xcb-util-wm-0.4.2.tar.xz.sig",
+        "size": 543,
+        "sha256": "9a21d3c27273c6ab340b9b93b4ab1a084a8a28bf39a84b1013c57aaf04e7a2da",
+        "algorithm": 1,
+        "digest": 10,
+        "epoch": 1666145064,
+        "fingerprint": "2F7DBCAD5B30E668BBD516C1CFDF148828C642A7",
+        "certificate": "4A193C06D35E7C670FA4EF0BA2FB9E081F2D130E"
+      },
+      "compileInputs": "compiler"
+    },
+    {
+      "root": "libX11-1.8.14",
+      "url": "https://xorg.freedesktop.org/releases/individual/lib/libX11-1.8.14.tar.xz",
+      "size": 1897544,
+      "sha256": "bbc78c46217174655c2b32b138ad119f3ac15f50808b4d0b3a2677a4b1afc950",
+      "name": "libX11",
+      "buildSystem": "autotools",
+      "options": [
+        "--disable-loadable-i18n",
+        "--disable-specs",
+        "--without-xmlto",
+        "--without-fop",
+        "--without-xsltproc"
+      ],
+      "licenseFiles": {
+        "COPYING": "eda0c2ed1cae0280c7fe79762eaad8ad31c044afc64e71e92ef2c6f3cd7bc395"
+      },
+      "signature": {
+        "url": "https://xorg.freedesktop.org/releases/individual/lib/libX11-1.8.14.tar.xz.sig",
+        "size": 594,
+        "sha256": "96634abc2fb2e46b56d907d0c43109137ebac6c2dcd20d9e5707cf6cc53dabea",
+        "algorithm": 1,
+        "digest": 10,
+        "epoch": 1792179000,
+        "fingerprint": "3AB285232C46AE43D8E192F4DAB0F78EA6E7E2D2",
+        "certificate": "3AB285232C46AE43D8E192F4DAB0F78EA6E7E2D2"
+      },
+      "patches": [
+        {
+          "path": "modules/im/ximcp/imDefIc.c",
+          "beforeSha256": "0436b4a4b006c82eb0b4de6ff9e118d574e6bab9b182d3302c9d297ddf5d8821",
+          "afterSha256": "95faad31fbf8ca579fc1ab19e3ec162cd6347044a978c00ab3317d6273fe87d5",
+          "reason": "Explicit pointer-width scalar bridge for LLP64 XIM/locale varargs and XIDs. Keep public scalar widths, sign extension and original license notices; do not suppress pointer diagnostics.",
+          "replacements": [
+            {
+              "before": "(XIMStyle)p->value",
+              "after": "(XIMStyle)(uintptr_t)p->value",
+              "occurrences": 1
+            }
+          ]
+        },
+        {
+          "path": "modules/im/ximcp/imRm.c",
+          "beforeSha256": "1f7d5193bba19d3d8c6ee73ad0ae208016dfa4089349a1e0073857cb50161630",
+          "afterSha256": "8f097a102c4dfb767c359a1c7b3cd8bd9dbe03465efe1496db7889257d36f6a2",
+          "reason": "Explicit pointer-width scalar bridge for LLP64 XIM/locale varargs and XIDs. Keep public scalar widths, sign extension and original license notices; do not suppress pointer diagnostics.",
+          "replacements": [
+            {
+              "before": "(Window)val",
+              "after": "(Window)(uintptr_t)val",
+              "occurrences": 1
+            },
+            {
+              "before": "(XIMResetState)val",
+              "after": "(XIMResetState)(uintptr_t)val",
+              "occurrences": 1
+            },
+            {
+              "before": "(XIMHotKeyState)val",
+              "after": "(XIMHotKeyState)(uintptr_t)val",
+              "occurrences": 1
+            },
+            {
+              "before": "(Colormap)val",
+              "after": "(Colormap)(uintptr_t)val",
+              "occurrences": 1
+            },
+            {
+              "before": "(Atom)val",
+              "after": "(Atom)(uintptr_t)val",
+              "occurrences": 1
+            },
+            {
+              "before": "(unsigned long)val",
+              "after": "(unsigned long)(uintptr_t)val",
+              "occurrences": 1
+            },
+            {
+              "before": "(Pixmap)val",
+              "after": "(Pixmap)(uintptr_t)val",
+              "occurrences": 1
+            },
+            {
+              "before": "(Cursor)val",
+              "after": "(Cursor)(uintptr_t)val",
+              "occurrences": 1
+            },
+            {
+              "before": "(XIMPreeditState)val",
+              "after": "(XIMPreeditState)(uintptr_t)val",
+              "occurrences": 1
+            },
+            {
+              "before": "(Window)p->value",
+              "after": "(Window)(uintptr_t)p->value",
+              "occurrences": 3
+            },
+            {
+              "before": "(Atom)p->value",
+              "after": "(Atom)(uintptr_t)p->value",
+              "occurrences": 2
+            },
+            {
+              "before": "(long)val",
+              "after": "(long)(intptr_t)val",
+              "occurrences": 1
+            },
+            {
+              "before": "(Window)NULL",
+              "after": "None",
+              "occurrences": 3
+            },
+            {
+              "before": "(XIMStyle)val",
+              "after": "(XIMStyle)(uintptr_t)val"
+            }
+          ]
+        },
+        {
+          "path": "modules/im/ximcp/imRmAttr.c",
+          "beforeSha256": "a54ca9ddb1ac27475c327aaa1cbc371a179d16c617cd32c3ea66cce120eee4d0",
+          "afterSha256": "a379abb206e2a8f44f7faffccfd27e20f1c44d8b2306366bc3916f993be4fa52",
+          "reason": "Explicit pointer-width scalar bridge for LLP64 XIM/locale varargs and XIDs. Keep public scalar widths, sign extension and original license notices; do not suppress pointer diagnostics.",
+          "replacements": [
+            {
+              "before": "(Window)p->value",
+              "after": "(Window)(uintptr_t)p->value",
+              "occurrences": 3
+            },
+            {
+              "before": "(Atom)p->value",
+              "after": "(Atom)(uintptr_t)p->value",
+              "occurrences": 2
+            },
+            {
+              "before": "(long)value",
+              "after": "(long)(intptr_t)value",
+              "occurrences": 3
+            }
+          ]
+        },
+        {
+          "path": "src/xlibi18n/XDefaultIMIF.c",
+          "beforeSha256": "005ea2e42661961c1181b8560da7538b7a1754b0687534f0755f6792df8ab341",
+          "afterSha256": "d7d239413fd14ef3d8bfa8eeadb43568f294a389bad125aa049797883d7c8e7a",
+          "reason": "Explicit pointer-width scalar bridge for LLP64 XIM/locale varargs and XIDs. Keep public scalar widths, sign extension and original license notices; do not suppress pointer diagnostics.",
+          "replacements": [
+            {
+              "before": "(XIMStyle)p->value",
+              "after": "(XIMStyle)(uintptr_t)p->value",
+              "occurrences": 1
+            },
+            {
+              "before": "(Window)p->value",
+              "after": "(Window)(uintptr_t)p->value",
+              "occurrences": 2
+            }
+          ]
+        },
+        {
+          "path": "src/xlibi18n/lcWrap.c",
+          "beforeSha256": "c923f6899831065d4a308a8a10b4c5604cf3277ea456d5fc6ca65f4beafff000",
+          "afterSha256": "a6a4688ab35242c95542e677654730601d98aea7d1cc85c333f0342a639b5bd1",
+          "reason": "Explicit pointer-width scalar bridge for LLP64 XIM/locale varargs and XIDs. Keep public scalar widths, sign extension and original license notices; do not suppress pointer diagnostics.",
+          "replacements": [
+            {
+              "before": "(long) src",
+              "after": "(long)(intptr_t) src",
+              "occurrences": 4
+            }
+          ]
+        },
+        {
+          "path": "src/xlibi18n/IMWrap.c",
+          "beforeSha256": "19525b832acd3b859f883134ad5b23e6dcebc9295ccfe26b2c138b3371093f22",
+          "afterSha256": "d54bcaf1cd5fb02975a90528d73999066d3f6a5abdce13e1c9d0073d13053d40",
+          "reason": "Explicit pointer-width scalar bridge for LLP64 XIM/locale varargs and XIDs. Keep public scalar widths, sign extension and original license notices; do not suppress pointer diagnostics.",
+          "replacements": [
+            {
+              "before": "(XPointer)u.longval",
+              "after": "(XPointer)(intptr_t)u.longval",
+              "occurrences": 1
+            },
+            {
+              "before": "(XPointer)(long)u.intval",
+              "after": "(XPointer)(intptr_t)u.intval",
+              "occurrences": 1
+            },
+            {
+              "before": "(XPointer)(long)u.shortval",
+              "after": "(XPointer)(intptr_t)u.shortval",
+              "occurrences": 1
+            },
+            {
+              "before": "(XPointer)(long)u.charval",
+              "after": "(XPointer)(intptr_t)u.charval",
+              "occurrences": 1
+            }
+          ]
+        },
+        {
+          "path": "src/ParseCmd.c",
+          "beforeSha256": "875a2a227812ff8251399f985464dc1769152fa77fd350d4592af94f03294ee5",
+          "afterSha256": "48c7a1c3e9c9c6c685d3b873c3f1b89861cf60fe18e20b7495a32733222c56ee",
+          "reason": "Explicit pointer-width scalar bridge for LLP64 XIM/locale varargs and XIDs. Keep public scalar widths, sign extension and original license notices; do not suppress pointer diagnostics.",
+          "replacements": [
+            {
+              "before": "(long) options[i].value",
+              "after": "(long)(intptr_t) options[i].value",
+              "occurrences": 1
+            }
+          ]
+        }
+      ],
+      "installedAnchors": {
+        "include/X11/extensions/XKBgeom.h": {
+          "size": 13758,
+          "sha256": "420d8335306aad84fde239eba310e7da5ffaecb572111ce78e42736fba77828f"
+        }
+      },
+      "compileInputs": "compiler"
+    },
+    {
+      "root": "libxkbfile-1.2.0",
+      "url": "https://xorg.freedesktop.org/releases/individual/lib/libxkbfile-1.2.0.tar.xz",
+      "size": 57856,
+      "sha256": "7f71884e5faf56fb0e823f3848599cf9b5a9afce51c90982baeb64f635233ebf",
+      "name": "libxkbfile",
+      "buildSystem": "meson",
+      "options": [],
+      "licenseFiles": {
+        "COPYING": "e1b3fdad8037ab3f986ef9caaa7c8da47d8d55875e680c7d6011f6c07363ea7c"
+      },
+      "signature": {
+        "url": "https://xorg.freedesktop.org/releases/individual/lib/libxkbfile-1.2.0.tar.xz.sig",
+        "size": 566,
+        "sha256": "29d99d31510ab32ce4d4c061dd1cb673e69a5b09783822082888b0599cf0b95a",
+        "algorithm": 1,
+        "digest": 10,
+        "epoch": 1769385411,
+        "fingerprint": "3AB285232C46AE43D8E192F4DAB0F78EA6E7E2D2",
+        "certificate": "3AB285232C46AE43D8E192F4DAB0F78EA6E7E2D2"
+      },
+      "compileInputs": "compiler"
+    },
+    {
+      "root": "libfontenc-1.1.9",
+      "url": "https://xorg.freedesktop.org/releases/individual/lib/libfontenc-1.1.9.tar.xz",
+      "size": 280828,
+      "sha256": "9d8392705cb10803d5fe1d27d236cbab3f664e26841ce01916bbbe430cf273e2",
+      "name": "libfontenc",
+      "buildSystem": "autotools",
+      "options": [],
+      "licenseFiles": {
+        "COPYING": "a4dda7a643b517794bfa23dc9605da030055df38ac8a5b9e1905e690975a59c4"
+      },
+      "signature": {
+        "url": "https://xorg.freedesktop.org/releases/individual/lib/libfontenc-1.1.9.tar.xz.sig",
+        "size": 566,
+        "sha256": "480820d0a6690fd3eaa946734006f3e03472d838e34eafd75cb02b62c11178d8",
+        "algorithm": 1,
+        "digest": 10,
+        "epoch": 1770514803,
+        "fingerprint": "3AB285232C46AE43D8E192F4DAB0F78EA6E7E2D2",
+        "certificate": "3AB285232C46AE43D8E192F4DAB0F78EA6E7E2D2"
+      },
+      "compileInputs": "compiler"
+    },
+    {
+      "root": "libXfont2-2.0.9",
+      "url": "https://xorg.freedesktop.org/releases/individual/lib/libXfont2-2.0.9.tar.xz",
+      "size": 478844,
+      "sha256": "f042a370666815e7b941e9b7019024755bd1c6c2954afbfa515af378251799e2",
+      "name": "libXfont2",
+      "buildSystem": "autotools",
+      "options": [
+        "--disable-freetype",
+        "--without-bzip2",
+        "--disable-devel-docs"
+      ],
+      "licenseFiles": {
+        "COPYING": "3b1047f0d45584973866a40e3eedc74aea4c6ac636960d650ae05af603e6d1a8"
+      },
+      "signature": {
+        "url": "https://xorg.freedesktop.org/releases/individual/lib/libXfont2-2.0.9.tar.xz.sig",
+        "size": 95,
+        "sha256": "7c0d4b5a8e51565ddd51c0aad0bfeab798ce28c9cb2eaa7df3dcf9670b03defc",
+        "algorithm": 17,
+        "digest": 2,
+        "epoch": 1785891596,
+        "fingerprint": "3C2C43D9447D5938EF4551EBE23B7E70B467F0BF",
+        "certificate": "3C2C43D9447D5938EF4551EBE23B7E70B467F0BF"
+      },
+      "patches": [
+        {
+          "path": "src/fontfile/bufio.c",
+          "beforeSha256": "a43645785c58da03225932bbcfe35bb0411e6b435e66f722bcbbef67a9a34d91",
+          "afterSha256": "aa4256dd104380818a87842e068249bb3659d68c6717ed8403fe49e9f913344f",
+          "reason": "Bridge signed CRT file descriptors through intptr_t instead of LLP64 long when encoding/decoding the existing opaque private field. Retain the Open Group notice and all IO/close behavior.",
+          "replacements": [
+            {
+              "before": "#include <errno.h>\n",
+              "after": "#include <errno.h>\n#include <stdint.h>\n"
+            },
+            {
+              "before": "((int)(long) (f)->private)",
+              "after": "((int)(intptr_t) (f)->private)"
+            },
+            {
+              "before": "(char *)(long) fd",
+              "after": "(char *)(intptr_t) fd",
+              "occurrences": 2
+            }
+          ]
+        }
+      ],
+      "compileInputs": "compiler"
+    }
+  ],
+  "serverOptions": [
+    "--enable-xwin",
+    "--disable-xorg",
+    "--disable-xvfb",
+    "--disable-xnest",
+    "--disable-xquartz",
+    "--enable-xdmcp",
+    "--enable-xdm-auth-1",
+    "--disable-glx",
+    "--disable-glamor",
+    "--disable-dri",
+    "--disable-dri2",
+    "--disable-dri3",
+    "--disable-libdrm",
+    "--disable-config-udev",
+    "--disable-config-udev-kms",
+    "--disable-config-hal",
+    "--disable-systemd-logind",
+    "--disable-secure-rpc",
+    "--disable-input-thread",
+    "--disable-docs",
+    "--disable-devel-docs",
+    "--with-sha1=CryptoAPI",
+    "--with-default-font-path=built-ins",
+    "--disable-debug",
+    "--disable-unit-tests"
+  ],
+  "serverExecutable": "XWin.exe",
+  "certificates": {
+    "4A193C06D35E7C670FA4EF0BA2FB9E081F2D130E": {
+      "file": "dependency-keys/4A193C06D35E7C670FA4EF0BA2FB9E081F2D130E.asc",
+      "size": 11298,
+      "sha256": "4bb44c8e72e3e27b7b690458fd3c0adb8e1ca8fa7c6911a607e8512fe5088383",
+      "primaryFingerprint": "4A193C06D35E7C670FA4EF0BA2FB9E081F2D130E",
+      "primaryBits": 1024,
+      "primaryAlgorithm": 17,
+      "source": "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x4A193C06D35E7C670FA4EF0BA2FB9E081F2D130E",
+      "transportSize": 11299,
+      "transportSha256": "cac9ff620d3c3b984b5f72d674adb8cfd728cc796c0bae96ccc77c346d220c74",
+      "normalization": "Removed one trailing ASCII space from the unauthenticated armor Comment header; decoded public certificate is unchanged."
+    },
+    "3AB285232C46AE43D8E192F4DAB0F78EA6E7E2D2": {
+      "file": "dependency-keys/3AB285232C46AE43D8E192F4DAB0F78EA6E7E2D2.asc",
+      "size": 6599,
+      "sha256": "539086534f086f03f40de70ce5133cad94a013877f1b36a41e7cd663272d8752",
+      "primaryFingerprint": "3AB285232C46AE43D8E192F4DAB0F78EA6E7E2D2",
+      "primaryBits": 4096,
+      "primaryAlgorithm": 1,
+      "source": "https://keys.openpgp.org/vks/v1/by-fingerprint/3AB285232C46AE43D8E192F4DAB0F78EA6E7E2D2"
+    },
+    "3BB639E56F861FA2E86505690FDD682D974CA72A": {
+      "file": "dependency-keys/3BB639E56F861FA2E86505690FDD682D974CA72A.asc",
+      "size": 45557,
+      "sha256": "be61fb4b9f8b8f4b9600585a59290931fdfb4ad3d7302b29cf29f376fa028c23",
+      "primaryFingerprint": "3BB639E56F861FA2E86505690FDD682D974CA72A",
+      "primaryBits": 4096,
+      "primaryAlgorithm": 1,
+      "source": "https://keys.openpgp.org/vks/v1/by-fingerprint/16238A7D92448B02B7B10344B6B1CEAE5103DB07"
+    },
+    "3C2C43D9447D5938EF4551EBE23B7E70B467F0BF": {
+      "file": "release-key.asc",
+      "size": 1598,
+      "sha256": "bc15a0a9ef7cf3d7e8290db3a280caf4440f74aa00d6f08e2ec00ef08486d081",
+      "primaryFingerprint": "3C2C43D9447D5938EF4551EBE23B7E70B467F0BF",
+      "primaryBits": 1024,
+      "primaryAlgorithm": 17,
+      "source": "https://keys.openpgp.org/vks/v1/by-fingerprint/3C2C43D9447D5938EF4551EBE23B7E70B467F0BF"
+    }
+  },
+  "serverFileReview": [
+    {
+      "path": "hw/xwin/winprefsyacc.c",
+      "sha256": "77b1fa1220e6db6cb8bba5a8e3d826f8289f6b198bdf0b1757fd7aa284c67ec8",
+      "size": 66840,
+      "review": "Generated Bison 3.8.2 parser: GPL-3.0-or-later with the intact Bison-exception-2.2 text; retain exception/grammar provenance, not a blanket MIT label."
+    },
+    {
+      "path": "hw/xwin/winprefslex.c",
+      "sha256": "794416e609a0d814e1d656dcb26b741e43491eb6419e3292c24955ede7604ed7",
+      "size": 59504,
+      "review": "Generated Flex 2.6.4 scanner with original permissive grammar notice at byte 24230; Flex tag COPYING states its scanner skeleton/output is not bound by the tool copyright."
+    },
+    {
+      "path": "hw/xwin/winprefslex.l",
+      "sha256": "09ecdbd4ed192d8978b763d0fc91bcad05dc44e6d9b6fc56228870ac7bed18f2",
+      "size": 3994,
+      "review": "Read actual file copyright and permission grant; retain its notice and name-use restrictions with distribution. Root COPYING alone is insufficient."
+    },
+    {
+      "path": "hw/xwin/winprefsyacc.y",
+      "sha256": "3bc5f6de700df0c0c05f3372bd1bbb1e55a3e74b40ae0200da89956e57e4d1f5",
+      "size": 10722,
+      "review": "Read actual file copyright and permission grant; retain its notice and name-use restrictions with distribution. Root COPYING alone is insufficient."
+    },
+    {
+      "path": "hw/xwin/ddraw.h",
+      "sha256": "619b300ab6061c6739b1c9f05f21e1e86eb5f909337cabc27845a1802e4d02a8",
+      "size": 132733,
+      "review": "Local fallback and LGPL MinGW SDK DirectDraw header/backend/loader are excluded from the GDI profile; actual compiler dependencies and link inputs must prove absence. No source distribution approval."
+    },
+    {
+      "path": "hw/xwin/winmessages.h",
+      "sha256": "5ebe556e3ed291ad716ae246f87efadad42bfbcafc05313caf7c6822995a63a6",
+      "size": 13392,
+      "review": "Message table has no file license header; release profile must prove absence from winmsg compiled dependencies. No source redistribution approval."
+    },
+    {
+      "path": "hw/xwin/winmsg.c",
+      "sha256": "90f550406c2df0773b9457a2864c4d33a4dd323de06869a989d9dc53dc91c210",
+      "size": 4347,
+      "review": "Read actual file copyright and permission grant; retain its notice and name-use restrictions with distribution. Root COPYING alone is insufficient."
+    },
+    {
+      "path": "hw/xwin/InitInput.c",
+      "sha256": "e0fc2a7e4858cd26ed05d1b141577e6beb758ae55a01815948757b0dce170d01",
+      "size": 3609,
+      "review": "Read actual file copyright and permission grant; retain its notice and name-use restrictions with distribution. Root COPYING alone is insufficient."
+    },
+    {
+      "path": "hw/xwin/InitOutput.c",
+      "sha256": "a7fb48af9e07baa257d90daba039a847b1df155a2f825db557bf48b3501bfc67",
+      "size": 31310,
+      "review": "Read actual file copyright and permission grant; retain its notice and name-use restrictions with distribution. Root COPYING alone is insufficient."
+    },
+    {
+      "path": "hw/xwin/winmonitors.c",
+      "sha256": "27d6f747372e34293ce0f9efc4e3ee57f8de0e5d0778dc2e074068c0177e9363",
+      "size": 2377,
+      "review": "Read actual file copyright and permission grant; retain its notice and name-use restrictions with distribution. Root COPYING alone is insufficient."
+    },
+    {
+      "path": "hw/xwin/winmonitors.h",
+      "sha256": "3ce07ac1ea65ddcb427aa8f930fd5d368b9f41506c4ddd43ea15ec7739ee5d57",
+      "size": 1551,
+      "review": "Read actual file copyright and permission grant; retain its notice and name-use restrictions with distribution. Root COPYING alone is insufficient."
+    },
+    {
+      "path": "hw/xwin/winprocarg.c",
+      "sha256": "3ab6a48e0d95d23b61eb4f6f37638cdd5e9bf279c5bf4d52dac21502bf36e0f2",
+      "size": 35797,
+      "review": "Read actual file copyright and permission grant; retain its notice and name-use restrictions with distribution. Root COPYING alone is insufficient."
+    },
+    {
+      "path": "hw/xwin/winkeynames.h",
+      "sha256": "8ec8c2dd7f84eeb0be9eeb0608bad128d4d2353da7cc77f5813257af4dd94bac",
+      "size": 11394,
+      "review": "Read actual file copyright and permission grant; retain its notice and name-use restrictions with distribution. Root COPYING alone is insufficient."
+    },
+    {
+      "path": "hw/xwin/winprefsyacc.h",
+      "size": 4765,
+      "sha256": "1299bdbf28d864b450083048475e9cb99dc8500a5b8b054a84a016961c433cf7",
+      "review": "Generated Bison 3.8.2 interface: intact GPL-3.0-or-later WITH Bison-exception-2.2; preserve its exception together with parser/grammar provenance."
+    },
+    {
+      "path": "hw/xwin/propertystore.h",
+      "size": 3117,
+      "sha256": "4460d61ae1a3c24b27aaea497493cbf0006e11e7c9a36b8278b51603a99ef7ec",
+      "review": "Actual permissive notice retained. Existing single documented property key is shared across compiler branches to exclude LGPL propkey.h; SDK generated interface provenance still requires review."
+    },
+    {
+      "path": "hw/xwin/XWin.rc",
+      "size": 3781,
+      "sha256": "45a02e43bb68ae3c923a6f1e8b0f05e93517db54d87bd9ebfc8f0deb550dd4ab",
+      "review": "Read actual permissive notice; resource script embeds X.ico. Script permission does not independently approve the binary icon."
+    },
+    {
+      "path": "hw/xwin/XWin.exe.manifest",
+      "size": 1395,
+      "sha256": "2cdb7dbcfe5fb3dbe13ca333388a1950edb12da0437505b523a8e15543e9dee9",
+      "review": "XML has no independent permission notice; preserve exact input and leave resource adoption unresolved rather than inferring approval from root COPYING."
+    },
+    {
+      "path": "hw/xwin/X.ico",
+      "size": 25214,
+      "sha256": "84ff9b2eb8ce3c3f26072fa367860989f8c900b1fd0aefda6d6f6f1af3ff3597",
+      "review": "Binary icon has no embedded license notice observed; exact resource identity recorded, redistribution provenance unresolved."
+    },
+    {
+      "path": "hw/xwin/system.XWinrc",
+      "size": 3581,
+      "sha256": "ca65e3afdbdf8a601dc5ffee469529070218a1490c0fa268e95a72cd5dc87c73",
+      "review": "Example configuration names its author but has no independent permission grant observed; installation identity retained, resource adoption unresolved."
+    },
+    {
+      "path": "xkb/xkbgeom.h",
+      "sha256": "770c4b7d41b7d87300c8b092afd0c1190a528750349befcc7bbf7e2c1ba32d8f",
+      "size": 17461,
+      "review": "Native server geometry uses these in-tree SGI permissive declarations, not the xorgproto legacy or public libX11 client geometry header. Retain the original notice and verify observed core compilation context."
+    },
+    {
+      "path": "include/xkbstr.h",
+      "sha256": "74805f13f671025a231792abb07546c7f0efe250aee535362e4586d0e1eda6a3",
+      "size": 20471,
+      "review": "Native server geometry uses these in-tree SGI permissive declarations, not the xorgproto legacy or public libX11 client geometry header. Retain the original notice and verify observed core compilation context."
+    }
+  ],
+  "generatorLicenseEvidence": [
+    {
+      "name": "Flex",
+      "version": "2.6.4",
+      "file": "license-evidence/flex-2.6.4-COPYING.txt",
+      "size": 1855,
+      "sha256": "97fd685958d93be7f8dab939bb8161dbd6afb0718c63bfc337c24321aea44273",
+      "source": "https://github.com/westes/flex/blob/v2.6.4/COPYING",
+      "gitBlob": "684b011026dd719137ef01764f002c2c27a2bb52",
+      "scope": "The generated scanner retains the grammar notice; this tool license explicitly excludes scanner skeleton/output from the tool copyright. Not approval to bundle the generator."
+    }
+  ],
+  "serverPatches": [
+    {
+      "path": "hw/xwin/winengine.c",
+      "beforeSha256": "49de9b340c8afa9c098249405c9f5d2ea1e476af3f739c7df2d49b77f1d4277d",
+      "afterSha256": "1ca616e5a08a2763e6edcba98d74583fc738ccab8f2d2f540919ca848fa26afd",
+      "reason": "Select only the existing GDI backend and preserve its real callback result; unsupported requested engines fail. No DirectDraw loader or interfaces. Original permissive notice retained.",
+      "overlay": {
+        "file": "overlays/winengine-gdi.c",
+        "size": 2082,
+        "sha256": "1ca616e5a08a2763e6edcba98d74583fc738ccab8f2d2f540919ca848fa26afd"
+      }
+    },
+    {
+      "path": "hw/xwin/winms.h",
+      "beforeSha256": "4ed313369bc0e923549c5488f43d34c46478b6700551b2706a4bf8296904e4e3",
+      "afterSha256": "55b9f151d6f1ef54ec36059ba51b802899d0ae6cbd0e1ffc5c95c1cecb71aebb",
+      "reason": "GDI profile does not include the local or LGPL SDK DirectDraw header.",
+      "replacements": [
+        {
+          "before": "#define DIRECTDRAW_VERSION\t0x0300\n",
+          "after": ""
+        },
+        {
+          "before": "#pragma push_macro(\"Status\")\n#undef Status\n#define Status wStatus\n#include \"ddraw.h\"\n#pragma pop_macro(\"Status\")\n",
+          "after": ""
+        }
+      ]
+    },
+    {
+      "path": "hw/xwin/win.h",
+      "beforeSha256": "7a252fa712bf496e8da602e1b741b6d79864e405e0bca5497e7565154a5a7c0d",
+      "afterSha256": "8fa934aaccf84eed385aa29b3f0bc087a42537dc0fd0388e983b17adee23294c",
+      "reason": "Remove private DirectDraw-only fields and APIs after excluding that backend; shared GDI callbacks and ownership remain intact.",
+      "replacements": [
+        {
+          "before": "    LPDIRECTDRAWPALETTE lpDDPalette;\n",
+          "after": ""
+        },
+        {
+          "before": "    /* Privates used by shadow fb DirectDraw Nonlocking engine */\n    LPDIRECTDRAW pdd;\n    LPDIRECTDRAW4 pdd4;\n    LPDIRECTDRAWSURFACE4 pddsShadow4;\n    LPDIRECTDRAWSURFACE4 pddsPrimary4;\n    LPDIRECTDRAWCLIPPER pddcPrimary;\n    BOOL fRetryCreateSurface;\n",
+          "after": ""
+        },
+        {
+          "before": "extern FARPROC g_fpDirectDrawCreate;\nextern FARPROC g_fpDirectDrawCreateClipper;\n",
+          "after": ""
+        },
+        {
+          "before": "Bool\n winGetDDProcAddresses(void);\n\nvoid\n winReleaseDDProcAddresses(void);\n",
+          "after": ""
+        },
+        {
+          "before": "Bool\n winSetEngineFunctionsShadowDDNL(ScreenPtr pScreen);\n",
+          "after": ""
+        }
+      ]
+    },
+    {
+      "path": "hw/xwin/InitOutput.c",
+      "beforeSha256": "a7fb48af9e07baa257d90daba039a847b1df155a2f825db557bf48b3501bfc67",
+      "afterSha256": "ab57da41fff7518585167d5d6e25252210dfc69a34085ba0de4fa3cfd38a748c",
+      "reason": "No DirectDraw dynamic module is initialized or released in the GDI profile.",
+      "replacements": [
+        {
+          "before": "    winReleaseDDProcAddresses();",
+          "after": "    /* GDI profile owns no dynamically loaded DirectDraw module. */"
+        },
+        {
+          "before": "    /* Load pointers to DirectDraw functions */\n    winGetDDProcAddresses();",
+          "after": "    /* GDI profile needs no DirectDraw initialization. */"
+        },
+        {
+          "before": "           \"\\t\\t4 - Shadow DirectDraw4 Non-Locking\\n\"\n",
+          "after": ""
+        }
+      ]
+    },
+    {
+      "path": "hw/xwin/Makefile.am",
+      "beforeSha256": "be2aac112120976e5b60bbc61f0a137004449da094588f189312e9fb90873c7e",
+      "afterSha256": "07d95d9950164d2403c2a9f554d9548f386b8d66bd03d4a79c100f6f06711196",
+      "reason": "Exclude DirectDraw backend and headers from source targets and remove its GUID import archive.",
+      "replacements": [
+        {
+          "before": "\twinshadddnl.c \\\n",
+          "after": ""
+        },
+        {
+          "before": "\tddraw.h \\\n",
+          "after": ""
+        },
+        {
+          "before": "XWIN_SYS_LIBS += -ldxguid",
+          "after": ""
+        }
+      ]
+    },
+    {
+      "path": "hw/xwin/Makefile.in",
+      "beforeSha256": "301d554dab220e31ab5a299ab3b557c58c1a5b880e5aa311d6c26f1e5791d834",
+      "afterSha256": "e619accc9dc4389c2a1966c8fc3ab8687dc5df82f3dbfb009f727d41e997adf1",
+      "reason": "Keep the shipped generated Makefile consistent without regenerating Autotools; no DirectDraw object/archive linked.",
+      "replacements": [
+        {
+          "before": "winshadddnl.$(OBJEXT) ",
+          "after": ""
+        },
+        {
+          "before": "\twinshadddnl.c \\\n",
+          "after": ""
+        },
+        {
+          "before": "\tddraw.h \\\n",
+          "after": ""
+        },
+        {
+          "before": "XWIN_SYS_LIBS = @XWIN_SYS_LIBS@ -ldxguid",
+          "after": "XWIN_SYS_LIBS = @XWIN_SYS_LIBS@"
+        }
+      ]
+    },
+    {
+      "path": "hw/xwin/propertystore.h",
+      "beforeSha256": "4460d61ae1a3c24b27aaea497493cbf0006e11e7c9a36b8278b51603a99ef7ec",
+      "afterSha256": "363f0c25ee9af00da4ef6932d864129fd14fe6f7296541aa4bc09e315f66537d",
+      "reason": "Exclude the LGPL MinGW propkey.h table. Move the existing permissive single AppUserModel property declaration into the common branch; retain the real IPropertyStore SDK interface and taskbar behavior. GUID/PID independently matched to Microsoft System.AppUserModel.ID documentation. Share the existing IID declaration as well because the protected SDK interface is parsed before INITGUID. Re-include the unguarded public-domain propkeydef.h after INITGUID to refresh DEFINE_PROPERTYKEY, as the SDK intends.",
+      "replacements": [
+        {
+          "before": "#include <propkey.h>\n",
+          "after": ""
+        },
+        {
+          "before": "DEFINE_PROPERTYKEY(PKEY_AppUserModel_ID, 0x9F4C2855, 0x9F79, 0x4B39, 0xA8, 0xD0,\n                   0xE1, 0xD4, 0x2D, 0xE1, 0xD5, 0xF3, 5);\n\n#endif /* !__MINGW64_VERSION_MAJOR */\n",
+          "after": "#endif /* !__MINGW64_VERSION_MAJOR */\n\nDEFINE_PROPERTYKEY(PKEY_AppUserModel_ID, 0x9F4C2855, 0x9F79, 0x4B39, 0xA8, 0xD0,\n                   0xE1, 0xD4, 0x2D, 0xE1, 0xD5, 0xF3, 5);\n"
+        },
+        {
+          "before": "DEFINE_GUID(IID_IPropertyStore, 0x886d8eeb, 0x8cf2, 0x4446, 0x8d, 0x02, 0xcd,\n            0xba, 0x1d, 0xbd, 0xcf, 0x99);\n\n",
+          "after": ""
+        },
+        {
+          "before": "#endif /* !__MINGW64_VERSION_MAJOR */\n\n",
+          "after": "#endif /* !__MINGW64_VERSION_MAJOR */\n\nDEFINE_GUID(IID_IPropertyStore, 0x886d8eeb, 0x8cf2, 0x4446, 0x8d, 0x02, 0xcd,\n            0xba, 0x1d, 0xbd, 0xcf, 0x99);\n\n"
+        },
+        {
+          "before": "#include <propsys.h>\n",
+          "after": "#include <propsys.h>\n#include <propkeydef.h>\n"
+        }
+      ]
+    },
+    {
+      "path": "dix/events.c",
+      "beforeSha256": "bf005379d69b21e84d9c5ca9b40c485f21cbf252ffcedd454f82de88be7a25f3",
+      "afterSha256": "8779166593c32594c3de6316fcd6e5f9b25638f1e6c370173260630dd467b45b",
+      "reason": "Preserve pointer-width address alignment and signed/unsigned scalar-token semantics on LLP64; retain public widths, original notices and diagnostics. Diagnostic pointers use %p; XDMCP keeps the same option payload/length.",
+      "replacements": [
+        {
+          "before": "(WindowPtr) (long) focusID",
+          "after": "(WindowPtr) (uintptr_t) focusID"
+        }
+      ]
+    },
+    {
+      "path": "dix/pixmap.c",
+      "beforeSha256": "fce70438225d4d90ad9b8e6546d2be9423ad8bb997cfcea5204a57895ce22bae",
+      "afterSha256": "cccc6aec9046011c66ba43d1f9cb23451227bec1647c0ac0178bd50ab1fa8c7b",
+      "reason": "Preserve pointer-width address alignment and signed/unsigned scalar-token semantics on LLP64; retain public widths, original notices and diagnostics. Diagnostic pointers use %p; XDMCP keeps the same option payload/length.",
+      "replacements": [
+        {
+          "before": "((void *)(long)ihandle)",
+          "after": "((void *)(intptr_t)ihandle)"
+        }
+      ]
+    },
+    {
+      "path": "dix/resource.c",
+      "beforeSha256": "70c7b8a9ef57284db729af2641001b31046a78c5a219953153e8bf9a297bf551",
+      "afterSha256": "878c937a8ccff16269173a4d79f6ba8e5c70ac955dd29f6364cb3153340b54a2",
+      "reason": "Preserve pointer-width address alignment and signed/unsigned scalar-token semantics on LLP64; retain public widths, original notices and diagnostics. Diagnostic pointers use %p; XDMCP keeps the same option payload/length.",
+      "replacements": [
+        {
+          "before": "AddResource(%lx, %x, %lx)",
+          "after": "AddResource(%lx, %x, %p)"
+        },
+        {
+          "before": "(unsigned long) value",
+          "after": "value"
+        }
+      ]
+    },
+    {
+      "path": "mi/miline.h",
+      "beforeSha256": "70cf58a36c620f3cc644ead7fd56305944de2076fa84ebc4c59c6eb63c92df00",
+      "afterSha256": "942b21397ecbbdca60ce3b6ac524301371a1c1483a5431d3db5d08b8b5d8080e",
+      "reason": "Preserve pointer-width address alignment and signed/unsigned scalar-token semantics on LLP64; retain public widths, original notices and diagnostics. Diagnostic pointers use %p; XDMCP keeps the same option payload/length.",
+      "replacements": [
+        {
+          "before": "((unsigned long) (unsigned long*)",
+          "after": "((unsigned long) (uintptr_t)"
+        }
+      ]
+    },
+    {
+      "path": "fb/fbgetsp.c",
+      "beforeSha256": "66a2a5c92ee113ccf1e03043c6e8eeb9cf9dd3515fcc937d1fefdabbfe06515a",
+      "afterSha256": "1169db67804244ed685aa31ea9b82d38c6ad37330a8c6fb3097a6703a7a3a19c",
+      "reason": "Preserve pointer-width address alignment and signed/unsigned scalar-token semantics on LLP64; retain public widths, original notices and diagnostics. Diagnostic pointers use %p; XDMCP keeps the same option payload/length.",
+      "replacements": [
+        {
+          "before": "((long) pchardstStart)",
+          "after": "((uintptr_t) pchardstStart)"
+        }
+      ]
+    },
+    {
+      "path": "fb/fboverlay.c",
+      "beforeSha256": "92e93956ad93c552b6aa8ca893fd0983d1d6be64b37ec9286a4f11de73d0c46a",
+      "afterSha256": "379b028cf291946ae67604dd0e0b775c9f34cd3a8c9304830c95aa25d60d4ef0",
+      "reason": "Preserve pointer-width address alignment and signed/unsigned scalar-token semantics on LLP64; retain public widths, original notices and diagnostics. Diagnostic pointers use %p; XDMCP keeps the same option payload/length.",
+      "replacements": [
+        {
+          "before": "(void *) (long) i",
+          "after": "(void *) (intptr_t) i"
+        }
+      ]
+    },
+    {
+      "path": "fb/fbsetsp.c",
+      "beforeSha256": "fa7f95e58ab6dd901c2700759d4914efc5f0952ff325385ff60e4cf9cd70c303",
+      "afterSha256": "756ee8834e2ed347a7f6b705f8559bc28802203042eb4bb7e607dc02d4356da9",
+      "reason": "Preserve pointer-width address alignment and signed/unsigned scalar-token semantics on LLP64; retain public widths, original notices and diagnostics. Diagnostic pointers use %p; XDMCP keeps the same option payload/length.",
+      "replacements": [
+        {
+          "before": "((long) src)",
+          "after": "((uintptr_t) src)"
+        }
+      ]
+    },
+    {
+      "path": "mi/miscrinit.c",
+      "beforeSha256": "45065d2ccf2687dcddbe0c30620b67c74845e76fb0c02113c27b5688ed5ae236",
+      "afterSha256": "039139f5a52dec94a9b24b5ebedf7f85cb8d805dc521ad364ad37da87497d0c5",
+      "reason": "Preserve pointer-width address alignment and signed/unsigned scalar-token semantics on LLP64; retain public widths, original notices and diagnostics. Diagnostic pointers use %p; XDMCP keeps the same option payload/length.",
+      "replacements": [
+        {
+          "before": "(unsigned long *) (unsigned long) bias",
+          "after": "(void *) (uintptr_t) bias"
+        }
+      ]
+    },
+    {
+      "path": "miext/shadow/sh3224.c",
+      "beforeSha256": "6783c86a7532b1afe8e34abb7be29197c8353064508a3b02cf8f752300416bdb",
+      "afterSha256": "c6d055204094f1034c3d0cac0456f5227bbc0db774883857959308756a63b076",
+      "reason": "Preserve pointer-width address alignment and signed/unsigned scalar-token semantics on LLP64; retain public widths, original notices and diagnostics. Diagnostic pointers use %p; XDMCP keeps the same option payload/length.",
+      "replacements": [
+        {
+          "before": "((long)dst & 3)",
+          "after": "((uintptr_t)dst & 3)"
+        }
+      ]
+    },
+    {
+      "path": "record/set.c",
+      "beforeSha256": "5687f22df347f772a6d28b3aab644fa9ba20e7bb4ed932d3dac561ec9fdfd908",
+      "afterSha256": "fdfda964d4f2fa6ff4c0d5c64aac893d08dcda765a383e258ff303d521038e91",
+      "reason": "Preserve pointer-width address alignment and signed/unsigned scalar-token semantics on LLP64; retain public widths, original notices and diagnostics. Diagnostic pointers use %p; XDMCP keeps the same option payload/length.",
+      "replacements": [
+        {
+          "before": "(int) (long) pIter",
+          "after": "(int) (intptr_t) pIter"
+        },
+        {
+          "before": "(RecordSetIteratePtr) (long) (pInterval->last + 1)",
+          "after": "(RecordSetIteratePtr) (intptr_t) (pInterval->last + 1)"
+        },
+        {
+          "before": "((long) pMem & (alignment - 1))",
+          "after": "((uintptr_t) pMem & (alignment - 1))"
+        }
+      ]
+    },
+    {
+      "path": "exa/exa_offscreen.c",
+      "beforeSha256": "d01ab750eacf42544d927cf397a33d0477fd040cfaa5cf1d6b881a82859832c0",
+      "afterSha256": "4fabad462beae4b12e4b14240ec42cce430d6a046d1cac9d96515e079c6c633f",
+      "reason": "Preserve pointer-width address alignment and signed/unsigned scalar-token semantics on LLP64; retain public widths, original notices and diagnostics. Diagnostic pointers use %p; XDMCP keeps the same option payload/length.",
+      "replacements": [
+        {
+          "before": "(unsigned long) pExaDstPix->fb_ptr",
+          "after": "(uintptr_t) pExaDstPix->fb_ptr"
+        }
+      ]
+    },
+    {
+      "path": "os/xdmcp.c",
+      "beforeSha256": "979ae7c29f1e91d9e82ebfc2b473cb16826c1ff3c06cc981e3cc8dd503c370aa",
+      "afterSha256": "24aa2f5bf463e98abb4c52cdf7d44521a131540d5844c94d55c278ae20c57dea",
+      "reason": "Preserve pointer-width address alignment and signed/unsigned scalar-token semantics on LLP64; retain public widths, original notices and diagnostics. Diagnostic pointers use %p; XDMCP keeps the same option payload/length.",
+      "replacements": [
+        {
+          "before": "&hopflag6, sizeof(hopflag6)",
+          "after": "(const char *)&hopflag6, sizeof(hopflag6)"
+        }
+      ]
+    },
+    {
+      "path": "include/xserver_poll.h",
+      "beforeSha256": "9edf4c720b32c56a4fcba5f87e84459f820c6c6ce9c33e1ad9d7fe939cd61e8d",
+      "afterSha256": "7768d8ec3a1934b3e3a6128d7be8201dd82e1497cc1c95251faa2684f25f17cf",
+      "reason": "Keep the existing select fallback structure/flags distinct from the SDK WSAPoll structure. Load protected Winsock first; do not change poll waiting or FD semantics. Preserve the original notice.",
+      "replacements": [
+        {
+          "before": "#else\n\n#define POLLIN",
+          "after": "#else\n\n#if defined(WIN32) && !defined(__CYGWIN__)\n#include <X11/Xwinsock.h>\n#define pollfd xserver_pollfd\n#undef POLLIN\n#undef POLLPRI\n#undef POLLOUT\n#undef POLLERR\n#undef POLLHUP\n#undef POLLNVAL\n#endif\n\n#define POLLIN"
+        }
+      ]
+    },
+    {
+      "path": "hw/xwin/winauth.h",
+      "create": true,
+      "beforeSha256": null,
+      "afterSha256": "f5bb812ded2e4083062a0eb9fee3bb5245e047ced5499c8c4c4631239054acd5",
+      "reason": "The fixed release omits this header. Add only declarations for its existing authorization implementation; do not replace authentication or cookie generation.",
+      "overlay": {
+        "file": "overlays/winauth.h",
+        "size": 257,
+        "sha256": "f5bb812ded2e4083062a0eb9fee3bb5245e047ced5499c8c4c4631239054acd5"
+      }
+    }
+  ],
+  "excludedHeaderReview": [
+    {
+      "source": "https://github.com/mingw-w64/mingw-w64/blob/63ebe6cdb/mingw-w64-headers/include/ddraw.h",
+      "gitBlob": "aa71819423d2f40f748a73cd9b55e77e47926be5",
+      "declaredLicense": "LGPL-2.1-or-later",
+      "resolution": "Exclude DirectDraw from this 2D development profile; do not infer permissive licensing from SDK origin."
+    },
+    {
+      "source": "https://github.com/mingw-w64/mingw-w64/blob/63ebe6cdb/mingw-w64-headers/include/propkey.h",
+      "gitBlob": "729a0bda2364fc92337b18ced095d63326ad7165",
+      "declaredLicense": "LGPL-2.1-or-later",
+      "resolution": "Exclude the SDK property table and retain the upstream permissive single AppUserModel key declaration verified against Microsoft documentation; actual server compiler dependencies must prove absence."
+    }
+  ]
+}

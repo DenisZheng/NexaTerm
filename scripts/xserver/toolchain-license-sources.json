@@ -1,0 +1,59 @@
+{
+  "schema": 1,
+  "packages": {
+    "mingw-w64-ucrt-x86_64-windows-default-manifest": {
+      "version": "20260815-1",
+      "packageDeclaredLicense": "custom:Public Domain",
+      "installedFiles": {
+        "lib/default-manifest.o": {
+          "size": 892,
+          "sha256": "9af5e18f01a63a7d02ba11e097324e046f778de5c74cd093b52296f8613dbcc8"
+        }
+      },
+      "sourceRepositoryLicense": {
+        "file": "toolchain-licenses/msys2-packaging-BSD-3-Clause.txt",
+        "size": 1490,
+        "sha256": "e08ac31ef517ea449b7f402ab7940c750127c1de0566458d8e80635be9fa4055",
+        "spdx": "BSD-3-Clause",
+        "source": "https://github.com/msys2/MINGW-packages/blob/fb1bee30b4f11cf4b857197a288466afad49033a/LICENSE",
+        "gitBlob": "e0f07ba679cbd516eb5feaff40e959f88f9a6ed1",
+        "scope": "Repository source notice; retain separately from the package publisher's Public Domain declaration. Neither is distribution approval."
+      },
+      "sourceProvenance": {
+        "repository": "https://github.com/msys2/MINGW-packages",
+        "commit": "fb1bee30b4f11cf4b857197a288466afad49033a",
+        "recipe": {
+          "path": "mingw-w64-windows-default-manifest/PKGBUILD",
+          "size": 960,
+          "sha256": "c01b38f7f32970b42d2c9ab834d35eb69fb71a0f3de30a0340ce30e40cd203e8",
+          "gitBlob": "bf3ae8fc26ba06fbc645a28fc3fd7102ee7e1f23"
+        },
+        "generator": {
+          "path": "mingw-w64-windows-default-manifest/genrc.py",
+          "size": 2567,
+          "sha256": "f2bfbcd92ab28d8671dda5a1485aae150ce5d5faf4395a6a4462cacd2a6fb60a",
+          "gitBlob": "8235ee61487f144fe3a07bbbc03befb6138e1cc3",
+          "scope": "Read and matched to the recipe's fixed source hash; implementation is not vendored or executed by this verifier."
+        },
+        "licenseScopeDeclaration": {
+          "path": "README.md",
+          "size": 3619,
+          "sha256": "b43425e34569540864439b8b0d3bafed18b49ea859eca2b2ba03c86b565f8c03",
+          "gitBlob": "89ea62e6baa41624fff244b80765bd721a1ff1ce"
+        }
+      },
+      "publishedPackage": {
+        "url": "https://repo.msys2.org/mingw/ucrt64/mingw-w64-ucrt-x86_64-windows-default-manifest-20260815-1-any.pkg.tar.zst",
+        "size": 2652,
+        "sha256": "b39039f754a600cc0dec49df7d675a59a3cb2b63691d91b4ae60735ee7075eca",
+        "publisherMetadata": "https://packages.msys2.org/package/mingw-w64-ucrt-x86_64-windows-default-manifest",
+        "objectMember": "ucrt64/lib/default-manifest.o",
+        "pkgInfoSha256": "cdcb864b568dac1d05f99a102a8d22fae85bcaa8b9ef315681c133ca7011e618",
+        "buildInfoSha256": "88fc62c3573e6029340faadb6b1a7a467671a89aa35f351274c542465eb01eef",
+        "buildRecipeSha256": "c01b38f7f32970b42d2c9ab834d35eb69fb71a0f3de30a0340ce30e40cd203e8",
+        "archiveSignatureIndependentlyVerified": false,
+        "scope": "Official archive bytes and published hash were matched; native verification requires the exact installed object hash and complete one-file package scope."
+      }
+    }
+  }
+}

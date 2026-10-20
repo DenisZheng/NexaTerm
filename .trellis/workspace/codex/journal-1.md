@@ -502,3 +502,53 @@ Draft #84 code bfbd225 verified: full CI669 all7 jobs and source CI2 passed; pin
 ### Next Steps
 
 - None - task complete
+
+
+## Session 12: WF-09 Windows native engine and license provenance
+
+**Date**: 2026-10-20
+**Task**: WF-09 Windows native engine and license provenance
+**Branch**: `build/wf09-07-xserver-windows`
+
+### Summary
+
+Windows development build and archive-member evidence passed full native24, source27 and application CI694; XDMCP remains in_progress.
+
+### Main Changes
+
+固定15官方依赖/签名/完整证书、51许可文本和21个server锚点；GDI profile保留真实IPv6/AppID/XCB/font/poll目标探针与编译诊断，排除DirectDraw、propkey及无许可调试表。实际server geometry上下文、default-manifest精确源receipt、GNU链接器内存BFD到PE输出贡献均已实证。
+
+原生22（code4108212）首次完成整条Windows门禁：完整引擎编译/链接/安装、16文件PE、105链接输入、1720份唯一C输入及最终版本probe。空Automake bootstrap仅在无对应编译对象时接受，不计编译观察；libXau真实Autest.Po验证了该格式。所有发行/随包/桌面批准仍false。
+
+四DLL五份及CRT三份notice匹配固定原文；固定SDK头/IDL及CRT源码已核对Git对象。原生24（code4e4e4a8）在新成员门禁后继续完成全部C输入和版本运行；47归档/942成员、544工具链成员发布payload、333份工具链头来源及56份生成C/头/表重生成均已核对。53份实际CRT主源已关联，gdtoa/Lucent、ZPL、SDK IDL及无独立声明文件仍分别审查。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `6e1f8fd` | Native XCB Winsock version |
+| `c2ca16f` | Actual server geometry evidence |
+| `60ac904` | Fixed default-manifest source receipt |
+| `e751827` | Linker memory contributions |
+| `b3e2aa6` | Published linker identity |
+| `898abaa` | Legacy format fixture scope |
+| `4108212` | Unbuilt Automake dependency records |
+| `0b3551f` | Selected archive-member payload evidence |
+| `4e4e4a8` | Inline archive reference regression and source receipts |
+
+### Testing
+
+- code4e4e4a8：source27的21源码+93 Windows回归、15签名通过，两个JSON实际下载匹配固定pins。
+- 完整CI694七执行job全部SUCCESS；Rust617/618/620、各19二进制/1集成通过（Linux4既有ignored），条件打包跳过。
+- 原生24整条SUCCESS，JSON归档451212字节/hash 05285264501255e1b75eaee1fffd060cb2e075dd4a9e04d4665749757e9de3bb已下载；942成员及1720输入核对完成，所有采用/随包/桌面批准false。
+- 本地114无skip、旧GNU2.38十项成员回归通过；真实双archive先重现原生23的贪婪解析失败再修正，旧失败按精确代码保留。
+
+### Status
+
+**IN_PROGRESS**：Windows开发构建和本轮成员取证通过；整体XDMCP许可/资源/随包工作未完成，不归档、合并或发布。
+
+### Next Steps
+
+- 继续审核942个实际选择成员的逐文件与生成链条件，落实53份关联CRT主源、SDK IDL/GCC例外、notice与源码供给；不要重做原生24已通过的构建修正。
+- 继续DLL内部静态/资源与xkbcomp/XKB数据，随后随包/桌面、X3及Unix宿主硬崩溃监督。
+- Windows Rlogin精确flush仍须实际backend；7/9是范围计数，不能换算工时完成度。
