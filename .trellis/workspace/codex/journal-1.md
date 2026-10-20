@@ -592,3 +592,5 @@ Continue verified PR85 in stacked Draft86: fixed XKB sources, private runtime in
 ### Next Steps
 
 - None - task complete
+
+Session 13续作：代码0e989ee已过完整CI698/source31；原生28在Windows完成293数据文件/3341129字节及11生成参考后，因listing.c的SDK TypeString/ERROR宏冲突真实FAIL（artifact下载留证）。继续精确调整SDK/Xlib与私有宏顺序，保留枚举/诊断，并新增重建依赖之前的真实SDK旧/正确顺序探针；新代码重新取证见Draft #86正文，不借用旧结果。Linux实际四份XKM往返与两个负向通过，仅作补充。

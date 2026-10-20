@@ -12,6 +12,8 @@
 - [x] 新代码已接入并触发独立Windows与完整CI门禁；实际执行结论只采用[Draft #86](https://github.com/DenisZheng/NexaTerm/pull/86)正文的精确SHA/run/artifact，不能借用#85基线结果。
 - [ ] 工具及DLL内部静态/资源、逐文件权限、notice/运行库本体义务、打包/签名/桌面和X3仍继续，不归档整体任务。
 
+原生28已取得Windows数据293文件/3341129字节及11参考，但xkbcomp/listing.c真实编译暴露SDK TypeString/ERROR宏冲突；先载入SDK/Xlib再定义私有宏的精确修复、提前执行的真实SDK旧/正确顺序探针，以及后续重新取证均见#86正文和research/windows-xkb-evidence.md。
+
 - [x] 固定15项直接/传递X库的官方源码、分离签名、构建参数及51项许可文件hash，区分host工具与target库；source CI27通过（代码4e4e4a8）。
 - [x] 在真实Windows UCRT64完成固定上游的编译/链接/安装：原生16（代码6e1f8fd）已通过，五项探针与递归PE导入也通过；后续曾因来源门禁FAIL；当前原生24已完成整条门禁。
 - [x] 实际AMD64 PE、XDMCP配置、原生版本probe、递归导入与完整C输入及成员门禁已过原生24（code4e4e4a8）。

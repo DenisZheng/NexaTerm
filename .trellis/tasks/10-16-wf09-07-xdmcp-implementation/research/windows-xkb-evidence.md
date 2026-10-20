@@ -30,3 +30,13 @@ xkbcomp COPYING为4394字节、SHA256 `6b833fdc05906ce57f016dc791db86830d49ee4da
 ## XKM二进制读取适配
 
 审查固定xkbcomp.c发现：已识别INPUT_XKM后，main仍以fopen(...,"r")打开；固定libxkbfile/src/xkmread.c通过fread/fseek的原始长度/偏移解析，内部没有切换模式。[Microsoft CRT主文档](https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/fopen-wfopen?view=msvc-170)规定文本模式会转换CRLF，并把Ctrl-Z解释为EOF；旧实际链接也观察到xtxtmode对象，不能依靠宿主默认流模式。现仅对INPUT_XKM选择rb，保留XKB源文本的原模式。源码替换发生次数严格为1，输入SHA256 `935ab13c57045a36efa7b1bee7d582584bcb4fb7d662378514e075c7c62b5e02`，输出hash由manifest固定；不修改libxkbfile算法、绕过解析或过滤错误。四份真实XKM往返均要求并记录Ctrl-Z/CRLF实际字节，继续以目标运行取得证据；未把源审查当作原生执行已通过。
+
+## 原生28与SDK命名冲突
+
+代码0e989ee已过完整CI698七执行job（Rust617/618/620、各19二进制+1集成，Linux4既有ignored；前端1160/1todo、脚本193/3既有skip），source31也已过21源码/111回归/17实际签名；两个源码JSON的artifact12240170659已下载，ZIP85547字节、SHA256 `8f1adeb6626d38e1d9bce1103e20209970134a73abc5dc1f87402ee0794ea06f`，当前manifest及17固定身份逐项匹配。
+
+原生28（39366607895）执行111回归和16个组件成功，Windows数据293文件/3341129字节（278固定源、15构建输出）、8源码别名和11生成参考全部完成；尚未开始键盘执行。失败在xkbcomp/listing.c：先定义的私有TypeString=4进入SDK声明、晚加载的SDK ERROR覆盖编译器诊断函数，分别造成声明与调用编译错误。make非零被如实保留。artifact12239928166已下载，ZIP276519字节、SHA256 `4677dc302ae2736e537ada1bc412f023d15df7c3f6bc442888c804cdc72fc3fc`，报告保持FAIL/xkbcomp/compile-install及全部采用字段false。
+
+修复把Windows/Xlib声明移到私有宏之前，清除SDK的ERROR/TEXT/ALTERNATE后再加载原诊断/解析声明；保留FindFirstFile/FindNextFile/FindClose、所有错误调用及原始notice，不删文件枚举或降低诊断。listing.c原SHA256 `8d8ef38d6b8a5946bcc9790e57aec0c0b984dd55c026994bfae638c352c5aeac`，适配后`3c40190bb5fad742fc246539fb244ea6827e8b564083e4a0b4eeb84f3b585a63`；两个精确替换各1次。新增真实SDK提前探针：旧顺序必须出现相关编译错误并无对象，正确顺序编译/运行且实际调用一次诊断函数。新修复仍须按#86正文精确SHA重新取得完整原生/CI，不借用0e989ee结果。
+
+补充Linux实验实际生成/安装293数据文件/3331990字节，11参考在三种hash seed下相同；固定xkbcomp1.5.0用Ubuntu host依赖完成四份XKM往返和空根/缺规则负向，四文件11964/13048/12664/13748字节且含5/5/3/3个Ctrl-Z。它验证格式断言，不能替代Windows原生结果。作者BSD外链当前页面另有名称/衍生物条款，fr/ir源有明确再许可说明；完整notice与逐文件采用仍开放，不按包标签批准。

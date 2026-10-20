@@ -891,6 +891,22 @@
               "after": "        else\n        {\n            file = fopen(inputFile, inputFormat == INPUT_XKM ? \"rb\" : \"r\");\n        }"
             }
           ]
+        },
+        {
+          "path": "listing.c",
+          "beforeSha256": "8d8ef38d6b8a5946bcc9790e57aec0c0b984dd55c026994bfae638c352c5aeac",
+          "afterSha256": "3c40190bb5fad742fc246539fb244ea6827e8b564083e4a0b4eeb84f3b585a63",
+          "reason": "Load actual Windows/Xlib declarations before private TypeString and ERROR parser macros; then restore compiler diagnostics. Preserve native file enumeration, error calls and all upstream notices.",
+          "replacements": [
+            {
+              "before": "#include \"utils.h\"\n",
+              "after": "#ifdef HAVE_CONFIG_H\n#include \"config.h\"\n#endif\n\n#if defined(_WIN32) || defined(WIN32)\n# define WIN32_LEAN_AND_MEAN\n# include <X11/Xwindows.h>\n# include <X11/Xlib.h>\n# undef ERROR\n# undef TEXT\n# undef ALTERNATE\n#endif\n\n#include \"utils.h\"\n"
+            },
+            {
+              "before": "#ifdef WIN32\n# define WIN32_LEAN_AND_MEAN\n# include <X11/Xwindows.h>\n# define FileName(file) file.cFileName\n# undef TEXT\n# undef ALTERNATE\n#else",
+              "after": "#ifdef WIN32\n# define FileName(file) file.cFileName\n#else"
+            }
+          ]
         }
       ]
     }
