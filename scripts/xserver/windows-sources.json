@@ -878,7 +878,21 @@
         "generator": "GNU Bison 3.8.2",
         "license": "GPL-3.0-or-later WITH Bison parser skeleton special exception",
         "distributionApproved": false
-      }
+      },
+      "patches": [
+        {
+          "path": "xkbcomp.c",
+          "beforeSha256": "935ab13c57045a36efa7b1bee7d582584bcb4fb7d662378514e075c7c62b5e02",
+          "afterSha256": "939ba7d17b32e703ff2707984974094eb21116d72c2399c66d9d15895e7d9b4f",
+          "reason": "Read XKM in binary mode on Windows so CRT text translation cannot truncate Ctrl-Z or rewrite CRLF bytes; retain existing text mode for XKB source and all upstream notices.",
+          "replacements": [
+            {
+              "before": "        else\n        {\n            file = fopen(inputFile, \"r\");\n        }",
+              "after": "        else\n        {\n            file = fopen(inputFile, inputFormat == INPUT_XKM ? \"rb\" : \"r\");\n        }"
+            }
+          ]
+        }
+      ]
     }
   ],
   "serverOptions": [

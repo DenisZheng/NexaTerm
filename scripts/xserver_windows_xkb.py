@@ -128,6 +128,9 @@ def xkb_probe(prefix, builds, work, report, run):
             run([compiler, "-I", "-I" + native_root, "-xkm", native_directory + "/" + input_file.name,
                  native_directory + "/" + output_file.name], directory, timeout=20, capture=True)
             require(output_file.is_file() and 0 < output_file.stat().st_size <= 1024 * 1024, "XKB_XKM_OUTPUT")
+            xkm = output_file.read_bytes()
+            sensitive = {"ctrlZ": xkm.count(b"\x1a"), "crlf": xkm.count(b"\r\n")}
+            require(any(sensitive.values()), "XKB_BINARY_CASE_MISSING")
             run([compiler, "-I", "-xkb", native_directory + "/" + output_file.name,
                  native_directory + "/" + roundtrip.name], directory, timeout=20, capture=True)
             require(roundtrip.is_file() and roundtrip.stat().st_size <= 2 * 1024 * 1024, "XKB_ROUNDTRIP_OUTPUT")
@@ -135,7 +138,7 @@ def xkb_probe(prefix, builds, work, report, run):
             evidence["keymaps"].append({"rules": rules, "layout": layout, "model": "pc105", "components": names,
                                         "inputSha256": digest(input_file.read_bytes()), "xkmSha256": digest(output_file.read_bytes()),
                                         "xkmSize": output_file.stat().st_size, "roundtripSha256": digest(roundtrip.read_bytes()),
-                                        "verifiedKeys": keys})
+                                        "binarySensitiveBytes": sensitive, "verifiedKeys": keys})
     empty = directory / "empty-data"
     evidence["current"] = {"negative": "empty-data"}
     empty.mkdir()
