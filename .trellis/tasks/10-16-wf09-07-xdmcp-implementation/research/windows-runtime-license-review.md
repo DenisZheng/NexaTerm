@@ -56,3 +56,16 @@ SDK逐文件例外、编译器运行库、生成器条件和缺少独立许可�
 ## 链接器生成输入的权限边界
 
 GNU ld创建的rtr/ertr与dll stuff是内存BFD对象。生成器身份记录到build-tool scope，不把GNU链接器加入运行时发行候选，不复制其实现或将其许可证直接标给输出。新的最终PE贡献字节核对只建立来源与内容证据，输出采用仍未批准；未知文件不能由命名模式获得豁免。固定源hash、生成类型与反例见[原生18记录](windows-build-evidence.md)。
+
+## CRT三份实际notice与固定原文匹配
+
+固定[CRT配方](https://github.com/msys2/MINGW-packages/blob/fb1bee30b4f11cf4b857197a288466afad49033a/mingw-w64-crt/PKGBUILD)git blob b60924373c6fb91141c2a0517bd9c570dc1e766a明确使用SDK commit63ebe6cdb3ec4d5c586b7f0f0c03dd502e44c296，并安装根COPYING及两份细分notice。现完整读取后两份原文，按blob字节校验git SHA1，SHA256分别匹配原生18/21的实际CRT许可记录：
+
+| 原文路径 | 字节 | SHA256 / git blob |
+| --- | --- | --- |
+| COPYING.MinGW-w64/COPYING.MinGW-w64.txt | 5905 | f38e6194bd3bfa1b654f118e5acefe0aead437bbe669eee43957ccc65a7127f1 / decbf46bde9d87a0c2250fe33ece1b7e0724ee6e |
+| COPYING.MinGW-w64-runtime/COPYING.MinGW-w64-runtime.txt | 12155 | 1db8da07b436c68833c0673ffee3d9fcb2526047f3820b81661865dfedc79a1f / 776d5f1034240f6dae0ce59d592f9c6f4ad29e7d |
+
+三份CRT安装notice至此均已同固定源文本匹配。非runtime文档明确区分GNU工具/可选profiling代码与普通应用输出；runtime文本包含MinGW总体、getopt、gdtoa、Sun数学函数及musl的不同保留声明，也保留Cephes权限措辞未定及Wine导入头/IDL的LGPL事项。不能把crt包级ZPL标签概括为全部文件。当前map记录的是实际加载的完整archive，不是其中最终选中成员的逐项权利清单；Cephes/profiling/Wine是否进入输出仍须结合真实成员、编译输入和对应声明核对，未由notice匹配推定不存在或批准发行。
+
+原生21已核对105项最终XWin链接输入（含3份内存生成输入），链接器程序hash与固定官方发布包一致；构建工具许可和输出采用仍分开记录。每个依赖DLL内部的静态/资源、完整SDK逐文件及打包notice落实仍开放。

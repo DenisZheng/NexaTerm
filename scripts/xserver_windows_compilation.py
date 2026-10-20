@@ -74,7 +74,7 @@ def dependency_path(name, directory, windows_roots):
     return (directory / path).resolve() if not path.is_absolute() else path.resolve()
 
 
-def component_dependencies(directory, build_system, work, run):
+def component_dependencies(directory, build_system, work, run, report=None):
     if build_system == "meson":
         output = run(["ninja", "-C", directory, "-t", "deps"], work, capture=True)
         require(len(output.encode()) <= MAX_DEP_BYTES, "COMPILE_DEP_BUDGET")
@@ -82,7 +82,7 @@ def component_dependencies(directory, build_system, work, run):
         return [(name, directory) for name in ninja_dependencies(output)], count, {"method": "ninja-deps", "sha256": digest(output.encode())}
     files = sorted([*directory.rglob("*.Po"), *directory.rglob("*.Plo")])
     require(0 < len(files) <= 3000, "COMPILE_DEP_FILES")
-    result, size, evidence = [], 0, []
+    result, size, evidence, bootstrap = [], 0, [], []
     for path in files:
         size += path.stat().st_size
         require(size <= MAX_DEP_BYTES, "COMPILE_DEP_BUDGET")
@@ -90,12 +90,30 @@ def component_dependencies(directory, build_system, work, run):
         while parent != directory and not (parent / "Makefile").is_file():
             parent = parent.parent
         require((parent / "Makefile").is_file(), "COMPILE_DEP_DIRECTORY")
-        names = make_dependencies(path.read_text())
+        raw = path.read_bytes()
+        current = {"path": str(path.relative_to(directory)), "size": len(raw), "sha256": digest(raw)}
+        if report is not None:
+            report["compilerDependencyCurrent"] = current
+        content = raw.decode("utf-8").replace("\r\n", "\n")
+        if report is not None:
+            current["firstLines"] = [line[:512] for line in content.splitlines()[:8]]
+        if content.strip() in {"", "# dummy", "#dummy"}:
+            # Automake bootstraps unbuilt optional targets with an empty/comment-only depfile.
+            require(path.parent.name == ".deps", "COMPILE_DEP_BOOTSTRAP")
+            object_directory = path.parent.parent
+            candidates = [root / (path.stem + suffix) for root in [object_directory, object_directory / ".libs"]
+                          for suffix in [".o", ".obj", ".lo"]]
+            require(not any(candidate.exists() for candidate in candidates), "COMPILE_DEP_WITHOUT_INPUTS")
+            bootstrap.append({**current, "compiledObjectPresent": False})
+            continue
+        names = make_dependencies(content)
         result.extend((name, parent) for name in names)
         if names:
             evidence.append({"path": str(path.relative_to(directory)), "sha256": digest(path.read_bytes())})
     require(evidence, "COMPILE_DEP_EMPTY")
-    return result, len(evidence), {"method": "gcc-dependency-files", "files": evidence}
+    if report is not None:
+        report.pop("compilerDependencyCurrent", None)
+    return result, len(evidence), {"method": "gcc-dependency-files", "files": evidence, "bootstrapFiles": bootstrap}
 
 
 def observed_inputs(builds, sources, prefix, manifest, server_root, owners, packages, work, run, report=None,
@@ -125,7 +143,7 @@ def observed_inputs(builds, sources, prefix, manifest, server_root, owners, pack
             observations.append({"component": component["name"], "scope": "headers-or-host-generator-only", "complete": True})
             continue
         require(component["compileInputs"] == "compiler", "COMPILE_INPUT_SCOPE")
-        dependencies, dep_count, evidence = component_dependencies(directory, component["buildSystem"], work, run)
+        dependencies, dep_count, evidence = component_dependencies(directory, component["buildSystem"], work, run, report)
         observation = {"component": component["name"], "dependencyRecords": dep_count, "evidence": evidence, "complete": False}
         observations.append(observation)
         for name, working_directory in dependencies:

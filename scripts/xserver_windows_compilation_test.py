@@ -5,7 +5,7 @@ import unittest
 from unittest.mock import patch
 
 from xserver_source_review import ReviewError, digest
-from xserver_windows_compilation import dependency_path, make_dependencies, ninja_dependencies, observed_inputs
+from xserver_windows_compilation import component_dependencies, dependency_path, make_dependencies, ninja_dependencies, observed_inputs
 
 
 class CompilationTests(unittest.TestCase):
@@ -76,6 +76,38 @@ class CompilationTests(unittest.TestCase):
         self.assertCode("COMPILE_NINJA_DEPS", ninja_dependencies, valid.replace("VALID", "STALE"))
         self.assertCode("COMPILE_NINJA_COUNT", ninja_dependencies, valid.replace("#deps 2", "#deps 3"))
         self.assertCode("COMPILE_DEP_EMPTY", ninja_dependencies, "")
+
+    def test_real_make_unbuilt_empty_dependency_is_not_a_compiler_observation(self):
+        directory = self.builds / "real-make"
+        self.file(directory / "unit.c", "int sample(void) { return 7; }\n")
+        self.file(directory / "Makefile", "all: .deps/unbuilt.Po unit.o\n.deps/unbuilt.Po:\n\tmkdir -p .deps\n\t: >> $@\nunit.o: unit.c\n\tgcc -MD -MP -MF .deps/unit.Po -MT $@ -c $< -o $@\n")
+        result = subprocess.run(["make"], cwd=directory, text=True, capture_output=True, timeout=30)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        inputs, count, evidence = component_dependencies(directory, "autotools", self.root, None)
+        self.assertIn("unit.c", inputs[0])
+        self.assertEqual(count, 1)
+        self.assertEqual(evidence["bootstrapFiles"][0]["path"], ".deps/unbuilt.Po")
+        self.assertEqual(evidence["bootstrapFiles"][0]["size"], 0)
+
+    def test_bootstrap_cannot_hide_compiled_objects_or_replace_all_observations(self):
+        directory = self.builds / "library"
+        for content in ["", "# dummy\n", "#dummy\n"]:
+            self.file(directory / ".deps/unit.Plo", content)
+            self.assertCode("COMPILE_DEP_EMPTY", self.collect)
+            for relative in ["unit.o", "unit.obj", "unit.lo", ".libs/unit.o"]:
+                object_file = self.file(directory / relative, "compiled")
+                self.assertCode("COMPILE_DEP_WITHOUT_INPUTS", self.collect)
+                object_file.unlink()
+
+    def test_dependency_parse_failure_retains_exact_bounded_record_identity(self):
+        path = self.file(self.builds / "library/.deps/unit.Plo", "unparsed " + "x" * 1000 + "\n" * 20)
+        report = {}
+        self.assertCode("COMPILE_DEP_RULE", lambda: self.collect(report=report))
+        current = report["compilerDependencyCurrent"]
+        self.assertEqual(current["path"], ".deps/unit.Plo")
+        self.assertEqual(current["sha256"], digest(path.read_bytes()))
+        self.assertEqual(len(current["firstLines"]), 8)
+        self.assertEqual(len(current["firstLines"][0]), 512)
 
     def test_windows_path_requires_a_known_native_mount(self):
         self.assertEqual(dependency_path("D:/work/sources/library-1/unit.c", self.root, [("D:/work", self.root)]), self.library_source)

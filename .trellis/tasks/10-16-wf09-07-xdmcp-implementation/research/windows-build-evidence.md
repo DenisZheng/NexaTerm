@@ -193,3 +193,11 @@ code e751827的[原生19](https://github.com/DenisZheng/NexaTerm/actions/runs/39
 [source22](https://github.com/DenisZheng/NexaTerm/actions/runs/39274327348)与[source23](https://github.com/DenisZheng/NexaTerm/actions/runs/39275251281)的主机格式夹具均为五FAIL/一ERROR；Windows对应77/79项已通过。实际runner为Ubuntu22.04，其GNU ld2.38把内存对象前缀生成为字面量(null)，不是没有生成伪重定位。已独立下载Canonical官方2.38-4ubuntu2.12的binutils-x86-64-linux-gnu（2323634字节/hash 6752566855c79448f8173e61eacde2ef582299480f1abcf4c2ba7ce84718ef32）和libbinutils（662922字节/hash c5a7c354cf986126edc80ec615c0041c19e5b554433857cc66858803d4552296，匹配官方包页），仅在scratch提取运行，真实map已复现相同(null)名称。测试夹具只对已识别2.38 banner将该前缀适配到固定目标格式，不改地址、节或PE字节；生产仍仅接受固定2.47 producer和XWin_exe名称，并新增(null)不能获得缺文件豁免的回归。
 
 夹具另显式启用auto-import，四字节偏移以原始八字节整数和独立BFD_RELOC_64记录保留；实际objdump核对原始值4及AMD64 ADDR64，避免ELF RELA到COFF时丢失非零加数。GNU as官方.reloc说明明确不同目标对加数的支持不同。现本地101项无skip；独立旧2.38工具链十项相关回归也全部通过。新代码仍须完整远端验证；原生20进行中，未据步骤运行推定早期探针或全引擎已经成功。
+
+## 原生21：链接内存输入闭环通过，修正未编译目标的空依赖文件
+
+code898abaa的[source CI24](https://github.com/DenisZheng/NexaTerm/actions/runs/39275857400)及[完整CI691](https://github.com/DenisZheng/NexaTerm/actions/runs/39275857337)均成功，后者七个执行job全SUCCESS、条件打包跳过。源码两JSON归档85272字节、SHA256 9124e261668f3843805e8b7aacc435d47dc6f92e6378f8968e9b2945e9e1b896已下载，server/manifest及全部15依赖/签名/身份pin一致，采用仍false。
+
+[原生21](https://github.com/DenisZheng/NexaTerm/actions/runs/39275857350)通过80项Windows回归、实际发布ld程序身份和真实DLL非零偏移数据导入运行、15依赖、五项目标探针、完整XWin编译/链接/安装、16文件PE及server头来源。最终静态map核验完成105项：68份server-build、12份private-prefix、22份target-toolchain磁盘输入及3份内存输入；后者分别为rtr、ertr和dll stuff，四段真实最终PE贡献字节均已绑定。保留无磁盘对象/无对象文件hash的真实语义，未发布二进制。单JSON归档252405字节、SHA256 a16ed4f0177a1f126b99fb7356c3afc2b0c1c4ff1c9d7ae091bb15556a839e3a已下载核对。
+
+整次仍FAIL：compiler-inputs在libXau首次依赖解析返回COMPILE_DEP_RULE，原报告没有保存失败depfile，不能据此声称已完成完整编译清单。固定libXau-1.0.12/Makefile.in（53511字节、SHA256 44f6da9354450e72b2ae2872acc71594ce97f910105779973da749cf6f47d41a）明确对包含Autest.Po的依赖集合执行空文件bootstrap；Autest只在check目标编译，当前实际profile不执行该目标。新增严格识别：仅接受.deps下空文件或既有dummy注释，且对应.o/.obj/.lo及.libs对象均不存在；只记录路径/大小/hash，不计编译观察；只有bootstrap的组件仍失败。解析失败现保留当前记录hash/大小及有界首行，避免下一次丢失定位。真实GNU make+GCC未构建目标回归和伪造已编译对象反例均通过，本地总104项无skip。新代码待Windows完整执行，完整C清单/最终版本probe及发行许可仍未关闭。

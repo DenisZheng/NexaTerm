@@ -10,7 +10,7 @@
 
 | 项目 | 原评估 | 当前开发方向 | 当前实现状态 |
 | --- | --- | --- | --- |
-| WF-09-07 XDMCP | 评估完成，真实集成被环境阻塞 | 集成并随包管理 X server，交付完整桌面会话流程 | IN_PROGRESS；X1退出屏障#83已过CI666/原生10；X0固定源码#84已过CI669/源码2；#85 code60ac904源码21及完整CI688七执行job通过；原生18已过15依赖、五探针、完整引擎/PE/头来源及固定manifest源证据，静态map保留102磁盘输入后在GNU ld内存BFD对象处FAIL；已补producer/map到PE贡献核对及早期DLL运行探针，本地98回归通过，待新原生执行；四DLL五份实际许可hash已匹配；完整C输入/最终版本、XKB工具/数据、DLL静态及资源闭包仍未关闭；组件采用、完整许可/资源、X2/X3与Unix硬崩溃监督未完成 |
+| WF-09-07 XDMCP | 评估完成，真实集成被环境阻塞 | 集成并随包管理 X server，交付完整桌面会话流程 | IN_PROGRESS；X1退出屏障#83已过CI666/原生10；X0固定源码#84已过CI669/源码2；Draft #85 code898abaa的source CI24与完整CI691七执行job通过；原生21已过80回归、真实DLL数据导入、15依赖、五探针、完整引擎/PE/头来源及105项实际链接输入，随后libXau编译依赖解析FAIL；已补未编译目标的空bootstrap识别和当前依赖记录定位，本地104回归通过、待新Windows验证；四DLL五份及CRT三份实际notice均匹配固定原文；完整C输入/最终版本、XKB工具/数据、DLL静态及资源闭包仍未关闭；组件采用、X2/X3与Unix硬崩溃监督未完成 |
 | WF-09-08A Rlogin | 原生实现 DEFER | 独立原生协议实现和终端接入 | IN_PROGRESS（L1）；L0 三平台 CI 已过，保留socket/OOB控制组件已过三平台原生与完整应用CI；Unix精确flush通过，Windows精确边界仍待开发；建立/ACK尾部adapter也已过三平台原生与完整应用CI，headless会话owner/有界pull-ACK也已过三平台原生与完整应用CI，typed IPC/应用生命周期已过三平台原生与完整CI；前端有界交付桥已通过行为/类型/构建和完整CI（Draft #73），终端IO适配器（编码/输入背压/renderer生命周期）已过原生与完整CI（Draft #74），配置/存储和表单组件已过完整CI（Draft #75/#76）；真实Workspace入口/许可/取消/重连/关闭/恢复及隐私隔离已实现、本地验证通过，Draft #77完整CI649和三平台原生30均通过；Unix能力按exact_flush开放，DNS已过Draft #78完整CI651/原生32三平台；Windows精确边界仍待开发，#82代码99bffa6/原生45的API反例没有启用能力；真实互通仍待完成 |
 | WF-09-08B Rsh | 原生实现 DEFER | 独立原生命令执行与双流管理 | IN_PROGRESS（S2开发交付）：S0 #79已过CI652/原生33，S1 #80已过CI655/原生36；S2 #81任务owner、typed IPC、实际命令界面、双流背压/ACK/EOF/信号/取消/重跑及隐私隔离已实现，code44529a0已过完整CI660/原生41三平台；真实rshd、Unix低端口正向和WebView仍待验收 |
 
