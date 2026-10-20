@@ -15,7 +15,7 @@
   "branch": "build/wf09-07-xserver-windows",
   "base_branch": "build/wf09-07-xserver-source-review",
   "worktree_path": null,
-  "commit": "898abaac7fd0d89362812c2da18284dfecbc53e5",
+  "commit": "4108212227769d5635a7d7fc61010745d3a08c73",
   "pr_url": "https://github.com/DenisZheng/NexaTerm/pull/85",
   "subtasks": [],
   "children": [],
@@ -33,8 +33,9 @@
     "scripts/xserver/toolchain-license-sources.json",
     ".trellis/tasks/10-16-wf09-07-xdmcp-implementation/research/windows-runtime-license-review.md",
     "scripts/xserver_windows_linker.py",
-    "scripts/xserver_windows_linkmap.py"
+    "scripts/xserver_windows_linkmap.py",
+    "scripts/xserver_windows_archives.py"
   ],
-  "notes": "Draft #85 stacked on #84. Code898abaa verified by source CI24 and full CI691 all7 executing jobs SUCCESS, package skipped. Native21 passed80 regressions, exact published linker identity and real DLL data import,15 dependencies,5 real probes,full engine/PE/header gates,105 actual static-link inputs including3 memory-generated records. Then libXau compiler dependency parse FAIL; complete C inventory/final version not reached. Added strict empty Automake bootstrap handling only without corresponding compiled objects and bounded current depfile diagnostics; local104 no-skip regressions, fresh native pending. Four DLL/five installed notices and all3 CRT notices match fixed primary texts. Selected archive-member rights, DLL internal static/resource closure,xkbcomp/XKB data,runtime GPL obligations,X2/X3 and Unix hard-crash supervision remain open; no distribution/bundled/desktop approval, merge or release.",
+  "notes": "Draft #85 stacked on #84. Code4108212 verified by source CI25, full CI692 all7 executing jobs SUCCESS and full Windows native22 SUCCESS. Native22 passed83 regressions, real DLL data import,15 dependencies,5 probes,full engine/PE/header gates,105 link inputs,1720 unique C inputs and final XWin version. JSON artifacts downloaded/pins checked; all adoption flags false. New archive-member collector binds map selections to exact owned archive/member payloads and preserves fail-closed diagnostics; local113 no-skip regressions, real GNU PE import-library and official13 CRT archive fixtures passed; fresh native pending. Four DLL/five notices, all3 CRT notices and14 CRT installed link inputs match fixed primary source/published package. Actual selected-member rights, SDK/generator conditions,DLL internals/resources,xkbcomp/XKB data,runtime GPL obligations,X2/X3 and Unix hard-crash supervision remain open. No distribution/bundled/desktop approval, merge or release.",
   "meta": {}
 }

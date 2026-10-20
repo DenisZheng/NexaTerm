@@ -22,6 +22,7 @@ from xserver_windows_compilation import observed_inputs
 from xserver_windows_probes import font_probe, header_probes, poll_probe, xcb_probe
 from xserver_windows_linker import linker_probe
 from xserver_windows_linkmap import memory_inputs
+from xserver_windows_archives import selected_members
 
 
 MAX_ENTRIES = 5000
@@ -290,6 +291,9 @@ def build(work, report):
     generated = memory_inputs(mapping.read_text(), server.read_bytes(), report["linkerProducer"])
     report["linkerGeneratedInputs"] = list(generated.values())
     report["staticLink"] = link_inputs(mapping, server_build / "hw/xwin", builds, prefix, owners, work, run, packages, report, generated)
+    report["stage"] = "archive-member-inputs"
+    report["archiveMembers"] = selected_members(mapping, server_build / "hw/xwin", builds, prefix,
+                                               report["staticLink"]["inputs"], work, run, report)
     report["stage"] = "compiler-inputs"
     report["compilerInputs"] = observed_inputs(builds, sources, prefix, manifest, root, owners, packages, work, run, report)
     report["runtimePackages"] = list(packages.values())

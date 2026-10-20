@@ -1,6 +1,6 @@
 # Windows X server 工具链运行库许可实证
 
-状态：审查进行中，未批准随包/分发。范围为code6e1f8fd原生16实际递归PE集合中四个目标工具链DLL；固定X库、生成器、资源及其他编译/静态输入见[构建证据](windows-build-evidence.md)。不把整个私有prefix或编译器包当作发行清单。
+状态：审查进行中，未批准随包/分发。当前基准code4108212/原生22，覆盖实际递归PE集合的四个目标工具链DLL及已经观察的SDK/编译与链接输入；固定X库、生成器、资源及其他编译/静态输入见[构建证据](windows-build-evidence.md)。不把整个私有prefix或编译器包当作发行清单。
 
 ## 实际DLL与固定包装来源
 
@@ -69,3 +69,11 @@ GNU ld创建的rtr/ertr与dll stuff是内存BFD对象。生成器身份记录到
 三份CRT安装notice至此均已同固定源文本匹配。非runtime文档明确区分GNU工具/可选profiling代码与普通应用输出；runtime文本包含MinGW总体、getopt、gdtoa、Sun数学函数及musl的不同保留声明，也保留Cephes权限措辞未定及Wine导入头/IDL的LGPL事项。不能把crt包级ZPL标签概括为全部文件。当前map记录的是实际加载的完整archive，不是其中最终选中成员的逐项权利清单；Cephes/profiling/Wine是否进入输出仍须结合真实成员、编译输入和对应声明核对，未由notice匹配推定不存在或批准发行。
 
 原生21已核对105项最终XWin链接输入（含3份内存生成输入），链接器程序hash与固定官方发布包一致；构建工具许可和输出采用仍分开记录。每个依赖DLL内部的静态/资源、完整SDK逐文件及打包notice落实仍开放。
+
+## 固定SDK源码身份与CRT发布对象交叉核对
+
+继续读取同一SDK commit63ebe6cdb3ec4d5c586b7f0f0c03dd502e44c296的官方GitHub归档（15827606字节、实际SHA256 94469ea48f974f9a4f7d8b7050cb7eceaa92c1f941ed3b6b8137591ba19491de）。对headers/include、crt、ddk三个tree及CRT源码tree重建Git tree对象hash，再按blob原始字节逐一核对归档：headers共2064文件，CRT共4335文件；对应tree分别为a24dd082c55841bec4437ac9c15f145577eb340b、05b4b86044cfcfec6729efc001f6da909d919d6e、a913de235999def84a08413d884d56fe41fea1dc、829f684f31c5b92c2ade2d339f52acd9004d0db9。没有复制SDK实现进项目。该身份清单用于随后同真实compilerInputs逐项匹配；不将“没有行内许可标记”当作权利批准，WIDL生成头还须追到输入IDL及适用根声明。
+
+标记核查已处理C注释行首星号及换行：headers候选中303文件存在GNU许可证文字；CRT的9个文字命中文件均非C/H/汇编实现。具体DirectDraw/propkey原文确为LGPL，继续排除。重新核对15个固定库的843份候选仍无GNU标记；server的1145份候选仅winprefsyacc.c/h命中，完整保留Bison3.8.2附加例外。以上只是固定文本的定位与身份核对，不能代替逐文件权限和实际编译/链接相关性审查。
+
+另独立下载[官方CRT发布包](https://packages.msys2.org/packages/mingw-w64-ucrt-x86_64-crt)，4067902字节、SHA256 5975fa56060f1d428d2369b6be70b1e63c0512c63031c2bae722b45610d1c1ea，与官方包页一致。原生21实际14项CRT链接输入（13个archive及crt2.o）逐个匹配包内字节；新成员读取器已成功解析这些真实GNU/COFF archive，包括名称表及全部成员边界。包的分离签名仍未独立核验；原生报告cachedArchives为空的事实保留，本次独立下载不会伪造其cache内容。实际选择哪些成员由下一次map取证确认。

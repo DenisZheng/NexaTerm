@@ -6,7 +6,7 @@
 
 同日X0续作：Draft #84已交付固定官方21.1.25源码/签名/公钥核验入口，专用CI2的21项测试和真实在线GPG验证通过。采集仅为REVIEW-REQUIRED，发行批准与bundled仍为false；继续原生Windows构建、逐文件/依赖许可及PE/资源闭包，不重复源码核验入口。精确完整CI结果与下一刀见research/source-review-evidence.md。
 
-2026-10-20 Windows续作：Draft #85 code898abaa的source CI24与完整CI691七执行job通过；原生21已过80回归、真实DLL数据导入、15依赖、五探针、完整引擎/PE/头来源及105项实际链接输入，随后libXau编译依赖解析FAIL；已补未编译目标的空bootstrap识别和当前依赖记录定位，本地104回归通过、待新Windows验证；四DLL五份及CRT三份实际notice均匹配固定原文。完整C输入/最终版本、xkbcomp/XKB数据、DLL内部静态/资源和随包/桌面仍须开发，见research/windows-build-evidence.md与research/windows-runtime-license-review.md。
+2026-10-20 Windows续作：Draft #85 code4108212的source CI25、完整CI692七执行job与Windows原生22整条门禁通过：83回归、真实DLL数据导入、15依赖、五探针、完整引擎/PE/头来源、105链接及1720份C输入、最终-version均成功；新增archive成员级取证本地113回归通过、待新Windows验证；四DLL五份及CRT三份notice已匹配固定原文。实际成员权限、xkbcomp/XKB数据、DLL内部静态/资源和随包/桌面仍须开发，见research/windows-build-evidence.md与research/windows-runtime-license-review.md。
 
 用户流程：选择 XDMCP 目标后启动远程桌面，查看状态，取消/重连/关闭并回收所属 X server。
 

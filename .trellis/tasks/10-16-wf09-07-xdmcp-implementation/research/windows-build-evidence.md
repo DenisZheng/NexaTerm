@@ -1,8 +1,12 @@
-# X0 Windows原生构建与依赖/许可证据（2026-10-19）
+# X0 Windows原生构建与依赖/许可证据（更新2026-10-20）
 
 本刀沿Draft #84固定输入继续，不重做源码采集入口。Draft #85堆叠#84，仍为开发构建；发行批准、bundled、desktop均false。15个依赖官方归档及51项许可文件hash见`scripts/xserver/windows-sources.json`。这些锚点证明核查了哪些文本，不是整个编译/运行闭包的MIT结论。
 
 ## 当前继续入口
+
+code4108212已通过source CI25、完整CI692七执行job及Windows原生22整条门禁：固定依赖、五目标探针、真实DLL数据导入、完整引擎/PE/头来源、105链接输入、1720份C输入及最终-version均成功。source25与原生22的JSON-only artifact已下载逐项复核。新的archive成员级取证本地113项回归通过，尚待新代码原生验证；从本文末尾该续作继续，不重做旧编译修正。逐文件/SDK生成头/运行库及资源义务、xkbcomp/XKB数据、随包/打包/桌面仍未关闭，所有发行/随包/桌面批准false。
+
+## 历史里程碑：原生13
 
 先核对[Draft #85](https://github.com/DenisZheng/NexaTerm/pull/85)最新HEAD和原生workflow，不把历史失败当作最新结果。code872dac6的source CI16及完整应用CI683七执行job均成功（条件打包为既有skip）。原生13的47项反例、全部15依赖构建安装、IPv6/AppID/font二进制I/O实际探针及引擎XDMCP/Winsock/relocate配置均通过；完整server make随后在LLP64地址/标量桥、SDK命名空间、缺失winauth.h及Unix测试程序处FAIL。继续实际引擎编译和PE/运行库/编译输入许可闭包，不能标记native build完成。原生13 artifact12171955533已实际下载：仅一JSON，SHA256 ba5f7a5f0a6318e983e5f9a01c384897bdabfedc33f847a9979272afc23cc406。source16 artifact12169904620也核对仅两JSON，SHA256 625d0aa17bab970c866d7309e6975e31e7c3b0c1a24de963064743e1544ab1b0，15项与code872dac6清单一致；所有分发/随包/桌面标志仍false。
 
@@ -201,3 +205,19 @@ code898abaa的[source CI24](https://github.com/DenisZheng/NexaTerm/actions/runs/
 [原生21](https://github.com/DenisZheng/NexaTerm/actions/runs/39275857350)通过80项Windows回归、实际发布ld程序身份和真实DLL非零偏移数据导入运行、15依赖、五项目标探针、完整XWin编译/链接/安装、16文件PE及server头来源。最终静态map核验完成105项：68份server-build、12份private-prefix、22份target-toolchain磁盘输入及3份内存输入；后者分别为rtr、ertr和dll stuff，四段真实最终PE贡献字节均已绑定。保留无磁盘对象/无对象文件hash的真实语义，未发布二进制。单JSON归档252405字节、SHA256 a16ed4f0177a1f126b99fb7356c3afc2b0c1c4ff1c9d7ae091bb15556a839e3a已下载核对。
 
 整次仍FAIL：compiler-inputs在libXau首次依赖解析返回COMPILE_DEP_RULE，原报告没有保存失败depfile，不能据此声称已完成完整编译清单。固定libXau-1.0.12/Makefile.in（53511字节、SHA256 44f6da9354450e72b2ae2872acc71594ce97f910105779973da749cf6f47d41a）明确对包含Autest.Po的依赖集合执行空文件bootstrap；Autest只在check目标编译，当前实际profile不执行该目标。新增严格识别：仅接受.deps下空文件或既有dummy注释，且对应.o/.obj/.lo及.libs对象均不存在；只记录路径/大小/hash，不计编译观察；只有bootstrap的组件仍失败。解析失败现保留当前记录hash/大小及有界首行，避免下一次丢失定位。真实GNU make+GCC未构建目标回归和伪造已编译对象反例均通过，本地总104项无skip。新代码待Windows完整执行，完整C清单/最终版本probe及发行许可仍未关闭。
+
+## 原生22：Windows开发构建整条门禁首次成功
+
+[原生22](https://github.com/DenisZheng/NexaTerm/actions/runs/39353470406)（code4108212）通过83项Windows回归、真实链接器/DLL导入、15依赖、五目标探针、完整编译/链接/安装、16文件PE、105链接输入及最终XWin.exe -version；nativeBuildVerified/nativeVersionVerified均true，状态仍REVIEW-REQUIRED，distributionApproved/bundled/desktopVerified均false。XWin.exe为2451933字节、SHA256 b4f71dca004a70769dce8b860fa5f7e99866fe75759b5b330d153bd713263213；只上传JSON，未发布引擎。单JSON归档385755字节、SHA256 a4aa706b255715eb8e0380abcfa06a2125a8266acc76ff5d49fb662d1e464e79已实际下载检查。
+
+完整C观察为1720份唯一输入、32185519字节：1212固定源码、104私有安装、71生成/私有头、333工具链；组件观察全complete。libXau真实记录正为8份编译依赖和一个零字节.deps/Autest.Po；server为387份编译记录及384份未编译bootstrap，不把后者算编译通过。333份工具链输入包括202 SDK头、121 GCC头和其余库头；SDK的201份字节同固定Git源码完全一致，唯一未直接匹配为配置生成_mingw.h。其中stdarg.h含GCC附加例外，须独立核对，不能把全部SDK标成Public Domain。
+
+该结果完成Windows开发构建和已有输入采集契约，不完成逐文件权限、静态成员、DLL内部静态/资源及桌面/分发。新成员级代码不能继承此处旧代码成功结论。
+
+## 成员级取证续作：真实archive与PE import library
+
+完整应用CI692与source CI25已通过code4108212；source25的21源码+83 Windows回归和15项实际签名均成功。两JSON归档85272字节、SHA256 a6d5f0520a826a16a2fafd93626fa45f77fadf726d49711e032a91d15e95086f已下载，server/manifest及15项源码、签名、证书与身份pin全部一致。原生22也已整条成功，精确范围与许可边界见上一节。
+
+新增成员取证只读取GNU map的archive选择区段，复用实际LOAD输入的路径/owner并重验archive hash，再以有界GNU/COFF读取器绑定唯一非空成员的payload hash、大小和文件偏移；不提取或执行外部对象。支持GNU长名和COFF长名表，未知/薄archive、越界/坏padding/不安全名称、owner缺失、文件漂移、缺失/重名/重复成员均失败；当前行/成员与已完成证据保留。静态库和import library均由真实GNU ar/ld构建后验证，另覆盖未选中对象不会被加入及失败反例；这些格式fixture没有执行，不冒充Windows引擎运行。
+
+当前本地113项无skip，旧GNU2.38工具链的相关成员回归也通过；实际官方CRT的13个已观察archive均可解析。新门禁接在最终LOAD清单后、完整C输入前，仍须整条Windows执行。报告保留finalSectionContributionInferred=false、perFileLicenseReviewComplete=false、dependencyDllInternalsIncluded=false；map选择成员不等同于每段字节最终保留或已具备发行权限。

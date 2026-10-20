@@ -81,6 +81,13 @@ def add_runtime_provenance(closure, prefix, owners, work, run):
     return packages
 
 
+def link_input_path(name, directory, work, run):
+    if re.match(r"^[A-Za-z]:", name):
+        name = run(["cygpath", "-u", name], work, capture=True).strip()
+    path = Path(name)
+    return (directory / path).resolve() if not path.is_absolute() else path.resolve()
+
+
 def link_inputs(map_file, link_directory, builds, prefix, owners, work, run, packages, report=None, generated_inputs=None):
     require(map_file.is_file() and map_file.stat().st_size <= 64 * 1024 * 1024, "LINK_MAP_MISSING")
     content = map_file.read_text(encoding="utf-8", errors="strict")
@@ -99,10 +106,7 @@ def link_inputs(map_file, link_directory, builds, prefix, owners, work, run, pac
             records[record["origin"] + "/" + record["path"]] = record
             result["inputs"] = list(records.values())
             continue
-        if re.match(r"^[A-Za-z]:", name):
-            name = run(["cygpath", "-u", name], work, capture=True).strip()
-        path = Path(name)
-        path = (link_directory / path).resolve() if not path.is_absolute() else path.resolve()
+        path = link_input_path(name, link_directory, work, run)
         if report is not None:
             report["staticLinkCurrentInput"] = str(path)[:4096]
         require(path.is_file(), "LINK_INPUT_MISSING")
