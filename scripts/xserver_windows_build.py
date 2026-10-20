@@ -23,6 +23,7 @@ from xserver_windows_probes import font_probe, header_probes, poll_probe, xcb_pr
 from xserver_windows_linker import linker_probe
 from xserver_windows_linkmap import memory_inputs
 from xserver_windows_archives import selected_members
+from xserver_windows_xkb import configured_paths, runtime_inventory, xkb_probe
 
 
 MAX_ENTRIES = 5000
@@ -37,7 +38,7 @@ SYSTEM_DLLS = {
 }
 
 
-def run(arguments, cwd, *, timeout=900, capture=False):
+def run(arguments, cwd, *, timeout=900, capture=False, expected_exit=0):
     print("BUILD:", " ".join(str(a) for a in arguments), flush=True)
     try:
         result = subprocess.run([str(a) for a in arguments], cwd=cwd, text=True,
@@ -47,27 +48,28 @@ def run(arguments, cwd, *, timeout=900, capture=False):
         raise ReviewError("BUILD_TIMEOUT") from error
     except OSError as error:
         raise ReviewError("BUILD_TOOL") from error
-    if result.returncode != 0 and capture:
+    if result.returncode != expected_exit and capture:
         print(result.stdout[-4000:], result.stderr[-4000:], flush=True)
-    require(result.returncode == 0, "BUILD_EXIT")
+    require(result.returncode == expected_exit, "BUILD_EXIT")
     return result.stdout + result.stderr if capture else ""
 
 
 
-def extract_component(archive, parent, root, licenses):
+def extract_component(archive, parent, root, licenses, aliases=None):
     require(not (parent / root).exists(), "SOURCE_ALREADY_EXISTS")
     with lzma.open(archive, "rb") as raw:
         budget = ArchiveBudget(raw, MAX_EXPANDED)
         try:
-            return extract_tar(budget, parent, root, licenses)
+            return extract_tar(budget, parent, root, licenses, aliases)
         except ReviewError as error:
             if str(error) == "ARCHIVE_BUDGET":
                 raise ReviewError("SOURCE_BUDGET") from error
             raise
 
 
-def extract_tar(budget, parent, root, licenses):
-    seen, total, anchors = set(), 0, {}
+def extract_tar(budget, parent, root, licenses, aliases=None):
+    aliases = aliases or {}
+    seen, regular, pending, total, anchors = set(), set(), set(), 0, {}
     with tarfile.open(fileobj=budget, mode="r|") as tar:
         for member in tar:
             require(len(seen) < MAX_ENTRIES, "SOURCE_BUDGET")
@@ -78,6 +80,14 @@ def extract_tar(budget, parent, root, licenses):
                     and path.parts[0] == root, "SOURCE_PATH")
             require(name not in seen, "SOURCE_DUPLICATE")
             seen.add(name)
+            relative = str(path.relative_to(root))
+            if member.issym() and relative in aliases:
+                target = aliases[relative]["target"]
+                require(target not in {".", ".."} and PurePosixPath(target).name == target
+                        and "\\" not in target and member.size == 0
+                        and member.linkname == target, "SOURCE_ALIAS_TARGET")
+                pending.add(relative)
+                continue
             require(member.isdir() or member.isreg(), "SOURCE_TYPE")
             target = parent.joinpath(*path.parts)
             if member.isdir():
@@ -95,14 +105,30 @@ def extract_tar(budget, parent, root, licenses):
             target.chmod(0o755 if member.mode & 0o111 else 0o644)
             # Autotools发行归档依赖生成文件的相对时间；保留固定输入元数据。
             os.utime(target, (member.mtime, member.mtime))
-            relative = str(path.relative_to(root))
+            regular.add(relative)
             if relative in licenses:
                 require(hasher.hexdigest() == licenses[relative], "SOURCE_LICENSE")
                 anchors[relative] = hasher.hexdigest()
     while budget.read(65536):
         pass
     require(anchors == licenses, "SOURCE_LICENSE")
-    return {"members": len(seen), "regularBytes": total, "licenseFiles": anchors}
+    require(pending == set(aliases), "SOURCE_ALIAS_SET")
+    materialized, alias_bytes = [], 0
+    for relative in sorted(pending):
+        spec = aliases[relative]
+        target_relative = str(PurePosixPath(relative).parent / spec["target"])
+        require(target_relative in regular, "SOURCE_ALIAS_REGULAR")
+        target = parent / root / target_relative
+        verify_file(target, spec["size"], spec["sha256"])
+        alias_bytes += spec["size"]
+        require(total + alias_bytes <= MAX_EXPANDED, "SOURCE_BUDGET")
+        output = parent / root / relative
+        output.write_bytes(target.read_bytes())
+        output.chmod(0o644)
+        os.utime(output, (target.stat().st_mtime, target.stat().st_mtime))
+        materialized.append({"path": relative, **spec, "archiveType": "symlink", "materializedRegular": True})
+    return {"members": len(seen), "regularBytes": total, "licenseFiles": anchors,
+            "sourceAliases": materialized, "materializedAliasBytes": alias_bytes}
 
 
 def pe_imports(path, work):
@@ -201,6 +227,8 @@ def build(work, report):
     os.environ["LDFLAGS"] = "-L" + str(prefix / "lib")
     os.environ["LIBS"] = "-lpthread -lws2_32"
     os.environ["PYTHON"] = "/usr/bin/python3"
+    native_xkb_root = run(["cygpath", "-m", prefix / "share/xkeyboard-config-2"], work, capture=True).strip()
+    native_bin = run(["cygpath", "-m", prefix / "bin"], work, capture=True).strip()
     report["components"] = []
     owners = {}
     report["component"] = "xorg-server"
@@ -220,7 +248,7 @@ def build(work, report):
         signing = component["signature"]
         signature = download_component(signing, cache, component["root"] + ".tar.xz.sig")
         signature_evidence = verify_dependency(archive, signature, manifest["certificates"][signing["certificate"]], signing)
-        evidence = extract_component(archive, sources, component["root"], component["licenseFiles"])
+        evidence = extract_component(archive, sources, component["root"], component["licenseFiles"], component.get("sourceAliases"))
         entry = {**component, "signatureEvidence": signature_evidence, "sourceEvidence": evidence, "built": False}
         report["components"].append(entry)
         build_directory = builds / component["name"]
@@ -230,17 +258,25 @@ def build(work, report):
         report["stage"] = "configure"
         before = snapshot(prefix)
         if component["buildSystem"] == "meson":
-            run(["meson", "setup", build_directory, source, "--prefix=" + str(prefix), "--libdir=lib", "--buildtype=release", "--default-library=shared"], work)
+            run(["meson", "setup", build_directory, source, "--prefix=" + str(prefix), "--libdir=lib", "--buildtype=release", "--default-library=shared", *component["options"]], work)
             report["stage"] = "compile-install"
             run(["meson", "compile", "-C", build_directory, "-j", jobs], work)
             run(["meson", "install", "-C", build_directory], work)
         else:
-            run(["bash", source / "configure", "--prefix=" + str(prefix), "--host=" + manifest["target"], "--enable-dependency-tracking", *component["options"]], build_directory)
+            xkb_options = ["--with-xkb-config-root=" + native_xkb_root] if component["name"] == "xkbcomp" else []
+            run(["bash", source / "configure", "--prefix=" + str(prefix), "--host=" + manifest["target"], "--enable-dependency-tracking", *component["options"], *xkb_options], build_directory)
             report["stage"] = "compile-install"
             run(["make", "-k", "-j" + jobs], build_directory)
             run(["make", "install"], build_directory)
         entry["built"] = True
         entry["installedFiles"] = installed_delta(prefix, before, component["name"], owners)
+        if component["name"] == "xkeyboard-config":
+            report["stage"] = "xkb-runtime-data"
+            report["xkbRuntimeData"] = runtime_inventory(prefix, source, build_directory, entry, owners, report)
+        if component["name"] == "xkbcomp":
+            parser = component["generatedParserReview"]
+            verify_file(source / parser["path"], parser["size"], parser["sha256"])
+            xkb_probe(prefix, builds, work, report, run)
         for relative, anchor in component.get("installedAnchors", {}).items():
             verify_file(prefix / relative, anchor["size"], anchor["sha256"])
         if component["name"] == "xorgproto":
@@ -260,7 +296,9 @@ def build(work, report):
     maps.mkdir()
     native_maps = run(["cygpath", "-m", maps], work, capture=True).strip()
     os.environ["LDFLAGS"] += " -Wl,-Map=" + native_maps
-    run(["bash", sources / root / "configure", "--prefix=" + str(prefix), "--host=" + manifest["target"], "--enable-dependency-tracking", *manifest["serverOptions"]], server_build)
+    run(["bash", sources / root / "configure", "--prefix=" + str(prefix), "--host=" + manifest["target"], "--enable-dependency-tracking", *manifest["serverOptions"],
+         "--with-xkb-path=" + native_xkb_root, "--with-xkb-bin-directory=" + native_bin], server_build)
+    report["serverXkbPaths"] = configured_paths(server_build, native_xkb_root, native_bin)
     core_bytes = (server_build / "include/dix-config.h").read_bytes()
     native_bytes = (server_build / "include/xwin-config.h").read_bytes()
     core_config, native_config = core_bytes.decode(), native_bytes.decode()
@@ -280,8 +318,13 @@ def build(work, report):
     require(server.is_file(), "SERVER_BINARY")
     report["stage"] = "pe-closure"
     report["peClosure"] = inspect_closure(server, [prefix / "bin", Path("/ucrt64/bin")], work)
+    report["xkbCompilerPeClosure"] = inspect_closure(prefix / "bin/xkbcomp.exe", [prefix / "bin", Path("/ucrt64/bin")], work)
+    report["peClosureRoots"] = {"peClosure": "XWin.exe", "xkbCompilerPeClosure": "xkbcomp.exe"}
     report["peImportScope"] = ["normal", "delay"]
     packages = add_runtime_provenance(report["peClosure"], prefix, owners, work, run)
+    for name, evidence in add_runtime_provenance(report["xkbCompilerPeClosure"], prefix, owners, work, run).items():
+        require(name not in packages or packages[name] == evidence, "PE_PACKAGE_CHANGED")
+        packages[name] = evidence
     report["runtimePackages"] = list(packages.values())
     report["stage"] = "native-headers"
     report["nativeHeaderEvidence"] = native_header_evidence(server_build)
@@ -296,6 +339,10 @@ def build(work, report):
                                                report["staticLink"]["inputs"], work, run, report)
     report["stage"] = "compiler-inputs"
     report["compilerInputs"] = observed_inputs(builds, sources, prefix, manifest, root, owners, packages, work, run, report)
+    parser = next(component for component in manifest["components"] if component["name"] == "xkbcomp")["generatedParserReview"]
+    require(any(item.get("component") == "xkbcomp" and item["path"].endswith("/" + parser["path"])
+                and item["sha256"] == parser["sha256"] and "xkbcomp" in item["observedBy"]
+                for item in report["compilerInputs"]["files"]), "XKB_PARSER_NOT_OBSERVED")
     report["runtimePackages"] = list(packages.values())
     report["stage"] = "native-version"
     version = run([server, "-version"], work, timeout=20, capture=True)

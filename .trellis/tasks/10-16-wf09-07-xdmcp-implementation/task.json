@@ -12,11 +12,11 @@
   "assignee": "codex",
   "createdAt": "2026-10-16",
   "completedAt": null,
-  "branch": "build/wf09-07-xserver-windows",
-  "base_branch": "build/wf09-07-xserver-source-review",
+  "branch": "build/wf09-07-xkb-runtime",
+  "base_branch": "build/wf09-07-xserver-windows",
   "worktree_path": null,
-  "commit": "4e4e4a8d6bd0c6c8a0c486b25bd4d3d85da7844d",
-  "pr_url": "https://github.com/DenisZheng/NexaTerm/pull/85",
+  "commit": null,
+  "pr_url": null,
   "subtasks": [],
   "children": [],
   "parent": "09-23-nexaterm-workflow-mainline",
@@ -34,8 +34,11 @@
     ".trellis/tasks/10-16-wf09-07-xdmcp-implementation/research/windows-runtime-license-review.md",
     "scripts/xserver_windows_linker.py",
     "scripts/xserver_windows_linkmap.py",
-    "scripts/xserver_windows_archives.py"
+    "scripts/xserver_windows_archives.py",
+    "scripts/xserver_windows_xkb.py",
+    ".trellis/spec/backend/xserver-windows-xkb.md",
+    ".trellis/tasks/10-16-wf09-07-xdmcp-implementation/research/windows-xkb-evidence.md"
   ],
-  "notes": "Draft #85 stacked on #84. Code4e4e4a8 verified by source CI27, full CI694 all7 executing jobs and full Windows native24 SUCCESS. Native24 passed93 regressions,15 dependencies,5 probes,real DLL data import,full engine/16 PE/header gates,105 link inputs,47 archives/942 selected members,1720 C inputs and final version. JSON artifacts downloaded/verified; all C identities equal native22. All544 selected toolchain members match official package payloads (CRT455,GCC2,pixman73,winpthreads14). Fixed source/transforms verified for333 toolchain headers and56 generated files; CRT53 selected implementation sources associated. Native23 inline-reference failure preserved; real two-archive regression,local114 and legacy GNU2.38 ten tests passed. Per-file/SDK IDL/generator conditions,DLL internals/resources,runtime GPL source obligations,notices,xkbcomp/XKB data,X2/X3 and Unix hard-crash supervision remain open. Adoption,bundled,desktop flags remain false. No merge or release.",
+  "notes": "Draft #85 stacked on #84. Code4e4e4a8 verified by source CI27, full CI694 all7 executing jobs and full Windows native24 SUCCESS. Native24 passed93 regressions,15 dependencies,5 probes,real DLL data import,full engine/16 PE/header gates,105 link inputs,47 archives/942 selected members,1720 C inputs and final version. JSON artifacts downloaded/verified; all C identities equal native22. All544 selected toolchain members match official package payloads (CRT455,GCC2,pixman73,winpthreads14). Fixed source/transforms verified for333 toolchain headers and56 generated files; CRT53 selected implementation sources associated. Native23 inline-reference failure preserved; real two-archive regression,local114 and legacy GNU2.38 ten tests passed. Per-file/SDK IDL/generator conditions,DLL internals/resources,runtime GPL source obligations,notices,xkbcomp/XKB data,X2/X3 and Unix hard-crash supervision remain open. Adoption,bundled,desktop flags remain false. No merge or release. Current continuation: Windows XKB tool/data on build/wf09-07-xkb-runtime, stacked on PR85 exact HEAD8c3e90b (CI695/source28/native25 all SUCCESS; artifact downloaded,1720 C inputs unchanged). New keyboard implementation requires its own native/CI evidence; see stacked Draft body. All adoption flags false.",
   "meta": {}
 }

@@ -702,6 +702,183 @@
         }
       ],
       "compileInputs": "compiler"
+    },
+    {
+      "root": "xkeyboard-config-2.48",
+      "url": "https://xorg.freedesktop.org/releases/individual/data/xkeyboard-config/xkeyboard-config-2.48.tar.xz",
+      "size": 953316,
+      "sha256": "b77041324f0109f77161ee43743fe04baa485866af8460d31e476ad3f7648fd5",
+      "name": "xkeyboard-config",
+      "buildSystem": "meson",
+      "options": [
+        "-Dnls=false",
+        "-Dcompat-rules=true"
+      ],
+      "licenseFiles": {
+        "COPYING": "fc03f6535d16b3fe9beece45b84214a37e6ca4b6550c03cadaed7e1b951fb294"
+      },
+      "signature": {
+        "url": "https://xorg.freedesktop.org/releases/individual/data/xkeyboard-config/xkeyboard-config-2.48.tar.xz.sig",
+        "size": 310,
+        "sha256": "ea077c1a328d65c01e349dbefd7ee350a7c85ac36cb58a79ab0ba92e13211ea4",
+        "algorithm": 1,
+        "digest": 10,
+        "epoch": 1782003973,
+        "fingerprint": "FFB4CCD275AAA422F5F9808E0661D98FC933A145",
+        "certificate": "FFB4CCD275AAA422F5F9808E0661D98FC933A145"
+      },
+      "compileInputs": "runtime-data-only",
+      "runtimeDataRoot": "share/xkeyboard-config-2",
+      "sourceAliases": {
+        "symbols/caps": {
+          "target": "capslock",
+          "size": 5293,
+          "sha256": "1181722e79a4c46319dea21d6f4eb723de49e798ec2e91f8929e4dfb528882cd"
+        },
+        "symbols/esperanto": {
+          "target": "epo",
+          "size": 7654,
+          "sha256": "e8978a60f6f5bf13aace45098f0f0530c0487f10b1ab200b46171e5963d90078"
+        },
+        "symbols/grp": {
+          "target": "group",
+          "size": 9891,
+          "sha256": "d962772859c00eb77223056cf3ec22e12c11b31ae8204760ca94e1c31f220000"
+        },
+        "symbols/japan": {
+          "target": "jp",
+          "size": 7031,
+          "sha256": "f4f8dd810e46727e26b09b102be1910732001553dfaafd251631deed667856d7"
+        },
+        "symbols/korean": {
+          "target": "kr",
+          "size": 1199,
+          "sha256": "6a45389b0e158c11c9df41a0ea5e8cd14533a2356dc7ab93a3fe53e73912e745"
+        },
+        "symbols/lv2": {
+          "target": "level2",
+          "size": 209,
+          "sha256": "ab1f791d69969eb8444f9661138cf5e28b38420dbd14bcac1adb1cda70742180"
+        },
+        "symbols/lv3": {
+          "target": "level3",
+          "size": 5452,
+          "sha256": "cdeddada22f8593f89cb8693d728dc02a24abef92d62cf0ce61c4f947b6d47d0"
+        },
+        "symbols/lv5": {
+          "target": "level5",
+          "size": 4232,
+          "sha256": "8009418071d2bc55d0f5d38522fc9552a910af4e930945b261a7cdfc2ea7e750"
+        }
+      },
+      "patches": [
+        {
+          "path": "meson.build",
+          "beforeSha256": "4bc2c12aedb9345b99a0a1587adee1d8ea582d1c937067b200e5293a35c7f220",
+          "afterSha256": "a21b8fdf59ee736a69e870423417c6cc089edec1049e9e12e9cabf697294bfaa",
+          "reason": "Use the versioned private XKB root directly on Windows; omit only the two legacy install aliases without requiring symlink privileges or changing keyboard content.",
+          "replacements": [
+            {
+              "before": "install_symlink(\n    'xkeyboard-config.pc',\n    install_dir: dir_pkgconfig,\n    pointing_to: f'@pkgconfig_file@.pc',\n)\n",
+              "after": ""
+            },
+            {
+              "before": "# Legacy X11 symlink\nfs = import('fs')\ninstall_symlink(\n    fs.name(dir_xkb_base_x11),\n    install_dir: fs.parent(dir_xkb_base_x11),\n    pointing_to: dir_xkb_base,\n)\n",
+              "after": ""
+            }
+          ]
+        }
+      ],
+      "generatedRuntimeFiles": {
+        "rules/base": {
+          "normalizedSize": 35692,
+          "normalizedSha256": "0cc70f50334ad2c046096728e6a54b97e5c2ff45e51cf9a2a26e8b3abb2946f5"
+        },
+        "rules/evdev": {
+          "normalizedSize": 31339,
+          "normalizedSha256": "8b3dbdf24e213c49015b46a7d689ecd65ed2229db609675b0be9879d5ece921b"
+        },
+        "symbols/ara": {
+          "normalizedSize": 36022,
+          "normalizedSha256": "425cb398bca83c54915d9ba24a995a6dca576718cc68f3a8042c857e367859dd"
+        },
+        "symbols/de": {
+          "normalizedSize": 101788,
+          "normalizedSha256": "6a547ad042a1e44db483c40f974ec0b639aae198ccb26fc7eb6d6c0f4801fb69"
+        },
+        "symbols/fi": {
+          "normalizedSize": 24874,
+          "normalizedSha256": "7cc55979949a158f01585706c2ead364188498d651370215d2f1e92562638c1b"
+        },
+        "symbols/gr": {
+          "normalizedSize": 10885,
+          "normalizedSha256": "6db0892ea654f4930630f354cc2bdf89fb871dfd3d6ffe1af52e927ac13c710c"
+        },
+        "symbols/in": {
+          "normalizedSize": 118908,
+          "normalizedSha256": "aee2183b3b2ecdad404163440f3345e114287c28065292ddee3a132de17ea150"
+        },
+        "symbols/ir": {
+          "normalizedSize": 11867,
+          "normalizedSha256": "38a4ebd89cd0e02d1eeba2aa28d6f8575417e87830ddfeda872b05add5d5b8e0"
+        },
+        "symbols/pk": {
+          "normalizedSize": 23840,
+          "normalizedSha256": "de24cb85203c49568649e16c273419fa15ba361ed2e7326395690ea2b664a183"
+        },
+        "symbols/ro": {
+          "normalizedSize": 11755,
+          "normalizedSha256": "ddb2b5b024924e5205b014fb784e5a9b3cc77ecc7f4085fb0de3d836ff75bd51"
+        },
+        "symbols/ru": {
+          "normalizedSize": 90991,
+          "normalizedSha256": "426a0d19fce3645017f1d7602a62958aeb57c519bcef5dc5470bd2f78435b259"
+        }
+      },
+      "generatorInputs": {
+        "rules/compat/layoutsMapping.lst": "6084c005223b1b4ce94cfea7fa8badb11ff1e04063d3599a8912a037253153f7",
+        "rules/compat/variantsMapping-vendors.lst": "638f15f87b08edf39c547ff3fabab394527901d66590510ae0c508db59e99b29",
+        "rules/compat/variantsMapping.lst": "718593719b77975b96395e44500460e10f201fb3c5e56e4fbf789a3aedec64c4",
+        "rules/generator/__init__.py": "5288c52e93beb2ea2891b26a7e08c76097f7414cc11d1f276956af5bd41d5abf",
+        "rules/generator/__main__.py": "4b89426a4a06c12ad78a67a348ae4889b3bbdcdecde5c9a0d0c98324e1d41f00",
+        "rules/generator/compatibility.py": "02d7ff968848f6b96940540992198b425f270001a815988bf60aeaa44266a63a",
+        "rules/generator/options.py": "fe4a0f61318ac4ead70a750fe17434bbced105b494c6e4310d3fcd24483db942",
+        "rules/generator/parser.py": "194b459a0d3e4ad3256afab2b458d7de0501c0a41b75a2d6ff9928d9f4d5ed81",
+        "rules/generator/registry.py": "cf4272e4d1e33346b43e6c96f99fb1b841d7c469959a1a04b9e87b8a376ac8e7",
+        "rules/generator/template.py": "6d41d4a123080556b1e1c6152e507cfb5429bd42b399b3aae6d8e1f9e061560f",
+        "rules/rules.in": "163897760093007e1f97808e9319ef2f30bed224c7ea19f0645cca5358b4ffa3"
+      }
+    },
+    {
+      "root": "xkbcomp-1.5.0",
+      "url": "https://xorg.freedesktop.org/releases/individual/app/xkbcomp-1.5.0.tar.xz",
+      "size": 247996,
+      "sha256": "2ac31f26600776db6d9cd79b3fcd272263faebac7eb85fb2f33c7141b8486060",
+      "name": "xkbcomp",
+      "buildSystem": "autotools",
+      "options": [],
+      "licenseFiles": {
+        "COPYING": "6b833fdc05906ce57f016dc791db86830d49ee4da2861ce45806c50b3f4dda9e"
+      },
+      "signature": {
+        "url": "https://xorg.freedesktop.org/releases/individual/app/xkbcomp-1.5.0.tar.xz.sig",
+        "size": 95,
+        "sha256": "e339d7265ed85396bc8c3fb78116f63a46ccde336c32e3b419082e55d5c0417b",
+        "algorithm": 17,
+        "digest": 2,
+        "epoch": 1764734671,
+        "fingerprint": "3C2C43D9447D5938EF4551EBE23B7E70B467F0BF",
+        "certificate": "3C2C43D9447D5938EF4551EBE23B7E70B467F0BF"
+      },
+      "compileInputs": "compiler",
+      "generatedParserReview": {
+        "path": "xkbparse.c",
+        "size": 120541,
+        "sha256": "171cb2bbfc545058624152d4dd5a887df71895a50b03909c2c414d2da9193e0f",
+        "generator": "GNU Bison 3.8.2",
+        "license": "GPL-3.0-or-later WITH Bison parser skeleton special exception",
+        "distributionApproved": false
+      }
     }
   ],
   "serverOptions": [
@@ -771,6 +948,18 @@
       "primaryBits": 1024,
       "primaryAlgorithm": 17,
       "source": "https://keys.openpgp.org/vks/v1/by-fingerprint/3C2C43D9447D5938EF4551EBE23B7E70B467F0BF"
+    },
+    "FFB4CCD275AAA422F5F9808E0661D98FC933A145": {
+      "file": "dependency-keys/FFB4CCD275AAA422F5F9808E0661D98FC933A145.asc",
+      "size": 976,
+      "sha256": "3bd219b811a66c97214067e6a6e65a527b379122d06eb070cc5b4d61ea92995f",
+      "primaryFingerprint": "FFB4CCD275AAA422F5F9808E0661D98FC933A145",
+      "primaryBits": 2048,
+      "primaryAlgorithm": 1,
+      "source": "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0xFFB4CCD275AAA422F5F9808E0661D98FC933A145",
+      "transportSize": 977,
+      "transportSha256": "df6d6bbab768604fafbdf2b3c609cf6b1225ae971893d8827bf5b1ca1c120d83",
+      "normalization": "Removed one trailing ASCII space from the unauthenticated armor Comment header; decoded public certificate is unchanged."
     }
   },
   "serverFileReview": [

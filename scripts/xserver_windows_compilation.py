@@ -142,6 +142,9 @@ def observed_inputs(builds, sources, prefix, manifest, server_root, owners, pack
         if component["compileInputs"] == "headers-only":
             observations.append({"component": component["name"], "scope": "headers-or-host-generator-only", "complete": True})
             continue
+        if component["compileInputs"] == "runtime-data-only":
+            observations.append({"component": component["name"], "scope": "runtime-data-only", "complete": True})
+            continue
         require(component["compileInputs"] == "compiler", "COMPILE_INPUT_SCOPE")
         dependencies, dep_count, evidence = component_dependencies(directory, component["buildSystem"], work, run, report)
         observation = {"component": component["name"], "dependencyRecords": dep_count, "evidence": evidence, "complete": False}

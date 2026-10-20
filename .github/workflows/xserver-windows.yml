@@ -25,7 +25,7 @@ jobs:
           msystem: UCRT64
           update: true
           install: >-
-            make autoconf automake libtool flex bison python gnupg diffutils
+            make autoconf automake libtool flex bison python perl gnupg diffutils
             mingw-w64-ucrt-x86_64-gcc
             mingw-w64-ucrt-x86_64-pkgconf
             mingw-w64-ucrt-x86_64-meson
