@@ -40,3 +40,7 @@ xkbcomp COPYING为4394字节、SHA256 `6b833fdc05906ce57f016dc791db86830d49ee4da
 修复把Windows/Xlib声明移到私有宏之前，清除SDK的ERROR/TEXT/ALTERNATE后再加载原诊断/解析声明；保留FindFirstFile/FindNextFile/FindClose、所有错误调用及原始notice，不删文件枚举或降低诊断。listing.c原SHA256 `8d8ef38d6b8a5946bcc9790e57aec0c0b984dd55c026994bfae638c352c5aeac`，适配后`3c40190bb5fad742fc246539fb244ea6827e8b564083e4a0b4eeb84f3b585a63`；两个精确替换各1次。新增真实SDK提前探针：旧顺序必须出现相关编译错误并无对象，正确顺序编译/运行且实际调用一次诊断函数。新修复仍须按#86正文精确SHA重新取得完整原生/CI，不借用0e989ee结果。
 
 补充Linux实验实际生成/安装293数据文件/3331990字节，11参考在三种hash seed下相同；固定xkbcomp1.5.0用Ubuntu host依赖完成四份XKM往返和空根/缺规则负向，四文件11964/13048/12664/13748字节且含5/5/3/3个Ctrl-Z。它验证格式断言，不能替代Windows原生结果。作者BSD外链当前页面另有名称/衍生物条款，fr/ir源有明确再许可说明；完整notice与逐文件采用仍开放，不按包标签批准。
+
+## 精确代码的原生29通过与下一刀
+
+代码9a815d5已过完整CI699七执行job、source32及Windows原生29。实际下载native29 JSON后，确认SDK旧/正确顺序探针、四份XKM往返、两个负向、293数据文件及1756 C输入全部完成，采用字段仍false；完整artifact身份见[后续私有链接证据](windows-private-links-evidence.md)。#86公开正文已回填三条SUCCESS；新代码继续单独取得CI，不借用本次通过。下一刀补实际私有DLL/工具自身map及选择成员，预编译DLL内部、资源与许可采用仍未关闭。

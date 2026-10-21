@@ -24,10 +24,12 @@ GENERATOR_SOURCE = {
     "scope": "Reviewed BFD in-memory constructors for rtr/ertr and dll stuff; implementation is not vendored."}
 
 
-def generated_kind(name):
+def generated_kind(name, target="XWin.exe"):
+    require(re.fullmatch(r"[A-Za-z0-9_+.-]+\.(?:exe|dll)", target), "LINK_GENERATED_TARGET")
     if name == "dll stuff":
         return "filler"
-    match = re.fullmatch(r"XWin_exe_(rtr|ertr)[0-9]{6}\.o", name)
+    prefix = re.sub(r"[^A-Za-z0-9]", "_", target)
+    match = re.fullmatch(re.escape(prefix) + r"_(rtr|ertr)[0-9]{6}\.o", name)
     return match[1] if match else None
 
 
@@ -49,10 +51,10 @@ def map_contributions(content, names):
     return result
 
 
-def memory_inputs(content, data, producer):
+def memory_inputs(content, data, producer, *, target="XWin.exe"):
     require(len(content.encode()) <= 64 * 1024 * 1024, "LINK_GENERATED_MAP")
     loads = re.findall(r"^LOAD (.+)$", content, re.MULTILINE)
-    names = [name for name in loads if generated_kind(name)]
+    names = [name for name in loads if generated_kind(name, target)]
     if not names:
         return {}
     require(len(names) <= 4096 and len(set(names)) == len(names), "LINK_GENERATED_COUNT")
@@ -62,7 +64,7 @@ def memory_inputs(content, data, producer):
     rows = map_contributions(content, names)
     descriptors = []
     for name, sections in rows.items():
-        kind = generated_kind(name)
+        kind = generated_kind(name, target)
         allowed = {"rtr": {".rdata_runtime_pseudo_reloc"}, "ertr": {".rdata"}, "filler": {".edata", ".reloc"}}[kind]
         require(sections and len({item[0] for item in sections}) == len(sections)
                 and all(item[0] in allowed for item in sections), "LINK_GENERATED_SECTIONS")
@@ -85,7 +87,7 @@ def memory_inputs(content, data, producer):
                      "outputLicenseApprovalInferred": False} for name in names}
     pseudo = []
     for (name, section, address, size), item in zip(descriptors, ranges):
-        kind, payload = generated_kind(name), item["bytes"]
+        kind, payload = generated_kind(name, target), item["bytes"]
         expected = ".rdata" if kind != "filler" else section
         require(item["sectionNameHex"] == expected.encode().hex(), "LINK_GENERATED_PE_SECTION")
         if kind == "rtr":

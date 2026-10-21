@@ -26,3 +26,7 @@ Concrete contracts are in .trellis/spec/backend/xdmcp-runner.md. A worker-owned 
 ## Application exit completion barrier（2026-10-18续作）
 
 用户stop的2秒响应预算与应用退出完成分开。`shutdown_wait`在同一registry临界区关闭admission、取消全部条目、移除未使用租约并订阅最多4个真实worker完成watch，随后锁外逐个等待。完成信号仍由worker在process和RunDirectory实际清理后发布，不添加成功超时或轮询空表推断。Tauri Exit与其它资源owner并行await，并只记录固定失败code。阻塞OS操作/目录删除时退出继续等待；这不解决Unix宿主SIGKILL，也不改变尚未采用的发行引擎或桌面能力。
+
+## X0 Windows private PE linkage slice（2026-10-20续作）
+
+#86的代码9a815d5已过完整CI699、source32与原生29；四组键盘往返、两个负向及SDK顺序探针已取得真实Windows结果。继续同一任务，按两个实际PE闭包采集除XWin独立既有报告之外的私有DLL与xkbcomp链接细节，契约见`.trellis/spec/backend/xserver-windows-private-links.md`。构建依赖起即保存map；每个目标先绑定自身构建输出与安装PE，再解析其实际LOAD、archive选择和精确生成命名空间。预编译四DLL内部、资源、逐文件权限及发行/桌面仍开放。

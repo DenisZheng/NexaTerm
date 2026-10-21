@@ -11,3 +11,5 @@
 {"file": ".trellis/spec/backend/xserver-windows-build.md", "reason": "Require real build/probe/import evidence; preserve pending distribution obligations"}
 {"file": ".trellis/tasks/10-16-wf09-07-xdmcp-implementation/research/windows-build-evidence.md", "reason": "Check the exact native and signature results; never infer bundled/desktop or license approval from compilation"}
 {"file": ".trellis/tasks/10-16-wf09-07-xdmcp-implementation/research/windows-runtime-license-review.md", "reason": "Match actual installed license hashes and preserve per-file/static/resource and distribution review boundaries"}
+{"file": ".trellis/spec/backend/xserver-windows-private-links.md", "reason": "Actual reachable private PE output/map/input/member binding and explicit prebuilt/resource exclusions"}
+{"file": ".trellis/tasks/10-16-wf09-07-xdmcp-implementation/research/windows-private-links-evidence.md", "reason": "Verified PR86 CI699/source32/native29 baseline and next private DLL/tool evidence scope"}

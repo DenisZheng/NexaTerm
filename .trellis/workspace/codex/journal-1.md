@@ -587,10 +587,12 @@ Continue verified PR85 in stacked Draft86: fixed XKB sources, private runtime in
 
 ### Status
 
-[OK] **Completed**
+[OK] **XKB slice verified; parent XDMCP task in progress**
 
 ### Next Steps
 
-- None - task complete
+- Continue private DLL/tool link evidence, prebuilt/runtime/resources and later packaging/desktop work
 
 Session 13续作：代码0e989ee已过完整CI698/source31；原生28在Windows完成293数据文件/3341129字节及11生成参考后，因listing.c的SDK TypeString/ERROR宏冲突真实FAIL（artifact下载留证）。继续精确调整SDK/Xlib与私有宏顺序，保留枚举/诊断，并新增重建依赖之前的真实SDK旧/正确顺序探针；新代码重新取证见Draft #86正文，不借用旧结果。Linux实际四份XKM往返与两个负向通过，仅作补充。
+
+Session 13收口：精确code9a815d5的CI699/source32/原生29均SUCCESS；actual JSON artifact12240678597（492466字节/hash df21bc8911e97002c8c970f64875e48133bc986b016170b52a4a4c8a22359484）已下载。SDK顺序、四组键盘往返/两个负向、293数据与1756 C输入及最终版本完整。XKB开发构建本刀通过，整体X0/X2/X3及发行/桌面仍未完成；接续同任务私有DLL/工具map，不归档。

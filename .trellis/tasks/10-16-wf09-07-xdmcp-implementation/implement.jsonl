@@ -13,3 +13,5 @@
 {"file": ".trellis/tasks/10-16-wf09-07-xdmcp-implementation/research/windows-runtime-license-review.md", "reason": "Actual DLL providers, fixed packaging sources, license byte identities and unfinished XKB/resource closure"}
 {"file": ".trellis/spec/backend/xserver-windows-xkb.md", "reason": "Fixed XKB source aliases, versioned private data provenance and actual native keymap semantics"}
 {"file": ".trellis/tasks/10-16-wf09-07-xdmcp-implementation/research/windows-xkb-evidence.md", "reason": "Verified PR85 exact HEAD CI695/source28/native25 baseline and XKB primary-source continuation"}
+{"file": ".trellis/spec/backend/xserver-windows-private-links.md", "reason": "Actual reachable private PE output/map/input/member binding and explicit prebuilt/resource exclusions"}
+{"file": ".trellis/tasks/10-16-wf09-07-xdmcp-implementation/research/windows-private-links-evidence.md", "reason": "Verified PR86 CI699/source32/native29 baseline and next private DLL/tool evidence scope"}
