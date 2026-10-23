@@ -36,6 +36,8 @@ Good: resolve libX11's own link map against its build and installed DLL, then re
 
 Use real GNU assembler/archive/PE links for an authored DLL and tool fixture. Verify exact output/installed binding, working directories, member payloads, provider mismatch, missing map, changed images, duplicate outputs, wrong targets and partial failure. The existing actual pseudo-relocation fixture covers exact namespaces; real Windows must rerun the complete recipe and early native probes. Linux PE parsing does not establish Windows execution.
 
+Native MinGW ld can write drive-letter paths into a map even when invoked by MSYS Python with POSIX arguments. Fixture command runners must execute `cygpath -u` for those paths and restrict package stubs to the exact `pacman -Qqo` lookup. A catch-all package stub corrupts path conversion. Cover drive-letter LOAD and archive-selection paths through the real parsers; retain image/member hashes and package ownership checks.
+
 ## 7. Wrong / correct
 
 Wrong: accept a map by filename alone, infer a relative LOAD's directory from its storage location, or mark toolchain DLL internals covered by an import archive.

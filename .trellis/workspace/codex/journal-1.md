@@ -596,3 +596,5 @@ Continue verified PR85 in stacked Draft86: fixed XKB sources, private runtime in
 Session 13续作：代码0e989ee已过完整CI698/source31；原生28在Windows完成293数据文件/3341129字节及11生成参考后，因listing.c的SDK TypeString/ERROR宏冲突真实FAIL（artifact下载留证）。继续精确调整SDK/Xlib与私有宏顺序，保留枚举/诊断，并新增重建依赖之前的真实SDK旧/正确顺序探针；新代码重新取证见Draft #86正文，不借用旧结果。Linux实际四份XKM往返与两个负向通过，仅作补充。
 
 Session 13收口：精确code9a815d5的CI699/source32/原生29均SUCCESS；actual JSON artifact12240678597（492466字节/hash df21bc8911e97002c8c970f64875e48133bc986b016170b52a4a4c8a22359484）已下载。SDK顺序、四组键盘往返/两个负向、293数据与1756 C输入及最终版本完整。XKB开发构建本刀通过，整体X0/X2/X3及发行/桌面仍未完成；接续同任务私有DLL/工具map，不归档。
+
+2026-10-23续作：Draft #87初版c595ac41已过CI700/source33；Windows原生30的前置回归2 ERROR/5 FAIL，构建未执行。盘符map本地复现证实夹具的包名catch-all桩错误拦截cygpath转换；修复为真实路径转换加精确fixture归属查询，并补盘符LOAD/成员hash与owner回归。生产门禁不放宽，新代码须独立Windows/完整CI验证。沿用现有XDMCP任务，不合并、不发布，采用/随包/桌面字段保持false。

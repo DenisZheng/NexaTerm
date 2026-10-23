@@ -1,8 +1,10 @@
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from xserver_source_review import ReviewError, digest
 from xserver_windows_linkmap import PRODUCER_PACKAGE, PRODUCER_RELEASE, PRODUCER_VERSION
@@ -45,10 +47,18 @@ class PrivateLinkTests(unittest.TestCase):
     def command(self, arguments):
         result = subprocess.run(arguments, cwd=self.directory, capture_output=True, text=True, timeout=30)
         self.assertEqual(result.returncode, 0, result.stderr)
+        return result.stdout
+
+    def observe(self, arguments, *args, **kwargs):
+        if arguments[:2] == ["cygpath", "-u"]:
+            return self.command(arguments)
+        self.assertEqual(arguments[:2], ["pacman", "-Qqo"])
+        self.assertEqual(Path(arguments[-1]), self.archive)
+        return self.package
 
     def collect(self, report=None):
         return private_linkage(self.maps, self.builds, self.prefix, self.owners, self.closures, self.root,
-                               lambda *args, **kwargs: self.package, self.packages, self.producer,
+                               self.observe, self.packages, self.producer,
                                report if report is not None else {}, build_systems={"fixture": "autotools"},
                                toolchain_root=self.toolchain)
 
@@ -74,6 +84,26 @@ class PrivateLinkTests(unittest.TestCase):
         self.assertFalse(result["prebuiltDllInternalsIncluded"])
         self.assertFalse(result["resourceCompilerInputsIncluded"])
         self.assertFalse(result["perFileLicenseReviewComplete"])
+
+    def test_native_drive_archive_paths_keep_real_bytes_and_package_owner(self):
+        native = "D:/authored-fixture/lib/fixture.a"
+        for mapping in self.maps.glob("*.map"):
+            content = mapping.read_text()
+            original = re.search(r"^LOAD (.+fixture\.a)$", content, re.MULTILINE)[1]
+            mapping.write_text(content.replace(original, native))
+
+        def convert(arguments, **kwargs):
+            self.assertEqual(arguments, ["cygpath", "-u", native])
+            return subprocess.CompletedProcess(arguments, 0, str(self.archive) + "\n", "")
+
+        with patch("subprocess.run", side_effect=convert) as conversion:
+            result = self.collect()
+        self.assertEqual(conversion.call_count, 4)
+        self.assertTrue(result["observationsComplete"])
+        for item in result["files"]:
+            member = item["archiveMembers"]["members"][0]
+            self.assertEqual(member["package"], self.package)
+            self.assertEqual(member["archiveSha256"], digest(self.archive.read_bytes()))
 
     def test_installed_or_build_image_drift_is_rejected(self):
         for path in [self.prefix / "bin/Xkbcomp.exe", self.directory / ".libs/Xkbcomp.exe"]:
