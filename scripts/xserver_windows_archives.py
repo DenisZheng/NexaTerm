@@ -82,15 +82,15 @@ def map_selections(content, report=None):
 
 
 def selected_members(map_file, link_directory, builds, prefix, inputs, work, run, report=None,
-                     *, toolchain_root=Path("/ucrt64")):
+                     *, toolchain_root=Path("/ucrt64"), target="XWin"):
     require(map_file.is_file() and map_file.stat().st_size <= MAX_ARCHIVE_BYTES, "AR_MAP_BUDGET")
     mapping = map_file.read_bytes()
     rows = map_selections(mapping.decode("utf-8").replace("\r\n", "\n"), report)
-    roots = {"server-build": builds, "private-prefix": prefix, "target-toolchain": toolchain_root}
+    roots = {"server-build": builds, "component-build": builds, "private-prefix": prefix, "target-toolchain": toolchain_root}
     known = {str((roots[x["origin"]] / x["path"]).resolve()).casefold(): x
              for x in inputs if x["origin"] in roots}
     cache, seen, total = {}, set(), 0
-    result = {"scope": "XWin-selected-archive-members", "mapSha256": digest(mapping), "members": [],
+    result = {"scope": target + "-selected-archive-members", "mapSha256": digest(mapping), "members": [],
               "observationsComplete": False, "finalSectionContributionInferred": False,
               "perFileLicenseReviewComplete": False, "dependencyDllInternalsIncluded": False}
     if report is not None:

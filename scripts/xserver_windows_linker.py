@@ -50,7 +50,7 @@ def linker_probe(builds, work, report, run, package_evidence):
     library = ASSETS / "overlays/linker-pseudo-library.c"
     caller = ASSETS / "overlays/linker-pseudo-caller.c"
     run(["gcc", "-std=gnu11", "-Wall", "-Wextra", "-Werror", "-shared", library,
-         "-o", "linker-probe.dll", "-Wl,--out-implib=linker-probe.dll.a"], directory)
+         "-o", "linker-probe.dll", "-Wl,--out-implib=linker-probe.dll.a", "-Wl,-Map=linker-probe.dll.map"], directory)
     run(["gcc", "-std=gnu11", "-Wall", "-Wextra", "-Werror", caller, "linker-probe.dll.a",
          "-Wl,-Map=XWin.exe.map", "-o", "XWin.exe"], directory)
     binary = directory / "XWin.exe"
@@ -66,3 +66,16 @@ def linker_probe(builds, work, report, run, package_evidence):
         "librarySourceSha256": digest(library.read_bytes()), "callerSourceSha256": digest(caller.read_bytes()),
         "imageSha256": digest(binary.read_bytes()), "mapSha256": digest(mapping_bytes),
         "memoryInputs": list(records.values())}
+    report["nativeAdditionalLinkTargets"] = []
+    for target in ["linker-probe.dll", "keyboard-tool.exe"]:
+        if target.endswith(".exe"):
+            run(["gcc", "-std=gnu11", "-Wall", "-Wextra", "-Werror", caller, "linker-probe.dll.a",
+                 "-Wl,-Map=" + target + ".map", "-o", target], directory)
+            run([directory / target], directory, timeout=10)
+        image = (directory / target).read_bytes()
+        mapping_bytes = (directory / (target + ".map")).read_bytes()
+        records = memory_inputs(mapping_bytes.decode().replace("\r\n", "\n"), image, producer, target=target)
+        require("dll stuff" in records and (target.endswith(".dll") or any("_rtr" in name for name in records)),
+                "LINK_GENERATED_PROBE")
+        report["nativeAdditionalLinkTargets"].append({"target": target, "imageSha256": digest(image),
+            "mapSha256": digest(mapping_bytes), "memoryInputs": list(records.values()), "verified": True})

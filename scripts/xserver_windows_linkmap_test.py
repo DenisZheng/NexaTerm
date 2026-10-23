@@ -86,6 +86,13 @@ class LinkerMemoryTests(unittest.TestCase):
         path.write_text(mapping)
         self.assertCode("LINK_INPUT_MISSING", lambda: link_inputs(path, self.root, self.root, self.root / "prefix", {}, self.root, None, {}, generated_inputs=records))
 
+    def test_each_output_accepts_only_its_exact_generated_namespace(self):
+        for target, prefix in [("keyboard-tool.exe", "keyboard_tool_exe"), ("libFixture-1.dll", "libFixture_1_dll")]:
+            mapping = self.mapping.replace("XWin_exe", prefix)
+            records = memory_inputs(mapping, self.binary, self.producer, target=target)
+            self.assertIn(prefix + "_rtr000000.o", records)
+            self.assertNotIn(prefix + "_rtr000000.o", memory_inputs(mapping, self.binary, self.producer))
+
     def test_missing_contribution_cannot_be_replaced_by_a_discarded_section(self):
         name = "XWin_exe_rtr000000.o"
         mapping = self.mapping.replace("0x18 " + name, "0x18 ordinary.o")

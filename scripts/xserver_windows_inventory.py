@@ -88,10 +88,17 @@ def link_input_path(name, directory, work, run):
     return (directory / path).resolve() if not path.is_absolute() else path.resolve()
 
 
-def link_inputs(map_file, link_directory, builds, prefix, owners, work, run, packages, report=None, generated_inputs=None):
+def map_output(content):
+    outputs = re.findall(r"^OUTPUT\((.+) pei-x86-64\)\s*$", content, re.MULTILINE)
+    require(len(outputs) == 1, "LINK_MAP_TARGET")
+    return outputs[0].replace("\\", "/")
+
+
+def link_inputs(map_file, link_directory, builds, prefix, owners, work, run, packages, report=None, generated_inputs=None,
+                *, target="XWin.exe", component="xorg-server", toolchain_root=Path("/ucrt64")):
     require(map_file.is_file() and map_file.stat().st_size <= 64 * 1024 * 1024, "LINK_MAP_MISSING")
     content = map_file.read_text(encoding="utf-8", errors="strict")
-    require(re.search(r"^OUTPUT\([^\n]*XWin\.exe\b", content, re.MULTILINE), "LINK_MAP_TARGET")
+    require(Path(map_output(content)).name.casefold() == target.casefold(), "LINK_MAP_TARGET")
     records = {}
     result = {"mapSha256": digest(map_file.read_bytes()), "inputs": [], "observationsComplete": False}
     if report is not None:
@@ -117,13 +124,16 @@ def link_inputs(map_file, link_directory, builds, prefix, owners, work, run, pac
             require(relative in owners, "LINK_SOURCE_OWNER")
             record.update({"origin": "private-prefix", "path": relative, "component": owners[relative]})
         elif path.is_relative_to(builds):
-            record.update({"origin": "server-build", "path": str(path.relative_to(builds)), "component": "xorg-server"})
+            relative = path.relative_to(builds)
+            require(component == "xorg-server" or relative.parts[0] == component, "LINK_BUILD_OWNER")
+            record.update({"origin": "server-build" if component == "xorg-server" else "component-build",
+                           "path": str(relative), "component": component})
         else:
-            require(path.is_relative_to("/ucrt64"), "LINK_INPUT_ORIGIN")
+            require(path.is_relative_to(toolchain_root), "LINK_INPUT_ORIGIN")
             package = run(["pacman", "-Qqo", path], work, capture=True).strip()
             if package not in packages:
                 packages[package] = package_evidence(package, work, run)
-            record.update({"origin": "target-toolchain", "path": str(path.relative_to("/ucrt64")), "package": package})
+            record.update({"origin": "target-toolchain", "path": str(path.relative_to(toolchain_root)), "package": package})
         records[record["origin"] + "/" + record["path"]] = record
         result["inputs"] = list(records.values())
         if report is not None:

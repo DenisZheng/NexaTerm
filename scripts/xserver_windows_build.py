@@ -24,6 +24,7 @@ from xserver_windows_linker import linker_probe
 from xserver_windows_linkmap import memory_inputs
 from xserver_windows_archives import selected_members
 from xserver_windows_xkb import configured_paths, runtime_inventory, xkb_probe
+from xserver_windows_private_links import private_linkage
 
 
 MAX_ENTRIES = 5000
@@ -224,7 +225,10 @@ def build(work, report):
     os.environ["CC"] = "gcc"
     os.environ["CFLAGS"] = "-O2 -g0 -std=gnu11"
     os.environ["CPPFLAGS"] = "-I" + str(prefix / "include")
-    os.environ["LDFLAGS"] = "-L" + str(prefix / "lib")
+    maps = work / "link-maps"
+    maps.mkdir()
+    native_maps = run(["cygpath", "-m", maps], work, capture=True).strip()
+    os.environ["LDFLAGS"] = "-L" + str(prefix / "lib") + " -Wl,-Map=" + native_maps
     os.environ["LIBS"] = "-lpthread -lws2_32"
     os.environ["PYTHON"] = "/usr/bin/python3"
     native_xkb_root = run(["cygpath", "-m", prefix / "share/xkeyboard-config-2"], work, capture=True).strip()
@@ -292,10 +296,6 @@ def build(work, report):
     server_build = builds / "xorg-server"
     server_build.mkdir()
     report["stage"] = "server-configure"
-    maps = work / "link-maps"
-    maps.mkdir()
-    native_maps = run(["cygpath", "-m", maps], work, capture=True).strip()
-    os.environ["LDFLAGS"] += " -Wl,-Map=" + native_maps
     run(["bash", sources / root / "configure", "--prefix=" + str(prefix), "--host=" + manifest["target"], "--enable-dependency-tracking", *manifest["serverOptions"],
          "--with-xkb-path=" + native_xkb_root, "--with-xkb-bin-directory=" + native_bin], server_build)
     report["serverXkbPaths"] = configured_paths(server_build, native_xkb_root, native_bin)
@@ -337,6 +337,10 @@ def build(work, report):
     report["stage"] = "archive-member-inputs"
     report["archiveMembers"] = selected_members(mapping, server_build / "hw/xwin", builds, prefix,
                                                report["staticLink"]["inputs"], work, run, report)
+    report["stage"] = "private-pe-link-inputs"
+    private_linkage(maps, builds, prefix, owners, [report["peClosure"], report["xkbCompilerPeClosure"]],
+                    work, run, packages, report["linkerProducer"], report,
+                    build_systems={item["name"]: item["buildSystem"] for item in manifest["components"]})
     report["stage"] = "compiler-inputs"
     report["compilerInputs"] = observed_inputs(builds, sources, prefix, manifest, root, owners, packages, work, run, report)
     parser = next(component for component in manifest["components"] if component["name"] == "xkbcomp")["generatedParserReview"]
