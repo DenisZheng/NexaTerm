@@ -1,11 +1,10 @@
 # Windows XWin resource compiler evidence (2026-10-30)
 
-Status: implementation in stacked Draft PR #89, based on documentation Draft #88. PR #88 documentation CI passed; it did not run the resource audit because it changed no build code.
+Status: implementation in stacked Draft PR #89, based on documentation Draft #88.
 
 ## Verified baseline
 
 Draft #87 code HEAD a924d48447b835426f81b205eee5adb7d50059a8 was checked on 2026-10-26:
-
 - Full CI #701: success.
 - Fixed source review #34: success.
 - Native Windows #31: success.
@@ -16,21 +15,37 @@ These results are baseline only; they do not validate the resource audit.
 
 ## Implementation in PR #89
 
-Exact code HEAD: 6e08efca76893b8a2a8e5c6a9ed9c0ac9ec02f0e
+Latest code HEAD: 85d2f0323fd26d648a830da76f01582183b7dfce
 
 - Added bounded AMD64 COFF section parsing and final PE resource-directory parsing.
-- Verified the generated XWin Makefile WINDRES rule and exact make-expanded command against the source Makefile.in.
+- Verified the generated XWin Makefile WINDRES rule and exact make-expanded command against source Makefile.in.
 - Recorded windres/GCC binary hashes, versions, target triple and MSYS2 package ownership.
 - Reproduced XWin.o resource sections and compared their bytes with the linked object input.
-- Captured GCC resource-preprocessor dependencies and required source/build/toolchain ownership for each input.
-- Compared final embedded RT_MANIFEST and RT_GROUP_ICON/RT_ICON payloads with the pinned source manifest and ICO entries.
+- Captured GCC resource-preprocessor dependencies and source/build/toolchain ownership for each input.
+- Compared final embedded RT_MANIFEST and RT_GROUP_ICON/RT_ICON payloads with pinned source manifest and ICO entries.
 - Verified installed system.XWinrc identity.
-- Scanned XWin direct objects/selected archive members and every reachable private PE target direct object/selected archive member for unexpected .rsrc sections.
-- Kept prebuilt DLL internals explicitly excluded and all distribution/adoption flags false.
+- Scanned XWin direct objects/selected archive members and reachable private PE target direct objects/selected archive members for unexpected resource sections.
 
-Local synthetic regression suite: 16 tests passed in the Linux test container. These cover malformed COFF/PE ranges, Makefile and command drift, custom preprocessor rejection, source/resource payload drift, icon mapping drift, and unexpected resource objects.
+## Native failure analysis and correction
 
-Exact-HEAD GitHub CI and native Windows build are pending. Do not infer native success from PR #87 or PR #88. The native Windows job must execute the real windres reproduction, package ownership checks, PE resource validation and private object scan.
+Native Windows #33 first failed because `make -B -n` triggered Automake refresh. That was corrected by using `make -n -o Makefile -W X.ico -W XWin.exe.manifest -W XWin.rc XWin.o`.
+
+Native Windows #34 then completed the XWin build and install and passed resource counterexample tests, but failed with `RESOURCE_WINDRES_INPUT`. The actual cause was GNU make VPATH behavior: the `.rc.o` recipe receives bare `XWin.rc` through `$<` even though make found the prerequisite in the source tree. Resolving that bare token relative only to the build directory incorrectly pointed to a nonexistent build-tree file.
+
+The latest correction:
+- Resolves Windows drive-absolute paths through the same cygpath root mapping used by compiler dependency auditing.
+- If the resource input token is relative and absent in the build directory, resolves it against the fixed source directory, then requires the exact `hw/xwin/XWin.rc` file.
+- Keeps output resolution anchored to the build directory and include paths normalized through the same roots.
+- Adds regression tests for VPATH bare prerequisite resolution and Windows drive-absolute input/output/include paths.
+
+A standalone local path reproduction passed for both VPATH and drive-absolute cases. This is not a native Windows build result.
+
+Exact-HEAD validation is pending:
+- Native Windows #37
+- Fixed Source Review #40
+- Full CI #708
+
+Do not reuse earlier native results as proof for the latest code. Wait for #37 to finish and inspect the resource audit report.
 
 ## Remaining boundaries
 

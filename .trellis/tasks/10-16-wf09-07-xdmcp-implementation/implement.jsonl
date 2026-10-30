@@ -19,3 +19,5 @@
 {"file":".trellis/tasks/10-16-wf09-07-xdmcp-implementation/research/windows-resource-evidence.md","reason":"Record exact resource compiler inputs and final PE resource evidence"}
 {"file":"scripts/xserver_windows_resources.py","reason":"Trace windres/GCC dependencies, XWin.o resource sections, final PE resources and private target resource closure"}
 {"file":"scripts/xserver_windows_resources_test.py","reason":"Synthetic COFF/PE/resource parser, identity, drift and fail-closed scan regressions"}
+{"file":"scripts/xserver_windows_resources.py","reason":"Normalize VPATH bare XWin.rc prerequisite and Windows drive-absolute WINDRES paths"}
+{"file":"scripts/xserver_windows_resources_test.py","reason":"Cover GNU make VPATH source resolution and Windows drive-absolute resource paths"}

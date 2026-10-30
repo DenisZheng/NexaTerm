@@ -17,3 +17,5 @@
 {"file":".trellis/tasks/10-16-wf09-07-xdmcp-implementation/research/windows-resource-evidence.md","reason":"Verify current exact-HEAD evidence and keep distribution/desktop flags false"}
 {"file":"scripts/xserver_windows_resources.py","reason":"Native resource audit must pass exact-HEAD Windows workflow before X0 resource evidence is accepted"}
 {"file":"scripts/xserver_windows_resources_test.py","reason":"16 local synthetic resource regression tests passed; GitHub native execution remains pending"}
+{"file":"scripts/xserver_windows_resources.py","reason":"Native Windows #34 exposed VPATH bare-token handling; corrected with source-root fallback and drive-path normalization"}
+{"file":"scripts/xserver_windows_resources_test.py","reason":"Standalone local path reproduction passed for VPATH and Windows drive-absolute cases; exact-HEAD native run pending"}

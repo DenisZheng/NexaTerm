@@ -79,3 +79,7 @@ WF-04B/04C/05/06/07 及 WF-08A–08E 已通过 integration PR #40 合入 `main`�
 ## XDMCP Windows resource audit continuation (2026-10-30)
 
 PR #88 documentation CI passed. The implementation is now in stacked Draft PR #89 (code HEAD 6e08efca76893b8a2a8e5c6a9ed9c0ac9ec02f0e): WINDRES/GCC provenance, RC dependency graph, XWin.o resource bytes, final PE manifest/icon payload checks, and resource-section scans across XWin/private PE objects. Local synthetic suite: 16 tests passed. Exact-HEAD GitHub CI and Windows-native build remain pending; no native success is inferred. Resource rights, prebuilt DLL internals, distribution, bundling and desktop verification remain open.
+
+## XDMCP Windows resource audit correction (2026-10-30)
+
+Native Windows #34 compiled/installed XWin and passed counterexample tests but failed the resource audit because GNU make VPATH leaves the `$<` token as bare `XWin.rc`. PR #89 latest HEAD 85d2f0323fd26d648a830da76f01582183b7dfce now resolves that token against the fixed source directory when it is absent in the build directory, and normalizes drive-letter paths. Local path reproduction passed; Native Windows #37, Source Review #40 and CI #708 are pending. No native success is claimed.
