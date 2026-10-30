@@ -4,8 +4,8 @@ import unittest
 from pathlib import Path
 
 from xserver_source_review import ReviewError, digest
+from xserver_windows_compilation import dependency_path
 from xserver_windows_resources import (
-    
     _scan_private_resource_objects, _scan_xwin_link_objects, coff_sections,
     parse_makefile_resource_rule, parse_pe_resources, parse_resource_references,
     parse_windres_command, resource_make_dry_run_arguments, verify_xwin_resource_payloads,
