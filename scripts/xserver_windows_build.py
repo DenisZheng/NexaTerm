@@ -25,6 +25,7 @@ from xserver_windows_linkmap import memory_inputs
 from xserver_windows_archives import selected_members
 from xserver_windows_xkb import configured_paths, runtime_inventory, xkb_probe
 from xserver_windows_private_links import private_linkage
+from xserver_windows_resources import resource_compiler_evidence
 
 
 MAX_ENTRIES = 5000
@@ -343,6 +344,11 @@ def build(work, report):
                     build_systems={item["name"]: item["buildSystem"] for item in manifest["components"]})
     report["stage"] = "compiler-inputs"
     report["compilerInputs"] = observed_inputs(builds, sources, prefix, manifest, root, owners, packages, work, run, report)
+    report["stage"] = "resource-compiler-inputs"
+    report["resourceCompilerInputs"] = resource_compiler_evidence(
+        sources / root, builds, server_build, server, prefix, manifest,
+        owners, packages, report, work, run
+    )
     parser = next(component for component in manifest["components"] if component["name"] == "xkbcomp")["generatedParserReview"]
     require(any(item.get("component") == "xkbcomp" and item["path"].endswith("/" + parser["path"])
                 and item["sha256"] == parser["sha256"] and "xkbcomp" in item["observedBy"]
