@@ -294,6 +294,37 @@ def parse_windres_command(content, rule, build_directory, source_directory, wind
             "output": output_path, "includes": includes, "defines": defines, "undefines": undefines}
 
 
+def package_owned_executable(name, toolchain_root, work, run):
+    """Bind an MSYS command alias to the exact .exe path registered by pacman.
+
+    In UCRT64, shutil.which("windres") may return /ucrt64/bin/windres,
+    but pacman tracks /ucrt64/bin/windres.exe. Never discard owner checks.
+    """
+    located = shutil.which(name)
+    require(located is not None, "RESOURCE_TOOL_MISSING")
+    alias = Path(located).resolve()
+    require(alias.is_relative_to(toolchain_root), "RESOURCE_TOOL_PATH")
+    if alias.suffix.casefold() == ".exe":
+        actual = alias
+    else:
+        # MSYS resolves extensionless invocations to native .exe files.
+        # Canonicalize before asking pacman for the owning package.
+        actual = alias.with_name(alias.name + ".exe").resolve()
+        require(actual.is_file(), "RESOURCE_TOOL_EXE_MISSING")
+        if alias.is_file():
+            require(alias.stat().st_size <= 128 * 1024 * 1024
+                    and actual.stat().st_size <= 128 * 1024 * 1024
+                    and digest(alias.read_bytes()) == digest(actual.read_bytes()),
+                    "RESOURCE_TOOL_ALIAS_MISMATCH")
+    require(actual.is_file() and actual.is_relative_to(toolchain_root),
+            "RESOURCE_TOOL_PATH")
+    require(actual.stat().st_size <= 128 * 1024 * 1024, "RESOURCE_TOOL_BUDGET")
+    package = run(["pacman", "-Qqo", actual], work, capture=True).strip()
+    require(re.fullmatch(r"mingw-w64-ucrt-x86_64-[A-Za-z0-9+_.-]+", package),
+            "RESOURCE_TOOL_PACKAGE")
+    return actual, package
+
+
 def _tool_record(path, package, role, work, run):
     raw = path.read_bytes()
     require(0 < len(raw) <= 128 * 1024 * 1024, "RESOURCE_TOOL_BUDGET")
@@ -463,19 +494,16 @@ def resource_compiler_evidence(source, builds, server_build, server, prefix, man
     command = parse_windres_command(planned, rule, build_directory, source_directory, windows_roots)
     include_paths = [dependency_path(item, build_directory, windows_roots) for item in command["includes"]]
     require(include_paths == [(server_build / "include").resolve()], "RESOURCE_INCLUDE_PATH")
-    windres_path = Path(shutil.which(command["command"][0]) or "").resolve()
-    gcc_path = Path(shutil.which("gcc") or "").resolve()
-    require(windres_path.is_file() and windres_path.is_relative_to(toolchain_root), "RESOURCE_WINDRES_PATH")
-    require(gcc_path.is_file() and gcc_path.is_relative_to(toolchain_root), "RESOURCE_PREPROCESSOR_PATH")
+    windres_path, windres_package = package_owned_executable(
+        command["command"][0], toolchain_root, work, run
+    )
+    gcc_path, gcc_package = package_owned_executable(
+        "gcc", toolchain_root, work, run
+    )
     target = run([gcc_path, "-dumpmachine"], work, capture=True).strip()
     require(target == manifest["target"], "RESOURCE_PREPROCESSOR_TARGET")
 
     package_files = {}
-    windres_package = run(["pacman", "-Qqo", windres_path], work, capture=True).strip()
-    gcc_package = run(["pacman", "-Qqo", gcc_path], work, capture=True).strip()
-    require(re.fullmatch(r"mingw-w64-ucrt-x86_64-[A-Za-z0-9+_.-]+", windres_package)
-            and re.fullmatch(r"mingw-w64-ucrt-x86_64-[A-Za-z0-9+_.-]+", gcc_package),
-            "RESOURCE_TOOL_PACKAGE")
     for path, package in ((windres_path, windres_package), (gcc_path, gcc_package)):
         identity = str(path.resolve()).casefold()
         require(identity not in package_files or package_files[identity] == package,
@@ -502,6 +530,7 @@ def resource_compiler_evidence(source, builds, server_build, server, prefix, man
     with tempfile.TemporaryDirectory(prefix="xwin-resource-repro-", dir=work) as temporary:
         repro_output = Path(temporary) / "XWin.resource.o"
         repro_command = list(command["command"])
+        repro_command[0] = str(windres_path)
         repro_command[repro_command.index("-o") + 1] = str(repro_output)
         repro_command.insert(1, "-v")
         verbose = run(repro_command, build_directory, capture=True)

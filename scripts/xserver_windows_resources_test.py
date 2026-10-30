@@ -1,6 +1,7 @@
 import struct
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 from xserver_source_review import ReviewError, digest
@@ -8,7 +9,8 @@ from xserver_windows_compilation import dependency_path
 from xserver_windows_resources import (
     _scan_private_resource_objects, _scan_xwin_link_objects, coff_sections,
     parse_makefile_resource_rule, parse_pe_resources, parse_resource_references,
-    parse_windres_command, resource_make_dry_run_arguments, verify_xwin_resource_payloads,
+    package_owned_executable, parse_windres_command, resource_make_dry_run_arguments,
+    verify_xwin_resource_payloads,
 )
 
 
@@ -158,6 +160,69 @@ XWin.o: XWin.rc XWin.exe.manifest X.ico
 XWin.o: $(srcdir)/XWin.rc $(srcdir)/XWin.exe.manifest $(srcdir)/X.ico
 """
         self.assertEqual(parse_makefile_resource_rule(content, True)["windres"], "@WINDRES@")
+
+    def test_msys_alias_resolves_to_pacman_owned_exe(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            binary = root / "bin/windres.exe"
+            binary.parent.mkdir(parents=True)
+            binary.write_bytes(b"MZ-binutils-test")
+            recorded = []
+
+            def run(args, cwd, *, capture=False):
+                recorded.append(args)
+                self.assertEqual(args[:2], ["pacman", "-Qqo"])
+                self.assertEqual(args[2], binary.resolve())
+                return "mingw-w64-ucrt-x86_64-binutils\\n"
+
+            # On MSYS this extensionless command resolves to windres.exe.
+            with patch("xserver_windows_resources.shutil.which", return_value=str(binary.with_suffix(""))):
+                actual, owner = package_owned_executable("windres", root, root, run)
+            self.assertEqual(actual, binary.resolve())
+            self.assertEqual(owner, "mingw-w64-ucrt-x86_64-binutils")
+            self.assertEqual(len(recorded), 1)
+
+    def test_gcc_alias_resolves_to_pacman_owned_exe(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            binary = root / "bin/gcc.exe"
+            binary.parent.mkdir(parents=True)
+            binary.write_bytes(b"MZ-gcc-test")
+
+            def run(args, cwd, *, capture=False):
+                self.assertEqual(args, ["pacman", "-Qqo", binary.resolve()])
+                return "mingw-w64-ucrt-x86_64-gcc"
+
+            with patch("xserver_windows_resources.shutil.which", return_value=str(binary.with_suffix(""))):
+                actual, owner = package_owned_executable("gcc", root, root, run)
+            self.assertEqual(actual, binary.resolve())
+            self.assertEqual(owner, "mingw-w64-ucrt-x86_64-gcc")
+
+    def test_tool_alias_collision_cannot_replace_package_owned_binary(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            binary = root / "bin/windres.exe"
+            binary.parent.mkdir(parents=True)
+            binary.write_bytes(b"MZ-actual")
+            alias = binary.with_suffix("")
+            alias.write_bytes(b"MZ-tampered")
+
+            def unexpected_pacman(args, cwd, *, capture=False):
+                self.fail("must reject an alias with different bytes before querying pacman")
+
+            with patch("xserver_windows_resources.shutil.which", return_value=str(alias)):
+                self.assert_code("RESOURCE_TOOL_ALIAS_MISMATCH", lambda: package_owned_executable(
+                    "windres", root, root, unexpected_pacman))
+
+    def test_tool_from_outside_target_toolchain_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            outside = root / "untrusted/windres.exe"
+            outside.parent.mkdir(parents=True)
+            outside.write_bytes(b"MZ-untrusted")
+            with patch("xserver_windows_resources.shutil.which", return_value=str(outside)):
+                self.assert_code("RESOURCE_TOOL_PATH", lambda: package_owned_executable(
+                    "windres", root / "ucrt64", root, lambda *args, **kw: ""))
 
     def test_windres_command_is_bound_to_source_and_output(self):
         with tempfile.TemporaryDirectory() as tmp:
