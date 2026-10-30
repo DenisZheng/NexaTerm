@@ -15,3 +15,5 @@
 {"file": ".trellis/tasks/10-16-wf09-07-xdmcp-implementation/research/windows-xkb-evidence.md", "reason": "Verified PR85 exact HEAD CI695/source28/native25 baseline and XKB primary-source continuation"}
 {"file": ".trellis/spec/backend/xserver-windows-private-links.md", "reason": "Actual reachable private PE output/map/input/member binding and explicit prebuilt/resource exclusions"}
 {"file": ".trellis/tasks/10-16-wf09-07-xdmcp-implementation/research/windows-private-links-evidence.md", "reason": "Verified PR86 CI699/source32/native29 baseline and next private DLL/tool evidence scope"}
+{"file":".trellis/spec/backend/xserver-windows-resources.md","reason":"Fail-closed XWin RC compiler, PE resource and private-object provenance contract"}
+{"file":".trellis/tasks/10-16-wf09-07-xdmcp-implementation/research/windows-resource-evidence.md","reason":"Record exact resource compiler inputs and final PE resource evidence"}
