@@ -277,6 +277,17 @@ def parse_windres_command(content, rule, build_directory, source_directory, wind
     # through the same cygpath -m roots used by compiler dependency auditing.
     input_path = dependency_path(inputs[0], build_directory, windows_roots)
     output_path = dependency_path(outputs[0], build_directory, windows_roots)
+    # GNU make's VPATH lookup can select a source-tree prerequisite while
+    # leaving the recipe's automatic variable as the bare token "XWin.rc".
+    # In that case the token is not a file under the build directory; resolve
+    # it against the fixed source directory, and still require the exact file.
+    if not input_path.is_file():
+        relative_input = Path(inputs[0])
+        require(not relative_input.is_absolute(), "RESOURCE_WINDRES_INPUT")
+        source_candidate = (source_directory / relative_input).resolve()
+        require(source_candidate.is_relative_to(source_directory.resolve())
+                and source_candidate.is_file(), "RESOURCE_WINDRES_INPUT")
+        input_path = source_candidate
     require(input_path == (source_directory / "XWin.rc").resolve(), "RESOURCE_WINDRES_INPUT")
     require(output_path == (build_directory / "XWin.o").resolve(), "RESOURCE_WINDRES_OUTPUT")
     return {"command": command, "commandLine": candidates[0], "input": input_path,

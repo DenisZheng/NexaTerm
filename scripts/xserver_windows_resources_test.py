@@ -195,6 +195,21 @@ XWin.o: $(srcdir)/XWin.rc $(srcdir)/XWin.exe.manifest $(srcdir)/X.ico
                 [(root / "build/xorg-server/include").resolve()],
             )
 
+    def test_windres_vpath_prerequisite_resolves_to_source_tree(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source, build = root / "src/hw/xwin", root / "build/xorg-server/hw/xwin"
+            source.mkdir(parents=True)
+            build.mkdir(parents=True)
+            (source / "XWin.rc").write_bytes(b"IDI_XWIN ICON \"X.ico\"\\n")
+            cmd = (
+                "windres --use-temp-file -i XWin.rc --input-format=rc "
+                " -o XWin.o -O coff -I " + str(root / "build/xorg-server/include")
+            )
+            result = parse_windres_command(cmd, {"windres": "windres"}, build, source)
+            self.assertEqual(result["input"], (source / "XWin.rc").resolve())
+            self.assertEqual(result["output"], (build / "XWin.o").resolve())
+
     def test_windres_custom_preprocessor_is_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
