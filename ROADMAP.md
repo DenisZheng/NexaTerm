@@ -75,3 +75,7 @@ WF-04B/04C/05/06/07 及 WF-08A–08E 已通过 integration PR #40 合入 `main`�
 - “CI check/test 通过”不等于“安装包、GUI、远程服务或硬件已验证”。
 - “自动化 harness 失败”不自动等于“产品功能失败”；必须先证明失败发生在被测功能本身。
 - 暂缓项必须保留原因和恢复条件，不能伪装成完成。
+
+## XDMCP Windows resource audit continuation (2026-10-30)
+
+PR #88 documentation CI passed. The implementation is now in stacked Draft PR #89 (code HEAD 6e08efca76893b8a2a8e5c6a9ed9c0ac9ec02f0e): WINDRES/GCC provenance, RC dependency graph, XWin.o resource bytes, final PE manifest/icon payload checks, and resource-section scans across XWin/private PE objects. Local synthetic suite: 16 tests passed. Exact-HEAD GitHub CI and Windows-native build remain pending; no native success is inferred. Resource rights, prebuilt DLL internals, distribution, bundling and desktop verification remain open.

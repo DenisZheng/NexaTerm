@@ -17,3 +17,5 @@
 {"file": ".trellis/tasks/10-16-wf09-07-xdmcp-implementation/research/windows-private-links-evidence.md", "reason": "Verified PR86 CI699/source32/native29 baseline and next private DLL/tool evidence scope"}
 {"file":".trellis/spec/backend/xserver-windows-resources.md","reason":"Fail-closed XWin RC compiler, PE resource and private-object provenance contract"}
 {"file":".trellis/tasks/10-16-wf09-07-xdmcp-implementation/research/windows-resource-evidence.md","reason":"Record exact resource compiler inputs and final PE resource evidence"}
+{"file":"scripts/xserver_windows_resources.py","reason":"Trace windres/GCC dependencies, XWin.o resource sections, final PE resources and private target resource closure"}
+{"file":"scripts/xserver_windows_resources_test.py","reason":"Synthetic COFF/PE/resource parser, identity, drift and fail-closed scan regressions"}
