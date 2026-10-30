@@ -165,6 +165,7 @@ XWin.o: $(srcdir)/XWin.rc $(srcdir)/XWin.exe.manifest $(srcdir)/X.ico
             source, build = root / "src/hw/xwin", root / "build/xorg-server/hw/xwin"
             source.mkdir(parents=True)
             build.mkdir(parents=True)
+            (source / "XWin.rc").write_bytes(b'IDI_XWIN ICON "X.ico"\\n')
             cmd = f"windres --use-temp-file -i {source / 'XWin.rc'} --input-format=rc -o XWin.o -O coff -I {root / 'build/xorg-server/include'}"
             result = parse_windres_command(cmd, {"windres": "windres"}, build, source)
             self.assertEqual(result["input"], (source / "XWin.rc").resolve())
@@ -176,6 +177,7 @@ XWin.o: $(srcdir)/XWin.rc $(srcdir)/XWin.exe.manifest $(srcdir)/X.ico
             source, build = root / "src/hw/xwin", root / "build/xorg-server/hw/xwin"
             source.mkdir(parents=True)
             build.mkdir(parents=True)
+            (source / "XWin.rc").write_bytes(b'IDI_XWIN ICON "X.ico"\\n')
             native_root = "D:/xserver-native"
             windows_roots = [(native_root, root)]
             cmd = (
