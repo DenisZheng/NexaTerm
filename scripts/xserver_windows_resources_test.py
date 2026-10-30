@@ -7,7 +7,7 @@ from xserver_source_review import ReviewError, digest
 from xserver_windows_resources import (
     _scan_private_resource_objects, _scan_xwin_link_objects, coff_sections,
     parse_makefile_resource_rule, parse_pe_resources, parse_resource_references,
-    parse_windres_command, verify_xwin_resource_payloads,
+    parse_windres_command, resource_make_dry_run_arguments, verify_xwin_resource_payloads,
 )
 
 
@@ -136,6 +136,19 @@ XWin.o: XWin.rc XWin.exe.manifest X.ico
         result = parse_makefile_resource_rule(content)
         self.assertEqual(result["windres"], "windres")
         self.assertEqual(set(result["prerequisites"]), {"XWin.rc", "XWin.exe.manifest", "X.ico"})
+
+    def test_resource_dry_run_never_forces_automake_refresh(self):
+        rule = {"prerequisites": ["X.ico", "XWin.exe.manifest", "XWin.rc"]}
+        arguments = resource_make_dry_run_arguments(rule)
+        self.assertEqual(arguments[:5], ["make", "-n", "V=1", "-o", "Makefile"][:5])
+        self.assertNotIn("-B", arguments)
+        self.assertEqual(arguments[-1], "XWin.o")
+        forced = [arguments[index + 1] for index, value in enumerate(arguments[:-1]) if value == "-W"]
+        self.assertEqual(forced, ["X.ico", "XWin.exe.manifest", "XWin.rc"])
+
+    def test_resource_dry_run_rejects_missing_prerequisite(self):
+        self.assert_code("RESOURCE_TARGET_PREREQUISITES", lambda: resource_make_dry_run_arguments(
+            {"prerequisites": ["XWin.rc", "X.ico"]}))
 
     def test_source_makefile_placeholder_is_allowed(self):
         content = """WINDRES = @WINDRES@

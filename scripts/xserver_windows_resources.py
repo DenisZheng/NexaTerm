@@ -206,6 +206,19 @@ def verify_xwin_resource_payloads(resources, rc_bytes, header_bytes, ico_bytes, 
             "rcReferences": references}
 
 
+def resource_make_dry_run_arguments(rule):
+    # Force only the RC prerequisites to be considered changed. Never use make -B:
+    # -B also rebuilds Automake's Makefile.in refresh chain and can invoke aclocal.
+    required = {"XWin.rc", "XWin.exe.manifest", "X.ico"}
+    prerequisites = sorted(required.intersection(rule.get("prerequisites", [])))
+    require(set(prerequisites) == required, "RESOURCE_TARGET_PREREQUISITES")
+    arguments = ["make", "-n", "V=1", "-o", "Makefile"]
+    for prerequisite in prerequisites:
+        arguments.extend(["-W", prerequisite])
+    arguments.append("XWin.o")
+    return arguments
+
+
 def parse_makefile_resource_rule(content, allow_unresolved=False):
     normalized = content.replace("\\\n", " ")
     windres = re.findall(r"(?m)^WINDRES\s*=\s*(\S.*?)\s*$", normalized)
@@ -431,7 +444,7 @@ def resource_compiler_evidence(source, builds, server_build, server, prefix, man
     require(source_rule["recipe"] == rule["recipe"] and
             source_rule["prerequisites"] == rule["prerequisites"], "RESOURCE_SOURCE_RULE")
 
-    planned = run(["make", "-B", "-n", "V=1", "XWin.o"], build_directory, capture=True)
+    planned = run(resource_make_dry_run_arguments(rule), build_directory, capture=True)
     command = parse_windres_command(planned, rule, build_directory, source_directory)
     include_paths = [(build_directory / item).resolve() for item in command["includes"]]
     require(include_paths == [(server_build / "include").resolve()], "RESOURCE_INCLUDE_PATH")
