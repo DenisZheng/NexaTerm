@@ -73,3 +73,5 @@ The goal is to help AI assistants and new team members understand how YOUR proje
 
 - [Rsh Task Owner](./rsh-task.md) — shared bounded leases, dual-stream task actor and true cleanup.
 - [Rsh Runtime IPC](./rsh-runtime.md) — actual main-window DTO/wrappers, fixed signals and unknown exit code.
+
+| Windows resource compiler and PE resources | `.trellis/spec/backend/xserver-windows-resources.md` |
