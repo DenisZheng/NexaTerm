@@ -5,6 +5,7 @@ from pathlib import Path
 
 from xserver_source_review import ReviewError, digest
 from xserver_windows_resources import (
+    
     _scan_private_resource_objects, _scan_xwin_link_objects, coff_sections,
     parse_makefile_resource_rule, parse_pe_resources, parse_resource_references,
     parse_windres_command, resource_make_dry_run_arguments, verify_xwin_resource_payloads,
@@ -168,6 +169,31 @@ XWin.o: $(srcdir)/XWin.rc $(srcdir)/XWin.exe.manifest $(srcdir)/X.ico
             result = parse_windres_command(cmd, {"windres": "windres"}, build, source)
             self.assertEqual(result["input"], (source / "XWin.rc").resolve())
             self.assertEqual(result["output"], (build / "XWin.o").resolve())
+
+    def test_windres_command_normalizes_windows_drive_absolute_paths(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source, build = root / "src/hw/xwin", root / "build/xorg-server/hw/xwin"
+            source.mkdir(parents=True)
+            build.mkdir(parents=True)
+            native_root = "D:/xserver-native"
+            windows_roots = [(native_root, root)]
+            cmd = (
+                "windres --use-temp-file "
+                "-i D:/xserver-native/src/hw/xwin/XWin.rc "
+                "--input-format=rc "
+                "-o D:/xserver-native/build/xorg-server/hw/xwin/XWin.o "
+                "-O coff -I D:/xserver-native/build/xorg-server/include"
+            )
+            result = parse_windres_command(
+                cmd, {"windres": "windres"}, build, source, windows_roots
+            )
+            self.assertEqual(result["input"], (source / "XWin.rc").resolve())
+            self.assertEqual(result["output"], (build / "XWin.o").resolve())
+            self.assertEqual(
+                [dependency_path(x, build, windows_roots) for x in result["includes"]],
+                [(root / "build/xorg-server/include").resolve()],
+            )
 
     def test_windres_custom_preprocessor_is_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:

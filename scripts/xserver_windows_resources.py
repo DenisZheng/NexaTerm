@@ -243,7 +243,7 @@ def parse_makefile_resource_rule(content, allow_unresolved=False):
     return {"windres": windres[0], "recipe": recipe, "prerequisites": sorted(names)}
 
 
-def parse_windres_command(content, rule, build_directory, source_directory):
+def parse_windres_command(content, rule, build_directory, source_directory, windows_roots=()):
     candidates = [line.strip() for line in content.splitlines()
                   if re.search(r"\bwindres(?:\.exe)?\b", line, re.IGNORECASE)]
     require(len(candidates) == 1, "RESOURCE_WINDRES_COMMAND")
@@ -272,9 +272,11 @@ def parse_windres_command(content, rule, build_directory, source_directory):
     require(len(inputs) == len(outputs) == 1 and includes, "RESOURCE_WINDRES_ARGUMENT")
     require("--input-format=rc" in command and "-O" in command
             and command[command.index("-O") + 1] == "coff", "RESOURCE_WINDRES_FORMAT")
-    input_path, output_path = Path(inputs[0]), Path(outputs[0])
-    input_path = (build_directory / input_path).resolve() if not input_path.is_absolute() else input_path.resolve()
-    output_path = (build_directory / output_path).resolve() if not output_path.is_absolute() else output_path.resolve()
+    # GCC/binutils on MSYS may print drive-letter absolute paths (D:/...).
+    # Path.is_absolute() on POSIX treats those as relative, so normalize them
+    # through the same cygpath -m roots used by compiler dependency auditing.
+    input_path = dependency_path(inputs[0], build_directory, windows_roots)
+    output_path = dependency_path(outputs[0], build_directory, windows_roots)
     require(input_path == (source_directory / "XWin.rc").resolve(), "RESOURCE_WINDRES_INPUT")
     require(output_path == (build_directory / "XWin.o").resolve(), "RESOURCE_WINDRES_OUTPUT")
     return {"command": command, "commandLine": candidates[0], "input": input_path,
@@ -444,9 +446,11 @@ def resource_compiler_evidence(source, builds, server_build, server, prefix, man
     require(source_rule["recipe"] == rule["recipe"] and
             source_rule["prerequisites"] == rule["prerequisites"], "RESOURCE_SOURCE_RULE")
 
+    windows_roots = [(run(["cygpath", "-m", root], work, capture=True).strip().rstrip("/"), root)
+                     for root in (work, toolchain_root)]
     planned = run(resource_make_dry_run_arguments(rule), build_directory, capture=True)
-    command = parse_windres_command(planned, rule, build_directory, source_directory)
-    include_paths = [(build_directory / item).resolve() for item in command["includes"]]
+    command = parse_windres_command(planned, rule, build_directory, source_directory, windows_roots)
+    include_paths = [dependency_path(item, build_directory, windows_roots) for item in command["includes"]]
     require(include_paths == [(server_build / "include").resolve()], "RESOURCE_INCLUDE_PATH")
     windres_path = Path(shutil.which(command["command"][0]) or "").resolve()
     gcc_path = Path(shutil.which("gcc") or "").resolve()
@@ -505,13 +509,11 @@ def resource_compiler_evidence(source, builds, server_build, server, prefix, man
         preprocessor_args.extend(["-D", define])
     for undefine in command["undefines"]:
         preprocessor_args.extend(["-U", undefine])
-    for include in command["includes"]:
-        preprocessor_args.extend(["-I", include])
-    preprocessor_args.append(command["command"][command["command"].index("-i") + 1])
+    for include in include_paths:
+        preprocessor_args.extend(["-I", str(include)])
+    preprocessor_args.append(str(command["input"]))
     dependency_output = run([gcc_path, *preprocessor_args], build_directory, capture=True)
     dependency_names = make_dependencies(dependency_output)
-    windows_roots = [(run(["cygpath", "-m", root], work, capture=True).strip().rstrip("/"), root)
-                     for root in (work, toolchain_root)]
     dependencies = sorted({dependency_path(name, build_directory, windows_roots) for name in dependency_names},
                           key=lambda path: str(path).casefold())
     require(command["input"] in dependencies, "RESOURCE_RC_DEPENDENCY")
