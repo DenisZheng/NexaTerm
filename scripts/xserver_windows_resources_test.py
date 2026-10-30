@@ -173,7 +173,7 @@ XWin.o: $(srcdir)/XWin.rc $(srcdir)/XWin.exe.manifest $(srcdir)/X.ico
                 recorded.append(args)
                 self.assertEqual(args[:2], ["pacman", "-Qqo"])
                 self.assertEqual(args[2], binary.resolve())
-                return "mingw-w64-ucrt-x86_64-binutils\\n"
+                return "mingw-w64-ucrt-x86_64-binutils\n"
 
             # On MSYS this extensionless command resolves to windres.exe.
             with patch("xserver_windows_resources.shutil.which", return_value=str(binary.with_suffix(""))):
