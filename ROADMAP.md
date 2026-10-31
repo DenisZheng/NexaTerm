@@ -6,7 +6,7 @@
 
 ## 当前下一阶段：三协议功能实现（2026-10-16）
 
-2026-10-31 最新结果（11:28，UTC+08:00）：PR #89 的 `f46a5fb` 完整 CI/源码审查成功，原生 run `41158110445` **失败**。已取得失败 artifact；XWin 编译安装与私有 PE 检查已完成，但 windres 重放仍传裸 `XWin.rc`，不是最终资源审查通过。本地最小修复已将真实源文件按原 cwd 相对化后重放，同时解决带空格工作根的实际预处理失败；Windows 新增 3 项、MSYS/WSL 各 27 项资源测试，以及只生成 `.o` 的真实 windres/COFF 对照通过。没有重跑完整本机构建；新修复尚未提交/推送，完整原生仍需 CI。暂不进入随包/桌面阶段，精确证据见 [资源审查记录](.trellis/tasks/10-16-wf09-07-xdmcp-implementation/research/windows-resource-evidence.md)。
+2026-10-31 最新结果：PR #89 已推送 `1a7bb15`，完整 CI/源码审查成功；原生 `41164964134` 的 windres 重放和依赖扫描已通过，随后因真实 COFF `.bss` 无磁盘 bytes 而失败。已下载并独立核验 ZIP/JSON；本机修复纯 BSS/长节名解析，扩查与 CI 字节一致的 609 对象后，将 XWin/xkbcomp 的固定默认 manifest 纳入来源、section/payload 和最终 PE 证据，而非跳过资源。MSYS/WSL 各 50 项相关测试及只读 corpus 通过；观察到的预处理模式也统一为 `-xc`。新修复待提交和自己的 native CI，不重跑本机受杀软干扰的完整构建。暂不进入随包/桌面阶段，精确证据见 [资源审查记录](.trellis/tasks/10-16-wf09-07-xdmcp-implementation/research/windows-resource-evidence.md)。下列更早日期/时间快照仅保留历史，不覆盖本条。
 
 2026-10-31 推送后接续（CI 快照 10:16，UTC+08:00）：PR #89 已更新到 `f46a5fb`，完整 CI 与源码审查通过；原生前置反例测试通过，正在编译/审查固定目标，最终 JSON 尚未取得。等待期间已完成 [资源历史与权限核实](.trellis/tasks/10-16-wf09-07-xdmcp-implementation/research/windows-resource-rights-review.md)、[四个预编译运行库的精确配方/义务记录](.trellis/tasks/10-16-wf09-07-xdmcp-implementation/research/windows-prebuilt-runtime-obligations.md) 和 [X2 Windows 环境交接与 14 项验收用例](.trellis/tasks/10-16-wf09-07-xdmcp-implementation/validation/x2-windows-desktop-preparation.md)。新证据纠正 pixman 的旧配方引用，确认预编译 DLL 的构建环境不能由当前 XWin 证据覆盖；三个资源授权仍待澄清或经评审的独立替换。不重跑本机受杀软干扰的构建，不改正在验证的构建代码；真实互通、随包和发行批准仍未完成。精确 run 见 [接续证据](.trellis/tasks/10-16-wf09-07-xdmcp-implementation/research/windows-resource-evidence.md)。
 

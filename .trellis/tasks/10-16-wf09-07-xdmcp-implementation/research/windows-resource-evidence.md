@@ -155,3 +155,46 @@ FAIL xorg-server resource-compiler-inputs BUILD_EXIT
 - `pr89-replay-final-mutations.log`：最终代码的三组配对控制均通过；删除输入重绑、改回绝对输入、删除 COFF 比较均被回归检出，未改磁盘生产代码。
 
 最终代码的 Windows Python 新增 3 项、MSYS/WSL 各 27 项资源测试重新通过，无 skip；类型检查、line-budget、任务 manifest 和 diff 检查通过。新增回归由既有 CI 的 `xserver_windows_*test.py` glob 自动收集，不需修改 workflow。本地修复与许可/X2 准备待一起人工审核，尚未提交/推送；PR #89 仍是 `f46a5fb` 的原生失败状态。
+
+## 2026-10-31：推送后核对实际预处理模式
+
+维护者审核后，上一批 11 个文件已作为 `1a7bb15d6570c85507f250a1bb65b3f51715801a` 一起推到 PR #89。本节开始接续其 [完整 CI](https://github.com/DenisZheng/NexaTerm/actions/runs/41164964135)、[源码审查](https://github.com/DenisZheng/NexaTerm/actions/runs/41164964119) 和 [原生构建](https://github.com/DenisZheng/NexaTerm/actions/runs/41164964134)；不沿用前一节未推送状态。
+
+最终审查又发现一处证据口径不一致：真实 windres verbose 使用 `gcc -E -xc -DRC_INVOKED`，依赖扫描和 `compiler.preprocessorDefaults` 却仍硬编码旧的 `-xc-header`。这不是已观察到的 CI 构建故障，也不证明两种模式必然产生不同依赖，但原字段不能真实描述当次工具调用，须在本阶段收口。
+
+- 现在要求唯一的真实 `Using` 调用记录，核对 GCC 默认选项，再用同一 `preprocessor_defaults` 构造 `-M` 依赖扫描和报告字段；缺失/重复调用或语言模式漂移均拒绝，不以“输出中有 gcc”代替核对。
+- 回归在实际依赖调用边界断言完整 argv，覆盖 C-header/C++/Objective-C 模式及缺失/重复 verbose 调用。先得到旧代码红灯，修正后 Windows Python 5 项、MSYS/WSL 各 29 项资源测试通过。
+- 全新带空格工作根中的资源级原生探针通过，并实际执行 `gcc -E -xc -DRC_INVOKED -M`：输出包含自写 RC、源头文件和 build 头文件；仍在真实 SDK/最终 PE 审查前停止，没有链接、生成或运行新 `.exe`。
+- 红灯、有效变异及真实工具日志分别为忽略目录下的 `pr89-preprocessor-mode-red.log`、`pr89-preprocessor-mode-mutation-checked.log`、`pr89-resource-only-smoke-observed-mode.log`。移除模式校验后，负向用例进入了本应禁止的依赖扫描，已被测试检出；首次 mutation harness 因非 raw Python 字符串将正则转义改写，在替换计数断言即失败，不计入有效变异证据。
+
+新代码须再次完成自己的原生 CI。仅预处理/资源自写夹具通过不代表真实 XWin 审查、许可批准、安装或桌面完成；本轮不放宽三个资源权限和四个预编译 DLL 内部的排除边界。
+
+## 2026-10-31：真实 COFF 对象与工具链默认 manifest
+
+`1a7bb15` 的完整 CI `41164964135`、源码审查 `41164964119` 成功，原生 `41164964134` 失败于 `resource-compiler-inputs / RESOURCE_COFF_RANGE`。实际 VPATH 重放与依赖扫描已通过，不是原路径故障重复。最终版本 probe 未执行，所有原生完成/发行能力标志仍为 false。
+
+从精确 head/run 下载 artifact `13029646488`：ZIP 642767 字节、SHA256 `2299904422a2c0402efc1d9547a1e662815defaf1de94b27f4828dfd537bd681`，已独立计算并匹配 GitHub API digest；JSON 3797953 字节、SHA256 `cd092a2d7597a097a1df94bbe8eacfbe3db7a5a4ef15b134c6bf21d92a1196e2`。完整日志/receipt 在忽略目录 `pr89-ci-native-41164964134/`，未下载或执行引擎。
+
+### 根因、扩查与防回归
+
+- 类别 D/E：旧 COFF parser 假定所有非零 section size 都有磁盘 bytes。实际首个 `lib/crt2.o`（7815 字节，SHA256 `6904489841a7d0d71aed3f49bfca3f722ae9e7c5073c1716f48b2c6be4502e83`）的 `.bss` 是 size 32/pointer 0/flags `0xc0500080`。本机同对象与 CI 精确一致；自写未初始化全局数据经 `gcc -c` 也得到该表示。只编译数据到 COFF，没有链接/运行程序。
+- 仅对纯未初始化内容保留内存长度但不读/hash磁盘；代码/初始化/混合标志仍严格校验。补 `/decimal` 字符串表节名解码，避免真实 CRT 长名不识别或编码 `.rsrc$...` 绕过检查。反例覆盖范围、错误标志、伪资源、缺 NUL 和非法字符串 offset。
+- 扩查所有与 CI 字节一致的本机工具链输入，而非只修首个错误：17 archives、609 个去重 COFF 对象、512 个 BSS 节；发现一个去重资源对象 `lib/default-manifest.o`，同时在 XWin 和 xkbcomp 的实际 LOAD 中。初次 corpus 的“应无资源”断言失败被保留，不写成通过。
+- 因而不能在 BSS 修好后直接推送，也不能跳过该文件。新增固定来源对象证据和最终 PE 绑定；九项合成回归覆盖包/来源/owner/完整字节/section/最终 image/payload 漂移、错目标、缺失/重复输入及 archive 资源。新逻辑不改链接配方或发行许可决定。
+- 预处理模式不一致是独立的证据契约问题；修正 `-xc` 不能解决 BSS，BSS 修正也不能代替默认 manifest 取证。前序阶段失败使后序真实对象尚未被扫描，纯解析器测试不能替代全链 native。
+
+### 默认 manifest 的固定来源与边界
+
+沿用已有 `mingw-w64-ucrt-x86_64-windows-default-manifest 20260815-1` 的单文件 pin（892 字节，SHA256 `9af5e18f01a63a7d02ba11e097324e046f778de5c74cd093b52296f8613dbcc8`），不是新增依赖或资源许可豁免。已有源 notice、发布 archive 和固定 recipe/generator 身份见 `toolchain-license-sources.json` 与 [运行库许可记录](windows-runtime-license-review.md)。
+
+只读官方 `msys2/MINGW-packages` commit `fb1bee30b4f11cf4b857197a288466afad49033a` 的 PKGBUILD/genrc，分别匹配既有 SHA256 `c01b38f7f32970b42d2c9ab834d35eb69fb71a0f3de30a0340ce30e40cd203e8` / `f2bfbcd92ab28d8671dda5a1485aae150ce5d5faf4395a6a4462cacd2a6fb60a`。未执行或复制上游生成器实现。用 AST 常量读取 XML_TEMPLATE，按生成器声明的去 XML 注释、折叠标签间空白和 strip 规则独立核对，得到与对象 payload 完全相同的 710 字节。原模板 SHA256 `9ec47595697628058434c8b056c581aefce247c4d774d5392cf6e74fd04075be`，结果为 `e989bc9ba32a3f5b1f5a565d5971e07462a2d6a504e7af682bd36cc8cc263f29`。
+
+完整固定对象只有一个 `.rsrc`（offset 60/size 800/SHA256 `0051d11dbb0208fbba9185ccf8634f81e3b4f47b10e3f6226832ea0340318864`），资源 type 24/name 1/language 0；payload 位于节内 offset 88。data entry 的节内 `0x48` 位置有一条指向 `.rsrc` section symbol 的 AMD64 ADDR32NB relocation。模板为 asInvoker 和 Windows 兼容声明；这只是精确对象/模板身份，不重现历史编译器、不验证发布 archive 签名，也不补出并不存在的 installed notice。
+
+新 collector 重验固定对象/包/sourceLicenseEvidence、section 和 payload，再只允许相同来源的直接 LOAD 对象。XWin 的原 manifest/icon 校验继续生效，并要求最终可达资源树没有默认 payload；xkbcomp 必须在绑定到既有 private-link size/hash 的真实安装 PE 中只有该默认 manifest。两者资源计数如实记录为 2/1；不从 LOAD 推断 section 存活或链接器丢弃过程。
+
+### 本地验证（尚非新 native 结果）
+
+Windows Python 的新 COFF/replay/default-manifest 共 21 项通过；MSYS `/usr/bin/python3` 和 WSL 的资源/来源五个 suite 各 50 项通过，无 skip。只读真实 corpus 最终通过，两个默认 manifest 输入均按精确来源/section pin 识别，archive 成员没有资源。日志 `pr89-coff-exact-ci-corpus-verified.log`；它不包含私有组件全部对象或最终 PE，不能充当完整原生报告。未重跑本机完整构建、关闭防护或添加排除。
+
+相关 code-spec 已加入 COFF 存储表示、长名、精确工具链对象以及最终可达资源契约。新提交仍需自己的完整/源码/native CI；通过后方可关闭本次资源审查实现阶段，X0 权限/预编译 DLL 内部、X2/X3 不随之完成。

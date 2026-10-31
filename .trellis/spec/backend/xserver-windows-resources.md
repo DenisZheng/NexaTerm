@@ -33,6 +33,7 @@ The XWin source header winresource.h must retain its actual permissive notice. T
 | Missing or changed RC/header/icon/manifest input | FAIL |
 | Source and generated Makefile rules differ | FAIL |
 | Unknown WINDRES command, custom preprocessor, wrong target or unowned tool | FAIL |
+| Missing/duplicate verbose preprocessor invocation, or unexpected default language/options | FAIL (`RESOURCE_PREPROCESSOR_NOT_OBSERVED` / `RESOURCE_PREPROCESSOR_MODE`) |
 | GCC dependency escapes known roots or has no package owner | FAIL |
 | Reproduced .rsrc section differs from linked XWin.o | FAIL |
 | XWin.o is absent from the actual link map or its bytes differ | FAIL |
@@ -65,6 +66,14 @@ repro_command[command["outputIndex"]] = str(repro_output)
 
 Good/base/bad: replay a source-tree RC from the original build cwd; run the MSYS resource suite plus a resource-only native probe; never treat mocked argv coverage as native tool compatibility. A probe may use a self-authored RC, source/build headers and file-backed RCDATA, but must state its synthetic link-identity fixture and explicit stop before dependency/final-PE audit. Full Windows CI remains required for real XWin evidence.
 
+### Observed preprocessor mode
+
+The current UCRT64 windres invocation reports `gcc -E -xc -DRC_INVOKED`, not the old documented `-xc-header` spelling. Require exactly one windres `Using` invocation line (backtick opener, apostrophe closer) and the expected GCC default options before the dependency scan. Missing/duplicate observations fail with `RESOURCE_PREPROCESSOR_NOT_OBSERVED`; a different language mode fails with `RESOURCE_PREPROCESSOR_MODE`. Do not accept a generic `gcc` mention as an invocation observation.
+
+One `preprocessor_defaults` value supplies both `compiler.preprocessorDefaults` and the dependency argv (with `-M` added). This is an observed-and-checked contract, not an inferred default silently reused across toolchain changes. Wrong: report `-xc-header` while windres used `-xc`, even if both dependency scans happen to produce the same files. Correct: check the real verbose invocation and use the same C preprocessing mode for dependency collection and report metadata.
+
+The replay regression must assert the full dependency argv and reject C-header/C++/Objective-C mode drift and absent/duplicate invocation lines before dependency execution. A resource-only native check can additionally execute GCC's dependency-only scan against its self-authored headers without invoking a linker; it still does not prove real XWin SDK/final-PE closure.
+
 ### MSYS executable-alias fixtures
 
 Run these tests with `/usr/bin/python3` under UCRT64, as in `xserver-windows.yml`; native Windows Python is not a substitute for the MSYS filesystem behavior. The focused regression is `python -m unittest xserver_windows_resources_test.ResourceEvidenceTests.test_tool_alias_collision_cannot_replace_package_owned_binary -v` from `scripts/`.
@@ -76,3 +85,19 @@ MSYS can resolve an extensionless write to an existing `.exe`. Wrong: create `wi
 ## 6. Explicit exclusions
 
 The four prebuilt runtime DLL internals remain outside this slice. This work does not approve any license, publish an X server binary, change install packaging, add privileges, enable a bundled capability, or claim desktop interoperability. Keep distributionApproved=false, bundled=false and desktopVerified=false.
+
+## 7. COFF storage and the fixed toolchain manifest
+
+`coff_sections(data)` scans objects, not only PE images. GNU COFF `.bss` can carry a nonzero `SizeOfRawData` with zero `PointerToRawData`. Only pure `IMAGE_SCN_CNT_UNINITIALIZED_DATA` (content mask `0xe0 == 0x80`) may use this representation; retain `rawSize`, set `uninitialized=true` and `rawSha256=null`. A nonzero file pointer or `.rsrc*` name on such a section fails `RESOURCE_COFF_UNINITIALIZED`. Code/initialized/mixed sections still require bounded file-backed bytes. Never skip every zero-pointer section or hash the COFF header as BSS data.
+
+Decode `/decimal` COFF section names through the bounded string table after the symbol table before resource classification. Validate the symbol/string-table range, minimum offset, terminating NUL, printable ASCII and 4096-byte name limit. Unsupported encodings fail closed. An encoded `.rsrc$...` must not escape the scanner.
+
+`default_manifest_evidence(toolchain_root, packages)` reuses the exact package/version/declaration/single-file/source-notice contract in `source_license_evidence`. `toolchain-license-sources.json.resourceEvidence` binds the already pinned `lib/default-manifest.o` to its reviewed section, manifest payload and independently read generator template. It is a fixed precompiled-object/layout receipt, not a general COFF-resource decoder or a reproduction of the historical compiler. Changed installed bytes, absent/drifting source evidence, changed section or payload fail before object acceptance.
+
+`matches_default_manifest(item, sections, evidence)` requires exact origin, owner, path, size, whole-object SHA256 and the single resource section's name/range/hash. No filename-only allowlist. The XWin direct-object scan requires exactly one own resource object and one fixed default-manifest input; private targets require exactly one default input, belonging to xkbcomp only. Unknown direct resources, duplicate/missing expected objects and all archive-contained resources still fail closed. Report counts are two for XWin and one across private targets, not the old inferred private zero.
+
+`default_manifest_in_image(resources, target, evidence)` checks the final reachable resource tree, independently of LOAD. The normal XWin source manifest/icon checks must pass and the fixed default payload must not be reachable. For xkbcomp, reread the unique installed image, rebind its size/hash to private-link evidence, parse the PE resource tree and require exactly type 24/name 1/language 0/codepage 0 with the fixed payload. Extra/changed resources fail `RESOURCE_DEFAULT_FINAL_PAYLOAD`; image drift fails `RESOURCE_PRIVATE_IMAGE_CHANGED`. Do not claim that LOAD means section survival or that non-reachability explains how the linker discarded bytes.
+
+The report adds `toolchainDefaultManifest` (source receipt, pins, historical-compiler exclusion and XWin reachability) and actual `resourceObjects[].linkedImage` under the private scan. Keep missing installed license text, unverified archive signature and all existing adoption/prebuilt/rights exclusions explicit.
+
+Good/base/bad: recognize the exact source-bound toolchain object and compare actual final PE payloads; test both scanners with authored object/PE fixtures; never silently skip `default-manifest.o`, accept any `.bss`-named bytes or call a prebuilt object a locally reproduced generator output. `xserver_windows_coff_test.py` covers BSS/long-name counterexamples; `xserver_windows_toolchain_resources_test.py` covers source/version/owner/hash/section/image drift, missing/duplicate inputs, wrong targets, archive resources and extra/final payloads. Fixtures execute no compiler/linker; real native CI remains mandatory.

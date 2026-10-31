@@ -12,6 +12,9 @@ from xserver_source_review import digest, require
 from xserver_windows_compilation import dependency_path, make_dependencies
 from xserver_windows_inventory import package_evidence
 from xserver_windows_pe import file_offset, parse_pe
+from xserver_windows_toolchain_resources import (
+    default_manifest_evidence, default_manifest_in_image, matches_default_manifest,
+)
 
 MAX_RESOURCE_BYTES = 16 * 1024 * 1024
 MAX_OBJECT_BYTES = 64 * 1024 * 1024
@@ -30,19 +33,38 @@ def coff_sections(data):
     for index in range(count):
         start = 20 + index * 40
         raw_name = data[start:start + 8].split(b"\0", 1)[0]
+        if raw_name.startswith(b"/"):
+            require(re.fullmatch(rb"/[0-9]+", raw_name), "RESOURCE_COFF_SECTION_NAME")
+            symbol_start, symbol_count = struct.unpack_from("<II", data, 8)
+            string_start = symbol_start + symbol_count * 18
+            require(symbol_start >= table_end and string_start + 4 <= len(data), "RESOURCE_COFF_STRING_TABLE")
+            string_size = struct.unpack_from("<I", data, string_start)[0]
+            require(4 <= string_size <= len(data) - string_start, "RESOURCE_COFF_STRING_TABLE")
+            offset = int(raw_name[1:])
+            require(4 <= offset < string_size, "RESOURCE_COFF_SECTION_NAME")
+            end = data.find(b"\0", string_start + offset,
+                            min(string_start + string_size, string_start + offset + 4097))
+            require(end >= 0, "RESOURCE_COFF_SECTION_NAME")
+            raw_name = data[string_start + offset:end]
         require(raw_name and all(32 <= byte <= 126 for byte in raw_name), "RESOURCE_COFF_SECTION_NAME")
         name = raw_name.decode("ascii")
         raw_size, raw_pointer = struct.unpack_from("<II", data, start + 16)
         characteristics = struct.unpack_from("<I", data, start + 36)[0]
         require(raw_size <= MAX_OBJECT_BYTES, "RESOURCE_COFF_SECTION_BUDGET")
-        if raw_size:
+        uninitialized = characteristics & 0xe0 == 0x80
+        if uninitialized:
+            # COFF 对象的 .bss 保留内存长度，但没有对应的磁盘字节。
+            require(raw_pointer == 0 and not name.startswith(".rsrc"), "RESOURCE_COFF_UNINITIALIZED")
+            raw = b""
+        elif raw_size:
             require(raw_pointer >= table_end and raw_pointer + raw_size <= len(data), "RESOURCE_COFF_RANGE")
             raw = data[raw_pointer:raw_pointer + raw_size]
         else:
             require(raw_pointer == 0, "RESOURCE_COFF_EMPTY_SECTION")
             raw = b""
         sections.append({"name": name, "rawSize": raw_size, "rawOffset": raw_pointer,
-                         "rawSha256": digest(raw) if raw else None, "characteristics": characteristics})
+                         "rawSha256": digest(raw) if raw else None, "characteristics": characteristics,
+                         "uninitialized": uninitialized})
     resource_sections = [item for item in sections if item["name"].startswith(".rsrc") and item["rawSize"]]
     return {"machine": "amd64", "sections": sections, "resourceSections": resource_sections}
 
@@ -381,7 +403,8 @@ def _scan_object(path, expected_size, expected_sha, scanned):
     return info
 
 
-def _scan_xwin_link_objects(builds, prefix, toolchain_root, static_link, archive_members, xwin_object):
+def _scan_xwin_link_objects(builds, prefix, toolchain_root, static_link, archive_members, xwin_object,
+                            default_manifest=None):
     roots = {"server-build": builds, "component-build": builds,
              "private-prefix": prefix, "target-toolchain": toolchain_root}
     scanned, resource_objects = [0], []
@@ -396,8 +419,10 @@ def _scan_xwin_link_objects(builds, prefix, toolchain_root, static_link, archive
         if info["resourceSections"]:
             expected = (item["origin"] in {"server-build", "component-build"}
                         and path == xwin_object and item["sha256"] == digest(xwin_object.read_bytes()))
-            require(expected, "RESOURCE_XWIN_UNEXPECTED_RESOURCE_OBJECT")
+            default = matches_default_manifest(item, info["resourceSections"], default_manifest)
+            require(expected or default, "RESOURCE_XWIN_UNEXPECTED_RESOURCE_OBJECT")
             resource_objects.append({"path": item["path"], "sha256": item["sha256"],
+                                     "kind": "xwin-resource" if expected else "toolchain-default-manifest",
                                      "sections": info["resourceSections"]})
     archive_cache, total_bytes = {}, 0
     for member in archive_members["members"]:
@@ -424,18 +449,22 @@ def _scan_xwin_link_objects(builds, prefix, toolchain_root, static_link, archive
         scanned[0] += 1
         require(scanned[0] <= MAX_SCAN_OBJECTS, "RESOURCE_OBJECT_BUDGET")
         require(not info["resourceSections"], "RESOURCE_XWIN_ARCHIVE_RESOURCE_OBJECT")
-    require(len(resource_objects) == 1, "RESOURCE_XWIN_OBJECT_MISSING")
+    require(sum(item["kind"] == "xwin-resource" for item in resource_objects) == 1
+            and sum(item["kind"] == "toolchain-default-manifest" for item in resource_objects)
+            == int(default_manifest is not None), "RESOURCE_XWIN_OBJECT_MISSING")
     return {"scannedCoffObjects": scanned[0], "resourceObjectCount": len(resource_objects),
             "resourceObjects": resource_objects, "archiveCount": len(archive_cache),
             "archiveBytes": total_bytes}
 
 
-def _scan_private_resource_objects(private_linkage, builds, prefix, toolchain_root, report=None):
+def _scan_private_resource_objects(private_linkage, builds, prefix, toolchain_root, report=None,
+                                   default_manifest=None):
     require(private_linkage.get("observationsComplete") and private_linkage.get("files"),
             "RESOURCE_PRIVATE_LINKS_INCOMPLETE")
     roots = {"component-build": builds, "server-build": builds,
              "private-prefix": prefix, "target-toolchain": toolchain_root}
     archive_cache, scanned, short_imports, archive_bytes = {}, [0], 0, 0
+    resource_objects = []
     for target in private_linkage["files"]:
         if report is not None:
             report["privateResourceCurrent"] = target["name"]
@@ -447,7 +476,23 @@ def _scan_private_resource_objects(private_linkage, builds, prefix, toolchain_ro
             require(item["origin"] in roots, "RESOURCE_PRIVATE_OBJECT_ORIGIN")
             path = (roots[item["origin"]] / item["path"]).resolve()
             info = _scan_object(path, item["size"], item["sha256"], scanned)
-            require(not info["resourceSections"], "RESOURCE_PRIVATE_DIRECT_RESOURCE_OBJECT")
+            if info["resourceSections"]:
+                require(target["name"] == "xkbcomp.exe"
+                        and matches_default_manifest(item, info["resourceSections"], default_manifest),
+                        "RESOURCE_PRIVATE_DIRECT_RESOURCE_OBJECT")
+                images = [path for path in (prefix / "bin").iterdir()
+                          if path.name.casefold() == target["name"]]
+                require(len(images) == 1 and images[0].is_file() and not images[0].is_symlink()
+                        and images[0].stat().st_size == target["imageSize"], "RESOURCE_PRIVATE_IMAGE")
+                image = images[0].read_bytes()
+                require(digest(image) == target["imageSha256"], "RESOURCE_PRIVATE_IMAGE_CHANGED")
+                directory = parse_pe_resources(image)
+                final = default_manifest_in_image(directory["resources"], target["name"], default_manifest)
+                resource_objects.append({"target": target["name"], "path": item["path"],
+                                         "sha256": item["sha256"], "sections": info["resourceSections"],
+                                         "kind": "toolchain-default-manifest",
+                                         "linkedImage": {"path": str(images[0].relative_to(prefix)),
+                                                         "size": len(image), "sha256": digest(image), **final}})
         for member in target["archiveMembers"]["members"]:
             origin = member["archiveOrigin"]
             require(origin in roots, "RESOURCE_PRIVATE_ARCHIVE_ORIGIN")
@@ -473,11 +518,13 @@ def _scan_private_resource_objects(private_linkage, builds, prefix, toolchain_ro
             scanned[0] += 1
             require(scanned[0] <= MAX_SCAN_OBJECTS, "RESOURCE_OBJECT_BUDGET")
             require(not info["resourceSections"], "RESOURCE_PRIVATE_ARCHIVE_RESOURCE_OBJECT")
+    require(len(resource_objects) == int(default_manifest is not None), "RESOURCE_PRIVATE_DEFAULT_MISSING")
     if report is not None:
         report.pop("privateResourceCurrent", None)
     return {"scope": "all-reachable-private-PE-direct-objects-and-selected-archive-members",
             "observationsComplete": True, "scannedCoffObjects": scanned[0],
-            "shortImportObjects": short_imports, "resourceObjectCount": 0,
+            "shortImportObjects": short_imports, "resourceObjectCount": len(resource_objects),
+            "resourceObjects": resource_objects,
             "targetCount": len(private_linkage["files"]),
             "archiveCount": len(archive_cache), "archiveBytes": archive_bytes}
 
@@ -534,6 +581,7 @@ def resource_compiler_evidence(source, builds, server_build, server, prefix, man
     require(len(static_inputs) == 1 and static_inputs[0]["size"] == len(object_bytes)
             and static_inputs[0]["sha256"] == digest(object_bytes), "RESOURCE_OBJECT_LINK_IDENTITY")
 
+    preprocessor_defaults = ["-E", "-xc", "-DRC_INVOKED"]
     with tempfile.TemporaryDirectory(prefix="xwin-resource-repro-", dir=work) as temporary:
         repro_output = Path(temporary) / "XWin.resource.o"
         repro_command = list(command["command"])
@@ -550,10 +598,13 @@ def resource_compiler_evidence(source, builds, server_build, server, prefix, man
         reproduced = [(item["name"], item["rawSize"], item["rawSha256"])
                       for item in repro_info["resourceSections"]]
         require(original == reproduced, "RESOURCE_REPRO_CHANGED")
-        require("gcc" in verbose.lower(), "RESOURCE_PREPROCESSOR_NOT_OBSERVED")
+        observed = re.findall(r"(?m)^Using `([^\r\n]+)'$", verbose)
+        require(len(observed) == 1 and "gcc" in observed[0].lower(), "RESOURCE_PREPROCESSOR_NOT_OBSERVED")
+        require(re.search(r'\bgcc(?:\.exe)?"?\s+' + re.escape(" ".join(preprocessor_defaults)) + r"\s",
+                          observed[0]), "RESOURCE_PREPROCESSOR_MODE")
         repro_hash = digest(repro_output.read_bytes())
 
-    preprocessor_args = ["-E", "-M", "-xc-header", "-DRC_INVOKED"]
+    preprocessor_args = [*preprocessor_defaults, "-M"]
     for define in command["defines"]:
         preprocessor_args.extend(["-D", define])
     for undefine in command["undefines"]:
@@ -650,10 +701,13 @@ def resource_compiler_evidence(source, builds, server_build, server, prefix, man
     require(installed_config.is_file() and installed_config.read_bytes() == system_config.read_bytes(),
             "RESOURCE_SYSTEM_CONFIG_IDENTITY")
 
+    default_manifest = default_manifest_evidence(toolchain_root, packages)
+    default_manifest["xwinLinkedImage"] = default_manifest_in_image(
+        directory["resources"], "xwin.exe", default_manifest)
     xwin_scan = _scan_xwin_link_objects(builds, prefix, toolchain_root, report["staticLink"],
-                                        report["archiveMembers"], resource_object)
+                                        report["archiveMembers"], resource_object, default_manifest)
     private_scan = _scan_private_resource_objects(report["privatePeLinkage"], builds, prefix,
-                                                  toolchain_root, report)
+                                                  toolchain_root, report, default_manifest)
     report["privatePeLinkage"]["resourceObjectScan"] = private_scan
     report["privatePeLinkage"]["resourceCompilerInputsIncluded"] = True
     report["compilerInputs"]["resourceCompilerInputsIncluded"] = True
@@ -668,7 +722,7 @@ def resource_compiler_evidence(source, builds, server_build, server, prefix, man
                          "prerequisites": rule["prerequisites"], "plannedCommand": command["commandLine"],
                          "plannedCommandSha256": digest(command["commandLine"].encode())},
             "compiler": {"windres": windres_record, "preprocessor": gcc_record,
-                         "preprocessorDefaults": ["-E", "-xc-header", "-DRC_INVOKED"],
+                         "preprocessorDefaults": preprocessor_defaults,
                          "verboseOutputSha256": digest(verbose.encode()), "target": target},
             "dependencies": {"method": "windres-default-gcc-preprocessor-with-GCC-M",
                              "command": preprocessor_args, "outputSha256": digest(dependency_output.encode()),
@@ -692,6 +746,7 @@ def resource_compiler_evidence(source, builds, server_build, server, prefix, man
                                      "installedSha256": digest(installed_config.read_bytes()),
                                      "identityVerified": True},
             "privateTargetResourceScan": private_scan,
+            "toolchainDefaultManifest": default_manifest,
             "resourceCompilerInputsIncluded": True,
             "prebuiltDllInternalsIncluded": False,
             "perFileLicenseReviewComplete": False,

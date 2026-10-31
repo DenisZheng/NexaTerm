@@ -15,7 +15,7 @@
   "branch": "build/wf09-07-resource-audit",
   "base_branch": "build/wf09-07-resource-inputs",
   "worktree_path": null,
-  "commit": "85d2f0323fd26d648a830da76f01582183b7dfce",
+  "commit": "1a7bb15d6570c85507f250a1bb65b3f51715801a",
   "pr_url": "https://github.com/DenisZheng/NexaTerm/pull/89",
   "subtasks": [],
   "children": [],
@@ -40,8 +40,21 @@
     ".trellis/tasks/10-16-wf09-07-xdmcp-implementation/research/windows-xkb-evidence.md",
     "scripts/xserver_windows_private_links.py",
     ".trellis/spec/backend/xserver-windows-private-links.md",
-    ".trellis/tasks/10-16-wf09-07-xdmcp-implementation/research/windows-private-links-evidence.md"
+    ".trellis/tasks/10-16-wf09-07-xdmcp-implementation/research/windows-private-links-evidence.md",
+    "scripts/xserver_windows_resources.py",
+    "scripts/xserver_windows_toolchain_resources.py",
+    ".trellis/spec/backend/xserver-windows-resources.md"
   ],
   "notes": "Draft #85 stacked on #84. Code4e4e4a8 verified by source CI27, full CI694 all7 executing jobs and full Windows native24 SUCCESS. Native24 passed93 regressions,15 dependencies,5 probes,real DLL data import,full engine/16 PE/header gates,105 link inputs,47 archives/942 selected members,1720 C inputs and final version. JSON artifacts downloaded/verified; all C identities equal native22. All544 selected toolchain members match official package payloads (CRT455,GCC2,pixman73,winpthreads14). Fixed source/transforms verified for333 toolchain headers and56 generated files; CRT53 selected implementation sources associated. Native23 inline-reference failure preserved; real two-archive regression,local114 and legacy GNU2.38 ten tests passed. Per-file/SDK IDL/generator conditions,DLL internals/resources,runtime GPL source obligations,notices,xkbcomp/XKB data,X2/X3 and Unix hard-crash supervision remain open. Adoption,bundled,desktop flags remain false. No merge or release. Current continuation: Windows XKB tool/data on build/wf09-07-xkb-runtime, stacked on PR85 exact HEAD8c3e90b (CI695/source28/native25 all SUCCESS; artifact downloaded,1720 C inputs unchanged). New keyboard implementation requires its own native/CI evidence; see stacked Draft body. All adoption flags false. Draft #86 is the XKB continuation; its body owns exact per-HEAD native/full-CI/artifact outcomes. Code0e989ee passed source31/fullCI698; native28 passed111 regressions and Windows data293/3341129bytes/11 references, then failed real listing.c TypeString/ERROR SDK macro collisions. Exact include-order fix and early real SDK bad/good probe continue in PR86; do not reuse prior CI for new code. Verified PR86 code9a815d5: fullCI699/source32/native29 SUCCESS; downloaded native29 JSON artifact12240678597, ZIP492466 SHA256 df21bc8911e97002c8c970f64875e48133bc986b016170b52a4a4c8a22359484. All17 components, SDK namespace probe,4 keymaps/2 negatives,293 runtime files,1756 C inputs and final version passed. Continue same task on build/wf09-07-private-links: capture actual reachable private DLL/tool maps and selected members; prebuilt DLL internals/resources/per-file rights remain open. New code requires its own native and full CI. Draft #87 initial c595ac41 passed full CI700/source33; native30 failed 2 errors/5 assertions before build because fixture package stub replaced cygpath output. Exact drive-map reproducer and strict command dispatch fix added; local145 Python tests pass. Updated code requires independent native/full CI; no native success inferred. Resource-input continuation is in stacked Draft #88 on build/wf09-07-resource-inputs. The new slice traces the actual WINDRES/GCC toolchain, RC dependency graph, linked XWin.o .rsrc bytes, final PE manifest/icon payloads, installed system.XWinrc and resource sections across reachable private PE objects. Exact-HEAD CI/native evidence is pending; no result is inferred from PR #87. Distribution, per-file rights, prebuilt DLL internals, signed packaging and desktop verification remain open. Draft #88 documentation CI passed on 0c6efbc45d3115e33c07a58703e8a1d5e3dd1c4f. Implementation now continues in stacked Draft #89 on build/wf09-07-resource-audit at exact code HEAD 6e08efca76893b8a2a8e5c6a9ed9c0ac9ec02f0e. Added resource COFF/PE parsing, Makefile/WINDRES/GCC identity and dependency evidence, resource-object reproduction, final manifest/icon payload checks, and XWin/private-target resource-section scans. Local synthetic resource regression suite: 16 tests passed in the Linux test container. PR #89 exact-HEAD GitHub CI and native Windows build are pending; no native success is claimed. Rights review remains open; distributionApproved/bundled/desktopVerified stay false. Native Windows #34 failed at resource audit after the XWin compile/install completed: GNU make's VPATH selected source XWin.rc but left the automatic $< token as bare 'XWin.rc', so resolving it only relative to the build directory caused RESOURCE_WINDRES_INPUT. Follow-up commits 85d2f0323fd26d648a830da76f01582183b7dfce and 07954c3c1bf8e1addf8e48ad3cb7e51089f832da normalize Windows drive paths; commit 85d2f0323fd26d648a830da76f01582183b7dfce adds fail-closed VPATH source fallback and regression coverage. Local path reproduction passes. Exact-HEAD Native Windows #37, Source Review #40 and CI #708 are pending; no native success claimed.",
-  "meta": {}
+  "meta": {
+    "currentResourceStage": {
+      "lastPushedCode": "1a7bb15d6570c85507f250a1bb65b3f51715801a",
+      "nativeRun": 41164964134,
+      "nativeConclusion": "FAIL: RESOURCE_COFF_RANGE",
+      "localContinuation": "Pure COFF BSS/long names, observed C preprocessing mode, fixed default-manifest source and final PE binding. MSYS/WSL 50 tests and exact-CI read-only toolchain corpus pass. New native result required.",
+      "distributionApproved": false,
+      "bundled": false,
+      "desktopVerified": false
+    }
+  }
 }

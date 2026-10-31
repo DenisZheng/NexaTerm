@@ -16,7 +16,8 @@ class DependencyScanReached(Exception):
 
 
 class ResourceReplayTests(unittest.TestCase):
-    def exercise_replay(self, mode, input_flag="-i", output_flag="-o", *, changed=False):
+    def exercise_replay(self, mode, input_flag="-i", output_flag="-o", *, changed=False,
+                        preprocessor_mode="-xc", observed_lines=1):
         with tempfile.TemporaryDirectory(prefix="resource replay ") as temporary:
             root = Path(temporary).resolve()
             source, builds, prefix = root / "source", root / "build", root / "prefix"
@@ -80,9 +81,12 @@ XWin.o: XWin.rc XWin.exe.manifest X.ico
                     self.assertEqual(args, expected)
                     output.write_bytes(make_coff(payload=b"changed") if changed else make_coff())
                     calls.append(args)
-                    return "Using gcc -E -xc -DRC_INVOKED"
+                    observation = f"Using `\"{gcc}\" -E {preprocessor_mode} -DRC_INVOKED -I../../include XWin.rc'\n"
+                    return observation * observed_lines
                 if args[0] == str(gcc) and "-M" in args:
-                    self.assertEqual(args[-1], str(resource))
+                    self.assertEqual(args[1:], ["-E", "-xc", "-DRC_INVOKED", "-M",
+                                               "-D", "REPLAY_TEST=1", "-U", "UNUSED",
+                                               "-I", str(server_build / "include"), str(resource)])
                     raise DependencyScanReached()
                 self.fail(f"unexpected command: {args}")
 
@@ -90,15 +94,18 @@ XWin.o: XWin.rc XWin.exe.manifest X.ico
                 "origin": "server-build", "path": "xorg-server/hw/xwin/XWin.o",
                 "size": original.stat().st_size, "sha256": digest(original.read_bytes()),
             }]}}
-            expected_error = ReviewError if changed else DependencyScanReached
+            error_code = ("RESOURCE_REPRO_CHANGED" if changed else
+                          "RESOURCE_PREPROCESSOR_NOT_OBSERVED" if observed_lines != 1 else
+                          "RESOURCE_PREPROCESSOR_MODE" if preprocessor_mode != "-xc" else None)
+            expected_error = ReviewError if error_code else DependencyScanReached
             with patch("xserver_windows_resources.package_owned_executable",
                        side_effect=[(windres, names[0]), (gcc, names[1])]):
                 with self.assertRaises(expected_error) as caught:
                     resource_compiler_evidence(source, builds, server_build, prefix / "bin/XWin.exe",
                                                prefix, {"target": "x86_64-w64-mingw32"}, {}, packages,
                                                report, root, run, toolchain_root=tools.parent)
-            if changed:
-                self.assertEqual(str(caught.exception), "RESOURCE_REPRO_CHANGED")
+            if error_code:
+                self.assertEqual(str(caught.exception), error_code)
             self.assertEqual(len(calls), 1)
             self.assertEqual(original.read_bytes(), make_coff())
 
@@ -115,6 +122,16 @@ XWin.o: XWin.rc XWin.exe.manifest X.ico
 
     def test_replay_still_rejects_changed_resource_sections(self):
         self.exercise_replay("vpath", changed=True)
+
+    def test_dependency_scan_rejects_unexpected_observed_preprocessor_mode(self):
+        for preprocessor_mode in ("-xc-header", "-xc++", "-xobjective-c"):
+            with self.subTest(preprocessor_mode=preprocessor_mode):
+                self.exercise_replay("vpath", preprocessor_mode=preprocessor_mode)
+
+    def test_dependency_scan_requires_one_observed_preprocessor(self):
+        for observed_lines in (0, 2):
+            with self.subTest(observed_lines=observed_lines):
+                self.exercise_replay("vpath", observed_lines=observed_lines)
 
 
 if __name__ == "__main__":
