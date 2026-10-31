@@ -2,6 +2,8 @@
 
 状态：2026-10-16 已获开工授权；X1 运行核心已实现，X0 组件审查推进中。任务整体保持 in_progress；X2/X3 尚未交付。
 
+2026-10-31 阶段完成：代码 `61c0192` 已通过完整 CI `41169134355`、源码 `41169134350`、原生 `41169134366`；169 项 native 反例及完整构建/版本/资源检查成功，精确 artifact ZIP/JSON 已独立核验。资源路径、COFF BSS/长名、固定默认 manifest 和最终 PE 闭合，四 DLL 的 B0 实际身份已重绑。详见 [阶段完成与排除范围](research/windows-resource-evidence.md)；不归档整个任务、不合并/发版，发行/随包/桌面仍为 false。下文的待提交/CI 失败是已被本条替代的历史快照。
+
 2026-10-31 最新接续：已按维护者授权将前一批修复/调研作为 `1a7bb15` 推到同一 PR #89，完整/源码 CI 成功，原生 `41164964134` 在 COFF `.bss` 范围校验失败。已用与 CI 精确一致的对象定位；扩查又发现 XWin/xkbcomp 的固定工具链默认 manifest，不能按名称跳过。当前修复同时补纯 BSS/长节名解析、观察到的 `-xc` 预处理模式、默认对象的固定来源/section/payload 与最终 PE 绑定。MSYS/WSL 各 50 项相关测试、只读 609 对象 corpus 通过；未重跑本机完整构建。待提交后取得新精确 SHA 的 CI/native 结果，再关闭本阶段；整体任务不归档。详见 [COFF 与默认 manifest 证据](research/windows-resource-evidence.md)。下文较早的“未授权/未推送”均为当时状态，不覆盖维护者后续“全 OK 就推”的授权。
 
 2026-10-31 11:28 接续：PR #89 的原生 run `41158110445` 已失败，完整 CI/源码审查成功。已下载精确 SHA 的失败 JSON/日志：前置测试及 XWin 编译安装通过，实际 windres 重放仍传裸 `XWin.rc`，导致 `resource-compiler-inputs / BUILD_EXIT`。本地将已验证源路径按原 cwd 相对化后传到实际 argv，避免真实探针新发现的带空格绝对输入预处理失败；未改 cwd、源身份或其他 flags。Windows 新增 3 项、MSYS/WSL 各 27 项资源测试通过，三组最终变异均被检出；仅生成 `.o` 的真实资源探针通过，未链接/生成新程序、未重跑完整本机构建。修复与许可/X2 准备尚未提交/推送，详见 [结果与根因](research/windows-resource-evidence.md)。先修复并重验 PR #89，再判定资源审查阶段是否可完成。
@@ -13,7 +15,7 @@
 - [x] [资源权限与配置边界](research/windows-resource-rights-review.md)：四项固定资源已对齐官方 tag/commit/blob 与历史，`winresource.h` 有直接许可；另三项仅解决历史定位，仍缺可审阅授权。stock 配置含外部工具菜单及 HOME 优先级，不作为已批准的产品配置。
 - [x] [预编译运行库义务](research/windows-prebuilt-runtime-obligations.md)：四个基线 `.BUILDINFO` 已绑定精确配方；纠正 pixman 的旧配方引用，记录不同 GCC/CRT 环境，以及 winpthread 实际 `.rsrc`/fake-libgcc 的待审查输入。不将声明环境当实际链接成员。
 - [x] X2 环境交接、14 项验收用例及状态/诊断边界已准备；无靶机/引擎/UI 的项保持 NOT-RUN，不修改系统、监听或认证策略。
-- [ ] 待新 CI 报告取得后按实际 provider/version/hash 重绑基线。不同版本不能复用旧结论；预编译 DLL 自身 map/member/depfiles/resource 输入不在发布包中，下一步需对应原构建材料或另经授权的精确重建方案。
+- [x] 原生 `41169134366` 成功后按实际 provider/version/size/hash 完成 B0 重绑，四 DLL 与此前失败报告集合相同。不同版本不能复用旧结论；其自身 map/member/depfiles/resource 输入仍须对应原构建材料或另经授权的精确重建方案，B1–B4 未闭合。
 - [ ] 三个资源的授权澄清或独立替换、libgcc 本体的源码供给与采用方式须人审；本轮不联系上游、不改变组件、链接方式、打包或能力标志。
 
 2026-10-31 接续 PR #89：已切到 `build/wf09-07-resource-audit`，保留原有未跟踪文件。原生 #41 的失败已在本机隔离 MSYS2 复现：碰撞测试先创建 `.exe`，再写无扩展名路径，实际覆盖了同一文件。已修正夹具创建顺序并增加目录项、文件身份和精确字节断言，生产校验不变；MSYS 148 项回归通过，移除字节校验的内存变异被测试检出。完整原生构建因杀软重复删除 libX11 的 `conftest.exe`，已于 09:55（UTC+08:00）主动停止；未取得最终原生资源报告，不认定误报或验证通过，不修改防护/排除设置。本机前端英文断言和 POSIX 专用脚本的环境缺口单独保留，不伪装成全绿。详见 [本轮证据](research/windows-resource-evidence.md)。本轮不自动提交/推送，不归档整体任务；经人工审核提交后再以新 CI 验证，本机重跑须先确认告警处理方式并使用全新构建状态。

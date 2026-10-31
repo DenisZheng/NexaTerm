@@ -119,3 +119,11 @@ GPLv3 §1 的 Corresponding Source 包括生成、安装及修改工作所需源
 | `zlib1.dll` | `1.3.2-3` | `8ae7aeb0467763a1e271cd831ca8e2f7fd101602adb9923100ea26c6be2a559b` | 已换 pkgrel；旧 `-2` 的归档/构建环境不能当新包证据 |
 
 该失败报告中的当前 CRT 也是 `r569`。这确认了必须按每次实际 provider 重绑的必要性，但不能把局部身份观察算成 B0–B4 或权限闭合；先修复资源重放，再以成功的新 run 集合确定后续范围。
+
+## 同日收口：成功原生报告的 B0 身份重绑
+
+代码 `61c019224093730a40137a67e2f967ef43b6f6bd` / 原生 run `41169134366` 已完整成功，artifact ZIP/JSON 独立核验见 [资源审查完成证据](windows-resource-evidence.md)。实际四项 `privatePeLinkage.prebuiltDllsExcluded` 的 name/package/version/size/SHA256 与前节失败 run 观察逐字段相同：libgcc 150537 字节、pixman 737775 字节、libwinpthread 73820 字节、zlib 121530 字节，SHA256 仍是表中对应值。
+
+因此 **B0 已完成**：后续候选明确为 libgcc `16.2.0-6`、pixman `0.46.4-3`、libwinpthread `14.0.0.r569.g34eeafb7d-1` 和 zlib `1.3.2-3`。这不是 B1–B4 完成；r495/旧 zlib `-2` 的配方和内部资源结论不得挪到新版本，仍需新包的独立材料。libgcc/pixman 同版本项也只复用已实际核对的来源材料，不补出原本缺失的内部 map/member。
+
+新加入的 `default-manifest.o` 是已固定包中的直接链接资源对象，不是四个预编译 DLL 之一；其来源/最终 PE 验证不清除这些 DLL 的内部排除。下一阶段优先补 r569/zlib `-3` 的精确源/配方材料，以及四个候选的原构建内部证据；重建/替换和 libgcc 分发策略须另外人审，不在本阶段自动实施。

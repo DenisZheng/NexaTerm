@@ -198,3 +198,32 @@ FAIL xorg-server resource-compiler-inputs BUILD_EXIT
 Windows Python 的新 COFF/replay/default-manifest 共 21 项通过；MSYS `/usr/bin/python3` 和 WSL 的资源/来源五个 suite 各 50 项通过，无 skip。只读真实 corpus 最终通过，两个默认 manifest 输入均按精确来源/section pin 识别，archive 成员没有资源。日志 `pr89-coff-exact-ci-corpus-verified.log`；它不包含私有组件全部对象或最终 PE，不能充当完整原生报告。未重跑本机完整构建、关闭防护或添加排除。
 
 相关 code-spec 已加入 COFF 存储表示、长名、精确工具链对象以及最终可达资源契约。新提交仍需自己的完整/源码/native CI；通过后方可关闭本次资源审查实现阶段，X0 权限/预编译 DLL 内部、X2/X3 不随之完成。
+
+## 2026-10-31：资源审查实现阶段完成（代码 `61c0192`）
+
+修复已按授权推到原分支和 PR #89，未创建或合并其它 PR。精确代码 SHA 为 `61c019224093730a40137a67e2f967ef43b6f6bd`，三条独立 workflow 均成功：
+
+| 门禁 | 实际结果 |
+| --- | --- |
+| [完整 CI `41169134355`](https://github.com/DenisZheng/NexaTerm/actions/runs/41169134355) | 七个实际执行 job SUCCESS；Windows 条件打包 job SKIPPED，不算安装验收 |
+| [源码审查 `41169134350`](https://github.com/DenisZheng/NexaTerm/actions/runs/41169134350) | 21 项源码测试、169 项 Windows 构建证据反例和固定 17 个依赖采集通过 |
+| [原生 Windows `41169134366`](https://github.com/DenisZheng/NexaTerm/actions/runs/41169134366) | 169 项反例、完整原生构建/安装、XKB/PE/输入检查、资源审查及最终版本 probe 通过 |
+
+完整 CI 日志另确认：前端 1160 passed/1 todo，Rust 主测试 Linux 617 passed/4 ignored、Windows 620 passed、macOS 618 passed；各平台其余二进制/集成/doc 测试通过。安全 job 的依赖审计仍是报告型结果（npm 22、Rust 26 项发现），本阶段没有把门禁成功解释为不存在依赖安全项，也未修改无关依赖。
+
+### 已独立下载并检查的原生证据
+
+Artifact `13031385050` 的 ZIP 为 646855 字节，SHA256 `68fd2bcc214897df990dfde4874d4ba66a389cfacf2d4e81c7cf9b40901c3eba`，独立匹配 API digest；唯一 JSON 为 3824227 字节，SHA256 `4b725df469c5554fbed19b9c113b1855f2079d58b7be4225219389ff67bbf7c6`。核对了 run/head、artifact head、成员名、大小和报告完整状态；原始 JSON/ZIP/日志保留在忽略目录 `pr89-ci-native-41169134366/`，没有下载或运行引擎。
+
+- 报告 `status=REVIEW-REQUIRED`、`stage=complete`，`nativeBuildVerified/nativeVersionVerified=true`；资源、C 输入及 private-link 的 `resourceCompilerInputsIncluded=true`。这是一条完整开发构建证据，不是发行批准。
+- 真实 windres 的 `-E -xc -DRC_INVOKED` 与依赖扫描一致；21 个资源输入全部有来源。`XWin.o` 原对象与重放对象完整 SHA256 同为 `270ac2adba48ad37d62198aaa4b77b2679727de4333c2c874d302d7653d9a486`；`.rsrc` 29304 字节完全一致。
+- 最终 `XWin.exe` 2451406 字节、SHA256 `1e4144582061d083bb07c56ed48a8e4e9fb25546952c3846b1416e01d0b65d14`；15 个可达资源，源 manifest 1395 字节精确匹配，9 个 ICO image payload 与 group 映射匹配；system.XWinrc 安装字节匹配。
+- XWin 扫描 992 个 COFF、47 archives，资源输入 2 个；另外 14 个私有 PE 目标扫描 1913 个 COFF、20 archives，唯一资源输入为 xkbcomp 的固定默认 manifest。计数按目标观察，不是全局去重值。
+- 默认 payload 在最终 XWin 资源树不可达，在最终 `xkbcomp.exe`（343399 字节、SHA256 `50c4a438c3ed6d4aa2a246f45d7482de1dafe82339ee0290eaadbad335ec9a03`）中恰好是唯一资源，type/name/language/codepage 为 24/1/0/0，710 字节/hash 全部匹配。未从 LOAD 推断链接器丢弃机制。
+- 固定 manifest 的 source receipt hash 与本次仓库 policy 一致；四个预编译 DLL 的实际 provider 已重绑，见 [B0 完成记录](windows-prebuilt-runtime-obligations.md)。缺失 installed notice、发布 archive 未独立验签、历史编译器未重现和原有排除项均原样保留。
+
+补充本地反例有效性：分别在内存绕过 `RESOURCE_DEFAULT_SOURCE` 和 `RESOURCE_DEFAULT_FINAL_PAYLOAD`，对应控制组通过，变异均在预期的“未拒绝错误来源/最终资源”断言处失败；无额外异常替代该断言。日志为 `pr89-default-manifest-mutations.log`，未修改磁盘生产代码。
+
+### 下一阶段边界
+
+本阶段可关闭的是 **PR #89 的 Windows 资源证据实现及原生验证**，不是整个 X0/XDMCP。三个资源授权、四个预编译 DLL 内部、分发/源码供给采用决定、打包签名、真实桌面及 X2/X3 仍未完成；`distributionApproved/bundled/desktopVerified=false`，任务保持 `in_progress`、PR 保持 Draft。X2 的 14 项准备用例仍全部 NOT-RUN。本机杀软问题没有被认定为误报，也没有通过恢复/重跑受影响目录取得成功结论。
