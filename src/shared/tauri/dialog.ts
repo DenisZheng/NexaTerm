@@ -118,3 +118,8 @@ export async function selectFileServiceFile() {
   const selected = await open({ multiple: false, directory: false, title: t("fileService.choose") });
   return normalizeSelectedPaths(selected)[0] || null;
 }
+
+export async function selectXdmcpEngine() {
+  const selected = await open({ multiple: false, directory: false, title: t("xdmcp.chooseEngine") });
+  return normalizeSelectedPaths(selected)[0] || null;
+}

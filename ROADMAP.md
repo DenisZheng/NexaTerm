@@ -6,6 +6,18 @@
 
 ## 当前下一阶段：三协议功能实现（2026-10-16）
 
+2026-10-31 开发接入已实现：统一新建菜单已有 **XDMCP（开发）** 临时实例，实际 typed IPC/私有 owner、两项单次许可、状态/取消/重连/关闭以及非 PTY/隐私边界已接线。本地新增 42 项前端反例与 3 项真实 shell 路由反例、三主题/窄窗口浏览器检查通过；当前批远端 CI 以 PR #89 的新 SHA 为准。**下一项是原生 WebView + 已核验开发引擎 + 授权 Linux 靶机的真实桌面联调**，不是再循环材料报告；无现场环境不冒充可用，X01 随包与 X2/X3 仍未完成。细节和环境差异见 [开发入口验收](.trellis/tasks/10-16-wf09-07-xdmcp-implementation/validation/development-entry.md)。
+
+2026-10-31 维护者调整主线：**优先交付 Windows XDMCP 开发会话端到端接入，不再连续以材料审查为主要阶段**。下一步是统一新建入口、临时独立实例、明确外置引擎/网络许可、真实状态及取消/重连/关闭；能落实的接入开发不等正式分发批准。正式随包、资源许可和真实 Linux 桌面互通仍须各自验收，不以 UI 或外置模式代替。具体切片与边界见当前 XDMCP 任务 PRD/design/implement；下文“下一阶段补材料”由本条调整。
+
+2026-10-31 最新阶段完成：**PR #89 四个预编译运行库的包/精确配方材料门禁已通过**。代码 `d18b651` 的完整 CI `41175645356`、源码 `41175645308`、Windows 原生 `41175645305` 全成功；187 项原生反例、完整构建/资源/最终版本通过，artifact 已独立核验。四包 61 成员、32 普通文件、27 配方文件及独立远端 patch 已绑定当次实际 DLL/notice，与独立源码 CI 一致。本机未重跑完整引擎构建，未放宽杀软或发行门禁。接下来补独立包/源码签名与完整 source/VCS 材料；预编译 DLL 内部、成员许可/源码供给、资源授权及 X2/X3 仍未完成，详见 [阶段证据](.trellis/tasks/10-16-wf09-07-xdmcp-implementation/research/windows-prebuilt-materials-evidence.md)。
+
+2026-10-31 最新结果：**PR #89 资源审查实现阶段已完成原生验证**。代码 `61c0192` 的完整 CI `41169134355`、源码 `41169134350`、Windows 原生 `41169134366` 全部 SUCCESS；169 项原生反例、完整构建/安装、资源/PE 闭合及最终版本 probe 通过，artifact ZIP/JSON 已独立核验。XWin 的 21 个资源输入、重放对象、manifest/9 个图标、固定工具链默认 manifest 及 14 个私有 PE 目标已留证；四 DLL 的 B0 身份重绑完成。仍保持 Draft，不合并或发行；三个资源授权、预编译 DLL 内部、分发材料和 X2/X3 未完成，`distributionApproved/bundled/desktopVerified=false`。本机未重跑受杀软干扰的完整构建。精确证据与下一阶段见 [资源审查记录](.trellis/tasks/10-16-wf09-07-xdmcp-implementation/research/windows-resource-evidence.md)。下列更早快照仅保留历史，不覆盖本条。
+
+2026-10-31 推送后接续（CI 快照 10:16，UTC+08:00）：PR #89 已更新到 `f46a5fb`，完整 CI 与源码审查通过；原生前置反例测试通过，正在编译/审查固定目标，最终 JSON 尚未取得。等待期间已完成 [资源历史与权限核实](.trellis/tasks/10-16-wf09-07-xdmcp-implementation/research/windows-resource-rights-review.md)、[四个预编译运行库的精确配方/义务记录](.trellis/tasks/10-16-wf09-07-xdmcp-implementation/research/windows-prebuilt-runtime-obligations.md) 和 [X2 Windows 环境交接与 14 项验收用例](.trellis/tasks/10-16-wf09-07-xdmcp-implementation/validation/x2-windows-desktop-preparation.md)。新证据纠正 pixman 的旧配方引用，确认预编译 DLL 的构建环境不能由当前 XWin 证据覆盖；三个资源授权仍待澄清或经评审的独立替换。不重跑本机受杀软干扰的构建，不改正在验证的构建代码；真实互通、随包和发行批准仍未完成。精确 run 见 [接续证据](.trellis/tasks/10-16-wf09-07-xdmcp-implementation/research/windows-resource-evidence.md)。
+
+2026-10-31 状态校正：Draft #89 的 `ec2d332` 已通过完整 CI #712 / 源码审查 #44，但原生 Windows #41 在前置碰撞测试失败，未执行引擎编译。已在本机 MSYS2 复现并修复测试夹具的 `.exe` 隐式覆盖，148 项原生脚本回归通过；本地完整构建因杀软重复删除 `conftest.exe` 已主动停止，未取得最终原生资源报告，修复尚未提交或推送。详见 [资源审查接续证据](.trellis/tasks/10-16-wf09-07-xdmcp-implementation/research/windows-resource-evidence.md)。X0 尚未收口，X2/X3 及发行/随包/桌面状态不变。
+
 2026-10-30续作：XDMCP 继续沿 Draft #87 的 Windows private-link evidence 开发，新增堆叠 Draft #88 跟踪 WINDRES/GCC 输入、XWin.o 资源段、最终 PE manifest/icon 和所有可达私有 PE 对象的资源扫描。新代码验证 pending；不改变 distributionApproved/bundled/desktopVerified=false。
 
 维护者明确要求先补实现计划，再开发。XDMCP 以随包 X server 和完整桌面会话管理为目标（Windows 优先，再适配 macOS/Linux）；Rlogin 为原生终端协议；Rsh 为原生命令执行和双流/信号管理。详细阶段、组件候选与许可、端口权限、生命周期及验收见 [三协议实现计划](docs/plans/WF09-PROTOCOL-IMPLEMENTATION-PLAN.md)。
@@ -75,3 +87,11 @@ WF-04B/04C/05/06/07 及 WF-08A–08E 已通过 integration PR #40 合入 `main`�
 - “CI check/test 通过”不等于“安装包、GUI、远程服务或硬件已验证”。
 - “自动化 harness 失败”不自动等于“产品功能失败”；必须先证明失败发生在被测功能本身。
 - 暂缓项必须保留原因和恢复条件，不能伪装成完成。
+
+## XDMCP Windows resource audit continuation (2026-10-30)
+
+PR #88 documentation CI passed. The implementation is now in stacked Draft PR #89 (code HEAD 6e08efca76893b8a2a8e5c6a9ed9c0ac9ec02f0e): WINDRES/GCC provenance, RC dependency graph, XWin.o resource bytes, final PE manifest/icon payload checks, and resource-section scans across XWin/private PE objects. Local synthetic suite: 16 tests passed. Exact-HEAD GitHub CI and Windows-native build remain pending; no native success is inferred. Resource rights, prebuilt DLL internals, distribution, bundling and desktop verification remain open.
+
+## XDMCP Windows resource audit correction (2026-10-30)
+
+Native Windows #34 compiled/installed XWin and passed counterexample tests but failed the resource audit because GNU make VPATH leaves the `$<` token as bare `XWin.rc`. PR #89 latest HEAD 85d2f0323fd26d648a830da76f01582183b7dfce now resolves that token against the fixed source directory when it is absent in the build directory, and normalizes drive-letter paths. Local path reproduction passed; Native Windows #37, Source Review #40 and CI #708 are pending. No native success is claimed.

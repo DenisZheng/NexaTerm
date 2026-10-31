@@ -1,3 +1,4 @@
+import { XdmcpWorkspaceSessions } from "./xdmcpWorkspaceSessions";
 import { RshWorkspaceSessions } from "./rshWorkspaceSessions";
 import { RloginConsentQueue } from "./rloginConsentQueue";
 import { RloginConsentDialog } from "./RloginConsentDialog";
@@ -217,6 +218,7 @@ const VncViewerSurface = lazy(async () => {
   const module = await loadVncViewerSurface();
   return { default: module.VncViewerSurface };
 });
+const XdmcpSessionPane = lazy(() => import("../xdmcp/XdmcpSessionPane"));
 const RshCommandPane = lazy(() => import("../rsh/RshCommandPane"));
 const RloginTerminalPane = lazy(() => import("../terminal/RloginTerminalPane"));
 const TerminalPanel = lazy(async () => {
@@ -1042,6 +1044,11 @@ export function WorkspaceShell() {
   const [aiContextRequestKey, setAiContextRequestKey] = useState(0);
   const [aiInitialContexts, setAiInitialContexts] = useState<AiContextBlock[]>([]);
   const localTerminalTabsRef = useRef<LocalTerminalTab[]>([]);
+  const [xdmcpSessions] = useState(() => new XdmcpWorkspaceSessions());
+  useEffect(() => {
+    xdmcpSessions.activate();
+    return () => { void xdmcpSessions.dispose().catch(() => { console.error("xdmcp_cleanup_failed"); }); };
+  }, [xdmcpSessions]);
   const [rshSessions] = useState(() => new RshWorkspaceSessions());
   useEffect(() => () => { void rshSessions.dispose().catch(() => undefined); }, [rshSessions]);
   const [rloginConsent] = useState(() => new RloginConsentQueue());
@@ -1853,6 +1860,7 @@ export function WorkspaceShell() {
     onOpenLocalProfile: (profile: LocalTerminalProfile) => void openLocalTerminalByProfile(profile),
     onQuickOpen: () => setConnectionSearchOpen(true),
     onOpenRsh: openRshTask,
+    onOpenXdmcp: openXdmcpSession,
   };
   const navigationItems = useMemo(
     () => selectWorkspaceItems({ localTerminalTabs, rdpSessions, terminalTabs, vncSessions }, workspaceItemOrder, null),
@@ -1952,10 +1960,10 @@ export function WorkspaceShell() {
     : null;
   const activeAiTerminalTab = terminalSplitActive
     ? focusedTerminalSplitBinding?.kind === "local"
-      ? localTerminalTabs.find((tab) => tab.id === focusedTerminalSplitBinding.tabId && tab.source !== "rlogin" && tab.source !== "rsh") || null
+      ? localTerminalTabs.find((tab) => tab.id === focusedTerminalSplitBinding.tabId && tab.source !== "rlogin" && tab.source !== "rsh" && tab.source !== "xdmcp") || null
       : terminalTabs.find((tab) => tab.id === focusedTerminalSplitBinding?.tabId) || null
     : activeWorkspaceMode === "local"
-      ? (activeLocalTerminalTab?.source === "rlogin" || activeLocalTerminalTab?.source === "rsh") ? null : activeLocalTerminalTab
+      ? (activeLocalTerminalTab?.source === "rlogin" || activeLocalTerminalTab?.source === "rsh" || activeLocalTerminalTab?.source === "xdmcp") ? null : activeLocalTerminalTab
       : activeConnectedTerminalTab;
   const activeAiRecentTerminalOutput = activeAiTerminalTab
     ? terminalRecentOutputByTabId[activeAiTerminalTab.id] || ""
@@ -2039,7 +2047,7 @@ export function WorkspaceShell() {
           value: terminalPaneBindingKey({ kind: "ssh", tabId: tab.id }),
         };
       }),
-      ...localTerminalTabs.filter(tab => tab.source !== "rsh").map((tab) => {
+      ...localTerminalTabs.filter(tab => tab.source !== "rsh" && tab.source !== "xdmcp").map((tab) => {
         const source =
           tab.profileKind === "wsl"
             ? "WSL"
@@ -2570,7 +2578,7 @@ export function WorkspaceShell() {
   }, [updateTerminalDirectory]);
 
   const appendTerminalRecentOutput = useCallback((tabId: string, output: string) => {
-    if (!output || localTerminalTabsRef.current.some(tab => tab.id === tabId && (tab.source === "rlogin" || tab.source === "rsh"))) {
+    if (!output || localTerminalTabsRef.current.some(tab => tab.id === tabId && (tab.source === "rlogin" || tab.source === "rsh" || tab.source === "xdmcp"))) {
       return;
     }
     setTerminalRecentOutputByTabId((items) => {
@@ -4450,7 +4458,7 @@ export function WorkspaceShell() {
     const exists =
       binding.kind === "ssh"
         ? terminalTabs.some((item) => item.id === binding.tabId)
-        : localTerminalTabs.some((item) => item.id === binding.tabId && item.source !== "rsh");
+        : localTerminalTabs.some((item) => item.id === binding.tabId && item.source !== "rsh" && item.source !== "xdmcp");
     return exists ? binding : null;
   }
 
@@ -4471,7 +4479,7 @@ export function WorkspaceShell() {
     if (!sourceTab) {
       return null;
     }
-    if (sourceTab.source === "rsh") return null;
+    if (sourceTab.source === "rsh" || sourceTab.source === "xdmcp") return null;
     if (sourceTab.source === "rlogin") {
       const connection = connectionById.get(sourceTab.profileId);
       return connection?.protocol === "rlogin" ? { kind: "local", tabId: openRloginTerminal(connection, false).id } : null;
@@ -4528,7 +4536,7 @@ export function WorkspaceShell() {
 
   function retryRestoredLocalTab(tabId: string) {
     const tab = localTerminalTabsRef.current.find((item) => item.id === tabId); if (!tab) return;
-    if (tab.source === "rsh") return;
+    if (tab.source === "rsh" || tab.source === "xdmcp") return;
     if (tab.source === "rlogin") { connectRloginTab(tab.id); return; }
     const requestId = `restore-${tab.id}-${Date.now().toString()}`;
     if (tab.source === "telnet" || tab.source === "serial") {
@@ -4611,7 +4619,7 @@ export function WorkspaceShell() {
   }
 
   function assignTerminalSplitBinding(paneId: string, binding: TerminalPaneBinding) {
-    if (binding.kind === "local" && localTerminalTabsRef.current.some(tab => tab.id === binding.tabId && tab.source === "rsh")) return;
+    if (binding.kind === "local" && localTerminalTabsRef.current.some(tab => tab.id === binding.tabId && (tab.source === "rsh" || tab.source === "xdmcp"))) return;
     setTerminalSplitLayout((layout) => {
       if (!layout) {
         return layout;
@@ -4644,7 +4652,7 @@ export function WorkspaceShell() {
     binding: TerminalPaneBinding,
     direction: TerminalSplitBranch["direction"],
   ) {
-    if (binding.kind === "local" && localTerminalTabsRef.current.some(tab => tab.id === binding.tabId && tab.source === "rsh")) return;
+    if (binding.kind === "local" && localTerminalTabsRef.current.some(tab => tab.id === binding.tabId && (tab.source === "rsh" || tab.source === "xdmcp"))) return;
     if (terminalSplitLayout && !terminalSplitCanAddPane) {
       return;
     }
@@ -4717,7 +4725,7 @@ export function WorkspaceShell() {
   }
 
   function startTerminalFourPaneForBinding(binding: TerminalPaneBinding) {
-    if (binding.kind === "local" && localTerminalTabsRef.current.some(tab => tab.id === binding.tabId && tab.source === "rsh")) return;
+    if (binding.kind === "local" && localTerminalTabsRef.current.some(tab => tab.id === binding.tabId && (tab.source === "rsh" || tab.source === "xdmcp"))) return;
     const host = terminalSplitHost || terminalSplitHostForBinding(binding);
     if (!host) {
       return;
@@ -5551,7 +5559,7 @@ export function WorkspaceShell() {
   }
 
   function sendTerminalSelectionToAi(tabId: string, selectedText: string) {
-    if (localTerminalTabsRef.current.some(tab => tab.id === tabId && (tab.source === "rlogin" || tab.source === "rsh"))) return;
+    if (localTerminalTabsRef.current.some(tab => tab.id === tabId && (tab.source === "rlogin" || tab.source === "rsh" || tab.source === "xdmcp"))) return;
     const content = selectedText.trim();
     if (!content) {
       return;
@@ -5709,7 +5717,7 @@ export function WorkspaceShell() {
   }
 
   function canRecordTerminalInputHistory(tabId: string) {
-    return !localTerminalTabsRef.current.some(tab => tab.id === tabId && (tab.source === "rlogin" || tab.source === "rsh")) && !macroRecorder.omitAutomaticHistory([
+    return !localTerminalTabsRef.current.some(tab => tab.id === tabId && (tab.source === "rlogin" || tab.source === "rsh" || tab.source === "xdmcp")) && !macroRecorder.omitAutomaticHistory([
       terminalPaneBindingKey({ kind: "ssh", tabId }), terminalPaneBindingKey({ kind: "local", tabId }),
     ]);
   }
@@ -5738,7 +5746,7 @@ export function WorkspaceShell() {
   }
 
   function commandHistoryScopeForTerminalTab(tabId: string): CommandHistoryScope | null {
-    if (localTerminalTabsRef.current.some(tab => tab.id === tabId && (tab.source === "rlogin" || tab.source === "rsh"))) return null;
+    if (localTerminalTabsRef.current.some(tab => tab.id === tabId && (tab.source === "rlogin" || tab.source === "rsh" || tab.source === "xdmcp"))) return null;
     const localTab = localTerminalTabs.find((tab) => tab.id === tabId);
     if (localTab) {
       return {
@@ -6285,14 +6293,24 @@ export function WorkspaceShell() {
 
   async function closeLocalTerminalTabs(tabIds: string[]) {
     const closing = localTerminalTabsRef.current.filter(tab => tabIds.includes(tab.id));
-    const ordinary = closing.filter(tab => tab.source !== "rlogin" && tab.source !== "rsh");
+    const ordinary = closing.filter(tab => tab.source !== "rlogin" && tab.source !== "rsh" && tab.source !== "xdmcp");
     ordinary.forEach(tab => stopTerminalWarmupCapture(tab.id));
     closeRuntimeTerminalSessions(ordinary); removeLocalTerminalTabs(ordinary.map(tab => tab.id));
-    await Promise.all(closing.filter(tab => tab.source === "rlogin" || tab.source === "rsh").map(async tab => {
-      const sessions = tab.source === "rsh" ? rshSessions : rloginSessions;
+    await Promise.all(closing.filter(tab => tab.source === "rlogin" || tab.source === "rsh" || tab.source === "xdmcp").map(async tab => {
+      const sessions = tab.source === "xdmcp" ? xdmcpSessions : tab.source === "rsh" ? rshSessions : rloginSessions;
       try { await sessions.close(tab.id); sessions.forget(tab.id); removeLocalTerminalTabs([tab.id]); }
       catch { /* Native owner retains the tab and exposes retry-close with a fixed reason. */ }
     }));
+  }
+
+  function openXdmcpSession() {
+    const tab = { ...buildCharacterTerminalTab(localTerminalTabsRef.current, "xdmcp", "XDMCP", "xdmcp-session"), requestId: undefined, status: "xdmcp:idle" };
+    xdmcpSessions.open(tab.id);
+    const next = [...localTerminalTabsRef.current, tab]; localTerminalTabsRef.current = next; setLocalTerminalTabs(next); activateLocalTerminalTab(tab);
+  }
+  function updateXdmcpSession(tabId: string, state: { phase: string; reason: string | null }) {
+    const next = localTerminalTabsRef.current.map(tab => tab.id === tabId && tab.source === "xdmcp" ? { ...tab, status: `xdmcp:${state.phase}`, error: state.reason } : tab);
+    localTerminalTabsRef.current = next; setLocalTerminalTabs(next);
   }
 
   function openRshTask() {
@@ -6443,7 +6461,7 @@ export function WorkspaceShell() {
 
   function buildCharacterTerminalTab(
     tabs: LocalTerminalTab[],
-    source: "telnet" | "serial" | "rlogin" | "rsh",
+    source: "telnet" | "serial" | "rlogin" | "rsh" | "xdmcp",
     title: string,
     profileId: string,
   ): LocalTerminalTab {
@@ -7253,7 +7271,7 @@ export function WorkspaceShell() {
 
   function closeRuntimeTerminalSessions(tabs: Array<{ sessionId?: string; source?: string }>) {
     const sessionIds = new Set(
-      tabs.filter(tab => tab.source !== "rlogin" && tab.source !== "rsh").map((tab) => tab.sessionId).filter((sessionId): sessionId is string => Boolean(sessionId)),
+      tabs.filter(tab => tab.source !== "rlogin" && tab.source !== "rsh" && tab.source !== "xdmcp").map((tab) => tab.sessionId).filter((sessionId): sessionId is string => Boolean(sessionId)),
     );
     sessionIds.forEach((sessionId) => {
       void terminalClose(sessionId).catch(() => undefined);
@@ -7342,7 +7360,7 @@ export function WorkspaceShell() {
    * 连接级关闭连带远程文件，其余按实例类型分派到 WF-00B 现有关闭路径。
    */
   function executeClosePlan(plan: ClosePlan) {
-    const nativeIds = plan.localTabIds.filter(id => localTerminalTabsRef.current.some(tab => tab.id === id && (tab.source === "rlogin" || tab.source === "rsh")));
+    const nativeIds = plan.localTabIds.filter(id => localTerminalTabsRef.current.some(tab => tab.id === id && (tab.source === "rlogin" || tab.source === "rsh" || tab.source === "xdmcp")));
     if (nativeIds.length) {
       void closeLocalTerminalTabs(nativeIds).then(() => {
         const retained = new Set(localTerminalTabsRef.current.filter(tab => nativeIds.includes(tab.id)).map(tab => tab.id));
@@ -8640,7 +8658,7 @@ export function WorkspaceShell() {
                     <TerminalSplitMenu
                       autoCreateSameSession={terminalSplitAutoCreateSameSession}
                       canAddPane={terminalSplitCanAddPane}
-                      disabled={activeLocalTerminalTab?.source === "rsh" || !fallbackTerminalSplitBinding()}
+                      disabled={(activeLocalTerminalTab?.source === "rsh" || activeLocalTerminalTab?.source === "xdmcp") || !fallbackTerminalSplitBinding()}
                       onAutoCreateSameSessionChange={setTerminalSplitAutoCreateSameSession}
                       onSplitDown={() => startTerminalSplit("column")}
                       onSplitFour={startTerminalFourPaneLayout}
@@ -8906,7 +8924,12 @@ export function WorkspaceShell() {
                     />
                   ) : null}
                   {localTerminalTabs.map((tab) =>
-                        tab.source === "rsh" ? (
+                        tab.source === "xdmcp" ? (
+                          <Suspense key={tab.id} fallback={<div className="terminal-direct-status">{tr("xdmcp.loading")}</div>}>
+                            <XdmcpSessionPane tabId={tab.id} title={tab.title} active={isTerminalPanelActive(tab.id, "local")} sessions={xdmcpSessions}
+                              onState={state => updateXdmcpSession(tab.id, state)} onClose={() => { void closeLocalTerminalTabs([tab.id]); }}/>
+                          </Suspense>
+                        ) : tab.source === "rsh" ? (
                           <Suspense key={tab.id} fallback={<div className="terminal-direct-status">{tr("rsh.loading")}</div>}>
                             <RshCommandPane tabId={tab.id} title={tab.title} active={isTerminalPanelActive(tab.id, "local")} sessions={rshSessions}
                               onState={state => updateRshTask(tab.id, state)} onClose={() => { void closeLocalTerminalTabs([tab.id]); }}/>

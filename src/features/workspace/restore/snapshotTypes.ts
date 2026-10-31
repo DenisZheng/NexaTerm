@@ -105,7 +105,7 @@ export interface WorkspaceSnapshotCollections {
     id: string;
     ordinal: number;
     profileId: string;
-    source?: "local" | "telnet" | "serial" | "rlogin" | "rsh";
+    source?: "local" | "telnet" | "serial" | "rlogin" | "rsh" | "xdmcp";
   }[];
   rdpSessions: readonly {
     connectionId: string;
@@ -198,7 +198,7 @@ function collectSnapshotInstances(
       }),
     ),
     ...collections.localTerminalTabs.flatMap((tab): WorkspaceSnapshotInstance[] => {
-      if(tab.source==="rsh")return [];
+      if(tab.source==="rsh" || tab.source==="xdmcp")return [];
       return [{id:instanceItemId("local",tab.id),kind:"local",ordinal:tab.ordinal,source:tab.source??"local",
         target:copyTargetRef(localProfileTargets?.[tab.profileId]??profileTarget(tab.profileId))}];
     }),

@@ -27,7 +27,7 @@ interface MultiExecCharacterTab {
   id: string;
   profileId: string;
   sessionId?: string | null;
-  source?: "local" | "serial" | "telnet" | "rlogin" | "rsh";
+  source?: "local" | "serial" | "telnet" | "rlogin" | "rsh" | "xdmcp";
   title: string;
 }
 
@@ -50,7 +50,7 @@ export function buildMultiExecTargets(input: {
   });
 
   const characterTargets = input.localTabs.flatMap((tab): MultiExecTarget[] => {
-    if (tab.source === "rlogin" || tab.source === "rsh" || !tab.sessionId) return [];
+    if (tab.source === "rlogin" || tab.source === "rsh" || tab.source === "xdmcp" || !tab.sessionId) return [];
     const binding: TerminalPaneBinding = { kind: "local", tabId: tab.id };
     return [{
       binding,

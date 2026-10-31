@@ -26,7 +26,7 @@ interface BatchCharacterTab {
   id: string;
   profileId: string;
   sessionId?: string;
-  source?: "local" | "serial" | "telnet" | "rlogin" | "rsh";
+  source?: "local" | "serial" | "telnet" | "rlogin" | "rsh" | "xdmcp";
   status: string;
 }
 
@@ -162,6 +162,7 @@ function sshTabRuntimeState(tab: BatchSshTab): BatchHandleRuntimeState {
 }
 
 function characterTabRuntimeState(tab: BatchCharacterTab): BatchHandleRuntimeState {
+  if (tab.source === "xdmcp") return { error: tr("batch.error.terminal"), status: "failed" };
   if (tab.source === "rlogin") {
     const phase = tab.status.replace(/^rlogin:/, "");
     if (phase === "initial_exchange_ready") return { error: null, status: "success" }; // Initial exchange, not login authentication.

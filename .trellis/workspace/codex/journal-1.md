@@ -598,3 +598,121 @@ Session 13续作：代码0e989ee已过完整CI698/source31；原生28在Windows�
 Session 13收口：精确code9a815d5的CI699/source32/原生29均SUCCESS；actual JSON artifact12240678597（492466字节/hash df21bc8911e97002c8c970f64875e48133bc986b016170b52a4a4c8a22359484）已下载。SDK顺序、四组键盘往返/两个负向、293数据与1756 C输入及最终版本完整。XKB开发构建本刀通过，整体X0/X2/X3及发行/桌面仍未完成；接续同任务私有DLL/工具map，不归档。
 
 2026-10-23续作：Draft #87初版c595ac41已过CI700/source33；Windows原生30的前置回归2 ERROR/5 FAIL，构建未执行。盘符map本地复现证实夹具的包名catch-all桩错误拦截cygpath转换；修复为真实路径转换加精确fixture归属查询，并补盘符LOAD/成员hash与owner回归。生产门禁不放宽，新代码须独立Windows/完整CI验证。沿用现有XDMCP任务，不合并、不发布，采用/随包/桌面字段保持false。
+
+
+## Session 14: PR89 Windows resource audit verified
+
+**Date**: 2026-10-31
+**Task**: PR89 Windows resource audit verified
+**Branch**: `build/wf09-07-resource-audit`
+
+### Summary
+
+修复 MSYS 别名夹具、VPATH 实际重放、COFF BSS/长节名和默认 manifest 来源/最终 PE；61c0192 的完整 CI、源码和原生 41169134366 全成功，169 native 反例及最终版本通过，ZIP/JSON 已独立核验。资源证据阶段完成、四 DLL B0 重绑完成；许可/预编译 DLL 内部、随包与真实桌面仍未完成，整体任务不归档。本机受杀软干扰的完整构建未重跑，原有未跟踪文件未动。
+
+### Main Changes
+
+完整阶段证据与失败根因见 `.trellis/tasks/10-16-wf09-07-xdmcp-implementation/research/windows-resource-evidence.md`；当前主线状态见 `ROADMAP.md`。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `f46a5fb` | 修复 MSYS 别名碰撞夹具 |
+| `1a7bb15` | 实际 VPATH 重放与许可/X2 准备 |
+| `61c0192` | COFF BSS/长名、预处理模式与默认 manifest 证据 |
+
+### Testing
+
+- [OK] MSYS/WSL 各 50 项相关测试；native 169 项反例与完整构建/版本通过，完整 CI 七个执行 job 和源码审查成功。
+
+### Status
+
+[OK] **本次资源证据阶段完成；整体 XDMCP 任务仍为 in_progress**
+
+### Next Steps
+
+- 继续三个资源权限、四个预编译 DLL 内部与分发材料；X2 的 14 项真实验收仍为 NOT-RUN，不合并或发行。
+
+
+## Session 15: PR89 prebuilt package and recipe materials verified
+
+**Date**: 2026-10-31
+**Task**: PR89 prebuilt package and recipe materials verified
+**Branch**: `build/wf09-07-resource-audit`
+
+### Summary
+
+完成四个实际运行库的固定包/BUILDINFO/精确PKGBUILD/notice材料门禁；完整、源码与原生CI均通过，整体XDMCP未完成。
+
+### Main Changes
+
+### 本阶段结果
+
+四个实际预编译 DLL 已绑定官方发布包、61 成员/32 普通文件、27 精确配方文件、五份 notice 和独立远端 patch。原生门禁绑定当次 provider；源码 CI 保持固定基线引用。补充报告原子写入失败反例，旧成功不得残留。
+
+### 验证
+
+- d18b651：完整 CI 41175645356、source 41175645308、native 41175645305 全 SUCCESS；187 native 回归及完整引擎构建、资源门禁、新材料门禁和最终版本通过。
+- 原生 artifact 13034205012 ZIP/JSON 与官方 digest 独立核验；精确 hash 及源码 artifact 见 research/windows-prebuilt-materials-evidence.md。
+- 本地新增18项在 Windows/MSYS/WSL 全过，实际在线/离线材料核验通过；WSL全量缺gcc/make的14项环境错误明确保留。
+- 未重跑本机受杀软干扰的完整引擎构建，未恢复隔离文件、添加排除或改变防护；原有未跟踪文件不动。
+
+### 状态与接续
+
+本次包/配方材料阶段完成；整体 XDMCP 任务保持 in_progress，不归档、不合并、不发行。下一项是独立包/源码验签与完整 source/VCS 材料；DLL 内部链接、逐文件权限、资源授权、源码供给方式及 X2/X3 仍开放。所有分发/随包/桌面与新增内部/签名批准字段保持 false。
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `d30f2a4` | 固定包与精确配方材料门禁 |
+| `d18b651` | 报告写入失败与全部 false 边界 |
+
+### Testing
+
+- [OK] 本阶段18项反例、187项原生回归、完整/源码/原生CI成功；精确 artifact 已核验，WSL环境缺口单列保留。
+
+### Status
+
+[OK] **本阶段完成；整体 XDMCP 任务保持 in_progress**
+
+### Next Steps
+
+- 独立包/源码签名与完整 source/VCS 材料；内部链接、成员权限、资源授权与 X2/X3 继续。
+
+
+## Session 16: XDMCP 开发会话入口与受管生命周期接入
+
+**Date**: 2026-10-31
+**Task**: XDMCP 开发会话入口与受管生命周期接入
+**Branch**: `build/wf09-07-resource-audit`
+
+### Summary
+
+按维护者调整后的主线交付实际 XDMCP 开发入口、typed IPC、私有 owner、取消/重连/关闭和非 PTY 隐私隔离；42 项新增前端反例、15 项 shell 路由与类型/build/lazy 门禁通过，完整前端在隔离 Node 系统语言条件下 1202 通过。实际 Edge 检查三主题/窄窗口、许可撤销及无原生 IPC 时明确失败；默认中文与 POSIX fixture 环境差异已记录，WSL Save As 11 项通过。代码已提交，本批沿 PR89 推送，精确 CI 收据在 PR 开发接入阶段块记录，不挪用旧 HEAD。真实引擎/授权 Linux 靶机及原生 WebView 仍待联调，随包/发行/desktop_verified 不变，整体任务不归档。
+
+### Main Changes
+
+新增实际 XDMCP 临时面板、typed IPC/私有资源 owner、单次许可与非 PTY 守卫；code-spec 和验收见当前任务 validation/development-entry.md。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `00eefc6` | (see git log) |
+
+### Testing
+
+- [OK] 新增 42 项前端反例、15 项真实 shell 路由、类型/build/lazy 门禁及三主题/窄窗口检查。
+- [OK] 完整前端在 NODE_OPTIONS=--no-experimental-global-navigator 下 1202 通过、1 todo；Windows 默认语言与 POSIX fixture 差异单独记录。
+- [PENDING] 本批新 SHA 的远端 CI；结果记录到 PR #89 开发接入阶段块。
+
+### Status
+
+[IN_PROGRESS] 开发接入已实现并本地验证；整体 XDMCP 未完成，不归档。
+
+### Next Steps
+
+- 在授权靶机、已核验开发引擎和测试网络就绪后进行原生 WebView/真实桌面验收；不回到重复材料整理，不绕过随包/许可与安全边界。

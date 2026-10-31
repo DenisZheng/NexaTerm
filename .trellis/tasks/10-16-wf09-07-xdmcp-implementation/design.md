@@ -1,5 +1,13 @@
 # Technical design
 
+## 当前实现：Windows XDMCP 开发会话入口（2026-10-31）
+
+本次授权先打通可操作链路，沿用已确认的统一会话入口及现有独立原生引擎窗口，不引入 WebView 嵌入或新的保存配置 schema。新建 XDMCP 开发会话只创建空白可关闭实例，不执行程序/探测网络；实际启动需填写数值 IPv4、明确选择本机原生引擎、确认外置程序与网络访问两项单次许可。参数原样验证，不额外接受引擎参数，不恢复或复用受杀软干扰的构建输出。
+
+复用现有 Rsh 非 PTY 任务的工作区投影方式，以 `source:xdmcp` 作为临时 metadata 标记；私有懒加载 owner 持有 reservation、generation 和运行寿命。目标/路径/许可不进入标签、快照、历史、AI、MultiExec 或日志。普通终端的 split/clone/reconnect/terminal_close 明确排除此实例；重连只能在面板重新确认后启动新 generation。关闭必须等待晚到 reserve/start 以及原生 stop 成功；stop_pending 或清理失败保留 owner 与可重试标签。
+
+面板保持原有紧凑共享表单、按钮与 token，双语/三主题并保持首屏 lazy boundary。先在现有 light-neutral 母版补可点击模拟，再落实同一动线；`ui-ux-pro-max` 初次未在安装入口找到，后续在既存 `.trellis/.runtime/ui-ux-pro-max-skill` 缓存找到并实际执行了表单可访问性/异步错误审查，结论见 `validation/development-entry.md`，不引入独立视觉体系。能力/状态通过 typed IPC 严格解析；`querying` 只描述已发起请求，不虚构 active/登录成功，不添加无证据的自动成功或登录超时。开发入口可用于真实人工联调，但没有引擎/靶机时，不将 fixture/UI 测试写成桌面互通。
+
 唯一详细设计为 [三协议计划](../../../docs/plans/WF09-PROTOCOL-IMPLEMENTATION-PLAN.md) §3、§4、§7–9。阶段：X0–X3。
 
 该设计是拟实现契约；具体 IPC 与结构签名在开工前结合现有 manager/能力/存储接入确认，并写入 code-spec，不能当作现有接口调用。组件候选、显示模式和受限端口策略按计划中的决策门槛落定。
