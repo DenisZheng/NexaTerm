@@ -6,6 +6,10 @@
 
 ## 当前下一阶段：三协议功能实现（2026-10-16）
 
+2026-10-31 开发接入已实现：统一新建菜单已有 **XDMCP（开发）** 临时实例，实际 typed IPC/私有 owner、两项单次许可、状态/取消/重连/关闭以及非 PTY/隐私边界已接线。本地新增 42 项前端反例与 3 项真实 shell 路由反例、三主题/窄窗口浏览器检查通过；当前批远端 CI 以 PR #89 的新 SHA 为准。**下一项是原生 WebView + 已核验开发引擎 + 授权 Linux 靶机的真实桌面联调**，不是再循环材料报告；无现场环境不冒充可用，X01 随包与 X2/X3 仍未完成。细节和环境差异见 [开发入口验收](.trellis/tasks/10-16-wf09-07-xdmcp-implementation/validation/development-entry.md)。
+
+2026-10-31 维护者调整主线：**优先交付 Windows XDMCP 开发会话端到端接入，不再连续以材料审查为主要阶段**。下一步是统一新建入口、临时独立实例、明确外置引擎/网络许可、真实状态及取消/重连/关闭；能落实的接入开发不等正式分发批准。正式随包、资源许可和真实 Linux 桌面互通仍须各自验收，不以 UI 或外置模式代替。具体切片与边界见当前 XDMCP 任务 PRD/design/implement；下文“下一阶段补材料”由本条调整。
+
 2026-10-31 最新阶段完成：**PR #89 四个预编译运行库的包/精确配方材料门禁已通过**。代码 `d18b651` 的完整 CI `41175645356`、源码 `41175645308`、Windows 原生 `41175645305` 全成功；187 项原生反例、完整构建/资源/最终版本通过，artifact 已独立核验。四包 61 成员、32 普通文件、27 配方文件及独立远端 patch 已绑定当次实际 DLL/notice，与独立源码 CI 一致。本机未重跑完整引擎构建，未放宽杀软或发行门禁。接下来补独立包/源码签名与完整 source/VCS 材料；预编译 DLL 内部、成员许可/源码供给、资源授权及 X2/X3 仍未完成，详见 [阶段证据](.trellis/tasks/10-16-wf09-07-xdmcp-implementation/research/windows-prebuilt-materials-evidence.md)。
 
 2026-10-31 最新结果：**PR #89 资源审查实现阶段已完成原生验证**。代码 `61c0192` 的完整 CI `41169134355`、源码 `41169134350`、Windows 原生 `41169134366` 全部 SUCCESS；169 项原生反例、完整构建/安装、资源/PE 闭合及最终版本 probe 通过，artifact ZIP/JSON 已独立核验。XWin 的 21 个资源输入、重放对象、manifest/9 个图标、固定工具链默认 manifest 及 14 个私有 PE 目标已留证；四 DLL 的 B0 身份重绑完成。仍保持 Draft，不合并或发行；三个资源授权、预编译 DLL 内部、分发材料和 X2/X3 未完成，`distributionApproved/bundled/desktopVerified=false`。本机未重跑受杀软干扰的完整构建。精确证据与下一阶段见 [资源审查记录](.trellis/tasks/10-16-wf09-07-xdmcp-implementation/research/windows-resource-evidence.md)。下列更早快照仅保留历史，不覆盖本条。

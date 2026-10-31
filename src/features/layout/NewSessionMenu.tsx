@@ -36,6 +36,7 @@ export interface NewSessionMenuProps {
   onOpenLocalProfile: (profile: LocalTerminalProfile) => void;
   onQuickOpen: () => void;
   onOpenRsh?: () => void;
+  onOpenXdmcp?: () => void;
 }
 interface NewSessionItemsProps extends NewSessionMenuProps { variant?: "menubar" | "dropdown" }
 
@@ -124,6 +125,9 @@ export function NewSessionMenuItems({ variant = "dropdown", ...props }: NewSessi
       <Menu.Separator className="context-menu-separator" />
       {props.onOpenRsh?<><Menu.Item className="dropdown-menu-item" onSelect={props.onOpenRsh}><TerminalSquare className="ui-icon" aria-hidden="true"/>{t("newSession.rsh")}</Menu.Item><Menu.Separator className="context-menu-separator"/></>:null}
       <Menu.Label className="title-new-session-menu-heading">{t("newSession.remoteDesktops")}</Menu.Label>
+      {props.onOpenXdmcp ? <Menu.Item className="dropdown-menu-item" onSelect={props.onOpenXdmcp}>
+        <MonitorPlay className="ui-icon" aria-hidden="true" />{t("newSession.xdmcp")}
+      </Menu.Item> : null}
       {(["rdp", "vnc"] as const).map((protocol) => {
         const capability = remoteCapabilities[protocol];
         return (

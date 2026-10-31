@@ -74,6 +74,8 @@ const startupHeavyImports = [
   ["../tools/DockerToolPanel", "DockerToolPanel"],
   ["../commands/CommandLibraryPanel", "CommandLibraryPanel"],
   ["../terminal/TerminalPanel", "TerminalPanel"],
+  ["../xdmcp/XdmcpSessionPane", "XdmcpSessionPane"],
+  ["../xdmcp/xdmcpRuntime", "XDMCP native runtime"],
   ["./VncViewerSurface", "VncViewerSurface"],
 ];
 

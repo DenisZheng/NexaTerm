@@ -119,3 +119,33 @@ test("Rsh history and AI sinks refuse a public session ID trap",()=>{
   shell(["sendTerminalSelectionToAi","canRecordTerminalInputHistory","commandHistoryScopeForTerminalTab"],context);
   context.sendTerminalSelectionToAi("native","private-selection");assert.equal(context.canRecordTerminalInputHistory("native"),false);assert.equal(context.commandHistoryScopeForTerminalTab("native"),null);
 });
+
+test("XDMCP real shell close awaits native cleanup and retains failed tabs for retry", async () => {
+  const f = closeFixture(); f.context.localTerminalTabsRef.current = [{ ...native, source: "xdmcp" }, ordinary];
+  f.context.xdmcpSessions = f.context.rloginSessions;
+  const work = f.context.closeLocalTerminalTabs(["native"]);
+  assert.equal(f.calls.some(call => call[0] === "public-close" || call[0] === "forget"), false);
+  f.reject(Error("cleanup pending")); await work;
+  assert.equal(f.context.localTerminalTabsRef.current.length, 2);
+  f.context.xdmcpSessions.close = () => Promise.resolve(); await f.context.closeLocalTerminalTabs(["native"]);
+  assert.deepEqual(f.context.localTerminalTabsRef.current.map(tab => tab.id), ["ordinary"]);
+  assert.equal(f.calls.some(call => call[0] === "public-close"), false);
+});
+test("XDMCP never enters split, terminal replay, history, AI or public terminal cleanup", () => {
+  const trap = { ...native, source: "xdmcp" };
+  const context = { localTerminalTabs: [trap], localTerminalTabsRef: { current: [trap] } };
+  shell(["retryRestoredLocalTab", "createSameSessionTerminalBinding", "assignTerminalSplitBinding", "startTerminalSplitForBinding", "startTerminalFourPaneForBinding", "sendTerminalSelectionToAi", "canRecordTerminalInputHistory", "commandHistoryScopeForTerminalTab", "closeRuntimeTerminalSessions"], context);
+  context.retryRestoredLocalTab("native"); assert.equal(context.createSameSessionTerminalBinding({ kind: "local", tabId: "native" }), null);
+  context.assignTerminalSplitBinding("pane", { kind: "local", tabId: "native" });
+  context.startTerminalSplitForBinding({ kind: "local", tabId: "native" }, "row"); context.startTerminalFourPaneForBinding({ kind: "local", tabId: "native" });
+  context.sendTerminalSelectionToAi("native", "private"); assert.equal(context.canRecordTerminalInputHistory("native"), false);
+  assert.equal(context.commandHistoryScopeForTerminalTab("native"), null); context.closeRuntimeTerminalSessions([trap]);
+});
+test("XDMCP new-session entry creates only a private empty owner and non-PTY metadata", () => {
+  const calls = [], context = { localTerminalTabsRef: { current: [] },
+    nextOrdinal: () => 0, displayOrdinal: () => null, xdmcpSessions: { open: id => calls.push(id) },
+    setLocalTerminalTabs: () => {}, activateLocalTerminalTab: () => {} };
+  shell(["buildCharacterTerminalTab", "openXdmcpSession"], context); context.openXdmcpSession();
+  const tab = context.localTerminalTabsRef.current[0]; assert.equal(tab.source, "xdmcp"); assert.equal(tab.sessionId, undefined); assert.equal(tab.requestId, undefined);
+  assert.equal(tab.status, "xdmcp:idle"); assert.deepEqual(calls, [tab.id]);
+});
