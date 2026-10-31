@@ -203,9 +203,18 @@ XWin.o: $(srcdir)/XWin.rc $(srcdir)/XWin.exe.manifest $(srcdir)/X.ico
             root = Path(tmp)
             binary = root / "bin/windres.exe"
             binary.parent.mkdir(parents=True)
-            binary.write_bytes(b"MZ-actual")
             alias = binary.with_suffix("")
-            alias.write_bytes(b"MZ-tampered")
+            # MSYS redirects an extensionless write to an existing .exe.
+            # Create the distinct alias first, without overwriting either file.
+            with alias.open("xb") as output:
+                output.write(b"MZ-tampered")
+            with binary.open("xb") as output:
+                output.write(b"MZ-actual")
+            self.assertEqual(sorted(path.name for path in binary.parent.iterdir()),
+                             ["windres", "windres.exe"])
+            self.assertFalse(alias.samefile(binary))
+            self.assertEqual(alias.read_bytes(), b"MZ-tampered")
+            self.assertEqual(binary.read_bytes(), b"MZ-actual")
 
             def unexpected_pacman(args, cwd, *, capture=False):
                 self.fail("must reject an alias with different bytes before querying pacman")

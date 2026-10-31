@@ -6,6 +6,8 @@
 
 ## 当前下一阶段：三协议功能实现（2026-10-16）
 
+2026-10-31 状态校正：Draft #89 的 `ec2d332` 已通过完整 CI #712 / 源码审查 #44，但原生 Windows #41 在前置碰撞测试失败，未执行引擎编译。已在本机 MSYS2 复现并修复测试夹具的 `.exe` 隐式覆盖，148 项原生脚本回归通过；本地完整构建因杀软重复删除 `conftest.exe` 已主动停止，未取得最终原生资源报告，修复尚未提交或推送。详见 [资源审查接续证据](.trellis/tasks/10-16-wf09-07-xdmcp-implementation/research/windows-resource-evidence.md)。X0 尚未收口，X2/X3 及发行/随包/桌面状态不变。
+
 2026-10-30续作：XDMCP 继续沿 Draft #87 的 Windows private-link evidence 开发，新增堆叠 Draft #88 跟踪 WINDRES/GCC 输入、XWin.o 资源段、最终 PE manifest/icon 和所有可达私有 PE 对象的资源扫描。新代码验证 pending；不改变 distributionApproved/bundled/desktopVerified=false。
 
 维护者明确要求先补实现计划，再开发。XDMCP 以随包 X server 和完整桌面会话管理为目标（Windows 优先，再适配 macOS/Linux）；Rlogin 为原生终端协议；Rsh 为原生命令执行和双流/信号管理。详细阶段、组件候选与许可、端口权限、生命周期及验收见 [三协议实现计划](docs/plans/WF09-PROTOCOL-IMPLEMENTATION-PLAN.md)。

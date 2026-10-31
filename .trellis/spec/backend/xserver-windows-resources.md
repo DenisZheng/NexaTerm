@@ -9,7 +9,7 @@ This is build and provenance evidence only. It does not approve distribution, cl
 ## 2. Required observations
 
 - Compare the source Makefile.in resource rule with the generated hw/xwin/Makefile rule. Require XWin.o to depend on XWin.rc, XWin.exe.manifest and X.ico.
-- Capture the expanded make -B -n V=1 XWin.o command. Require the expected RC input, COFF output, include root and default windres preprocessor; reject custom preprocessor overrides.
+- Capture the expanded `make -n V=1 -o Makefile -W X.ico -W XWin.exe.manifest -W XWin.rc XWin.o` command. Do not use `-B`, which also forces unrelated Automake refresh. Require the expected RC input, COFF output, include root and default windres preprocessor; reject custom preprocessor overrides.
 - Record the actual windres and GCC executable bytes, versions, target triple and owning MSYS2 packages. Do not infer tool identity from the package name alone.
 - Re-run the exact windres command into a temporary object and compare its .rsrc section names, sizes and bytes with the XWin.o object selected by the actual XWin link map.
 - Reproduce the default windres GCC preprocessing mode with a dependency-only scan. Record every resolved input and its source/build/private-prefix/toolchain owner. Required inputs include XWin.rc, winresource.h, xwin-config.h, version-config.h and the target Windows SDK windows.h.
@@ -44,6 +44,16 @@ The XWin source header winresource.h must retain its actual permissive notice. T
 ## 5. Tests
 
 Synthetic tests cover AMD64 COFF section parsing, malformed ranges, PE resource directory parsing, manifest/icon byte identity, group-icon mapping, Makefile rule inputs and unknown resource-file references. Native Windows CI must execute the actual windres reproduction, target-toolchain ownership checks, final PE verification and full private-object scan.
+
+An antivirus-interrupted build is diagnostic only, even if configure continues after a probe executable is removed. Preserve the logs, leave protection settings unchanged and do not accept partial artifacts as native evidence. After the interruption is resolved, rerun in fresh build/configure state rather than reusing potentially affected feature detections or installed outputs.
+
+### MSYS executable-alias fixtures
+
+Run these tests with `/usr/bin/python3` under UCRT64, as in `xserver-windows.yml`; native Windows Python is not a substitute for the MSYS filesystem behavior. The focused regression is `python -m unittest xserver_windows_resources_test.ResourceEvidenceTests.test_tool_alias_collision_cannot_replace_package_owned_binary -v` from `scripts/`.
+
+MSYS can resolve an extensionless write to an existing `.exe`. Wrong: create `windres.exe`, then call `windres.write_bytes(...)` and assume two files exist. This can overwrite the executable and turn a mismatched-alias fixture into a single-file case. Correct: exclusively create the extensionless file first, then the `.exe`; assert both directory entries, different file identities and each expected byte payload before invoking the production function.
+
+`package_owned_executable(name, toolchain_root, work, run)` must still reject differing bytes with `RESOURCE_TOOL_ALIAS_MISMATCH` before querying pacman. An extensionless lookup of the actual `.exe` remains valid and must query ownership using the `.exe` path. Never remove the byte comparison, change the expected error or skip the Windows test to accommodate a malformed fixture. An in-memory mutation removing the byte comparison must make the corrected regression fail.
 
 ## 6. Explicit exclusions
 
