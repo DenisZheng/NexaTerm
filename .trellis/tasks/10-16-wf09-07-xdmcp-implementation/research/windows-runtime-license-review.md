@@ -2,6 +2,8 @@
 
 状态：审查进行中，未批准随包/分发。当前基准code4e4e4a8/原生24，覆盖实际递归PE集合的四个目标工具链DLL及已经观察的SDK/编译与链接输入；固定X库、生成器、资源及其他编译/静态输入见[构建证据](windows-build-evidence.md)。不把整个私有prefix或编译器包当作发行清单。
 
+2026-10-31 纠正与补充：[预编译运行库新证据](windows-prebuilt-runtime-obligations.md) 已将四个基线包的 `.BUILDINFO` 绑定精确配方。下文统一引用 `fb1bee30` 的旧快照不能当作四包的原始构建配方：pixman `0.46.4-3` 实际匹配 `82bcf47d`，后续配方修改未变版本号。各包的构建 SDK/GCC 不同，本机还存在版本漂移；旧的当前 XWin 工具链成员核对不覆盖预编译 DLL 内部。原文保留作历史证据；新 CI 的实际集合、内部贡献及分发采用仍须分别核对。
+
 ## 实际DLL与固定包装来源
 
 原生16记录了16个实际PE文件，其中下列四项来自UCRT64。包装配方统一核对到[MSYS2提交fb1bee30b4f11cf4b857197a288466afad49033a](https://github.com/msys2/MINGW-packages/commit/fb1bee30b4f11cf4b857197a288466afad49033a)；四个文件的实际git blob与读取内容逐字节匹配，版本与原生16已安装包相同。

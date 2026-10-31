@@ -1,5 +1,6 @@
 """Trace Windows resource compiler inputs through the final XWin PE image."""
 
+from os.path import relpath
 from pathlib import Path
 import re
 import shlex
@@ -252,14 +253,19 @@ def parse_windres_command(content, rule, build_directory, source_directory, wind
             and "--use-temp-file" in command, "RESOURCE_WINDRES_COMMAND")
     require(not any(token.startswith("--preprocessor") for token in command), "RESOURCE_PREPROCESSOR_OVERRIDE")
     inputs, outputs, includes, defines, undefines = [], [], [], [], []
+    input_index = output_index = None
     index = 1
     while index < len(command):
         token = command[index]
         if token in {"-i", "--input", "-o", "--output", "-I", "-D", "-U"}:
             require(index + 1 < len(command), "RESOURCE_WINDRES_ARGUMENT")
             value = command[index + 1]
-            if token in {"-i", "--input"}: inputs.append(value)
-            elif token in {"-o", "--output"}: outputs.append(value)
+            if token in {"-i", "--input"}:
+                inputs.append(value)
+                input_index = index + 1
+            elif token in {"-o", "--output"}:
+                outputs.append(value)
+                output_index = index + 1
             elif token == "-I": includes.append(value)
             elif token == "-D": defines.append(value)
             else: undefines.append(value)
@@ -291,6 +297,7 @@ def parse_windres_command(content, rule, build_directory, source_directory, wind
     require(input_path == (source_directory / "XWin.rc").resolve(), "RESOURCE_WINDRES_INPUT")
     require(output_path == (build_directory / "XWin.o").resolve(), "RESOURCE_WINDRES_OUTPUT")
     return {"command": command, "commandLine": candidates[0], "input": input_path,
+            "inputIndex": input_index, "outputIndex": output_index,
             "output": output_path, "includes": includes, "defines": defines, "undefines": undefines}
 
 
@@ -531,7 +538,9 @@ def resource_compiler_evidence(source, builds, server_build, server, prefix, man
         repro_output = Path(temporary) / "XWin.resource.o"
         repro_command = list(command["command"])
         repro_command[0] = str(windres_path)
-        repro_command[repro_command.index("-o") + 1] = str(repro_output)
+        # 按原 cwd 重绑真实源文件，避免 MinGW 再次解析带空格的绝对输入路径。
+        repro_command[command["inputIndex"]] = Path(relpath(command["input"], build_directory)).as_posix()
+        repro_command[command["outputIndex"]] = str(repro_output)
         repro_command.insert(1, "-v")
         verbose = run(repro_command, build_directory, capture=True)
         require(repro_output.is_file(), "RESOURCE_REPRO_OUTPUT")

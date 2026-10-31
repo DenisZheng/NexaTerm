@@ -6,6 +6,10 @@
 
 ## 当前下一阶段：三协议功能实现（2026-10-16）
 
+2026-10-31 最新结果（11:28，UTC+08:00）：PR #89 的 `f46a5fb` 完整 CI/源码审查成功，原生 run `41158110445` **失败**。已取得失败 artifact；XWin 编译安装与私有 PE 检查已完成，但 windres 重放仍传裸 `XWin.rc`，不是最终资源审查通过。本地最小修复已将真实源文件按原 cwd 相对化后重放，同时解决带空格工作根的实际预处理失败；Windows 新增 3 项、MSYS/WSL 各 27 项资源测试，以及只生成 `.o` 的真实 windres/COFF 对照通过。没有重跑完整本机构建；新修复尚未提交/推送，完整原生仍需 CI。暂不进入随包/桌面阶段，精确证据见 [资源审查记录](.trellis/tasks/10-16-wf09-07-xdmcp-implementation/research/windows-resource-evidence.md)。
+
+2026-10-31 推送后接续（CI 快照 10:16，UTC+08:00）：PR #89 已更新到 `f46a5fb`，完整 CI 与源码审查通过；原生前置反例测试通过，正在编译/审查固定目标，最终 JSON 尚未取得。等待期间已完成 [资源历史与权限核实](.trellis/tasks/10-16-wf09-07-xdmcp-implementation/research/windows-resource-rights-review.md)、[四个预编译运行库的精确配方/义务记录](.trellis/tasks/10-16-wf09-07-xdmcp-implementation/research/windows-prebuilt-runtime-obligations.md) 和 [X2 Windows 环境交接与 14 项验收用例](.trellis/tasks/10-16-wf09-07-xdmcp-implementation/validation/x2-windows-desktop-preparation.md)。新证据纠正 pixman 的旧配方引用，确认预编译 DLL 的构建环境不能由当前 XWin 证据覆盖；三个资源授权仍待澄清或经评审的独立替换。不重跑本机受杀软干扰的构建，不改正在验证的构建代码；真实互通、随包和发行批准仍未完成。精确 run 见 [接续证据](.trellis/tasks/10-16-wf09-07-xdmcp-implementation/research/windows-resource-evidence.md)。
+
 2026-10-31 状态校正：Draft #89 的 `ec2d332` 已通过完整 CI #712 / 源码审查 #44，但原生 Windows #41 在前置碰撞测试失败，未执行引擎编译。已在本机 MSYS2 复现并修复测试夹具的 `.exe` 隐式覆盖，148 项原生脚本回归通过；本地完整构建因杀软重复删除 `conftest.exe` 已主动停止，未取得最终原生资源报告，修复尚未提交或推送。详见 [资源审查接续证据](.trellis/tasks/10-16-wf09-07-xdmcp-implementation/research/windows-resource-evidence.md)。X0 尚未收口，X2/X3 及发行/随包/桌面状态不变。
 
 2026-10-30续作：XDMCP 继续沿 Draft #87 的 Windows private-link evidence 开发，新增堆叠 Draft #88 跟踪 WINDRES/GCC 输入、XWin.o 资源段、最终 PE manifest/icon 和所有可达私有 PE 对象的资源扫描。新代码验证 pending；不改变 distributionApproved/bundled/desktopVerified=false。
