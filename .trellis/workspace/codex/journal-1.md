@@ -681,3 +681,38 @@ Session 13收口：精确code9a815d5的CI699/source32/原生29均SUCCESS；actua
 ### Next Steps
 
 - 独立包/源码签名与完整 source/VCS 材料；内部链接、成员权限、资源授权与 X2/X3 继续。
+
+
+## Session 16: XDMCP 开发会话入口与受管生命周期接入
+
+**Date**: 2026-10-31
+**Task**: XDMCP 开发会话入口与受管生命周期接入
+**Branch**: `build/wf09-07-resource-audit`
+
+### Summary
+
+按维护者调整后的主线交付实际 XDMCP 开发入口、typed IPC、私有 owner、取消/重连/关闭和非 PTY 隐私隔离；42 项新增前端反例、15 项 shell 路由与类型/build/lazy 门禁通过，完整前端在隔离 Node 系统语言条件下 1202 通过。实际 Edge 检查三主题/窄窗口、许可撤销及无原生 IPC 时明确失败；默认中文与 POSIX fixture 环境差异已记录，WSL Save As 11 项通过。代码已提交，本批沿 PR89 推送，精确 CI 收据在 PR 开发接入阶段块记录，不挪用旧 HEAD。真实引擎/授权 Linux 靶机及原生 WebView 仍待联调，随包/发行/desktop_verified 不变，整体任务不归档。
+
+### Main Changes
+
+新增实际 XDMCP 临时面板、typed IPC/私有资源 owner、单次许可与非 PTY 守卫；code-spec 和验收见当前任务 validation/development-entry.md。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `00eefc6` | (see git log) |
+
+### Testing
+
+- [OK] 新增 42 项前端反例、15 项真实 shell 路由、类型/build/lazy 门禁及三主题/窄窗口检查。
+- [OK] 完整前端在 NODE_OPTIONS=--no-experimental-global-navigator 下 1202 通过、1 todo；Windows 默认语言与 POSIX fixture 差异单独记录。
+- [PENDING] 本批新 SHA 的远端 CI；结果记录到 PR #89 开发接入阶段块。
+
+### Status
+
+[IN_PROGRESS] 开发接入已实现并本地验证；整体 XDMCP 未完成，不归档。
+
+### Next Steps
+
+- 在授权靶机、已核验开发引擎和测试网络就绪后进行原生 WebView/真实桌面验收；不回到重复材料整理，不绕过随包/许可与安全边界。

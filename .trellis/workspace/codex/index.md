@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 15
+- **Total Sessions**: 16
 - **Last Active**: 2026-10-31
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~683 | Active |
+| `journal-1.md` | ~718 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 16 | 2026-10-31 | XDMCP 开发会话入口与受管生命周期接入 | `00eefc6` | `build/wf09-07-resource-audit` |
 | 15 | 2026-10-31 | PR89 prebuilt package and recipe materials verified | `d30f2a4`, `d18b651` | `build/wf09-07-resource-audit` |
 | 14 | 2026-10-31 | PR89 Windows resource audit verified | `f46a5fb`, `1a7bb15`, `61c0192` | `build/wf09-07-resource-audit` |
 | 13 | 2026-10-19 | WF-09 Windows XKB tools and keyboard runtime data | `757c599bab085b5f9a67aec22edbb8e0de69cb05` | `build/wf09-07-xkb-runtime` |
