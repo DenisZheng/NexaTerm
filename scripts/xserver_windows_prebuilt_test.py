@@ -123,6 +123,21 @@ class PrebuiltMaterialTests(unittest.TestCase):
                 self.assertEqual(result["error"], "PREBUILT_NATIVE_INCOMPLETE")
                 self.assertEqual(result["status"], "FAIL")
                 self.assertFalse(result["observationsComplete"])
+                for key in ("prebuiltDllInternalsIncluded", "packageSignaturesVerified", "sourceDistributionApproved"):
+                    self.assertIs(result[key], False)
+
+    def test_report_write_failure_cannot_leave_stale_success_or_delete_native_input(self):
+        report = self.root / "report.json"
+        report.write_text('{"status":"REVIEW-REQUIRED"}')
+        with patch.object(materials, "collect_materials", side_effect=ReviewError("INPUT_SHA256")), \
+                patch.object(materials, "write_report", side_effect=OSError("private path")), patch("sys.stdout", io.StringIO()):
+            self.assertEqual(materials.main(["--cache", str(self.cache), "--report", str(report)]), 1)
+        self.assertFalse(report.exists())
+        report.write_text(json.dumps(self.native))
+        original = report.read_bytes()
+        with patch("sys.stdout", io.StringIO()):
+            self.assertEqual(materials.main(["--cache", str(self.cache), "--report", str(report), "--native-report", str(report)]), 1)
+        self.assertEqual(report.read_bytes(), original)
 
     def test_cli_complete_native_sha_is_bound_and_errors_are_sanitized(self):
         report, native = self.root / "report.json", self.root / "native.json"

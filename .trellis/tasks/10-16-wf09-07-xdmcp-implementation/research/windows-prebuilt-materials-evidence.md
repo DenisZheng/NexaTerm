@@ -28,9 +28,10 @@
 
 - 全新缓存在线下载四个官方包、27 个配方文件和远端 patch 后通过；不是仅信任旧 pacman 缓存。
 - 再用 `--offline --native-report` 复查通过，JSON 与在线结果逐字节相同。Windows 报告 48342 字节，SHA256 `690f843b2c987fd9247ea5f6f7d2b3d61d14e136f9555132ec39c1b2e1afb486`；其 supplied native JSON SHA256 为 `6e2835d865a04e2982986949fcf4166380dcd99de06fc236eed4d72718d21fb9`。
-- 新增 17 项反例在 Windows Python、MSYS Python、WSL Python 均通过；测试用自写普通 tar，经真实 tar 读取到 stdout，不解包到目录。覆盖 provider/版本/notice 漂移、BUILDINFO/PKGBUILD/blob/source 声明不符、损坏缓存、unsafe URL/redirect、下载/工具超时、非零退出、成员集合/字节/预算和旧成功替换。
+- 新增 18 项反例在 Windows Python、MSYS Python、WSL Python 均通过；测试用自写普通 tar，经真实 tar 读取到 stdout，不解包到目录。覆盖 provider/版本/notice 漂移、BUILDINFO/PKGBUILD/blob/source 声明不符、损坏缓存、unsafe URL/redirect、下载/工具超时、非零退出、成员集合/字节/预算和旧成功替换。补充复核还覆盖报告原子写入失败：开工前先移除旧报告，预检失败仍显式保留全部 false，报告与 native 输入同路径直接拒绝而不删除输入。
 - MSYS 的完整 `xserver_windows_*test.py` 186 项通过，包括既有编译/链接格式夹具与 GDI 测试程序；这些不是 X server 构建/桌面验收。未重跑本机受杀软干扰的完整引擎构建，未恢复隔离文件、关闭防护或设置排除。
-- WSL 全套尝试有 14 项因缺 `gcc` / `make` 出错；本阶段新增 17 项单独全过。WSL 也缺 zstd，未修改该环境；Linux 真实压缩包验证交给显式安装 zstd 的源码 CI。此环境缺口不能写成 WSL 全量通过。
+- WSL 全套尝试有 14 项因缺 `gcc` / `make` 出错；本阶段新增 18 项单独全过。WSL 也缺 zstd，未修改该环境；Linux 真实压缩包验证交给显式安装 zstd 的源码 CI。此环境缺口不能写成 WSL 全量通过。
+- `npm run check`、行数门禁、Trellis context validate 和 `git diff --check` 通过；staged 文件逐项确认 UTF-8/LF、无 runtime/二进制及私钥/token 模式。未改变应用代码和依赖；完整应用门禁仍交给当前提交 CI。
 
 ## 保留边界与下一项
 

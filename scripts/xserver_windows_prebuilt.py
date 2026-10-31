@@ -11,6 +11,14 @@ from xserver_source_review import ASSETS, ReviewError, digest, require, write_re
 from xserver_windows_prebuilt_inputs import cached_material, inspect_package, parse_metadata, single
 
 
+def initial_result():
+    return {"schema": 1, "status": "FAIL", "observationsComplete": False,
+            "distributionApproved": False, "bundled": False, "desktopVerified": False,
+            "prebuiltDllInternalsIncluded": False, "perFileLicenseReviewComplete": False,
+            "packageSignaturesVerified": False, "upstreamSourceArchivesCollected": False,
+            "sourceDistributionApproved": False, "files": []}
+
+
 def bind_providers(native, packages):
     require(isinstance(native, dict), "PREBUILT_NATIVE_INCOMPLETE")
     require(native.get("privatePeLinkage", {}).get("observationsComplete"), "PREBUILT_NATIVE_INCOMPLETE")
@@ -28,11 +36,7 @@ def collect_materials(cache, *, native=None, offline=False, result=None, assets=
     if result is None:
         result = {}
     result.clear()
-    result.update({"schema": 1, "status": "FAIL", "observationsComplete": False,
-                   "distributionApproved": False, "bundled": False, "desktopVerified": False,
-                   "prebuiltDllInternalsIncluded": False, "perFileLicenseReviewComplete": False,
-                   "packageSignaturesVerified": False, "upstreamSourceArchivesCollected": False,
-                   "sourceDistributionApproved": False, "files": []})
+    result.update(initial_result())
     raw = (assets / "prebuilt-runtime-materials.json").read_bytes()
     manifest = json.loads(raw)
     require(manifest["schema"] == 1 and len(manifest["packages"]) == 4, "PREBUILT_MANIFEST")
@@ -117,8 +121,16 @@ def main(arguments=None):
     parser.add_argument("--native-report", type=Path)
     parser.add_argument("--offline", action="store_true")
     args = parser.parse_args(arguments)
-    result = {"schema": 1, "status": "FAIL", "observationsComplete": False,
-              "distributionApproved": False, "bundled": False, "desktopVerified": False}
+    result = initial_result()
+    try:
+        if args.native_report and args.report.resolve() == args.native_report.resolve():
+            print("FAIL: PREBUILT_REPORT_IS_INPUT")
+            return 1
+        # 与源码采集入口一致：报告写入失败也不能留下旧成功。
+        args.report.unlink(missing_ok=True)
+    except OSError:
+        print("FAIL: REPORT_WRITE")
+        return 1
     code = 1
     try:
         native = None
@@ -136,7 +148,11 @@ def main(arguments=None):
         code = 0
     except (ReviewError, OSError, ValueError, KeyError, TypeError, AttributeError) as error:
         result["error"] = str(error) if isinstance(error, ReviewError) else "PREBUILT_COLLECTION_FAILED"
-    write_report(args.report, result)
+    try:
+        write_report(args.report, result)
+    except OSError:
+        print("FAIL: REPORT_WRITE")
+        return 1
     print(result["status"], result.get("currentPackage", ""), result.get("error", ""))
     return code
 
