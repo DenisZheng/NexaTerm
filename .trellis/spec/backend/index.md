@@ -52,6 +52,7 @@ The goal is to help AI assistants and new team members understand how YOUR proje
 - [Windows X server Build](./xserver-windows-build.md) — native UCRT64 development recipe, actual PE imports and pending distribution obligations.
 - [Windows XKB Runtime](./xserver-windows-xkb.md) — fixed private keyboard data, bounded source aliases and actual native keymap round-trip evidence.
 - [Windows Private PE Links](./xserver-windows-private-links.md) — actual private DLL/tool link inputs and selected members, with explicit prebuilt/resource exclusions.
+- [Windows Prebuilt Materials](./xserver-windows-prebuilt.md) — exact published package, BUILDINFO/PKGBUILD and notice receipts; no DLL-internal or adoption claim.
 
 - [Rlogin Protocol Core](./rlogin-protocol.md) — L0 request/handshake/window framing, bounded private rejection handling and loopback TCP fixtures; terminal/OOB integration remains L1.
 

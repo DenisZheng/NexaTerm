@@ -26,6 +26,7 @@ from xserver_windows_archives import selected_members
 from xserver_windows_xkb import configured_paths, runtime_inventory, xkb_probe
 from xserver_windows_private_links import private_linkage
 from xserver_windows_resources import resource_compiler_evidence
+from xserver_windows_prebuilt import collect_materials
 
 
 MAX_ENTRIES = 5000
@@ -354,6 +355,9 @@ def build(work, report):
                 and item["sha256"] == parser["sha256"] and "xkbcomp" in item["observedBy"]
                 for item in report["compilerInputs"]["files"]), "XKB_PARSER_NOT_OBSERVED")
     report["runtimePackages"] = list(packages.values())
+    report["stage"] = "prebuilt-runtime-materials"
+    report["prebuiltRuntimeMaterials"] = {}
+    collect_materials(work / "prebuilt-cache", native=report, result=report["prebuiltRuntimeMaterials"])
     report["stage"] = "native-version"
     version = run([server, "-version"], work, timeout=20, capture=True)
     require("21.1.25" in version, "SERVER_VERSION")

@@ -1,0 +1,557 @@
+{
+  "schema": 1,
+  "nativeBaselineReference": {
+    "scope": "reference-only-not-a-current-build-observation",
+    "headSha": "15e4dae890a0930cec5abf7e5f1d4e608d4a9056",
+    "runId": 41170743513,
+    "artifactId": 13031626753,
+    "reportSha256": "6e2835d865a04e2982986949fcf4166380dcd99de06fc236eed4d72718d21fb9"
+  },
+  "packages": [
+    {
+      "package": "mingw-w64-ucrt-x86_64-libgcc",
+      "version": "16.2.0-6",
+      "archive": {
+        "url": "https://repo.msys2.org/mingw/ucrt64/mingw-w64-ucrt-x86_64-libgcc-16.2.0-6-any.pkg.tar.zst",
+        "name": "mingw-w64-ucrt-x86_64-libgcc-16.2.0-6-any.pkg.tar.zst",
+        "size": 77191,
+        "sha256": "80b2497f019977dd9528b1abc8621b1328a0115ab1f724047ccbb56bf323f11d"
+      },
+      "members": [
+        ".BUILDINFO",
+        ".MTREE",
+        ".PKGINFO",
+        "ucrt64/",
+        "ucrt64/bin/",
+        "ucrt64/bin/libgcc_s_seh-1.dll",
+        "ucrt64/share/",
+        "ucrt64/share/licenses/",
+        "ucrt64/share/licenses/libgcc/",
+        "ucrt64/share/licenses/libgcc/COPYING.RUNTIME",
+        "ucrt64/share/licenses/libgcc/COPYING3"
+      ],
+      "files": {
+        ".BUILDINFO": {
+          "size": 6996,
+          "sha256": "7fdf767ea43f83f4d49e9430342821c1d89f3a414a591ee74d46c7d5090dcfa9"
+        },
+        ".MTREE": {
+          "size": 461,
+          "sha256": "b045e76cbd0484e3caf47a45f5bee8e5d6d402cc6f0f7e23054a195144789047"
+        },
+        ".PKGINFO": {
+          "size": 1267,
+          "sha256": "4b05a2063f6f7be2cc1e0a5874dc04ca0d144ad366e75043c4fc10ea25f8544a"
+        },
+        "ucrt64/bin/libgcc_s_seh-1.dll": {
+          "size": 150537,
+          "sha256": "791ebf66e99c7c1b4ed3666468cec45a0172b4c8942ac6c84c3e9cab3e1b5270"
+        },
+        "ucrt64/share/licenses/libgcc/COPYING.RUNTIME": {
+          "size": 3324,
+          "sha256": "9d6b43ce4d8de0c878bf16b54d8e7a10d9bd42b75178153e3af6a815bdc90f74"
+        },
+        "ucrt64/share/licenses/libgcc/COPYING3": {
+          "size": 35147,
+          "sha256": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903"
+        }
+      },
+      "provider": {
+        "component": null,
+        "name": "libgcc_s_seh-1.dll",
+        "origin": "target-toolchain",
+        "package": "mingw-w64-ucrt-x86_64-libgcc",
+        "sha256": "791ebf66e99c7c1b4ed3666468cec45a0172b4c8942ac6c84c3e9cab3e1b5270",
+        "size": 150537
+      },
+      "installedNotices": {
+        "share/licenses/libgcc/COPYING.RUNTIME": "9d6b43ce4d8de0c878bf16b54d8e7a10d9bd42b75178153e3af6a815bdc90f74",
+        "share/licenses/libgcc/COPYING3": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903"
+      },
+      "recipe": {
+        "directory": "mingw-w64-gcc",
+        "commit": "fb1bee30b4f11cf4b857197a288466afad49033a",
+        "files": [
+          {
+            "path": "mingw-w64-gcc/0002-i386-Keep-SEH-enabled-for-Win64-sysv_abi-functions.patch",
+            "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/fb1bee30b4f11cf4b857197a288466afad49033a/mingw-w64-gcc/0002-i386-Keep-SEH-enabled-for-Win64-sysv_abi-functions.patch",
+            "size": 3389,
+            "sha256": "fdf4e90a56fc195a8f9a969af39335f158a29f29d42d33c00d908fc47cf5ad24",
+            "gitBlob": "96f2c21236c3e85200bcb9a3bcde1962928ea8db"
+          },
+          {
+            "path": "mingw-w64-gcc/0003-Windows-Follow-Posix-dir-exists-semantics-more-close.patch",
+            "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/fb1bee30b4f11cf4b857197a288466afad49033a/mingw-w64-gcc/0003-Windows-Follow-Posix-dir-exists-semantics-more-close.patch",
+            "size": 4138,
+            "sha256": "3fc35067823f87e48dd3bfd265e7593000dc110fa9ad5f16c81b896765fc897a",
+            "gitBlob": "8d5c2dd735e0afa063d0b914db231f70b6ae17f3"
+          },
+          {
+            "path": "mingw-w64-gcc/0007-Build-EXTRA_GNATTOOLS-for-Ada.patch",
+            "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/fb1bee30b4f11cf4b857197a288466afad49033a/mingw-w64-gcc/0007-Build-EXTRA_GNATTOOLS-for-Ada.patch",
+            "size": 1267,
+            "sha256": "90d5cb570083f9dea4ac0f0f87e3e8d2230f5052e6f9b946061a20a224a9d195",
+            "gitBlob": "6450d95972816387a3d67dae0041bdd77ecbbdf1"
+          },
+          {
+            "path": "mingw-w64-gcc/0008-Prettify-linking-no-undefined.patch",
+            "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/fb1bee30b4f11cf4b857197a288466afad49033a/mingw-w64-gcc/0008-Prettify-linking-no-undefined.patch",
+            "size": 1404,
+            "sha256": "8d2d53ae26b777d90189240494de1b895c5efa1ebdcdfbf5774f29fc742499d9",
+            "gitBlob": "c35a2eb0dd9a25fd19d6866bea2ea0238d93ae9d"
+          },
+          {
+            "path": "mingw-w64-gcc/0011-Enable-shared-gnat-implib.patch",
+            "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/fb1bee30b4f11cf4b857197a288466afad49033a/mingw-w64-gcc/0011-Enable-shared-gnat-implib.patch",
+            "size": 1474,
+            "sha256": "5ef4148acc4a2b7ed648d4fe75fab5545e84b4b93a12d6ba4e4ea6061dd635fa",
+            "gitBlob": "3a953c8cdb622640f3ff499ad42eaa676dcbc1b6"
+          },
+          {
+            "path": "mingw-w64-gcc/0012-Handle-spaces-in-path-for-default-manifest.patch",
+            "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/fb1bee30b4f11cf4b857197a288466afad49033a/mingw-w64-gcc/0012-Handle-spaces-in-path-for-default-manifest.patch",
+            "size": 2243,
+            "sha256": "e98805ead7d78ee2a92f237894c4b2b7ddc1688e1b517d8c04f28d440202e40f",
+            "gitBlob": "adc926b3503811c72949adbe21251a6d5896be00"
+          },
+          {
+            "path": "mingw-w64-gcc/0014-gcc-9-branch-clone_function_name_1-Retain-any-stdcall-suffix.patch",
+            "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/fb1bee30b4f11cf4b857197a288466afad49033a/mingw-w64-gcc/0014-gcc-9-branch-clone_function_name_1-Retain-any-stdcall-suffix.patch",
+            "size": 3690,
+            "sha256": "fd9bdecb2bbc4796bbc9f00b708dac42ef9e3464a06d6d27e5475cee117de5be",
+            "gitBlob": "cbb82d017a2c5439d4391880be69768c16cf2207"
+          },
+          {
+            "path": "mingw-w64-gcc/0020-libgomp-Don-t-hard-code-MS-printf-attributes.patch",
+            "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/fb1bee30b4f11cf4b857197a288466afad49033a/mingw-w64-gcc/0020-libgomp-Don-t-hard-code-MS-printf-attributes.patch",
+            "size": 1608,
+            "sha256": "ad1f7b5e7afaaec008b7cbd14feea13a10989fa91bda7003af72d457619bb199",
+            "gitBlob": "08034b2f16b917ddc9699750285d85eaa45dd4ff"
+          },
+          {
+            "path": "mingw-w64-gcc/0021-bootstrap-gnattools-Pass-target-sysroot-flags-to-boo.patch",
+            "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/fb1bee30b4f11cf4b857197a288466afad49033a/mingw-w64-gcc/0021-bootstrap-gnattools-Pass-target-sysroot-flags-to-boo.patch",
+            "size": 5086,
+            "sha256": "76455c46eec4df95a80bbf7e5bcd2d165f300976c79c1baf0bf7ed20f000cdd4",
+            "gitBlob": "5655f193a1cc9eed0f9ff86837b8a81c1747b2c3"
+          },
+          {
+            "path": "mingw-w64-gcc/0022-mingw-Remove-outdated-mingw-stuff.patch",
+            "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/fb1bee30b4f11cf4b857197a288466afad49033a/mingw-w64-gcc/0022-mingw-Remove-outdated-mingw-stuff.patch",
+            "size": 5553,
+            "sha256": "ec05f8f26698dae4e0e0b58189cbf509185ad6d40b4950b33e28b638bf70c7ae",
+            "gitBlob": "29ebf6784505777d9cc91f3bb49f9b46973f9236"
+          },
+          {
+            "path": "mingw-w64-gcc/0023-Ada-Don-t-export-gnat1-s-symbols-on-PE-hosts.patch",
+            "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/fb1bee30b4f11cf4b857197a288466afad49033a/mingw-w64-gcc/0023-Ada-Don-t-export-gnat1-s-symbols-on-PE-hosts.patch",
+            "size": 2560,
+            "sha256": "395dd4df29c295f917aa4a136a0aa72af34eee6320ecc2d92ee717397578398d",
+            "gitBlob": "d6e0f5bad5a362c2dae89a2301ebd9f0901da904"
+          },
+          {
+            "path": "mingw-w64-gcc/0024-libgfortran-Guard-locale-restoration-for-formatted-I0.patch",
+            "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/fb1bee30b4f11cf4b857197a288466afad49033a/mingw-w64-gcc/0024-libgfortran-Guard-locale-restoration-for-formatted-I0.patch",
+            "size": 2138,
+            "sha256": "976d14f803a211b19d9bf0169c08d4fde05af5cc18073f2fc8efc9a3cb17890a",
+            "gitBlob": "c958314b53739fa79406faf573dcf26dce8ff2a7"
+          },
+          {
+            "path": "mingw-w64-gcc/0025-libgfortran-Copy-LC_NUMERIC-string-for-formatted-IO.patch",
+            "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/fb1bee30b4f11cf4b857197a288466afad49033a/mingw-w64-gcc/0025-libgfortran-Copy-LC_NUMERIC-string-for-formatted-IO.patch",
+            "size": 1980,
+            "sha256": "f591efc820a2c72aefb83179f7cbd3f4654231b68700486bd04ee32e2db61de5",
+            "gitBlob": "efa4ea36074faeb2a7e3cd5a8915302640447cbd"
+          },
+          {
+            "path": "mingw-w64-gcc/0140-gcc-diagnostic-color.patch",
+            "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/fb1bee30b4f11cf4b857197a288466afad49033a/mingw-w64-gcc/0140-gcc-diagnostic-color.patch",
+            "size": 1275,
+            "sha256": "c94004dab1685a6fa9124de86aae742df4136a2e9ff5d5e1ad87ecdc35fbcef4",
+            "gitBlob": "ad9b3a1467a584cd0eab15463153901b373477d4"
+          },
+          {
+            "path": "mingw-w64-gcc/0200-add-m-no-align-vector-insn-option-for-i386.patch",
+            "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/fb1bee30b4f11cf4b857197a288466afad49033a/mingw-w64-gcc/0200-add-m-no-align-vector-insn-option-for-i386.patch",
+            "size": 7553,
+            "sha256": "1484911163634f30324827619c873a6267b377abba0df8bbedfd128163c53ea4",
+            "gitBlob": "0cf16938463bc52872fb490733366434cb643c47"
+          },
+          {
+            "path": "mingw-w64-gcc/2001-fix-building-rust-on-mingw-w64.patch",
+            "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/fb1bee30b4f11cf4b857197a288466afad49033a/mingw-w64-gcc/2001-fix-building-rust-on-mingw-w64.patch",
+            "size": 343,
+            "sha256": "a411f59953553a3d01dd64c79b1acbb91eca092c4cb01bfd26b1c51c3eb798e8",
+            "gitBlob": "e1330fe8d091b81dac56db5f4adfa602e06bee17"
+          },
+          {
+            "path": "mingw-w64-gcc/3001-fix-codeview-crashes.patch",
+            "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/fb1bee30b4f11cf4b857197a288466afad49033a/mingw-w64-gcc/3001-fix-codeview-crashes.patch",
+            "size": 4097,
+            "sha256": "f21f9ab731e9cab8fd4ca8c289497f859ef7004e6fa0507877dc2559ac2071c3",
+            "gitBlob": "6ac89abd6831a8c0894692f30dd764c319587c9c"
+          },
+          {
+            "path": "mingw-w64-gcc/PKGBUILD",
+            "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/fb1bee30b4f11cf4b857197a288466afad49033a/mingw-w64-gcc/PKGBUILD",
+            "size": 26394,
+            "sha256": "1a123ea062e01beb611c4375999492b0f41ef2d92d03e38cb29e7c23e855ad45",
+            "gitBlob": "c633fccd531fc5a5c045a9e2d3c14cfda512868c"
+          },
+          {
+            "path": "mingw-w64-gcc/gdbinit",
+            "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/fb1bee30b4f11cf4b857197a288466afad49033a/mingw-w64-gcc/gdbinit",
+            "size": 180,
+            "sha256": "bce81824fc89e5e62cca350de4c17a27e27a18a1a1ad5ca3492aec1fc5af3234",
+            "gitBlob": "5786c603704a661d158ddb4d76c8b97c9d7bdae0"
+          }
+        ]
+      },
+      "sourceReferences": {
+        "upstreamArchiveUrl": "https://ftp.gnu.org/gnu/gcc/gcc-16.2.0/gcc-16.2.0.tar.xz",
+        "declaredArchiveSha256": "e6738e29597f733270731aa90600f37ffdc045079dfc27ec7e8192cc81085c3e",
+        "detachedSignatureDeclared": true,
+        "declaredSignatureChecksum": "SKIP",
+        "declaredValidPgpKeys": [
+          "F3691687D867B81B51CE07D9BBE43771487328A9",
+          "86CFFCA918CF3AF47147588051E8B148A9999C34",
+          "13975A70E63C361C73AE69EF6EEB81F8981C74C7",
+          "D3A93CAD751C2AF4F8C7AD516C35B99309B5FA62"
+        ]
+      }
+    },
+    {
+      "package": "mingw-w64-ucrt-x86_64-pixman",
+      "version": "0.46.4-3",
+      "archive": {
+        "url": "https://repo.msys2.org/mingw/ucrt64/mingw-w64-ucrt-x86_64-pixman-0.46.4-3-any.pkg.tar.zst",
+        "name": "mingw-w64-ucrt-x86_64-pixman-0.46.4-3-any.pkg.tar.zst",
+        "size": 356199,
+        "sha256": "4c01b986563d2b5f7ad6fcec2d0ec9915d2f242ddac5eacddc19971964241cc5"
+      },
+      "members": [
+        ".BUILDINFO",
+        ".MTREE",
+        ".PKGINFO",
+        "ucrt64/",
+        "ucrt64/bin/",
+        "ucrt64/bin/libpixman-1-0.dll",
+        "ucrt64/include/",
+        "ucrt64/include/pixman-1/",
+        "ucrt64/include/pixman-1/pixman-version.h",
+        "ucrt64/include/pixman-1/pixman.h",
+        "ucrt64/lib/",
+        "ucrt64/lib/libpixman-1.a",
+        "ucrt64/lib/libpixman-1.dll.a",
+        "ucrt64/lib/pkgconfig/",
+        "ucrt64/lib/pkgconfig/pixman-1.pc",
+        "ucrt64/share/",
+        "ucrt64/share/licenses/",
+        "ucrt64/share/licenses/pixman/",
+        "ucrt64/share/licenses/pixman/COPYING"
+      ],
+      "files": {
+        ".BUILDINFO": {
+          "size": 6303,
+          "sha256": "09bc09578a081ffc5bf420e250f881b5b9257f74d26ff45d00706eeca0d74f1f"
+        },
+        ".MTREE": {
+          "size": 694,
+          "sha256": "3b386a37d64623c62924947f926f54588fca09e2c833902a8b7763bdcadc6d6e"
+        },
+        ".PKGINFO": {
+          "size": 644,
+          "sha256": "6655e7d673a4049cdcdbf6013801207b49e7cc8f3ea35255b829c52685d86c3d"
+        },
+        "ucrt64/bin/libpixman-1-0.dll": {
+          "size": 737775,
+          "sha256": "12e693d94829f013e0bd7c042b30998b20e91ece7b6f4d5f075ddbb58b373c92"
+        },
+        "ucrt64/include/pixman-1/pixman-version.h": {
+          "size": 1786,
+          "sha256": "eebbff4b66cbcc98b3ffa16c68a919d4a16dfcffb86cd1fb85faea4f07bcd76b"
+        },
+        "ucrt64/include/pixman-1/pixman.h": {
+          "size": 55372,
+          "sha256": "af49363cee8b2340a215e1ea477761c2c867905c17abe129e5778bfc65033f53"
+        },
+        "ucrt64/lib/libpixman-1.a": {
+          "size": 903538,
+          "sha256": "0196aa8f6fae1ea0a6efece3486eaea6473892a7c95fa7ad2d57c0ed2ab46e2c"
+        },
+        "ucrt64/lib/libpixman-1.dll.a": {
+          "size": 137328,
+          "sha256": "e0f7d0a24a364904b515b8ef2a096f3aa8ba9268d288af3dd187c9947b58cddc"
+        },
+        "ucrt64/lib/pkgconfig/pixman-1.pc": {
+          "size": 238,
+          "sha256": "f21f978ff107212ea47b6254ecca572888cd30e161e291048ac0ad1b80f840cd"
+        },
+        "ucrt64/share/licenses/pixman/COPYING": {
+          "size": 2087,
+          "sha256": "fac9270f0987b96ff4533fca3548c633e02083cbba4a0172a3b149b2e4019793"
+        }
+      },
+      "provider": {
+        "component": null,
+        "name": "libpixman-1-0.dll",
+        "origin": "target-toolchain",
+        "package": "mingw-w64-ucrt-x86_64-pixman",
+        "sha256": "12e693d94829f013e0bd7c042b30998b20e91ece7b6f4d5f075ddbb58b373c92",
+        "size": 737775
+      },
+      "installedNotices": {
+        "share/licenses/pixman/COPYING": "fac9270f0987b96ff4533fca3548c633e02083cbba4a0172a3b149b2e4019793"
+      },
+      "recipe": {
+        "directory": "mingw-w64-pixman",
+        "commit": "82bcf47d0ae2621e1cd00fb82c8ee5db02b91955",
+        "files": [
+          {
+            "path": "mingw-w64-pixman/PKGBUILD",
+            "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/82bcf47d0ae2621e1cd00fb82c8ee5db02b91955/mingw-w64-pixman/PKGBUILD",
+            "size": 1731,
+            "sha256": "b1a58a74281f8b2ab72986d745249590238dfeed1dd2fca811b362fa7d582ea4",
+            "gitBlob": "459ae9788a53ec74b7aa62572aa4ae6bf3114996"
+          }
+        ]
+      },
+      "sourceReferences": {
+        "upstreamArchiveUrl": "https://xorg.freedesktop.org/releases/individual/lib/pixman-0.46.4.tar.xz",
+        "declaredArchiveSha256": "a098c33924754ad43f981b740f6d576c70f9ed1006e12221b1845431ebce1239",
+        "detachedSignatureDeclared": false
+      }
+    },
+    {
+      "package": "mingw-w64-ucrt-x86_64-libwinpthread",
+      "version": "14.0.0.r569.g34eeafb7d-1",
+      "archive": {
+        "url": "https://repo.msys2.org/mingw/ucrt64/mingw-w64-ucrt-x86_64-libwinpthread-14.0.0.r569.g34eeafb7d-1-any.pkg.tar.zst",
+        "name": "mingw-w64-ucrt-x86_64-libwinpthread-14.0.0.r569.g34eeafb7d-1-any.pkg.tar.zst",
+        "size": 34529,
+        "sha256": "b4ebe2826e848c5e790e06ea7b37d3e0594e005f42382b0506886f17df8127da"
+      },
+      "members": [
+        ".BUILDINFO",
+        ".MTREE",
+        ".PKGINFO",
+        "ucrt64/",
+        "ucrt64/bin/",
+        "ucrt64/bin/libwinpthread-1.dll",
+        "ucrt64/share/",
+        "ucrt64/share/licenses/",
+        "ucrt64/share/licenses/libwinpthread/",
+        "ucrt64/share/licenses/libwinpthread/COPYING"
+      ],
+      "files": {
+        ".BUILDINFO": {
+          "size": 7477,
+          "sha256": "455df1f932e3ad469181e178b5a0afabb34cfe1c68f39525b3f0e4b5a4dd10e3"
+        },
+        ".MTREE": {
+          "size": 396,
+          "sha256": "c015104874519c3b44cacc75a03b4811f2c2b05270e1fa4685c1737170437e6c"
+        },
+        ".PKGINFO": {
+          "size": 805,
+          "sha256": "8dc1a10605a4ed040e105ca6039b4cb5b48f861374d463edd09daa27ad2b843a"
+        },
+        "ucrt64/bin/libwinpthread-1.dll": {
+          "size": 73820,
+          "sha256": "ee4f503512b09d7e2668518c41d6c176755a354523ae15aa4d36220c9cb31791"
+        },
+        "ucrt64/share/licenses/libwinpthread/COPYING": {
+          "size": 2883,
+          "sha256": "63263614cdd29f2f93cba85e992f041b31f9fc7b4033692f31269489a8a1b177"
+        }
+      },
+      "provider": {
+        "component": null,
+        "name": "libwinpthread-1.dll",
+        "origin": "target-toolchain",
+        "package": "mingw-w64-ucrt-x86_64-libwinpthread",
+        "sha256": "ee4f503512b09d7e2668518c41d6c176755a354523ae15aa4d36220c9cb31791",
+        "size": 73820
+      },
+      "installedNotices": {
+        "share/licenses/libwinpthread/COPYING": "63263614cdd29f2f93cba85e992f041b31f9fc7b4033692f31269489a8a1b177"
+      },
+      "recipe": {
+        "directory": "mingw-w64-winpthreads",
+        "commit": "aae0fa06746a677422daa223d479d34dc8895796",
+        "files": [
+          {
+            "path": "mingw-w64-winpthreads/PKGBUILD",
+            "size": 3897,
+            "sha256": "ce977f0a06848c55cfdea7bdcbaa49036ca204eb4f1a1d11788712d355996367",
+            "gitBlob": "0416e8fe370b8ea345d7d92bb067c4cbbe433953",
+            "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/aae0fa06746a677422daa223d479d34dc8895796/mingw-w64-winpthreads/PKGBUILD"
+          }
+        ]
+      },
+      "sourceReferences": {
+        "kind": "git",
+        "url": "git+https://git.code.sf.net/p/mingw-w64/mingw-w64#commit=34eeafb7d0e5b037b4644c17defc4f4131ad85cc",
+        "commit": "34eeafb7d0e5b037b4644c17defc4f4131ad85cc",
+        "declaredMakepkgArchiveSha256": "09e0b1df237e310561963ade682286855ef45119550df4ca64e712854bc4aaa6",
+        "makepkgArchiveChecksumIndependentlyReproduced": false,
+        "localPatchFiles": [],
+        "detachedSourceSignatureDeclared": false
+      }
+    },
+    {
+      "package": "mingw-w64-ucrt-x86_64-zlib",
+      "version": "1.3.2-3",
+      "archive": {
+        "url": "https://repo.msys2.org/mingw/ucrt64/mingw-w64-ucrt-x86_64-zlib-1.3.2-3-any.pkg.tar.zst",
+        "name": "mingw-w64-ucrt-x86_64-zlib-1.3.2-3-any.pkg.tar.zst",
+        "size": 108848,
+        "sha256": "130e6ef04c654fc2150a177600aa5ed0035087665a893479d2c85ba7485d5704"
+      },
+      "members": [
+        ".BUILDINFO",
+        ".MTREE",
+        ".PKGINFO",
+        "ucrt64/",
+        "ucrt64/bin/",
+        "ucrt64/bin/zlib1.dll",
+        "ucrt64/include/",
+        "ucrt64/include/zconf.h",
+        "ucrt64/include/zlib.h",
+        "ucrt64/lib/",
+        "ucrt64/lib/libz.a",
+        "ucrt64/lib/libz.dll.a",
+        "ucrt64/lib/pkgconfig/",
+        "ucrt64/lib/pkgconfig/zlib.pc",
+        "ucrt64/share/",
+        "ucrt64/share/licenses/",
+        "ucrt64/share/licenses/zlib/",
+        "ucrt64/share/licenses/zlib/LICENSE",
+        "ucrt64/share/man/",
+        "ucrt64/share/man/man3/",
+        "ucrt64/share/man/man3/zlib.3.gz"
+      ],
+      "files": {
+        ".BUILDINFO": {
+          "size": 6075,
+          "sha256": "1583e14da355bd89b68704ad64dae3196e151f05ed3fafd3608f7ee8f3313da1"
+        },
+        ".MTREE": {
+          "size": 744,
+          "sha256": "353d90879a75b4083d7d9ce535b1b578129a65ea62de33d3b0023238f041dd56"
+        },
+        ".PKGINFO": {
+          "size": 559,
+          "sha256": "ad21f7367879d2ac725f08bb520407ccb7680831d7dcaf48ec44cefaa18e8dbd"
+        },
+        "ucrt64/bin/zlib1.dll": {
+          "size": 121530,
+          "sha256": "8ae7aeb0467763a1e271cd831ca8e2f7fd101602adb9923100ea26c6be2a559b"
+        },
+        "ucrt64/include/zconf.h": {
+          "size": 16970,
+          "sha256": "6f3a8f18eaa62f482d00e4d5b083afe4bbe4ace0864d2b88a78e262680788183"
+        },
+        "ucrt64/include/zlib.h": {
+          "size": 103848,
+          "sha256": "818667d6ab6a37fe7469cb06a7f0cb2c2cb2f2c948a03e5accf1a4a74bf3020a"
+        },
+        "ucrt64/lib/libz.a": {
+          "size": 113130,
+          "sha256": "4cb41e66d0b8dabe744ee5ba93a11bea6b3c83cc9caab56721a23a8a87244286"
+        },
+        "ucrt64/lib/libz.dll.a": {
+          "size": 70902,
+          "sha256": "0c4848c6215d524133447d4449e0cb8a0b6673376b19be2b579506fc1d57c492"
+        },
+        "ucrt64/lib/pkgconfig/zlib.pc": {
+          "size": 260,
+          "sha256": "882348d91826831e18962c8e00e41ad61ce3515143d8fc32b2324ebe795003cd"
+        },
+        "ucrt64/share/licenses/zlib/LICENSE": {
+          "size": 1002,
+          "sha256": "e32ff4e00d9d94930537635291da39e7e612703334bf6fde8c7f1686fe8a45a2"
+        },
+        "ucrt64/share/man/man3/zlib.3.gz": {
+          "size": 2079,
+          "sha256": "babd82a67b5d173f207592953aa8d4c191b37e8c67117de1d7386bd108de2eb5"
+        }
+      },
+      "provider": {
+        "component": null,
+        "name": "zlib1.dll",
+        "origin": "target-toolchain",
+        "package": "mingw-w64-ucrt-x86_64-zlib",
+        "sha256": "8ae7aeb0467763a1e271cd831ca8e2f7fd101602adb9923100ea26c6be2a559b",
+        "size": 121530
+      },
+      "installedNotices": {
+        "share/licenses/zlib/LICENSE": "e32ff4e00d9d94930537635291da39e7e612703334bf6fde8c7f1686fe8a45a2"
+      },
+      "recipe": {
+        "directory": "mingw-w64-zlib",
+        "commit": "433ce7b2cb3ff79751e4a125974f7dfa25f60d57",
+        "files": [
+          {
+            "path": "mingw-w64-zlib/PKGBUILD",
+            "size": 4335,
+            "sha256": "64c6315e3825a295aa82c3218017d5a700381711bfc58a5cbceb9f6bc685b55e",
+            "gitBlob": "222183a0fc21f5e285dafd531d86d65bef15904a",
+            "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/433ce7b2cb3ff79751e4a125974f7dfa25f60d57/mingw-w64-zlib/PKGBUILD"
+          },
+          {
+            "path": "mingw-w64-zlib/01-zlib-1.2.11-1-buildsys.mingw.patch",
+            "size": 9316,
+            "sha256": "b58b353d976d6fdd9a5094e60fa39439d4f14e9bf8be4a8bd475f2cd47f10226",
+            "gitBlob": "ec7c0b8e38c37bf7cb86b73297948499c775f192",
+            "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/433ce7b2cb3ff79751e4a125974f7dfa25f60d57/mingw-w64-zlib/01-zlib-1.2.11-1-buildsys.mingw.patch"
+          },
+          {
+            "path": "mingw-w64-zlib/03-dont-put-sodir-into-L.mingw.patch",
+            "size": 172,
+            "sha256": "7287d12db57dcf0f66964c861100bf06ebe1ddcb243e7ee0773fcab1b2935596",
+            "gitBlob": "0fce7d5844646e21230ad3f4248629127a5dbd30",
+            "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/433ce7b2cb3ff79751e4a125974f7dfa25f60d57/mingw-w64-zlib/03-dont-put-sodir-into-L.mingw.patch"
+          },
+          {
+            "path": "mingw-w64-zlib/04-fix-largefile-support.patch",
+            "size": 756,
+            "sha256": "8e1cdf8edfc6ac08b0e660ca42a977942a88fab3ff59c01c87ba96500e2c3e63",
+            "gitBlob": "bcfb3f02ec0a3f6e3920127921d6b9d51c08f459",
+            "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/433ce7b2cb3ff79751e4a125974f7dfa25f60d57/mingw-w64-zlib/04-fix-largefile-support.patch"
+          },
+          {
+            "path": "mingw-w64-zlib/07-Add-no-undefined-to-link-to-enable-build-shared-vers.patch",
+            "size": 722,
+            "sha256": "fb83292f494f649ea7f1835aa4abea61acc593d7f90625741d42cd99cac0e075",
+            "gitBlob": "e2621b1d17ee47c55b68d917734212f334464c61",
+            "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/433ce7b2cb3ff79751e4a125974f7dfa25f60d57/mingw-w64-zlib/07-Add-no-undefined-to-link-to-enable-build-shared-vers.patch"
+          },
+          {
+            "path": "mingw-w64-zlib/08-Add-bzip2-library-to-pkg-config-file.patch",
+            "size": 616,
+            "sha256": "0be98a7e660e7c068856f08b9e92d6c73a6b0d88c3e29a9716140b147f7c23c5",
+            "gitBlob": "306254e1442f7e929e833d3edfa695b15015d9a3",
+            "url": "https://raw.githubusercontent.com/msys2/MINGW-packages/433ce7b2cb3ff79751e4a125974f7dfa25f60d57/mingw-w64-zlib/08-Add-bzip2-library-to-pkg-config-file.patch"
+          }
+        ]
+      },
+      "sourceReferences": {
+        "upstreamArchiveUrl": "https://github.com/madler/zlib/releases/download/v1.3.2/zlib-1.3.2.tar.xz",
+        "declaredArchiveSha256": "d7a0654783a4da529d1bb793b7ad9c3318020af77667bcae35f95d0e42a792f3",
+        "detachedSignatureDeclared": true,
+        "declaredSignatureChecksum": "SKIP",
+        "declaredValidPgpKeys": [
+          "5ED46A6721D365587791E2AA783FCD8E58BCAFBA"
+        ]
+      },
+      "externalMaterials": [
+        {
+          "url": "https://patch-diff.githubusercontent.com/raw/madler/zlib/pull/1165.patch",
+          "size": 695,
+          "sha256": "af9ce272d3495a27c91e3d37ccfe1146d7e1847ded8b871d86ce3c1875d7cea7"
+        }
+      ]
+    }
+  ]
+}
