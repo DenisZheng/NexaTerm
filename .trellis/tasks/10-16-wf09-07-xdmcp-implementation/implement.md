@@ -9,11 +9,11 @@
 - [x] 将四个实际 DLL 绑定固定官方发布归档、`.PKGINFO` / `.BUILDINFO`、完整随包 notice，以及 `.BUILDINFO` 指定的精确 PKGBUILD；补齐 r569/zlib `-3`，不挪用旧版本结论。
 - [x] 记录固定配方目录中实际 source/patch 材料的原始身份、上游源码引用及环境声明；不执行配方、不把声明环境当内部链接贡献，不把尚未取得的上游源码写成已供给。
 - [x] 实现可重复运行的只读材料核验入口和有意义反例，验证 provider/版本/hash/配方/notice 漂移、缺材料、非零工具退出和旧成功报告替换；在线固定输入与离线复查均留证。
-- [ ] 检查、更新 code-spec/阶段记录，按既有授权提交推到同一 PR 并等待本阶段门禁完成。完成范围限包/配方证据，不关闭内部 map/member、独立签名、逐文件权限、源码供给方式或 X2/X3。
+- [x] 检查、更新 code-spec/阶段记录，按既有授权提交推到同一 PR 并等待本阶段门禁完成。完成范围限包/配方证据，不关闭内部 map/member、独立签名、逐文件权限、源码供给方式或 X2/X3。
 
 资源授权的上游联系、独立图标/manifest/配置替换和 libgcc 分发方式仍需明确人审；本阶段不代作该决定，也不通过反复整理同一份旧证据宣称这些项完成。
 
-本阶段实现、材料数量、本地真实在线/离线验证和剩余边界见 [预编译材料阶段证据](research/windows-prebuilt-materials-evidence.md)；新增原生 `prebuilt-runtime-materials` 门禁与 JSON-only 独立源码采集。需要取得本阶段新提交的 CI 结果后才关闭本阶段，不归档整个 XDMCP 任务。
+本阶段完成：代码 `d18b651` 的完整 CI `41175645356`、源码 `41175645308`、原生 `41175645305` 全成功，187 项原生反例及完整构建/最终版本通过；新增 `prebuilt-runtime-materials` 门禁绑定当次实际 provider，JSON-only artifact 已独立核验。实现、材料数量、本地在线/离线验证和保留边界见 [预编译材料阶段证据](research/windows-prebuilt-materials-evidence.md)。下一阶段继续独立包/源码签名与完整 source/VCS 材料，B2–B4、资源授权和 X2/X3 仍开放，不归档整个任务。
 
 2026-10-31 阶段完成：代码 `61c0192` 已通过完整 CI `41169134355`、源码 `41169134350`、原生 `41169134366`；169 项 native 反例及完整构建/版本/资源检查成功，精确 artifact ZIP/JSON 已独立核验。资源路径、COFF BSS/长名、固定默认 manifest 和最终 PE 闭合，四 DLL 的 B0 实际身份已重绑。详见 [阶段完成与排除范围](research/windows-resource-evidence.md)；不归档整个任务、不合并/发版，发行/随包/桌面仍为 false。下文的待提交/CI 失败是已被本条替代的历史快照。
 

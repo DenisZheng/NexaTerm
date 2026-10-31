@@ -6,7 +6,7 @@
 
 ## 当前下一阶段：三协议功能实现（2026-10-16）
 
-2026-10-31 下一阶段：**PR #89 四个预编译运行库的包/精确配方材料采集已实现，待新提交 CI 验证**。本地实际在线/离线核验通过；四包 61 成员、32 普通文件、27 配方文件及独立远端 patch 已与实际 DLL/notice 绑定。新增原生门禁必须核对当次 provider；源码 CI 独立核对固定引用。未重跑本机完整引擎构建，未放宽杀软或发行门禁。该阶段不关闭预编译 DLL 内部、独立签名、成员许可/源码供给及 X2/X3，详见 [阶段证据](.trellis/tasks/10-16-wf09-07-xdmcp-implementation/research/windows-prebuilt-materials-evidence.md)。
+2026-10-31 最新阶段完成：**PR #89 四个预编译运行库的包/精确配方材料门禁已通过**。代码 `d18b651` 的完整 CI `41175645356`、源码 `41175645308`、Windows 原生 `41175645305` 全成功；187 项原生反例、完整构建/资源/最终版本通过，artifact 已独立核验。四包 61 成员、32 普通文件、27 配方文件及独立远端 patch 已绑定当次实际 DLL/notice，与独立源码 CI 一致。本机未重跑完整引擎构建，未放宽杀软或发行门禁。接下来补独立包/源码签名与完整 source/VCS 材料；预编译 DLL 内部、成员许可/源码供给、资源授权及 X2/X3 仍未完成，详见 [阶段证据](.trellis/tasks/10-16-wf09-07-xdmcp-implementation/research/windows-prebuilt-materials-evidence.md)。
 
 2026-10-31 最新结果：**PR #89 资源审查实现阶段已完成原生验证**。代码 `61c0192` 的完整 CI `41169134355`、源码 `41169134350`、Windows 原生 `41169134366` 全部 SUCCESS；169 项原生反例、完整构建/安装、资源/PE 闭合及最终版本 probe 通过，artifact ZIP/JSON 已独立核验。XWin 的 21 个资源输入、重放对象、manifest/9 个图标、固定工具链默认 manifest 及 14 个私有 PE 目标已留证；四 DLL 的 B0 身份重绑完成。仍保持 Draft，不合并或发行；三个资源授权、预编译 DLL 内部、分发材料和 X2/X3 未完成，`distributionApproved/bundled/desktopVerified=false`。本机未重跑受杀软干扰的完整构建。精确证据与下一阶段见 [资源审查记录](.trellis/tasks/10-16-wf09-07-xdmcp-implementation/research/windows-resource-evidence.md)。下列更早快照仅保留历史，不覆盖本条。
 
