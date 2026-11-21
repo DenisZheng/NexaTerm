@@ -13,3 +13,5 @@ overrides:
   # jsdom 传递依赖；4.0.1 发布于 2026-09-18，被 CI pnpm 11 的 minimumReleaseAge 策略拒绝。
   # 待其发布满策略窗口后可移除本行并重新解析。
   "@csstools/css-tokenizer": "4.0.0"
+  # GHSA-68fv-2mgg-jv7q：source-map-js < 1.2.2 事件循环 DoS（high，dev-only：vite>postcss 与 jsdom>css-tree）；下限即修复版 1.2.2（2026-09-30 发布）。
+  source-map-js: "^1.2.2"

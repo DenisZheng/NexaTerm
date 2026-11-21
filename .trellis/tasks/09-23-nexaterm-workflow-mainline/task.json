@@ -31,7 +31,8 @@
     "10-05-wf-08e-a15-release-acceptance",
     "10-06-workstation-ux-polish",
     "10-06-home-after-close-diagnosis",
-    "10-06-wf07-files-follow-snapshot"
+    "10-06-wf07-files-follow-snapshot",
+    "10-11-npm-source-map-js-advisory"
   ],
   "parent": null,
   "relatedFiles": [],
