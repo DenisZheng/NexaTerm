@@ -2673,5 +2673,8 @@
   "terminal.status.listenerFailed": "Event listener failed",
   "terminal.status.disconnected": "Disconnected",
   "workspace.time.minuteAgo": "{count} minute ago",
-  "workspace.time.hourAgo": "{count} hour ago"
+  "workspace.time.hourAgo": "{count} hour ago",
+  "workspace.terminalClose.failed": "Could not close {count} terminal session(s). They remain queued for cleanup.",
+  "workspace.terminalClose.retry": "Retry cleanup",
+  "workspace.terminalClose.retrying": "Retrying cleanup..."
 }

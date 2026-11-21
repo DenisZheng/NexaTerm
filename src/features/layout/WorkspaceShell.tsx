@@ -100,6 +100,10 @@ import {
 import { connectionTimestampOf, sortConnectionsByRecent } from "../connections/connectionSearch";
 import { formatRelativeTime } from "../connections/relativeTime";
 import { terminalStatusLabel } from "../terminal/terminalStatusLabel";
+import {
+  createTerminalCloseCoordinator,
+  type TerminalCloseFailure,
+} from "../terminal/terminalCloseCoordinator";
 import { isQuickConnectCredentialError, type QuickConnectTarget } from "../connections/quickConnect";
 import { connectTemporaryQuickTerminal, createTemporaryQuickConnectProfile, prepareTemporaryQuickConnectCredentials, releaseTemporaryQuickConnectRefs, saveTemporaryQuickConnectProfile } from "../connections/quickConnectRuntime";
 import { finalTemporaryContextRefs, rebindConnectionItems, rebindTemporaryTerminalTab } from "../connections/quickConnectSession";
@@ -985,6 +989,16 @@ export function WorkspaceShell() {
     syncRdpEmbeddedBounds(session, bounds, true);
   }, [activeRdpSessionId, measureRdpEmbeddedBounds, syncRdpEmbeddedBounds]);
   const terminalWarmupCaptureStopsRef = useRef(new Map<string, () => void>());
+  const [terminalCloseFailures, setTerminalCloseFailures] = useState<TerminalCloseFailure[]>([]);
+  const [terminalCloseRetrying, setTerminalCloseRetrying] = useState(false);
+  const terminalCloseCoordinatorRef = useRef<ReturnType<typeof createTerminalCloseCoordinator> | null>(null);
+  if (!terminalCloseCoordinatorRef.current) {
+    terminalCloseCoordinatorRef.current = createTerminalCloseCoordinator(
+      (sessionId) => terminalClose(sessionId),
+      setTerminalCloseFailures,
+      formatDetailedError,
+    );
+  }
   const [commandSenderOpen, setCommandSenderOpen] = useState(false);
   const [multiExecBarOpen, setMultiExecBarOpen] = useState(false);
   const [commandSenderInput, setCommandSenderInput] = useState("");
@@ -6315,7 +6329,7 @@ export function WorkspaceShell() {
       const sessionId = await openSession();
       if (!localTerminalTabExists(tab.id)) {
         stopTerminalWarmupCapture(tab.id);
-        await terminalClose(sessionId).catch(() => undefined);
+        await closeRuntimeTerminalSession(sessionId);
         return;
       }
       handoffComplete = true;
@@ -7164,12 +7178,31 @@ export function WorkspaceShell() {
     closeTerminalTabs([tabId]);
   }
 
+  function closeRuntimeTerminalSession(sessionId: string) {
+    if (!hasTauriRuntime()) {
+      return Promise.resolve();
+    }
+    return terminalCloseCoordinatorRef.current?.close(sessionId) || Promise.resolve();
+  }
+
+  async function retryFailedTerminalCloses() {
+    if (terminalCloseRetrying || terminalCloseFailures.length === 0) {
+      return;
+    }
+    setTerminalCloseRetrying(true);
+    try {
+      await terminalCloseCoordinatorRef.current?.retryPending();
+    } finally {
+      setTerminalCloseRetrying(false);
+    }
+  }
+
   function closeRuntimeTerminalSessions(tabs: Array<{ sessionId?: string }>) {
     const sessionIds = new Set(
       tabs.map((tab) => tab.sessionId).filter((sessionId): sessionId is string => Boolean(sessionId)),
     );
     sessionIds.forEach((sessionId) => {
-      void terminalClose(sessionId).catch(() => undefined);
+      void closeRuntimeTerminalSession(sessionId);
     });
   }
 
@@ -7468,7 +7501,7 @@ export function WorkspaceShell() {
 
       if (!terminalTabExists(tab.id)) {
         stopTerminalWarmupCapture(tab.id);
-        await terminalClose(sessionId).catch(() => {});
+        await closeRuntimeTerminalSession(sessionId);
         return;
       }
 
@@ -7721,7 +7754,7 @@ export function WorkspaceShell() {
             });
       if (!connectingTabExists(tabId)) {
         stopTerminalWarmupCapture(tabId);
-        await terminalClose(sessionId).catch(() => {});
+        await closeRuntimeTerminalSession(sessionId);
         return;
       }
       if (!step.temporary) void refreshConnectedProfile(step.connection.id, runtimeCredential);
@@ -8317,6 +8350,23 @@ export function WorkspaceShell() {
       }} />
 
       <main className="workspace-shell" ref={workspaceShellRef} hidden={activeView === "settings"}>
+        {terminalCloseFailures.length > 0 ? (
+          <div className="terminal-close-failures" role="alert">
+            <span>
+              {tr("workspace.terminalClose.failed", { count: terminalCloseFailures.length })}
+            </span>
+            <button
+              type="button"
+              disabled={terminalCloseRetrying}
+              onClick={() => void retryFailedTerminalCloses()}
+            >
+              <RefreshCw className={terminalCloseRetrying ? "ui-icon spin" : "ui-icon"} aria-hidden="true" />
+              {terminalCloseRetrying
+                ? tr("workspace.terminalClose.retrying")
+                : tr("workspace.terminalClose.retry")}
+            </button>
+          </div>
+        ) : null}
         <WorkspaceSidebar
           activeView={workspaceSidebarView}
           fileContext={workspaceSidebarFileContext}

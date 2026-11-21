@@ -11,10 +11,10 @@
 
 ## Frontend
 
-- [ ] Add an in-memory close coordinator with in-flight deduplication and pending failure records.
-- [ ] Route all close calls, including late connection results, through the coordinator.
-- [ ] Add a compact retry alert and English / Simplified Chinese strings.
-- [ ] Add unit tests for failure retention, retry success, and concurrent duplicate calls.
+- [x] Add an in-memory close coordinator with in-flight deduplication and pending failure records.
+- [x] Route all close calls, including late connection results, through the coordinator.
+- [x] Add a compact retry alert and English / Simplified Chinese strings.
+- [x] Add unit tests for failure retention, retry success, and concurrent duplicate calls.
 
 ## Verification
 
