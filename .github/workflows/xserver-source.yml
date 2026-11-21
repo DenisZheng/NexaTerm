@@ -15,7 +15,7 @@ jobs:
   source:
     name: Fixed upstream integrity (review only)
     runs-on: ubuntu-22.04
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with:
@@ -36,6 +36,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends zstd
           python scripts/xserver_windows_prebuilt.py --cache "$RUNNER_TEMP/xserver-prebuilt" --report xserver-prebuilt-review.json
+      - name: Verify fixed prebuilt upstream archive bytes (VCS and signatures pending)
+        run: python scripts/xserver_windows_upstream.py --cache "$RUNNER_TEMP/xserver-prebuilt" --report xserver-upstream-review.json
       - name: Keep only source evidence JSON
         if: always()
         uses: actions/upload-artifact@v4
@@ -45,5 +47,6 @@ jobs:
             xserver-review.json
             xserver-dependencies-review.json
             xserver-prebuilt-review.json
+            xserver-upstream-review.json
           if-no-files-found: error
           retention-days: 14

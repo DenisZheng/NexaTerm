@@ -31,15 +31,20 @@ def check_material_url(url):
 
 
 class MaterialRedirect(HTTPRedirectHandler):
+    def __init__(self, url_check=check_material_url):
+        super().__init__()
+        self.url_check = url_check
+
     def redirect_request(self, request, response, code, message, headers, url):
-        check_material_url(url)
+        self.url_check(url)
         return super().redirect_request(request, response, code, message, headers, url)
 
 
-def cached_material(cache, pin, offline):
+def cached_material(cache, pin, offline, *, url_check=check_material_url, max_input=None, download_budget=120):
+    limit = MAX_INPUT if max_input is None else max_input
     require(re.fullmatch(r"[0-9a-f]{64}", pin["sha256"])
-            and 0 < pin["size"] <= MAX_INPUT, "PREBUILT_PIN")
-    check_material_url(pin["url"])
+            and type(pin["size"]) is int and 0 < pin["size"] <= limit, "PREBUILT_PIN")
+    url_check(pin["url"])
     cache.mkdir(parents=True, exist_ok=True)
     path = cache / pin["sha256"]
     require(not path.is_symlink(), "PREBUILT_CACHE_LINK")
@@ -47,9 +52,9 @@ def cached_material(cache, pin, offline):
         require(not offline, "PREBUILT_OFFLINE_MISSING")
         temporary = None
         try:
-            deadline = time.monotonic() + 120
-            with build_opener(MaterialRedirect()).open(pin["url"], timeout=30) as response:
-                check_material_url(response.url)
+            deadline = time.monotonic() + download_budget
+            with build_opener(MaterialRedirect(url_check)).open(pin["url"], timeout=30) as response:
+                url_check(response.url)
                 with tempfile.NamedTemporaryFile(dir=cache, delete=False) as output:
                     temporary = Path(output.name)
                     total = 0

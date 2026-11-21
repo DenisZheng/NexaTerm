@@ -10,6 +10,8 @@ Bind the four actual prebuilt DLL providers to fixed official package bytes, com
 
 `collect_materials(cache, *, native=None, offline=False, result=None, assets=ASSETS)` initializes FAIL before collection. An optional mutable result preserves completed package evidence on failure. The native build attaches it at `prebuiltRuntimeMaterials`, after resource observations and before the final version probe.
 
+`cached_material(..., *, url_check=check_material_url, max_input=None, download_budget=120)` also serves the independent [upstream archive collector](./xserver-windows-upstream.md). Its default remains the original 8 MiB / 120-second package-and-recipe policy; only that separate source entry supplies its larger budget and official archive/CDN URL checker. `collect_materials` still does not fetch upstream archives or claim complete source/VCS supply.
+
 ## 3. Contracts
 
 - Exactly four unique package/provider identities. With `native`, match the full `privatePeLinkage.prebuiltDllsExcluded` dictionaries and complete observations, plus exact `runtimePackages` versions/notice hashes. No provider hash or version substitution. Native collection labels `providerBinding=enclosing-native-report`; standalone reference mode labels `fixed-baseline-reference` and retains an explicitly historical `nativeBaselineReference`.

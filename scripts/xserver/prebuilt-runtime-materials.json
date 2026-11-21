@@ -217,7 +217,8 @@
           "86CFFCA918CF3AF47147588051E8B148A9999C34",
           "13975A70E63C361C73AE69EF6EEB81F8981C74C7",
           "D3A93CAD751C2AF4F8C7AD516C35B99309B5FA62"
-        ]
+        ],
+        "upstreamArchiveSize": 107200820
       }
     },
     {
@@ -319,7 +320,8 @@
       "sourceReferences": {
         "upstreamArchiveUrl": "https://xorg.freedesktop.org/releases/individual/lib/pixman-0.46.4.tar.xz",
         "declaredArchiveSha256": "a098c33924754ad43f981b740f6d576c70f9ed1006e12221b1845431ebce1239",
-        "detachedSignatureDeclared": false
+        "detachedSignatureDeclared": false,
+        "upstreamArchiveSize": 660536
       }
     },
     {
@@ -543,7 +545,8 @@
         "declaredSignatureChecksum": "SKIP",
         "declaredValidPgpKeys": [
           "5ED46A6721D365587791E2AA783FCD8E58BCAFBA"
-        ]
+        ],
+        "upstreamArchiveSize": 1320064
       },
       "externalMaterials": [
         {

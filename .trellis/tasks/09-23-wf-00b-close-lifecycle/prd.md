@@ -1,5 +1,9 @@
 # WF-00B 关闭/删除生命周期收尾
 
+2026-11-21接续授权：维护者确认暂缓XDMCP产品化、转回核心工作流。先复核本任务现有实现与当前回归，结合2026-10-04 A01验收报告更新旧待办，不重复action迁移或已通过场景，不引入UI/布局/数据模型变化；证据按历史人工、当前自动化与仍缺平台细分项分开。最新指示为收尾、交接文档随成果提交并Push后停止；不切分支、不归档未完成任务，推送目标按实际远端与维护者确认处理。
+
+本轮结果与下一会话入口见 [交接文档](./handoff-2026-11-21.md)。原action迁移已完成；迟到SSH会话清理失败路径仍待受控回归与根因修复，不以成功路径测试或历史A01 PASS证明所有资源失败路径已收口。
+
 > 父任务：`09-23-nexaterm-workflow-mainline`。承接 Task 04（`09-19-workspace-shell-state-seam`）的 2c-2b 切片；来源：`NEXATERM_WORKFLOW_DELIVERY_PLAN.md` §4 WF-00、§7 执行 2 与执行 3。
 > 用户流程：连接中立即关闭再等待异步结果，不出现幽灵标签/连接；关闭活动/非活动/最后一个标签、同配置多实例、分屏 pane 后，剩余项与活动项符合预期。
 > 验收编号：**A01**（并为 A02 铺路）。引用规则：WS-M06；数据形状目标见 WS-M01、WS-M05（本任务不实现实例投影）。
@@ -26,9 +30,9 @@
 
 ## Acceptance Criteria
 
-- [ ] 关闭活动、非活动、最后一个、同 profile 多实例、分屏 pane 五类场景均有明确状态结果，且由 characterization 测试锁定（重构前后同时通过）。
-- [ ] 关闭/删除决策不在 updater 中做外部副作用；`connectingTabExists()` 保护有测试证据。
-- [ ] A01 通过：连接中立即关闭，迟到 session 被关闭，不出现幽灵标签/连接（真实窗口验证一轮；无 GUI 环境时记"未验证"，不据此声称完成）。
+- [x] 关闭活动、非活动、最后一个、同 profile 多实例、分屏 pane 五类场景均有明确状态结果，且由 characterization 测试锁定（原迁移已有证据；2026-11-21 sessionTabs 132项通过）。
+- [x] 关闭/删除决策不在 updater 中做外部副作用；`connectingTabExists()` 保护有测试证据（本轮执行真实判定函数，覆盖成功回收与同配置实例隔离；清理失败不在已通过范围内）。
+- [x] A01 通过：2026-10-04 Windows真实Tauri人工验收已有维护者PASS，见父任务验收报告；本次未新增GUI验收，不据此扩大平台或失败路径覆盖。
 - [ ] `pnpm run check`、`pnpm test`、`pnpm run build`、`node scripts/check-startup-module-boundary-source.mjs` 与相关 `scripts/check-*.mjs` 通过；CI run 记录在 implement.md。
 - [ ] Task 04 implement.md 的 2c-2b 条目引用本任务完成记录；父任务地图更新。
 
