@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 13
-- **Last Active**: 2026-10-19
+- **Total Sessions**: 21
+- **Last Active**: 2026-11-21
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~594 | Active |
+| `journal-1.md` | ~891 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,14 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 21 | 2026-11-21 | 核心关闭复核与产品化暂缓交接收尾 | - | `build/wf09-07-resource-audit` |
+| 20 | 2026-11-21 | 三桌面人工验收签字与固定上游源码归档门禁 | - | `build/wf09-07-resource-audit` |
+| 19 | 2026-11-01 | 专用XDM重传认证私有修复与真实协议回归 | - | `build/wf09-07-resource-audit` |
+| 18 | 2026-10-31 | XDMCP 首次原生桌面联调与防火墙恢复 | - | `build/wf09-07-resource-audit` |
+| 17 | 2026-10-31 | 隔离 WSL XDMCP 靶机安装与发现协议验证 | - | `build/wf09-07-resource-audit` |
+| 16 | 2026-10-31 | XDMCP 开发会话入口与受管生命周期接入 | `00eefc6` | `build/wf09-07-resource-audit` |
+| 15 | 2026-10-31 | PR89 prebuilt package and recipe materials verified | `d30f2a4`, `d18b651` | `build/wf09-07-resource-audit` |
+| 14 | 2026-10-31 | PR89 Windows resource audit verified | `f46a5fb`, `1a7bb15`, `61c0192` | `build/wf09-07-resource-audit` |
 | 13 | 2026-10-19 | WF-09 Windows XKB tools and keyboard runtime data | `757c599bab085b5f9a67aec22edbb8e0de69cb05` | `build/wf09-07-xkb-runtime` |
 | 12 | 2026-10-20 | WF-09 Windows native engine and license provenance | `6e1f8fd`, `c2ca16f`, `60ac904`, `898abaa`, `4108212`, `0b3551f`, `4e4e4a8` | `build/wf09-07-xserver-windows` |
 | 11 | 2026-10-18 | WF-09 X server fixed source review inputs | `1a6d899`, `bfbd225` | `build/wf09-07-xserver-source-review` |

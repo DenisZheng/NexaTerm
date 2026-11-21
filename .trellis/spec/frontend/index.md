@@ -96,3 +96,5 @@ The goal is to help AI assistants and new team members understand how YOUR proje
 - [Rlogin Workspace](./rlogin-workspace.md) — transient permits, native logical instances and restore/privacy boundaries.
 
 - [Rsh Command Task](./rsh-command-task.md) — explicit transient run, labelled bytes/EOF, renderer ACK, private cleanup and snapshot isolation.
+
+- [XDMCP Session](./xdmcp-session.md) — external-engine development entry, per-attempt permission, private lifecycle, honest status and non-PTY workspace isolation.

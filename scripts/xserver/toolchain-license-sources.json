@@ -42,6 +42,26 @@
           "gitBlob": "89ea62e6baa41624fff244b80765bd721a1ff1ce"
         }
       },
+      "resourceEvidence": {
+        "section": {
+          "name": ".rsrc",
+          "rawOffset": 60,
+          "rawSize": 800,
+          "rawSha256": "0051d11dbb0208fbba9185ccf8634f81e3b4f47b10e3f6226832ea0340318864"
+        },
+        "payload": {
+          "type": 24,
+          "name": 1,
+          "language": 0,
+          "codepage": 0,
+          "size": 710,
+          "sha256": "e989bc9ba32a3f5b1f5a565d5971e07462a2d6a504e7af682bd36cc8cc263f29"
+        },
+        "payloadSectionOffset": 88,
+        "sourceXmlSha256": "9ec47595697628058434c8b056c581aefce247c4d774d5392cf6e74fd04075be",
+        "sourceBinding": "The pinned generator's static XML_TEMPLATE was read without execution; XML comments and inter-tag whitespace were removed according to its declared recipe and the UTF-8 result matched the object payload exactly.",
+        "historicalCompilerReproduced": false
+      },
       "publishedPackage": {
         "url": "https://repo.msys2.org/mingw/ucrt64/mingw-w64-ucrt-x86_64-windows-default-manifest-20260815-1-any.pkg.tar.zst",
         "size": 2652,

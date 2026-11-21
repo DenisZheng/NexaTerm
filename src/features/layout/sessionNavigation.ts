@@ -13,7 +13,7 @@ export function buildOpenSessionEntries(
   t: Translate,
 ): OpenSessionEntry[] {
   return items.flatMap((item) => {
-    if (item.kind === "home" || item.kind === "split" || (item.kind === "local" && (item.source === "local" || item.source === "rsh"))) return [];
+    if (item.kind === "home" || item.kind === "split" || (item.kind === "local" && (item.source === "local" || item.source === "rsh" || item.source === "xdmcp"))) return [];
     return [{
       ...buildTitlebarItems([item], lookups, t)[0],
       connectionId: item.kind === "local" ? item.profileId : item.connectionId,

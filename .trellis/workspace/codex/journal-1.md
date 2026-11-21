@@ -598,3 +598,294 @@ Session 13续作：代码0e989ee已过完整CI698/source31；原生28在Windows�
 Session 13收口：精确code9a815d5的CI699/source32/原生29均SUCCESS；actual JSON artifact12240678597（492466字节/hash df21bc8911e97002c8c970f64875e48133bc986b016170b52a4a4c8a22359484）已下载。SDK顺序、四组键盘往返/两个负向、293数据与1756 C输入及最终版本完整。XKB开发构建本刀通过，整体X0/X2/X3及发行/桌面仍未完成；接续同任务私有DLL/工具map，不归档。
 
 2026-10-23续作：Draft #87初版c595ac41已过CI700/source33；Windows原生30的前置回归2 ERROR/5 FAIL，构建未执行。盘符map本地复现证实夹具的包名catch-all桩错误拦截cygpath转换；修复为真实路径转换加精确fixture归属查询，并补盘符LOAD/成员hash与owner回归。生产门禁不放宽，新代码须独立Windows/完整CI验证。沿用现有XDMCP任务，不合并、不发布，采用/随包/桌面字段保持false。
+
+
+## Session 14: PR89 Windows resource audit verified
+
+**Date**: 2026-10-31
+**Task**: PR89 Windows resource audit verified
+**Branch**: `build/wf09-07-resource-audit`
+
+### Summary
+
+修复 MSYS 别名夹具、VPATH 实际重放、COFF BSS/长节名和默认 manifest 来源/最终 PE；61c0192 的完整 CI、源码和原生 41169134366 全成功，169 native 反例及最终版本通过，ZIP/JSON 已独立核验。资源证据阶段完成、四 DLL B0 重绑完成；许可/预编译 DLL 内部、随包与真实桌面仍未完成，整体任务不归档。本机受杀软干扰的完整构建未重跑，原有未跟踪文件未动。
+
+### Main Changes
+
+完整阶段证据与失败根因见 `.trellis/tasks/10-16-wf09-07-xdmcp-implementation/research/windows-resource-evidence.md`；当前主线状态见 `ROADMAP.md`。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `f46a5fb` | 修复 MSYS 别名碰撞夹具 |
+| `1a7bb15` | 实际 VPATH 重放与许可/X2 准备 |
+| `61c0192` | COFF BSS/长名、预处理模式与默认 manifest 证据 |
+
+### Testing
+
+- [OK] MSYS/WSL 各 50 项相关测试；native 169 项反例与完整构建/版本通过，完整 CI 七个执行 job 和源码审查成功。
+
+### Status
+
+[OK] **本次资源证据阶段完成；整体 XDMCP 任务仍为 in_progress**
+
+### Next Steps
+
+- 继续三个资源权限、四个预编译 DLL 内部与分发材料；X2 的 14 项真实验收仍为 NOT-RUN，不合并或发行。
+
+
+## Session 15: PR89 prebuilt package and recipe materials verified
+
+**Date**: 2026-10-31
+**Task**: PR89 prebuilt package and recipe materials verified
+**Branch**: `build/wf09-07-resource-audit`
+
+### Summary
+
+完成四个实际运行库的固定包/BUILDINFO/精确PKGBUILD/notice材料门禁；完整、源码与原生CI均通过，整体XDMCP未完成。
+
+### Main Changes
+
+### 本阶段结果
+
+四个实际预编译 DLL 已绑定官方发布包、61 成员/32 普通文件、27 精确配方文件、五份 notice 和独立远端 patch。原生门禁绑定当次 provider；源码 CI 保持固定基线引用。补充报告原子写入失败反例，旧成功不得残留。
+
+### 验证
+
+- d18b651：完整 CI 41175645356、source 41175645308、native 41175645305 全 SUCCESS；187 native 回归及完整引擎构建、资源门禁、新材料门禁和最终版本通过。
+- 原生 artifact 13034205012 ZIP/JSON 与官方 digest 独立核验；精确 hash 及源码 artifact 见 research/windows-prebuilt-materials-evidence.md。
+- 本地新增18项在 Windows/MSYS/WSL 全过，实际在线/离线材料核验通过；WSL全量缺gcc/make的14项环境错误明确保留。
+- 未重跑本机受杀软干扰的完整引擎构建，未恢复隔离文件、添加排除或改变防护；原有未跟踪文件不动。
+
+### 状态与接续
+
+本次包/配方材料阶段完成；整体 XDMCP 任务保持 in_progress，不归档、不合并、不发行。下一项是独立包/源码验签与完整 source/VCS 材料；DLL 内部链接、逐文件权限、资源授权、源码供给方式及 X2/X3 仍开放。所有分发/随包/桌面与新增内部/签名批准字段保持 false。
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `d30f2a4` | 固定包与精确配方材料门禁 |
+| `d18b651` | 报告写入失败与全部 false 边界 |
+
+### Testing
+
+- [OK] 本阶段18项反例、187项原生回归、完整/源码/原生CI成功；精确 artifact 已核验，WSL环境缺口单列保留。
+
+### Status
+
+[OK] **本阶段完成；整体 XDMCP 任务保持 in_progress**
+
+### Next Steps
+
+- 独立包/源码签名与完整 source/VCS 材料；内部链接、成员权限、资源授权与 X2/X3 继续。
+
+
+## Session 16: XDMCP 开发会话入口与受管生命周期接入
+
+**Date**: 2026-10-31
+**Task**: XDMCP 开发会话入口与受管生命周期接入
+**Branch**: `build/wf09-07-resource-audit`
+
+### Summary
+
+按维护者调整后的主线交付实际 XDMCP 开发入口、typed IPC、私有 owner、取消/重连/关闭和非 PTY 隐私隔离；42 项新增前端反例、15 项 shell 路由与类型/build/lazy 门禁通过，完整前端在隔离 Node 系统语言条件下 1202 通过。实际 Edge 检查三主题/窄窗口、许可撤销及无原生 IPC 时明确失败；默认中文与 POSIX fixture 环境差异已记录，WSL Save As 11 项通过。代码已提交，本批沿 PR89 推送，精确 CI 收据在 PR 开发接入阶段块记录，不挪用旧 HEAD。真实引擎/授权 Linux 靶机及原生 WebView 仍待联调，随包/发行/desktop_verified 不变，整体任务不归档。
+
+### Main Changes
+
+新增实际 XDMCP 临时面板、typed IPC/私有资源 owner、单次许可与非 PTY 守卫；code-spec 和验收见当前任务 validation/development-entry.md。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `00eefc6` | (see git log) |
+
+### Testing
+
+- [OK] 新增 42 项前端反例、15 项真实 shell 路由、类型/build/lazy 门禁及三主题/窄窗口检查。
+- [OK] 完整前端在 NODE_OPTIONS=--no-experimental-global-navigator 下 1202 通过、1 todo；Windows 默认语言与 POSIX fixture 差异单独记录。
+- [PENDING] 本批新 SHA 的远端 CI；结果记录到 PR #89 开发接入阶段块。
+
+### Status
+
+[IN_PROGRESS] 开发接入已实现并本地验证；整体 XDMCP 未完成，不归档。
+
+### Next Steps
+
+- 在授权靶机、已核验开发引擎和测试网络就绪后进行原生 WebView/真实桌面验收；不回到重复材料整理，不绕过随包/许可与安全边界。
+
+
+## Session 17: 隔离 WSL XDMCP 靶机安装与发现协议验证
+
+**Date**: 2026-10-31
+**Task**: 隔离 WSL XDMCP 靶机安装与发现协议验证
+**Branch**: `build/wf09-07-resource-audit`
+
+### Summary
+
+按授权在 Ubuntu-24.04 WSL2 NAT 安装 XDM/轻量 XFCE，共58个新包、无原包升级/移除。独立手动服务、精确接口和来源限制、只读私有 PAM 与锁定非特权账号已配置；Windows/WSL7项发现协议断言、root/既有用户认证前拒绝及两轮原始pidfd清理通过。初次查询失败定位为WSL idle shutdown，改用前台owner保活和退出清理，重复owner拒绝；未改防火墙/杀软/WSLg或业务服务。最终服务停止、账号锁定，重启和回滚留本机与validation/wsl-target.md。类型、Trellis manifest和diff检查通过；应用代码未改，文档暂存待审核，无新提交/推送。下一步为人工设置测试密码、干净Windows开发引擎及原生WebView真实桌面；整体任务不归档。
+
+### Main Changes
+
+仅安装本机测试靶机和可回滚管理入口；仓库记录见 `.trellis/tasks/10-16-wf09-07-xdmcp-implementation/validation/wsl-target.md`。
+
+### Git Commits
+
+无新提交；本轮文档已暂存，等待人工审核。
+
+### Testing
+
+- [OK] 7 项 Windows/WSL 发现协议断言、真实 namespace PAM 负向、两轮原始 pidfd/监听/runtime 清理及重复 owner 隔离。
+- [OK] `npm run check`、Trellis context manifest、diff 检查；未重跑完整应用/原生构建。
+
+### Status
+
+[OK] WSL 靶机准备阶段完成，测试服务停止；整体 XDMCP 任务保持 in_progress。
+
+### Next Steps
+
+- 人工设置专用口令，准备干净 Windows 开发引擎与原生 WebView 后验证真实登录/桌面；防火墙修改另行确认。
+
+
+## Session 18: XDMCP 首次原生桌面联调与防火墙恢复
+
+**Date**: 2026-10-31
+**Task**: XDMCP 首次原生桌面联调与防火墙恢复
+**Branch**: `build/wf09-07-resource-audit`
+
+### Summary
+
+维护者设置专用测试口令并授权临时收窄 VcXsrv 入站规则；预装官方 payload、独立原生验证 exe、本机管理员手动脚本与快照已核验，不自动提权。Windows PowerShell 5.1/7 各13组 mock、两宿主只读检查及真实非管理员拒绝通过，修复PS5顶层JSON数组与.NET空字符串转换造成的状态写入问题。维护者实际 Apply 后在开发入口登录，首次因 umask077 导致 Xsession 父目录root0700而失败；实际构造/真实UID回归先红，精确修复目录为0755后转绿，私有配置仍0600。随后维护者确认进入XFCE及到期退出，原始引擎句柄exit0、监听/目录/WSL服务与专用UID进程清理通过。21:09独立核实手动Restore后的两条原规则在两个policy store均完整匹配基线，临时规则消失。验证版已退出但为非零码，不算正常关闭用例通过。首次互通与恢复阶段收尾，剩余交互/随包未完成；不提交/推送，不归档整体任务，文档暂存待人工审核。
+
+### Main Changes
+
+本机可回滚脚本及精确快照留在忽略目录；更新任务授权/执行记录和 `validation/native-desktop-preflight.md`，不改产品源码或随包能力。
+
+### Git Commits
+
+无新提交或推送；文档暂存待人工审核。
+
+### Testing
+
+- [OK] PowerShell 5.1/7 各13组 mock、真实只读 Check 和标准用户 Apply/Restore 拒绝；维护者实际 Apply/Restore 后由代理独立只读核对有效规则及完整恢复。
+- [OK] umask目录构造与真实登录UID访问的红绿回归；首次真实登录/桌面显示、原始引擎退出及到期资源清理。
+- [PENDING] 桌面内输入、手动注销/取消/重连、双实例和正常应用关闭；验证版原始进程非零退出不能替代关闭屏障验收。
+- [OK] `npm run check`、Trellis manifest 和 diff 检查；本轮不重建引擎或重跑完整应用 CI。
+
+### Status
+
+[IN_PROGRESS] 首次真实桌面联调与本次恢复收尾完成；整体 XDMCP 及完整交互/随包验收未完成，不归档。
+
+### Next Steps
+
+- 准备新的受控测试窗口，再补桌面输入、手动注销、取消/重连及正常应用关闭；双实例需另核实端口许可。保留本次恢复凭据，不覆盖Restored状态强行重跑、不重复安装或设置密码。
+
+同日 20:20（UTC+08:00）续作：维护者回复已执行，实际只读核对 ActiveStore 和动态 NAT 通过，宽规则已禁用、临时单端口规则有效。WSL `run` 前台 owner 已启动，独立原生验证 exe 已复核 hash 后以标准用户启动，专用 app-data/WebView 目录存在；原始应用进程句柄由本机观察会话持有。尚无 VcXsrv 引擎进程，未操作两项许可或登录；交由维护者在实际界面完成，后台两个测试窗口仍有时限。真实桌面和防火墙恢复未完成，不归档/提交/推送。
+
+同日 20:39 续作：维护者报告输入密码后窗口退出，最近两次 XDM 会话 exec 均为errno13，NexaTerm/XDM仍活跃。准备脚本的umask077将mkdir0755实际屏蔽成root0700，登录UID无法访问Xsession。真实构造路径及实际UID检查先红；创建后显式chmod0755并只修复现存专用目录后转绿，七个文件内容/owner/mode不变，私有配置不可读反例通过。未改认证/防火墙/引擎参数，不重复安装；已请维护者在原测试窗口到期前重试，完整桌面与恢复仍未通过。
+
+同日后续：维护者确认修复后进入 XFCE，随后确认到期退出；不能记作手动注销测试。专用 UID 的实际桌面进程已观察，原始 VcXsrv 句柄在退出前持有并确认exit0。20:58复核无引擎、X端口监听、runner私有目录、WSL服务/runtime或专用UID进程残留。临时防火墙规则已撤销，但原两条仍禁用，待维护者关闭独立验证版并执行Restore。首次真实登录/桌面显示成立，桌面输入/取消/重连/手动注销及完整随包交付仍待，不修改能力标志或归档整体任务。
+
+同日21:09收尾：维护者返回 `RESTORED` 后，独立只读核对两条原规则在PersistentStore/ActiveStore的完整配置和过滤器均与保存基线一致，两个store均无临时规则；无验证版/引擎、X监听或runner私有目录。原始验证版句柄确认21:06:23退出，exit code为 `-1073741510`（`0xC000013A`），具体结束原因未进一步确认，不计作正常应用退出屏障通过；引擎exit0另有独立收据。本次恢复完成，不再要求维护者重复Restore或重新开放网络。
+
+
+## Session 19: 专用XDM重传认证私有修复与真实协议回归
+
+**Date**: 2026-11-01
+**Task**: 专用XDM重传认证私有修复与真实协议回归
+**Branch**: `build/wf09-07-resource-audit`
+
+### Summary
+
+经授权验证Ubuntu签名源索引，新增54个编译包且既有包不变；私有daemon保留系统greeter/PAM。原版及同参数重建版各3轮红色，修正版10轮与最终安装副本通过16项；12项切换工具回归、实际专用drop-in回滚/再切换及unit校验通过，服务保持停止。旧窗口防火墙两store恢复已独立核验；远端观察结束仍有残留，后续发行版关机不能当自然回收。npm run check和Trellis manifests通过，仅暂存文档未提交；W07与原场景仍待新窗口复验，验证版窗口仍开着。详见任务validation/private-xdm-request-fix.md。
+
+### Main Changes
+
+- 阶段实施与证据边界见本节Summary及对应任务文档。
+
+### Git Commits
+
+记录生成时未提交；随本次收尾批次提交，精确hash见包含本节的git提交。
+
+### Testing
+
+- 结果按本节Summary及对应validation/research文档记录；阶段通过不能替代完整桌面或分发结论。
+
+### Status
+
+**本节阶段结果已落盘；整体XDMCP任务仍未完成，最新排期见ROADMAP。**
+
+### Next Steps
+
+- 这是历史阶段记录；后续以ROADMAP和2026-11-21交接为准，不继续执行已暂缓产品化。
+
+
+## Session 20: 三桌面人工验收签字与固定上游源码归档门禁
+
+**Date**: 2026-11-21
+**Task**: 三桌面人工验收签字与固定上游源码归档门禁
+**Branch**: `build/wf09-07-resource-audit`
+
+### Summary
+
+接受维护者三桌面全部操作通过，不重复验收；保留最终观察日志缺口，重启后资源/防火墙/服务只读检查通过。实现固定GCC/pixman/zlib归档完整字节门禁与JSON-only CI，在线/离线报告一致，Windows/WSL相关31项、MSYS完整200项、类型/行数/任务检查通过。Windows Node既有10项POSIX fixture失败、WSL同文件11项通过，Gitleaks3项skip。VCS/签名/许可/随包/X3继续开放，仅暂存不提交推送。
+
+### Main Changes
+
+- 阶段实施与证据边界见本节Summary及对应任务文档。
+
+### Git Commits
+
+记录生成时未提交；随本次收尾批次提交，精确hash见包含本节的git提交。
+
+### Testing
+
+- 结果按本节Summary及对应validation/research文档记录；阶段通过不能替代完整桌面或分发结论。
+
+### Status
+
+**本节阶段结果已落盘；整体XDMCP任务仍未完成，最新排期见ROADMAP。**
+
+### Next Steps
+
+- 这是历史阶段记录；后续以ROADMAP和2026-11-21交接为准，不继续执行已暂缓产品化。
+
+
+## Session 21: 核心关闭复核与产品化暂缓交接收尾
+
+**Date**: 2026-11-21
+**Task**: 核心关闭复核与产品化暂缓交接收尾
+**Branch**: `build/wf09-07-resource-audit`
+
+### Summary
+
+维护者确认XDMCP产品化后置，核心关闭132/24项自动化及类型/静态检查通过；保留历史A01和三桌面人工PASS证据边界，迟到SSH清理失败风险未修。交接与成果同批提交，Push目标按实际上游确认后处理，本会话收尾停止，不归档整体任务。
+
+### Main Changes
+
+- 产品取舍已同步ROADMAP、XDMCP任务与发布任务：保留既有成果，暂缓正式随包与剩余发行材料/跨平台适配，不降低安全或正式A15门禁。
+- 本轮只新增真实connectingTabExists的迟到SSH清理与sibling隔离测试，不改产品runtime，不重做原action迁移。
+- 历史A01 Windows人工PASS与当前自动化分开记录；迟到session关闭失败的吞错风险未修，未证明真实OS资源泄漏。
+- 交接入口：`.trellis/tasks/09-23-wf-00b-close-lifecycle/handoff-2026-11-21.md`；下一会话先建立受控失败回归并追踪backend资源所有权，再转SSH/Files和性能/安装升级。
+- 用户授权本次收尾提交/Push后停止；实际origin为GitHub，和Gitee分支约定不一致，已向维护者请求确认Push目标，未猜测远端或推主线。
+- 历史靶机、源码材料及既有untracked保留，不纳入认证材料、runtime或二进制；整体两个任务仍未完成，不归档。
+
+
+### Git Commits
+
+记录生成时未提交；随本次收尾批次提交，精确hash见包含本节的git提交。
+
+### Testing
+
+- sessionTabs 132项、真实shell回归24项、Windows上游/prebuilt 31项、类型及七项静态检查通过；本轮未新增完整build/Rust/GUI，新CI未取证。
+
+### Status
+
+**本轮复核与交接已落盘；整体任务仍in_progress，迟到SSH清理失败风险未修。**
+
+### Next Steps
+
+- 本会话按维护者指示收尾停止；后续会话从交接文档接续，先做迟到session关闭失败回归。

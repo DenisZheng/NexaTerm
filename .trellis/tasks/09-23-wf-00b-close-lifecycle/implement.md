@@ -1,5 +1,25 @@
 # WF-00B 执行清单
 
+## 2026-11-21 核心主线接续
+
+维护者确认XDMCP产品化后置，本会话转入本任务。当前分支仍为`build/wf09-07-resource-audit`、HEAD`56ca831`；不自动切分支或重做已完成实现。下面9月的“GUI/A01待验”须结合父任务2026-10-04报告核对，历史A01通过不等于本次新增GUI或所有平台细分项已验证。
+
+- [x] 读取既有PRD/design/implement和后续A01报告，确认原action迁移已经完成，优先复核而非重复开发。
+- [x] 当前sessionTabs、真实shell关闭/Home回落与连接迟到保护回归；静态检查、类型和启动边界分开记录，结果见下文。
+- [x] 整理历史人工PASS、当前自动化及仍缺的细分项，记录下一项实际核心待办与跨会话交接。维护者最新授权收尾提交/Push后停止，推送目标须与实际远端一致；不归档整体任务。
+
+### 本轮结果与停止点
+
+- `npm test -- src/features/workspace/sessionTabs`：8文件、132项通过。
+- `node --test scripts/wf07-ssh-output.test.mjs scripts/workspace-home-close.test.mjs scripts/rlogin-entry-routing.test.mjs`：24项通过。新增两项执行真实`connectingTabExists`，断言关闭连接中标签后精确关闭迟到session、不handoff/刷新/复活；同profile关闭A不能清理B。
+- `npm run check` exit0；session-subtab-memory、local-terminal-warmup、remote-file-editor、workspace-empty-home、workspace-ssh-activation、startup-module-boundary与line-budget七项静态检查通过。Trellis两个任务manifest与diff空白检查通过。
+- 2026-10-04的A01 Windows人工PASS见 [父任务验收报告](../09-23-nexaterm-workflow-mainline/validation/acceptance-report-2026-10-04.md)，覆盖SSH五类关闭、Split与连接迟到；该报告保留RDP/VNC等细分环境边界。原“整个A01待验”已过时，不能继续要求重复上述已签字场景。
+- 本次没有新GUI、完整build、Rust或三平台资源清理验收。删除多实例配置、设置页返回和平台细分场景须按既有证据逐项核对，不能从A01总PASS外推。
+- **待修风险**：`WorkspaceShell.tsx`的`runConnectionStep`在连接标签消失后调用`await terminalClose(sessionId).catch(() => {})`（复核时7843行）；关闭失败被吞掉，外层catch也会在标签已不存在时返回。普通`closeRuntimeTerminalSessions`有类似吞错路径（复核时7277行）。尚未证明真实OS资源泄漏，未修复；新增测试只证明关闭成功时的行为，不覆盖失败后的归属/重试。
+- 下一会话先做该失败路径的受控回归与后端session/close契约追踪，确定资源所有权和真实释放结果，再修根因。不能只加日志/删标签、全局kill或虚假成功。后续再转SSH/Files和性能/安装升级，不重做原action迁移。
+
+详细交接：[handoff-2026-11-21.md](./handoff-2026-11-21.md)。以下9月条目是历史执行记录，不覆盖本节当前状态。
+
 ## 0. 开工前
 
 - [x] `task.py current --source` 指向本任务（2026-09-23 `start`）；`git status --short` 只含许可证 WIP。
@@ -31,7 +51,7 @@
 
 ## 3. 验证与收尾
 
-- [ ] GUI 冒烟（用户，2026-09-23 决定暂缓）：关闭活动 SSH tab、关闭非活动 tab、关闭最后一个回首页、同 profile 两个终端关一个、分屏中关 pane、连接中立即关闭再等结果（A01）、删除有多个终端的连接、关 RDP/VNC 后回退、从设置页返回。**未验证前不归档、不宣称 A01 通过。**
+- [ ] 完整GUI细分清单：2026-09-23曾整体暂缓，后续2026-10-04报告已确认SSH五类关闭、Split和连接迟到A01 PASS；删除多实例配置、RDP/VNC/设置页及平台细分项仍按各自证据核对。本条未全勾选不否定已签字A01，也不代表本次已补齐所有细分验收；整体任务不归档。
 - [x] push `45418f3..d722bf5`；CI run `35825557106` @ `d722bf5` 全绿：Frontend checks / Rust linux-x64 / macos-arm64 / windows-x64 / Security evidence 均 success，Package windows-x64 skipped（2026-09-23）。
 - [x] Task 04 `implement.md` 2c-2b 条目指向本任务提交；父任务地图 WF-00B 标"代码完成，冒烟待做"。
 - [x] `trellis-update-spec`：`state-management.md` 已补 followUp 标记模式与关闭路径形状（`d722bf5`）。

@@ -43,7 +43,7 @@ WF-07 / A14，产品行为按 `docs/WORKFLOW_SPEC.md` WS-R01/WS-R02。涉及加�
 ## 6. 必须测试
 
 - lifecycle hook：就绪波动、普通 rerender、保存排序、unmount、错误上报；实际组合 `useConnections`，不能只测 planner。
-- `scripts/wf07-ssh-output.test.mjs`：执行 shell 实际连接函数，验证同毫秒并发和重试的输出隔离。
+- `scripts/wf07-ssh-output.test.mjs`：执行 shell 实际连接函数与`connectingTabExists`，验证同毫秒并发、重试的输出隔离、关闭后迟到session精确回收及同profile实例互不误关。当前关闭成功测试不覆盖关闭失败后的资源归属；该边界与待修风险见`state-management.md`的WF-00B契约。
 - `RemoteFilePanel.restore.test.tsx`：实际浏览后重新挂载无缓存实例，检查目录与祖先加载。
 - `remoteFileSnapshotBridge.test.ts`：真实投影、JSON 序列化、解码与冷模块恢复的组合回归；同一配置的两个实例必须保留独立目录与 true/false 开关。
 - A14 人工坏项使用 `scripts/wf07_a14_fixture.py`，只在应用退出后修改唯一 `A14-` 测试项的快照引用；保留 profile/凭据和原布局，逆向恢复只还原该引用。不要用正常 UI 删除 profile 构造仍打开的占位项，因为该入口会关闭实例。

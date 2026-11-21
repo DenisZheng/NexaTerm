@@ -19058,6 +19058,7 @@ body[data-platform="macos"][data-theme-mode="dark"] .ui-tooltip-arrow {
 .command-task-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px 12px; }
 .command-task-form .settings-field,.command-task-input .settings-field { display:grid; min-width:0; gap:4px; }
 .command-task-form > button { justify-self:start; }
+.command-task-form .pane-error a { color:inherit; text-underline-offset:2px; }
 .command-task-toggle { display:flex; align-items:center; gap:6px; font-size:12px; }
 .command-task-command,.command-task-streams pre { font-family:var(--mx-font-mono,monospace); }
 .command-task-streams { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-block:8px; }
