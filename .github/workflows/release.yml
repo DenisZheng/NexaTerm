@@ -247,24 +247,44 @@ jobs:
             "release-assets/license-inventory-${{ matrix.target }}.json"
 
           if [ "${{ matrix.target }}" = "windows-x64" ]; then
+            # Portable ZIP 只收录运行所需文件（显式 allowlist，缺一即失败），
+            # 不再整目录复制 target/release 下的 .pdb / .d / .fingerprint / nsis 等构建残留。
+            release_root="src-tauri/target/release"
             portable_root="release-assets/NexaTerm-portable"
             mkdir -p "$portable_root"
-            find src-tauri/target/release -mindepth 1 -maxdepth 1 \
-              ! -name bundle \
-              ! -name build \
-              ! -name deps \
-              ! -name _up_ \
-              ! -name incremental \
-              -exec cp -R {} "$portable_root/" \;
 
-            if [ -d "src-tauri/target/release/_up_" ]; then
-              cp -R src-tauri/target/release/_up_ "$portable_root/_up_"
+            for required in nexaterm.exe nexaterm-mcp.exe mxterm-mcp.exe; do
+              if [ ! -f "$release_root/$required" ]; then
+                echo "::error::Portable bundle is missing required file: $release_root/$required"
+                exit 1
+              fi
+              cp "$release_root/$required" "$portable_root/"
+            done
+
+            if [ ! -d "$release_root/_up_" ]; then
+              echo "::error::Portable bundle is missing Tauri resources: $release_root/_up_"
+              exit 1
             fi
+            cp -R "$release_root/_up_" "$portable_root/_up_"
 
             cp LICENSE THIRD_PARTY_LICENSES.md "$portable_root/"
             printf "portable\n" > "$portable_root/portable.marker"
-            powershell -NoProfile -Command "Compress-Archive -Path 'release-assets/NexaTerm-portable/*' -DestinationPath 'release-assets/NexaTerm-portable-windows-x64.zip' -Force"
+
+            # 用 Windows 自带 bsdtar 生成标准 zip（条目使用正斜杠分隔符）；
+            # Git Bash 的 tar 是 GNU tar，必须显式调用 System32 下的 tar.exe。
+            bsdtar="$(cygpath -u "$SYSTEMROOT")/System32/tar.exe"
+            if [ ! -x "$bsdtar" ]; then
+              echo "::error::bsdtar not found: $bsdtar"
+              exit 1
+            fi
+            (
+              cd "$portable_root"
+              "$bsdtar" -a -cf ../NexaTerm-portable-windows-x64.zip \
+                nexaterm.exe nexaterm-mcp.exe mxterm-mcp.exe _up_ \
+                LICENSE THIRD_PARTY_LICENSES.md portable.marker
+            )
             rm -rf "$portable_root"
+            "$bsdtar" -tf release-assets/NexaTerm-portable-windows-x64.zip
           fi
 
           if [ "$(find release-assets -type f | wc -l | tr -d ' ')" = "0" ]; then

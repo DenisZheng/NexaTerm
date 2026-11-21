@@ -33,7 +33,8 @@
     "10-06-home-after-close-diagnosis",
     "10-06-wf07-files-follow-snapshot",
     "10-11-npm-source-map-js-advisory",
-    "10-11-vitest-locale-pinning"
+    "10-11-vitest-locale-pinning",
+    "10-11-portable-zip-allowlist"
   ],
   "parent": null,
   "relatedFiles": [],
