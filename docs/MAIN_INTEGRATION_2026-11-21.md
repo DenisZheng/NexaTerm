@@ -8,6 +8,12 @@
 - 项目规则中的 Gitee `origin/master` / GitHub `github/main` 与当前配置不一致；已向维护者说明并按现有 `origin/main` 授权执行，未修改远端配置或猜测地址。
 - 使用 merge commit 保留 PR head 的祖先关系，不 squash、不 rebase、不强制推送。
 
+### 主线保护规则与提交路线
+
+本机完成整合后尝试推送 `main`，远端以 `GH013` 拒绝，未修改远端主线。随后查询实际 branch rules：必须通过 PR，且 Frontend checks、Rust 三平台、Test fixtures smoke、Security evidence、License compliance 共 7 项检查必须通过；不能只查询旧 branch protection 接口就认为主线不受保护。
+
+因此使用必要的专用分支 `merge/main-maintenance-20261121` 提交同一批整合内容，以 PR 合入 `main`，不使用 admin bypass、不更改 ruleset、不 force push。该分支仅用于这次保护规则要求的整合，不作为新的日常开发主线；本轮不自动删除它。
+
 | 顺序 | PR / 内容 | 原分支 head | 主线 merge commit |
 | --- | --- | --- | --- |
 | 1 | #57 source-map-js advisory 修复 | `e4f76d88360fbf4681145436f3356f2963659561` | `5651e9b` |
