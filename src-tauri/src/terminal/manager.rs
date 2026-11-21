@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::future::Future;
 use std::sync::Arc;
 
 use russh::{ChannelMsg, ChannelReadHalf};
@@ -29,7 +30,152 @@ enum ManagedTerminalSession {
     Serial(Arc<SerialTerminalSession>),
 }
 
-type SessionStore = Arc<Mutex<HashMap<String, ManagedTerminalSession>>>;
+impl ManagedTerminalSession {
+    async fn close(&self) -> Result<(), AppError> {
+        match self {
+            Self::Ssh(session) => session.close().await,
+            Self::Local(session) => session.close().await,
+            Self::Telnet(session) => session.close().await,
+            Self::Serial(session) => session.close().await,
+        }
+    }
+
+    async fn close_after_reader_exit(&self) -> Result<(), AppError> {
+        // A remote EOF closes the target channel, but the local SSH client and
+        // its jump chain still need an explicit shutdown attempt.
+        match self {
+            Self::Ssh(session) => session.close().await,
+            Self::Local(_) | Self::Telnet(_) | Self::Serial(_) => Ok(()),
+        }
+    }
+}
+
+#[derive(Default)]
+struct SessionLifecycle {
+    cleanup_started: bool,
+}
+
+#[derive(Clone)]
+struct SessionEntry<T> {
+    session: T,
+    lifecycle: Arc<Mutex<SessionLifecycle>>,
+}
+
+impl<T> SessionEntry<T> {
+    fn new(session: T) -> Self {
+        Self {
+            session,
+            lifecycle: Arc::new(Mutex::new(SessionLifecycle::default())),
+        }
+    }
+}
+
+type SessionMap<T> = Arc<Mutex<HashMap<String, SessionEntry<T>>>>;
+type SessionStore = SessionMap<ManagedTerminalSession>;
+
+async fn session_entry_is_current<T>(
+    sessions: &SessionMap<T>,
+    session_id: &str,
+    entry: &SessionEntry<T>,
+) -> bool {
+    sessions
+        .lock()
+        .await
+        .get(session_id)
+        .map(|current| Arc::ptr_eq(&current.lifecycle, &entry.lifecycle))
+        .unwrap_or(false)
+}
+
+async fn remove_session_entry_if_current<T>(
+    sessions: &SessionMap<T>,
+    session_id: &str,
+    entry: &SessionEntry<T>,
+) {
+    let mut sessions = sessions.lock().await;
+    let is_current = sessions
+        .get(session_id)
+        .map(|current| Arc::ptr_eq(&current.lifecycle, &entry.lifecycle))
+        .unwrap_or(false);
+    if is_current {
+        sessions.remove(session_id);
+    }
+}
+
+async fn close_session_entry<T, F, Fut>(
+    sessions: &SessionMap<T>,
+    session_id: &str,
+    close: F,
+) -> Result<(), AppError>
+where
+    T: Clone,
+    F: FnOnce(T) -> Fut,
+    Fut: Future<Output = Result<(), AppError>>,
+{
+    let entry = sessions.lock().await.get(session_id).cloned();
+    let Some(entry) = entry else {
+        // Closing an already-ended session is an idempotent no-op.
+        return Ok(());
+    };
+
+    let mut lifecycle = entry.lifecycle.lock().await;
+    if !session_entry_is_current(sessions, session_id, &entry).await {
+        return Ok(());
+    }
+
+    lifecycle.cleanup_started = true;
+    let result = close(entry.session.clone()).await;
+    if result.is_ok() {
+        remove_session_entry_if_current(sessions, session_id, &entry).await;
+    }
+    // On failure the entry remains registered and another close request can retry.
+    result
+}
+
+async fn finish_session_reader<T, F, Fut>(
+    sessions: &SessionMap<T>,
+    session_id: &str,
+    close: F,
+) where
+    T: Clone,
+    F: FnOnce(T) -> Fut,
+    Fut: Future<Output = Result<(), AppError>>,
+{
+    let entry = sessions.lock().await.get(session_id).cloned();
+    let Some(entry) = entry else {
+        return;
+    };
+
+    let mut lifecycle = entry.lifecycle.lock().await;
+    if lifecycle.cleanup_started
+        || !session_entry_is_current(sessions, session_id, &entry).await
+    {
+        return;
+    }
+
+    lifecycle.cleanup_started = true;
+    if close(entry.session.clone()).await.is_ok() {
+        remove_session_entry_if_current(sessions, session_id, &entry).await;
+    }
+    // Keep failed reader-exit cleanup registered so terminal_close can retry it.
+}
+
+async fn remove_session_after_reader<T>(
+    sessions: &SessionMap<T>,
+    session_id: &str,
+) {
+    let entry = sessions.lock().await.get(session_id).cloned();
+    let Some(entry) = entry else {
+        return;
+    };
+
+    let lifecycle = entry.lifecycle.lock().await;
+    if lifecycle.cleanup_started
+        || !session_entry_is_current(sessions, session_id, &entry).await
+    {
+        return;
+    }
+    remove_session_entry_if_current(sessions, session_id, &entry).await;
+}
 
 #[derive(Clone, Default)]
 pub struct TerminalManager {
@@ -67,7 +213,7 @@ impl TerminalManager {
         let terminal_encoding = session.terminal_encoding().to_string();
         self.sessions.lock().await.insert(
             session_id.clone(),
-            ManagedTerminalSession::Ssh(Arc::new(session)),
+            SessionEntry::new(ManagedTerminalSession::Ssh(Arc::new(session))),
         );
         spawn_reader(
             app,
@@ -94,7 +240,7 @@ impl TerminalManager {
         let session_id = session.id.clone();
         self.sessions.lock().await.insert(
             session_id.clone(),
-            ManagedTerminalSession::Local(session.clone()),
+            SessionEntry::new(ManagedTerminalSession::Local(session.clone())),
         );
         spawn_local_reader(
             app,
@@ -118,10 +264,10 @@ impl TerminalManager {
             request_id,
         } = TelnetTerminalSession::open(request).await?;
         let session_id = session.id.clone();
-        self.sessions
-            .lock()
-            .await
-            .insert(session_id.clone(), ManagedTerminalSession::Telnet(session));
+        self.sessions.lock().await.insert(
+            session_id.clone(),
+            SessionEntry::new(ManagedTerminalSession::Telnet(session)),
+        );
         spawn_telnet_reader(
             app,
             session_id.clone(),
@@ -146,7 +292,7 @@ impl TerminalManager {
         let close_signal = session.close_signal();
         self.sessions.lock().await.insert(
             session_id.clone(),
-            ManagedTerminalSession::Serial(session),
+            SessionEntry::new(ManagedTerminalSession::Serial(session)),
         );
         spawn_serial_reader(
             app,
@@ -190,27 +336,10 @@ impl TerminalManager {
 
     pub async fn close(&self, session_id: String) -> Result<(), AppError> {
         validate_session_id(&session_id)?;
-
-        let session = self
-            .sessions
-            .lock()
-            .await
-            .remove(&session_id)
-            .ok_or_else(|| {
-                AppError::new(
-                    "terminal_session_missing",
-                    "终端会话不存在。",
-                    format!("session_id={session_id}"),
-                    false,
-                )
-            })?;
-
-        match session {
-            ManagedTerminalSession::Ssh(session) => session.close().await,
-            ManagedTerminalSession::Local(session) => session.close().await,
-            ManagedTerminalSession::Telnet(session) => session.close().await,
-            ManagedTerminalSession::Serial(session) => session.close().await,
-        }
+        close_session_entry(&self.sessions, &session_id, |session| async move {
+            session.close().await
+        })
+        .await
     }
 
     async fn session(&self, session_id: &str) -> Result<ManagedTerminalSession, AppError> {
@@ -219,7 +348,7 @@ impl TerminalManager {
             .lock()
             .await
             .get(session_id)
-            .cloned()
+            .map(|entry| entry.session.clone())
             .ok_or_else(|| {
                 AppError::new(
                     "terminal_session_missing",
@@ -307,7 +436,10 @@ fn spawn_reader(
             Ok(decoder) => decoder,
             Err(error) => {
                 emit_terminal_error(&app, &session_id, &request_id, &error);
-                sessions.lock().await.remove(&session_id);
+                finish_session_reader(&sessions, &session_id, |session| async move {
+                    session.close_after_reader_exit().await
+                })
+                .await;
                 let _ = app.emit(
                     crate::events::TERMINAL_STATE_CHANGED,
                     TerminalStateChangedEvent {
@@ -388,7 +520,10 @@ fn spawn_reader(
             },
         }
 
-        sessions.lock().await.remove(&session_id);
+        finish_session_reader(&sessions, &session_id, |session| async move {
+            session.close_after_reader_exit().await
+        })
+        .await;
         let _ = app.emit(
             crate::events::TERMINAL_STATE_CHANGED,
             TerminalStateChangedEvent {
@@ -441,7 +576,7 @@ fn spawn_local_reader(
 
         let exit_status = session.wait_exit_status();
         tauri::async_runtime::spawn(async move {
-            sessions.lock().await.remove(&session_id);
+            remove_session_after_reader(&sessions, &session_id).await;
             let _ = app.emit(
                 crate::events::TERMINAL_STATE_CHANGED,
                 TerminalStateChangedEvent {
@@ -467,7 +602,7 @@ fn spawn_telnet_reader(
             emit_terminal_output(&app, &session_id, &request_id, data);
         }
 
-        sessions.lock().await.remove(&session_id);
+        remove_session_after_reader(&sessions, &session_id).await;
         let _ = app.emit(
             crate::events::TERMINAL_STATE_CHANGED,
             TerminalStateChangedEvent {
@@ -519,7 +654,7 @@ fn spawn_serial_reader(
         }
 
         tauri::async_runtime::spawn(async move {
-            sessions.lock().await.remove(&session_id);
+            remove_session_after_reader(&sessions, &session_id).await;
             let _ = app.emit(
                 crate::events::TERMINAL_STATE_CHANGED,
                 TerminalStateChangedEvent {
@@ -609,5 +744,116 @@ mod tests {
         let error = validate_connect_request(&request).unwrap_err();
 
         assert_eq!(error.code, "terminal_auth_missing");
+    }
+
+    #[tokio::test]
+    async fn failed_close_keeps_the_session_for_a_later_retry() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+
+        let sessions: SessionMap<()> = Arc::new(Mutex::new(HashMap::new()));
+        sessions
+            .lock()
+            .await
+            .insert("session-1".to_string(), SessionEntry::new(()));
+        let calls = Arc::new(AtomicUsize::new(0));
+
+        let first_calls = Arc::clone(&calls);
+        let first = close_session_entry(&sessions, "session-1", move |_| async move {
+            first_calls.fetch_add(1, Ordering::SeqCst);
+            Err(AppError::new(
+                "test_close_failed",
+                "Test close failed.",
+                "first attempt",
+                true,
+            ))
+        })
+        .await;
+
+        assert_eq!(first.unwrap_err().code, "test_close_failed");
+        assert!(sessions.lock().await.contains_key("session-1"));
+
+        let retry_calls = Arc::clone(&calls);
+        close_session_entry(&sessions, "session-1", move |_| async move {
+            retry_calls.fetch_add(1, Ordering::SeqCst);
+            Ok(())
+        })
+        .await
+        .unwrap();
+
+        assert!(!sessions.lock().await.contains_key("session-1"));
+        assert_eq!(calls.load(Ordering::SeqCst), 2);
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn concurrent_close_requests_share_one_cleanup_attempt() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        use tokio::sync::oneshot;
+
+        let sessions: SessionMap<()> = Arc::new(Mutex::new(HashMap::new()));
+        sessions
+            .lock()
+            .await
+            .insert("session-1".to_string(), SessionEntry::new(()));
+        let calls = Arc::new(AtomicUsize::new(0));
+        let (started_tx, started_rx) = oneshot::channel();
+        let (release_tx, release_rx) = oneshot::channel();
+
+        let first_sessions = Arc::clone(&sessions);
+        let first_calls = Arc::clone(&calls);
+        let first = tokio::spawn(async move {
+            close_session_entry(&first_sessions, "session-1", move |_| async move {
+                first_calls.fetch_add(1, Ordering::SeqCst);
+                started_tx.send(()).expect("signal first close start");
+                release_rx.await.expect("release first close");
+                Ok(())
+            })
+            .await
+        });
+
+        started_rx.await.expect("first close started");
+
+        let second_sessions = Arc::clone(&sessions);
+        let second_calls = Arc::clone(&calls);
+        let second = tokio::spawn(async move {
+            close_session_entry(&second_sessions, "session-1", move |_| async move {
+                second_calls.fetch_add(1, Ordering::SeqCst);
+                Ok(())
+            })
+            .await
+        });
+
+        release_tx.send(()).expect("release first close");
+        first.await.expect("first task").unwrap();
+        second.await.expect("second task").unwrap();
+
+        assert_eq!(calls.load(Ordering::SeqCst), 1);
+        assert!(!sessions.lock().await.contains_key("session-1"));
+    }
+
+    #[tokio::test]
+    async fn failed_ssh_reader_cleanup_remains_available_for_explicit_close() {
+        let sessions: SessionMap<()> = Arc::new(Mutex::new(HashMap::new()));
+        sessions
+            .lock()
+            .await
+            .insert("session-1".to_string(), SessionEntry::new(()));
+
+        finish_session_reader(&sessions, "session-1", |_| async {
+            Err(AppError::new(
+                "test_reader_cleanup_failed",
+                "Test reader cleanup failed.",
+                "reader exit",
+                true,
+            ))
+        })
+        .await;
+
+        assert!(sessions.lock().await.contains_key("session-1"));
+
+        close_session_entry(&sessions, "session-1", |_| async { Ok(()) })
+            .await
+            .unwrap();
+
+        assert!(!sessions.lock().await.contains_key("session-1"));
     }
 }

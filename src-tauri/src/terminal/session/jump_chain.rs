@@ -32,11 +32,29 @@ fn to_node_russh_error(
 }
 
 pub(super) async fn disconnect_jump_clients(jump_clients: &[SshHandle]) {
-    for jump_client in jump_clients.iter().rev() {
-        let _ = jump_client
+    let mut disconnected = vec![false; jump_clients.len()];
+    let _ = disconnect_jump_clients_with_state(jump_clients, &mut disconnected).await;
+}
+
+pub(super) async fn disconnect_jump_clients_with_state(
+    jump_clients: &[SshHandle],
+    disconnected: &mut [bool],
+) -> Option<russh::Error> {
+    let mut first_error = None;
+    for (index, jump_client) in jump_clients.iter().enumerate().rev() {
+        if disconnected[index] {
+            continue;
+        }
+        match jump_client
             .disconnect(Disconnect::ByApplication, "", "English")
-            .await;
+            .await
+        {
+            Ok(()) => disconnected[index] = true,
+            Err(error) if first_error.is_none() => first_error = Some(error),
+            Err(_) => {}
+        }
     }
+    first_error
 }
 
 pub(super) async fn connect_target_client(

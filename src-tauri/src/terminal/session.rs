@@ -38,7 +38,9 @@ mod jump_chain;
 pub(crate) mod fixture_support;
 #[cfg(all(test, target_os = "linux"))]
 mod fixture_tests;
-use jump_chain::{connect_target_client, disconnect_jump_clients};
+use jump_chain::{
+    connect_target_client, disconnect_jump_clients, disconnect_jump_clients_with_state,
+};
 
 const REMOTE_EXEC_TRANSFER_CHUNK_BYTES: usize = 256 * 1024;
 const TERMINAL_OUTPUT_BATCH_MAX_BYTES: usize = 32 * 1024;
@@ -253,6 +255,12 @@ pub struct TerminalSession {
     jump_clients: Vec<SshHandle>,
     x11_forward: X11ForwardState,
     writer: Mutex<ChannelWriter>,
+    close_state: Mutex<TerminalCloseState>,
+}
+
+struct TerminalCloseState {
+    client_disconnected: bool,
+    jump_clients_disconnected: Vec<bool>,
 }
 
 pub struct ExecOutput {
@@ -473,6 +481,7 @@ impl TerminalSession {
         emit_progress(&progress, "shell_ready", "远程 Shell 已启动。");
 
         let (reader, writer) = channel.split();
+        let jump_client_count = jump_clients.len();
 
         Ok((
             Self {
@@ -485,6 +494,10 @@ impl TerminalSession {
                 jump_clients,
                 x11_forward,
                 writer: Mutex::new(writer),
+                close_state: Mutex::new(TerminalCloseState {
+                    client_disconnected: false,
+                    jump_clients_disconnected: vec![false; jump_client_count],
+                }),
             },
             reader,
         ))
@@ -513,17 +526,52 @@ impl TerminalSession {
     }
 
     pub async fn close(&self) -> Result<(), AppError> {
-        let writer = self.writer.lock().await;
-        let _ = writer.close().await;
+        let mut close_state = self.close_state.lock().await;
+        {
+            let writer = self.writer.lock().await;
+            let _ = writer.close().await;
+        }
         self.x11_forward.clear().await;
-        self.client
-            .disconnect(Disconnect::ByApplication, "", "English")
-            .await
-            .map_err(|error| {
-                AppError::new("terminal_close_failed", "终端连接关闭失败。", error, true)
-            })?;
-        disconnect_jump_clients(&self.jump_clients).await;
-        Ok(())
+
+        let mut first_error = None;
+        if !close_state.client_disconnected {
+            match self
+                .client
+                .disconnect(Disconnect::ByApplication, "", "English")
+                .await
+            {
+                Ok(()) => close_state.client_disconnected = true,
+                Err(error) => {
+                    first_error = Some(AppError::new(
+                        "terminal_close_failed",
+                        "终端连接关闭失败。",
+                        error,
+                        true,
+                    ));
+                }
+            }
+        }
+
+        if let Some(error) = disconnect_jump_clients_with_state(
+            &self.jump_clients,
+            &mut close_state.jump_clients_disconnected,
+        )
+        .await
+        {
+            if first_error.is_none() {
+                first_error = Some(AppError::new(
+                    "terminal_close_failed",
+                    "SSH 跳板连接关闭失败。",
+                    error,
+                    true,
+                ));
+            }
+        }
+
+        match first_error {
+            Some(error) => Err(error),
+            None => Ok(()),
+        }
     }
 }
 
