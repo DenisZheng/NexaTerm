@@ -136,6 +136,23 @@ if (!mcp.includes('const MCP_SIDECAR_PROCESS_NAMES: [&str; 2] = ["nexaterm-mcp.e
   fail("Windows updater blocker must recognize canonical and legacy MCP process names");
 }
 
+// Windows portable ZIP 只允许显式 allowlist；禁止整目录复制 target/release 构建残留，也不再用 Compress-Archive（会产生反斜杠条目）。
+for (const needle of [
+  "for required in nexaterm.exe nexaterm-mcp.exe mxterm-mcp.exe; do",
+  'cp -R "$release_root/_up_" "$portable_root/_up_"',
+  'cp LICENSE THIRD_PARTY_LICENSES.md "$portable_root/"',
+  '> "$portable_root/portable.marker"',
+  "-a -cf ../NexaTerm-portable-windows-x64.zip",
+]) {
+  if (!release.includes(needle)) fail(`portable ZIP allowlist drifted: ${needle}`);
+}
+for (const forbidden of [
+  "find src-tauri/target/release -mindepth 1 -maxdepth 1",
+  "Compress-Archive",
+]) {
+  if (release.includes(forbidden)) fail(`portable ZIP must stay an explicit allowlist: ${forbidden}`);
+}
+
 console.log(
   `PASS  WF-08C release surface: ${enKeys.length} locale keys aligned; NexaTerm brand/update/MCP canonical surfaces locked`,
 );

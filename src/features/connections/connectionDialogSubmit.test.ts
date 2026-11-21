@@ -1,10 +1,16 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { getLocale, setLocalePreference, type Locale } from "../../shared/i18n";
 
 import {
   connectionDialogSubmitPolicy,
   validateConnectionNetworkPath,
 } from "./connectionDialogSubmit";
 import { defaultAdvancedConfig, defaultProxyConfig } from "./connectionTypes";
+
+// 本文件断言英文文案：固定 locale，避免随宿主机系统语言（如 zh-CN）变化而失败。
+let previousLocale: Locale;
+beforeEach(() => { previousLocale = getLocale(); setLocalePreference("en"); });
+afterEach(() => { setLocalePreference(previousLocale); });
 
 describe("WF-02A connection dialog submit policy", () => {
   it("makes save-and-connect the primary action for a new or duplicated profile", () => {

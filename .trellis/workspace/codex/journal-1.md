@@ -364,3 +364,45 @@ closeDecision 纯决策 + close action + followUp；六条关闭路径接入、�
 ### Next Steps
 
 - None - task complete
+
+
+## Session 8: 主线第一批合并与联合验证
+
+**Date**: 2026-11-21
+**Task**: 主线第一批合并与联合验证
+**Branch**: `main`
+
+### Summary
+
+经维护者授权在实际 origin/main 合并 #57/#56/#55/#54，保留 merge ancestry 与全部父任务 children；本机 build/typecheck、609 项 Vitest、125 项脚本及 13 项真实 Gitleaks 集成测试通过，静态门禁通过。同步开发栈已有 5 条精确误报审查指纹，不合入其功能代码；全历史/当前源码密钥扫描无未审查命中。同日 npm 审计 main 基线 High 6→5，仅消除 source-map-js，其余 5 条 High 继续 REVIEW-REQUIRED，不批准发布，旧 rc.1 A15 保持 pending/31 blockers。交接见 docs/MAIN_INTEGRATION_2026-11-21.md；WF-09 核心及扩展栈本轮未合，未删分支、未归档任务、保留原有 untracked。推送后同一 HEAD 的远端 CI 另行核对，不提前声明成功。
+
+### Main Changes
+
+- 合并四个已确认 PR，保留全部父任务 children；不合入 WF-09 产品代码。
+- 同步五条已有精确历史误报审查记录，并提交本轮主线交接文档。
+- 不归档其它任务，不修改原有未跟踪文件。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `5651e9b` | (see git log) |
+| `c60a0f3` | (see git log) |
+| `624af99` | (see git log) |
+| `0f7755a` | (see git log) |
+| `8317545` | (see git log) |
+
+### Testing
+
+- [OK] frozen install、typecheck、build、609 项 Vitest、125 项脚本测试、22 项静态门禁及 startup boundary。
+- [OK] 13 项真实 Gitleaks 集成测试；完整 refs 历史及 tracked snapshot 扫描没有未审查命中。
+- [REVIEW-REQUIRED] 当前 npm 21 条发现（High 5）；A15 保持 pending、31 项 blocker，不签署发布验收。
+
+### Status
+
+本机整合与验证完成；远端推送及同一 HEAD 的 CI 仍需在提交日志后核对。
+
+### Next Steps
+
+- 推送 origin/main 并核对远端 SHA、#54–#57 PR 状态和联合 CI。
+- 核心 WF-09 留下一批；其余分支范围与当前依赖审计缺口见 `docs/MAIN_INTEGRATION_2026-11-21.md`。

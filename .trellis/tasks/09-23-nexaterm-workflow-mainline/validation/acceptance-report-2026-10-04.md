@@ -23,7 +23,7 @@
 | A12 | 隧道 + 两级 Jump | **通过**（维护者确认 2026-10-04） | 本报告"集中验收"节 |
 | A13 | X11 真 GUI | **通过**（维护者确认 2026-10-04） | 本报告“A13”节；`10-03-wf-06c-x11-core/A13_EVIDENCE.md` |
 | A14 | 工作区恢复 | 通过（既有记录） | `10-04-wf-07/A14_EVIDENCE.md`（两轮 Windows 重启，A14-01～15） |
-| A15 | 迁移/安装/完整 v1 | **进行中** | `main@4bd88f9` 已成为 RC 基线；A09/A10、final CI/Security/License 已通过，三平台真实发布/升级/回滚/迁移/性能/updater 仍待验 |
+| A15 | 迁移/安装/完整 v1 | **进行中** | `v0.1.17-rc.1`（`6e341f0e`）已发布为 Pre-release；Windows 安装/启动/品牌/语言/主题已于 2026-10-11 由维护者确认（见 `validation/a15-rc-manual-assist-2026-10-11.md`）；平台签名、升级/回滚、macOS/Linux 真实验收、迁移、性能、updater 升级仍待验 |
 
 ## 2026-10-04 集中验收（A01/A02/A04/A11/A12）
 
@@ -84,6 +84,10 @@ WF-08E 的 validator 要求上述全部为 `pass`，否则不得把 A15 / v1 sig
 ### A15 i18n 补验（2026-10-06）
 
 维护者在 macOS 上对 PR #42 `fix/a15-english-coverage` @ `66ae2dfcefaeb0a1898c616c8a8d85abd45459e1` 进行了 English/i18n 人工复验并确认 **PASS**：未发现中文残留。该结果用于确认本轮 English 覆盖修复的跨平台共用 UI 文案，不等同于 macOS 打包版 install / Developer ID / notarization / upgrade / rollback 等 A15 项已完成；A15 总状态继续保持 **进行中**。
+
+### A15 Windows rc.1 验收（2026-10-11）
+
+Pre-release `v0.1.17-rc.1`（`6e341f0e8ccb457ad53d10efb40e1ca0eb8bdeb9`，PR #49 merge）已由 Release workflow 构建并发布。维护者在 Windows 11 对 rc.1 Windows 产物完成人工验收并确认 **PASS**（安装、启动、品牌、English、简体中文、Light、Dark、布局交互）。自动化证据（Release/CI、SHA256、updater minisign 签名、许可证、本地测试套件、静默安装与启动）以及两项环境相关 FAIL（本机 zh-CN locale 导致的 vitest 英文断言失败、updater `latest` 端点在仓库只有预发布时返回 404）见 `validation/a15-rc-manual-assist-2026-10-11.md`。Windows Authenticode、升级/回滚，以及 macOS / Linux 真实验收、迁移、性能、updater 升级仍未完成；A15 总状态继续保持 **进行中**。
 
 ## 记录边界与后续动作
 

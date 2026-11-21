@@ -111,6 +111,35 @@ The explicit step validates the checked-out capability configuration and makes t
 
 ---
 
+## Scenario: Windows Portable ZIP Allowlist Gate
+
+### 1. Scope / Trigger
+
+- Trigger: changing the Windows portable ZIP assembly in `.github/workflows/release.yml` ("Collect release assets", `matrix.target == windows-x64`) or the set of files the portable build must ship.
+- The gate is a static source contract plus a local simulation. It does not replace a real GitHub Actions build of the ZIP.
+
+### 2. Contracts
+
+- The ZIP is built from an explicit allowlist: `nexaterm.exe`, `nexaterm-mcp.exe`, `mxterm-mcp.exe`, `_up_/` (Tauri resources), `LICENSE`, `THIRD_PARTY_LICENSES.md`, `portable.marker`. A missing allowlisted file fails the step (`::error::` annotation + `exit 1`).
+- Never bulk-copy `src-tauri/target/release`; cargo residue (`*.pdb`, `*.d`, `.fingerprint/`, `nsis/`, `.cargo-*lock`) must not ship.
+- The archive is produced by the Windows built-in bsdtar (`$SYSTEMROOT/System32/tar.exe -a -cf`) so entries use `/` separators; `Compress-Archive` is not allowed because it emits `\` entry names.
+- `scripts/check-wf08c-release-surface.mjs` locks the allowlist lines and forbids the `find ... -mindepth 1 -maxdepth 1` bulk copy and `Compress-Archive`.
+
+### 3. Validation & Error Matrix
+
+| Condition | Expected result |
+|---|---|
+| Allowlist intact, bsdtar present | step exits `0` and lists exactly 9 entries |
+| Required exe or `_up_/` missing | `::error::` annotation, step exits `1` |
+| Workflow drifts back to bulk copy or `Compress-Archive` | `pnpm run check:wf08c-release-surface` fails |
+| Real artifact size / entry list needed | run `release.yml` via `workflow_dispatch` on the branch (no GitHub Release is created) |
+
+### 4. Local Simulation
+
+Extract the `windows-x64` block from the workflow, run it with `set -euo pipefail` against a copy of `src-tauri/target/release` that also contains residue, then list the ZIP with `tar.exe -tvf` and open it with `Expand-Archive` / `System.IO.Compression.ZipFile` to confirm `/` separators and hash parity with the source binaries.
+
+---
+
 ## Code Review Checklist
 
 <!-- What reviewers should check -->
