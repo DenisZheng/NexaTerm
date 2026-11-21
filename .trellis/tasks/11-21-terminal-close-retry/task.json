@@ -15,8 +15,8 @@
   "branch": "fix/wf00b-terminal-close-retry",
   "base_branch": "main",
   "worktree_path": null,
-  "commit": null,
-  "pr_url": null,
+  "commit": "8300c481e127422267905360a1f30f95042423a6",
+  "pr_url": "https://github.com/DenisZheng/NexaTerm/pull/91",
   "subtasks": [],
   "children": [],
   "parent": "09-23-wf-00b-close-lifecycle",
@@ -27,6 +27,6 @@
     "src-tauri/src/terminal/local.rs",
     "src/features/layout/WorkspaceShell.tsx"
   ],
-  "notes": "Backend lifecycle and reader-exit cleanup are being fixed before frontend retry feedback. Do not archive until CI and manual close/late-connect smoke checks pass.",
+  "notes": "Automated CI run 44913382927 passed on Windows, Linux and macOS, including the real two-hop SSH fixture. Keep the task in progress until the manual GUI close/late-connect/retry smoke checks are reviewed.",
   "meta": {}
 }
