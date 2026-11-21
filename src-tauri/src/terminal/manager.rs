@@ -159,7 +159,7 @@ async fn finish_session_reader<T, F, Fut>(
     // Keep failed reader-exit cleanup registered so terminal_close can retry it.
 }
 
-async fn remove_session_after_reader<T>(
+async fn remove_session_after_reader<T: Clone>(
     sessions: &SessionMap<T>,
     session_id: &str,
 ) {
