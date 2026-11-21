@@ -8,6 +8,7 @@
 - [x] Attempt SSH jump-host cleanup even when the target disconnect fails; persist per-resource success in the live session object.
 - [x] Treat an already-exited Local child as successfully closed.
 - [x] Add Rust tests for failed-close retry, concurrent close and reader-exit cleanup retention.
+- [x] Update the WF-06B source contract for stateful Terminal jump-chain cleanup progress.
 
 ## Frontend
 

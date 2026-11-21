@@ -33,14 +33,19 @@ if (ownerMatches.length < 4) {
 }
 const ownerCleanupMatches =
   session.match(/disconnect_jump_clients\(&self\.jump_clients\)\.await/g) || [];
-if (ownerCleanupMatches.length < 4) {
+const terminalCleanupMatches =
+  session.match(/disconnect_jump_clients_with_state\(\s*&self\.jump_clients,\s*&mut close_state\.jump_clients_disconnected,/g) || [];
+if (ownerCleanupMatches.length < 3 || terminalCleanupMatches.length !== 1) {
   throw new Error(
-    `WF-06B expected Terminal/Exec/SFTP/Forward owner cleanup seams, found ${ownerCleanupMatches.length}`,
+    `WF-06B expected Exec/SFTP/Forward cleanup plus stateful Terminal cleanup, found ${ownerCleanupMatches.length} + ${terminalCleanupMatches.length}`,
   );
 }
 for (const needle of [
   "disconnect_jump_clients(&jump_clients).await",
-  "for jump_client in jump_clients.iter().rev()",
+  "disconnect_jump_clients_with_state(jump_clients, &mut disconnected).await",
+  "for (index, jump_client) in jump_clients.iter().enumerate().rev()",
+  "if disconnected[index]",
+  "Ok(()) => disconnected[index] = true",
   "for jump in jump_plan",
   "jump_clients.push(jump_client)",
 ]) {
