@@ -1,0 +1,4 @@
+{"file": "docs/WORKFLOW_SPEC.md", "reason": "WS-M01/F01/F05/F08/F09 已确认规则"}
+{"file": ".trellis/spec/frontend/remote-file-transfers.md", "reason": "实例、异步目标、暂停及拖放契约"}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "既有 store/controller 与关闭归属"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "行为与 source gates 分别留证"}

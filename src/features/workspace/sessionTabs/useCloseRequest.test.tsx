@@ -107,10 +107,11 @@ describe("useCloseRequest", () => {
   it("活动传输先询问，取消不执行；确认时排除已完成传输且只执行一次", () => {
     const context: CloseContext = {
       localTerminalTabs: [], rdpSessions: [], remoteFileTabs: [],
-      splitMemberIds: [], terminalTabs: [{ id: "t1", connectionId: "a" }], vncSessions: [],
+      splitMemberIds: [], terminalTabs: [{ id: "t1", connectionId: "a" }, { id: "t2", connectionId: "a" }], vncSessions: [],
       remoteFileTransfers: [
-        { connectionId: "a", id: "running", status: "running" },
-        { connectionId: "a", id: "queued", status: "queued" },
+        { connectionId: "a", ownerInstanceId: "ssh:t1", id: "running", status: "running" },
+        { connectionId: "a", ownerInstanceId: "ssh:t1", id: "queued", status: "queued" },
+        { connectionId: "a", ownerInstanceId: "ssh:t2", id: "sibling", status: "running" },
       ],
     };
     const execute = vi.fn();
@@ -124,8 +125,9 @@ describe("useCloseRequest", () => {
     expect(execute).not.toHaveBeenCalled();
     act(() => result.current.request(close));
     context.remoteFileTransfers = [
-      { connectionId: "a", id: "running", status: "success" },
-      { connectionId: "a", id: "queued", status: "queued" },
+      { connectionId: "a", ownerInstanceId: "ssh:t1", id: "running", status: "success" },
+      { connectionId: "a", ownerInstanceId: "ssh:t1", id: "queued", status: "queued" },
+      { connectionId: "a", ownerInstanceId: "ssh:t2", id: "sibling", status: "running" },
     ];
     act(() => result.current.confirm());
     expect(execute).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({

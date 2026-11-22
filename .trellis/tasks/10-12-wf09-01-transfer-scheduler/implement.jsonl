@@ -1,0 +1,4 @@
+{"file":"docs/WORKFLOW_SPEC.md","reason":"工作区文件入口、远程文件与传输交互的已确认规则"}
+{"file":".trellis/spec/frontend/state-management.md","reason":"controller/store 边界、队列生命周期与卸载清理约定"}
+{"file":".trellis/spec/frontend/tauri-command-contracts.md","reason":"远程文件传输 IPC、取消与进度事件契约"}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Vitest 回归与质量门禁记录规则"}

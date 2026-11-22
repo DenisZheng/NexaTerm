@@ -16,6 +16,7 @@ mod docker_tools;
 mod events;
 mod known_hosts;
 mod legacy_webview_settings;
+mod local_files;
 mod mobaxterm_import;
 pub mod mcp;
 mod network_tools;
@@ -190,6 +191,7 @@ pub fn run() {
             commands::remote_file_cancel_transfer,
             commands::remote_file_delete_upload_temp,
             commands::local_path_metadata,
+            local_files::local_file_list,
             commands::remote_file_download,
             commands::remote_file_check_download_target,
             commands::remote_file_download_to_local,

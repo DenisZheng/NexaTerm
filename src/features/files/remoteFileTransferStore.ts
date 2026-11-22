@@ -26,6 +26,7 @@ const finishedTransferStatuses = new Set<TransferStatus>(["success", "skipped", 
 
 export interface AddRemoteFileTransferInput {
   connectionId?: string | null;
+  ownerInstanceId?: string | null;
   direction: TransferDirection;
   kind: TransferKind;
   name: string;
@@ -120,6 +121,7 @@ export function addRemoteFileTransfer(input: AddRemoteFileTransferInput) {
   const item: RemoteFileTransferItem = {
     createdAt: now,
     connectionId: input.connectionId ?? null,
+    ownerInstanceId: input.ownerInstanceId ?? null,
     direction: input.direction,
     error: null,
     id,
@@ -336,6 +338,7 @@ function trimTransferHistory(items: RemoteFileTransferItem[]) {
 function isTransferItemEqual(left: RemoteFileTransferItem, right: RemoteFileTransferItem) {
   return (
     left.connectionId === right.connectionId &&
+    left.ownerInstanceId === right.ownerInstanceId &&
     left.direction === right.direction &&
     left.error === right.error &&
     left.kind === right.kind &&

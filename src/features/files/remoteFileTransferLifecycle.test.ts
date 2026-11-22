@@ -48,6 +48,7 @@ describe("WF-03C remote transfer lifecycle", () => {
   it("rebinds local upload ownership and retry connection after temporary save", () => {
     const item = transfer({
       connectionId: "temp:ctx-a",
+      ownerInstanceId: "ssh:t1",
       retry: {
         action: "local-file-upload",
         connectionId: "temp:ctx-a",
@@ -60,6 +61,7 @@ describe("WF-03C remote transfer lifecycle", () => {
       rebindRemoteFileTransferItem(item, "temp:ctx-a", "saved-a"),
     ).toMatchObject({
       connectionId: "saved-a",
+      ownerInstanceId: "ssh:t1",
       retry: { connectionId: "saved-a" },
     });
   });
