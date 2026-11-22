@@ -9,18 +9,18 @@
 - [x] 右侧 SSH 工具移除 Files tab；文件定位动作改为左侧 Files。
 - [x] 同 connectionId 两 pane 不同目录 selector 测试。
 - [x] WF-03A source gate 接 CI。
-- [ ] PR / CI。
+- [x] PR #25 / CI：已合入 main（merge commit `92e2581`）。
 
 ## 03B
 
-- [ ] 跟随终端目录状态按实例保存。
-- [ ] 快速 pane 切换与慢请求过期保护自动化。
-- [ ] 断线/重连目录状态。
+- [x] 跟随终端目录状态按实例保存；冷启动持久化由 PR #44 补齐并通过 A/B 验收。
+- [x] 快速 pane 切换与慢请求过期保护自动化；实现见 PR #25 commit `c7f6be9`。
+- [x] 断线/重连目录状态；A05 真实 GUI 验收通过。
 
 ## 03C
 
 - [x] 编辑冲突与 dirty close 回归。
-- [ ] 传输队列/retry/关闭实例策略。
+- [ ] 传输队列/retry/关闭实例策略（转由 WF-09-01 / PR #58 接续；代码已在 Draft PR，真实 W09-G01–G09 GUI/SFTP 验收仍待完成）。
 - [x] A05/A06 真实 GUI 验收。
 
 ## 2026-10-02 真实 GUI 验收前置阻塞
@@ -42,3 +42,18 @@
 - 回归覆盖默认策略、无编辑器关闭、sibling 共享连接隔离、取消不执行及确认时重算。
 - 验证：定向测试 39/39；`pnpm run check`、`pnpm test`（425 通过、1 既有 todo）、`pnpm run build`、WF-03 / startup / line-budget 门禁通过。重模块保持独立 chunk；无 WorkspaceShell 或预算文件修改。
 - 既有 A05/A06 人工验收对应 `bff271a`；本次策略修改的自动化与后续 GUI 证据独立记录，不追认旧验收覆盖新策略。
+
+## 2026-11-22 进度对账
+
+### 已完成并验收
+
+- **03A**：左侧 Files 已由 PR #25 合入。
+- **03B**：实例请求 owner/scope、A/B pane 切换和慢响应保护已实现；A05 真实桌面验收确认同 profile 两实例目录隔离、至少 16 次快速切换、Files 跟随、断线隔离及原逻辑 pane 重连均 PASS。
+- **跟随状态持久化**：PR #44 将每个 SSH 实例的跟随 ON/OFF 写入 workspace snapshot；维护者确认 Mac A=OFF/B=ON 完全退出后冷启动恢复 PASS。
+- **A06**：远程编辑冲突、取消/重新加载和 dirty-close 保护真实 GUI 验收 PASS；细节见 [wf03-real-tauri-acceptance.md](../../../docs/research/wf03-real-tauri-acceptance.md)。
+
+### 尚未完成的边界
+
+- 03C 的传输队列、实例级 owner 和关闭策略由 WF-09-01 / PR #58 接续。PR #58 当前仍为 Draft，且分支落后于 main；W09-G01–G09 真实 GUI/SFTP 验收尚未执行。
+- WS-F03 只剩“手动浏览后自动暂停跟随并提供恢复入口”待产品确认；默认关闭和当前 keep-following 行为不再作为 WF-03B 未完成项。
+- 因 03C 仍待收口，WF-03 父任务保留 in_progress；不得因此重开 03A/03B/A05/A06。

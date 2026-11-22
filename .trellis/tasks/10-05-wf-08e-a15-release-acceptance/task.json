@@ -17,6 +17,6 @@
   "children": [],
   "parent": "09-23-nexaterm-workflow-mainline",
   "relatedFiles": [],
-  "notes": "2026-10-05: main @ 4bd88f9060fe089ee6e52a042a5e589c1bb739bd is the A15 release-candidate baseline. Main CI #383 passed Frontend, Rust Windows/Linux/macOS, fixtures, Security and License; A09/A10 real-Tauri are PASS. WF-08E remains in_progress for real Windows/macOS/Linux install/sign/upgrade/rollback, migration, performance and updater evidence.",
+  "notes": "2026-10-05: main @ 4bd88f9060fe089ee6e52a042a5e589c1bb739bd is the A15 release-candidate baseline. Main CI #383 passed Frontend, Rust Windows/Linux/macOS, fixtures, Security and License; A09/A10 real-Tauri are PASS. WF-08E remains in_progress for real Windows/macOS/Linux install/sign/upgrade/rollback, migration, performance and updater evidence. 2026-11-22 reconciliation: PR #90 maintenance batch merged (PRs #54-#57); latest main integration audit 2026-11-21 still records A15 not eligible for signoff with 31 blockers (8 pending, 22 blocked, 1 review). Five remaining npm High advisories are on development dependency paths. Historical candidate evidence remains immutable; no newer complete three-platform install/sign/upgrade/rollback evidence was found. Keep in_progress.",
   "meta": {}
 }
