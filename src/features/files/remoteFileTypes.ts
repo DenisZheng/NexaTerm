@@ -56,6 +56,12 @@ export interface RemoteFileWriteInput {
   path: string;
 }
 
+export interface RemoteFileSaveAsInput {
+  connectionId: string;
+  content: string;
+  path: string;
+}
+
 export interface RemoteFileRenameInput {
   connectionId: string;
   newPath: string;

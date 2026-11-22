@@ -779,6 +779,7 @@ let output = TerminalSession::exec(
 
 - `remote_file_read(app: AppHandle, manager: State<RemoteFileManager>, request: RemoteFileReadRequest) -> Result<RemoteFileReadResult, AppError>`
 - `remote_file_write(app: AppHandle, manager: State<RemoteFileManager>, request: RemoteFileWriteRequest) -> Result<RemoteFileWriteResult, AppError>`
+- `remote_file_save_as(app: AppHandle, manager: State<RemoteFileManager>, request: RemoteFileSaveAsRequest) -> Result<RemoteFileWriteResult, AppError>` (in `commands/remote_file_save_as.rs`)
 - `remote_file_create_file(app: AppHandle, manager: State<RemoteFileManager>, request: RemoteFilePathRequest) -> Result<RemoteFileMetadata, AppError>`
 - `remote_file_create_directory(app: AppHandle, manager: State<RemoteFileManager>, request: RemoteFilePathRequest) -> Result<(), AppError>`
 - `remote_file_rename(app: AppHandle, manager: State<RemoteFileManager>, request: RemoteFileRenameRequest) -> Result<(), AppError>`
@@ -820,6 +821,12 @@ RemoteFileWriteRequest {
 RemoteFilePathRequest {
     connection_id: String,
     path: String,
+}
+
+RemoteFileSaveAsRequest {
+    connection_id: String,
+    path: String,
+    content: String,
 }
 
 RemoteFileRenameRequest {
@@ -3178,3 +3185,11 @@ apply_bundle(repository, &bundle, password, strategy)?;
 ```
 
 Import revalidates the exact file before any persistent mutation.
+
+## Scenario: WF-09-02B Create-only Save As
+- Backend resolves the saved/temporary connection and validates the path; payload contains no frontend credentials.
+- `RemoteFileSaveAsRequest` has connection_id/path/content only; result reuses `RemoteFileWriteResult`. There is no overwrite flag or implicit fallback to regular write.
+- `remote_files/save_as.rs` writes stdin to a private same-directory staging folder (umask 077, exclusive mkdir), then POSIX `link` atomically publishes the exact target. Do not replace it with `ln` (directory destination semantics), `mv`, or create-empty-then-write.
+- Existing files/directories/symlinks, including racing creation, return remote_file_exists. Missing link/hard-link support, permission and stdin failures return remote_file_save_as_failed. Normal exit and HUP/INT/TERM clean staging; process kill or transport loss can leave a private staging folder, never authorize overwriting the target.
+- Metadata failure after publication returns remote_file_save_as_metadata_failed and explicitly says the new file was created. Transport failure can also make publication outcome uncertain; keep the local original buffer and inspect the destination before retry.
+- Tests: actual Rust builder shell execution via `scripts/wf09-editor-save-as.test.mjs` covers bytes/permissions/quoted paths, existing and racing file/directory/symlink, missing link, failed link and failed stdin. Rust builder unit test and three-platform compilation run in CI.
