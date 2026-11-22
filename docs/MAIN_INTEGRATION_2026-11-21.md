@@ -69,3 +69,13 @@ Windows 11、Node `24.12.0`、pnpm `11.22.0`，Node 系统语言 `zh-CN`。切�
 本记录描述本机整合与验证，不预先宣称远端推送或联合 CI 成功。接续时核对 `main` 与 `origin/main` 的 SHA、#54–#57 的 PR 状态，并查询同一 main HEAD 的 CI；不以旧 run 代替。
 
 完整本机日志、同日基线审计对照、官方 advisory 查询及原有文件校验快照位于忽略目录 `.trellis/.runtime/main-integration-20261121/`；全分支评估原始材料位于 `.trellis/.runtime/branch-integration-review-20261121/`，不提交原始扫描材料。
+
+
+## 2026-11-22 后续主线对账
+
+- PR #90 已于 2026-11-21 合入，merge commit `b0db712549703b8fcdc5c3f243bb6d5665af3b5d`；保留 #54–#57 的 merge ancestry。当前 main 随后又合入 PR #91，HEAD 为 `84f2118426e6b4c4fcd1218ac72b67590a65d787`。
+- PR #91（终端关闭失败保留与重试）于 2026-11-22 合入。CI run [44914220159](https://github.com/DenisZheng/NexaTerm/actions/runs/44914220159) 的 Frontend、Rust Windows/Linux/macOS、Fixtures、Security、License 七个实际执行 job 全部成功；维护者另确认真实桌面 GUI 验收通过。
+- WF-02B A04：维护者再次明确确认此前已在 PC 完成 Quick Connect 全流程真实 GUI 验收。WF-03 A05/A06 与 WF-07 A/B 冷启动已有 2026-10-02 / 2026-10-06 的详细真实桌面记录。相关 Trellis 状态与证据链接已在本次文档对账中同步；不因旧 checkbox 重开已验收工作。
+- 下一项 Files 工作是 WF-09-01 / PR #58，不是 WF-03B。PR #58 的代码 HEAD `83db4bf` 对当前 main ahead 5 / behind 15，GitHub 显示 dirty；旧 HEAD CI run #582 成功，但 W09-G01–G09 真实 GUI/SFTP 仍 MANUAL_REQUIRED。必须先更新分支、解决冲突、对新 HEAD 重跑 CI，再做真实验收。
+- PR #61/#62（WF-09-04/05）、PR #70/#71（Rlogin）和 PR #87–#89（XDMCP 构建证据）均是各自堆叠开发栈，保持 Draft，不与 PR #58 混为一个可合并批次。
+- A15 仍未签署。2026-11-21 的审计结论 31 blockers（8 pending、22 blocked、1 review）继续有效；本次没有执行正式安装、签名/公证、迁移、升级/回滚或三平台 GUI 验收。

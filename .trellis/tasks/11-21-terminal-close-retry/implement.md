@@ -26,6 +26,6 @@
 - [x] `pnpm run build` — production build passed.
 - [x] `node scripts/check-startup-module-boundary-source.mjs` — passed.
 - [x] CI run `44913382927`: Frontend, Rust Linux, Rust Windows, Rust macOS, Security, License, and fixture smoke all passed.
-- [ ] Manual smoke: close a live SSH tab, close during connect and let the result arrive late, close a Local tab while its process exits, retry after an injected close failure, and close one of two instances of the same profile.
+- [x] Manual GUI smoke — user confirmed validation passed for live SSH close, late connection completion, Local process exit, failed-close retry, and same-profile instance isolation.
 
-Do not archive the task or claim A01–A08 complete until CI and the manual smoke checks have been reviewed.
+A01–A08 accepted: cross-platform CI passed and the user confirmed the manual GUI smoke checks. Merged into main via PR #91.
