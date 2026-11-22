@@ -77,3 +77,14 @@ export function shouldShowRemoteDirectoryEmptyRow({
 }) {
   return loaded && !loading && childCount === 0;
 }
+
+export function joinRemotePath(parentPath: string, name: string) {
+  const normalizedParent = normalizeRemotePath(parentPath);
+  const cleanName = name.trim().replace(/\\/g, "/").replace(/^\/+/, "");
+  if (!cleanName) {
+    return normalizedParent;
+  }
+  return normalizeRemotePath(
+    normalizedParent === "/" ? `/${cleanName}` : `${normalizedParent}/${cleanName}`,
+  );
+}

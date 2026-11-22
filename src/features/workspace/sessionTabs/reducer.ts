@@ -312,6 +312,12 @@ export function sessionPointerReducer(
       });
       return changed ? { ...state, activeUnifiedTabByConnectionId: nextActiveTabs } : state;
     }
+    case "tabs/retargetFile": {
+      let next = state.activeRemoteFileTabId === action.oldId ? set(state, "activeRemoteFileTabId", action.newId) : state;
+      const unified = state.activeUnifiedTabByConnectionId[action.connectionId];
+      if (unified?.kind === "file" && unified.id === action.oldId) next = rememberUnified(next, action.connectionId, { kind: "file", id: action.newId });
+      return next;
+    }
     case "tabs/setActiveRemoteFileTabId":
       return set(state, "activeRemoteFileTabId", action.value);
     default:
