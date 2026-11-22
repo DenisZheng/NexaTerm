@@ -25,9 +25,8 @@
 - [x] temporary → 正式 prompt profile；临时认证不永久写入 profile。
 - [x] 当前终端原地关联新 profile，保留原 sessionId/requestId，不调用 terminalConnect。
 - [x] 保存后正式 profile 进入 Sessions；当前实例用内存 alias 延续 Files 认证，关闭实例后释放 alias。
-- [ ] A04 全流程真实 GUI 验收。
+- [x] A04 全流程真实 GUI 验收（维护者于 2026-11-22 再次确认此前 PC 验收通过；详见 validation/a04-real-tauri.md）。
 
-- [x] A04 全流程真实 GUI 验收（维护者于 2026-11-22 再次确认 PC 验收通过；详见 validation/a04-real-tauri.md）。
 
 ## 2026-11-22 进度对账
 
