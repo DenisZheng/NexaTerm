@@ -3,7 +3,7 @@
   "name": "11-21-terminal-close-retry",
   "title": "Terminal close failure retention and retry",
   "description": "Fix terminal session ownership, concurrent close and retry behavior across Rust and the workspace UI.",
-  "status": "in_progress",
+  "status": "completed",
   "dev_type": "bugfix",
   "scope": "frontend-and-backend",
   "package": null,
@@ -11,11 +11,11 @@
   "creator": "assistant",
   "assignee": "assistant",
   "createdAt": "2026-11-21",
-  "completedAt": null,
+  "completedAt": "2026-11-22",
   "branch": "fix/wf00b-terminal-close-retry",
   "base_branch": "main",
   "worktree_path": null,
-  "commit": "8300c481e127422267905360a1f30f95042423a6",
+  "commit": "84f2118426e6b4c4fcd1218ac72b67590a65d787",
   "pr_url": "https://github.com/DenisZheng/NexaTerm/pull/91",
   "subtasks": [],
   "children": [],
@@ -27,6 +27,6 @@
     "src-tauri/src/terminal/local.rs",
     "src/features/layout/WorkspaceShell.tsx"
   ],
-  "notes": "Automated CI run 44913382927 passed on Windows, Linux and macOS, including the real two-hop SSH fixture. Keep the task in progress until the manual GUI close/late-connect/retry smoke checks are reviewed.",
+  "notes": "Merged into main via squash merge on 2026-11-22 (PR #91, merge commit 84f2118426e6b4c4fcd1218ac72b67590a65d787). CI run 44914220159 passed on Windows, Linux and macOS, including real two-hop SSH Terminal/SFTP/Tunnel fixture. User confirmed manual GUI validation passed. cargo fmt --all -- --check was not separately run in hosted CI.",
   "meta": {}
 }
