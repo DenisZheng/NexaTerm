@@ -34,7 +34,9 @@
     "10-06-wf07-files-follow-snapshot",
     "10-12-wf09-01-transfer-scheduler",
     "10-12-wf09-01-local-pane",
-    "10-13-wf09-01-closeout"
+    "10-13-wf09-01-closeout",
+    "10-13-wf09-02-editor-save-lifecycle",
+    "10-13-wf09-02-editor-save-as"
   ],
   "parent": null,
   "relatedFiles": [],

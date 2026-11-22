@@ -176,6 +176,7 @@ pub fn run() {
             commands::remote_file_list,
             commands::remote_file_read,
             commands::remote_file_write,
+            commands::remote_file_save_as::remote_file_save_as,
             commands::remote_file_create_file,
             commands::remote_file_create_directory,
             commands::remote_file_rename,

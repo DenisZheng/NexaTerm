@@ -1,0 +1,5 @@
+{"file": "docs/WORKFLOW_SPEC.md", "reason": "WS-F01/F05/F08/F09"}
+{"file": ".trellis/spec/frontend/remote-file-editor.md", "reason": "编辑器状态和 I/O 生命周期"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "复用既有工具栏与 Radix 弹窗"}
+{"file": ".trellis/spec/backend/tauri-command-contracts.md", "reason": "stdin/路径验证/后端连接解析"}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "既有 controller 为单一事实源"}
