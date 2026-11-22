@@ -1,0 +1,32 @@
+{
+  "id": "terminal-close-retry",
+  "name": "11-21-terminal-close-retry",
+  "title": "Terminal close failure retention and retry",
+  "description": "Fix terminal session ownership, concurrent close and retry behavior across Rust and the workspace UI.",
+  "status": "in_progress",
+  "dev_type": "bugfix",
+  "scope": "frontend-and-backend",
+  "package": null,
+  "priority": "P0",
+  "creator": "assistant",
+  "assignee": "assistant",
+  "createdAt": "2026-11-21",
+  "completedAt": null,
+  "branch": "fix/wf00b-terminal-close-retry",
+  "base_branch": "main",
+  "worktree_path": null,
+  "commit": "8300c481e127422267905360a1f30f95042423a6",
+  "pr_url": "https://github.com/DenisZheng/NexaTerm/pull/91",
+  "subtasks": [],
+  "children": [],
+  "parent": "09-23-wf-00b-close-lifecycle",
+  "relatedFiles": [
+    "src-tauri/src/terminal/manager.rs",
+    "src-tauri/src/terminal/session.rs",
+    "src-tauri/src/terminal/session/jump_chain.rs",
+    "src-tauri/src/terminal/local.rs",
+    "src/features/layout/WorkspaceShell.tsx"
+  ],
+  "notes": "Automated CI run 44913382927 passed on Windows, Linux and macOS, including the real two-hop SSH fixture. Keep the task in progress until the manual GUI close/late-connect/retry smoke checks are reviewed.",
+  "meta": {}
+}

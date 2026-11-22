@@ -133,7 +133,11 @@ impl LocalTerminalSession {
                 .child
                 .lock()
                 .map_err(|_| poisoned_lock_error("local_terminal_close_failed"))?;
-            child.kill()
+            match child.try_wait() {
+                Ok(Some(_)) => Ok(()),
+                Ok(None) => child.kill(),
+                Err(error) => Err(error),
+            }
         };
         let released = self
             .master

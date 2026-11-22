@@ -7254,6 +7254,54 @@ button {
   white-space: nowrap;
 }
 
+.terminal-close-failures {
+  position: absolute;
+  z-index: 80;
+  top: 10px;
+  right: 12px;
+  max-width: min(620px, calc(100% - 24px));
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid color-mix(in srgb, var(--mx-danger) 22%, var(--mx-line));
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: var(--mx-danger);
+  background: color-mix(in srgb, var(--mx-danger) 8%, var(--mx-panel));
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.terminal-close-failures span {
+  min-width: 0;
+}
+
+.terminal-close-failures button {
+  min-height: 28px;
+  border: 1px solid var(--mx-line);
+  border-radius: 7px;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 9px;
+  color: var(--mx-text);
+  background: var(--mx-panel);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.terminal-close-failures button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.terminal-close-failures button .ui-icon {
+  width: 14px;
+  height: 14px;
+}
+
 .command-library-error {
   min-width: 0;
   border: 1px solid color-mix(in srgb, var(--mx-danger) 22%, var(--mx-line));

@@ -2673,5 +2673,8 @@
   "terminal.status.listenerFailed": "事件监听失败",
   "terminal.status.disconnected": "已断开",
   "workspace.time.minuteAgo": "{count} 分钟前",
-  "workspace.time.hourAgo": "{count} 小时前"
+  "workspace.time.hourAgo": "{count} 小时前",
+  "workspace.terminalClose.failed": "有 {count} 个终端会话未能正常关闭，已保留清理记录。",
+  "workspace.terminalClose.retry": "重试清理",
+  "workspace.terminalClose.retrying": "正在重试清理..."
 }
