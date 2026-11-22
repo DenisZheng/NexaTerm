@@ -476,6 +476,7 @@ remoteFilePrepareUploadTemp(fileName: string): Promise<LocalUploadTempResult>
 remoteFileAppendUploadTemp(localPath: string, chunk: Uint8Array | number[]): Promise<void>
 remoteFileDeleteUploadTemp(localPath: string): Promise<void>
 localPathMetadata(path: string): Promise<LocalPathMetadataResult>
+localFileList(path: string): Promise<LocalFileEntry[]>
 remoteFileDownload(connectionId: string, path: string): Promise<RemoteFileDownloadResult>
 remoteFileCheckDownloadTarget(input: RemoteFileDownloadTargetCheckInput): Promise<RemoteFileDownloadTargetCheckResult>
 remoteFileDownloadToLocal(input: RemoteFileDownloadToLocalInput): Promise<RemoteFileDownloadToLocalResult>

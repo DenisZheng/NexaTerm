@@ -78,6 +78,7 @@ import type {
 } from "../../features/tools/scheduledTaskTypes";
 import type {
   LocalPathMetadataResult,
+  LocalFileEntry,
   LocalUploadTempResult,
   RemoteFileDeleteInput,
   RemoteFileDownloadToLocalInput,
@@ -1351,6 +1352,14 @@ export function remoteFileDeleteUploadTemp(localPath: string) {
 
 export function localPathMetadata(path: string) {
   return invoke<LocalPathMetadataResult>("local_path_metadata", {
+    request: {
+      path,
+    },
+  });
+}
+
+export function localFileList(path: string) {
+  return invoke<LocalFileEntry[]>("local_file_list", {
     request: {
       path,
     },

@@ -7,6 +7,8 @@ import {
   FileText,
   Folder,
   FolderOpen,
+  Pause,
+  Play,
   RefreshCw,
   Trash2,
   X,
@@ -34,6 +36,9 @@ import {
 } from "./remoteFileTransferUtils";
 
 interface RemoteFileTransferPanelProps {
+  queuePaused?: boolean;
+  onPauseQueue?: () => void;
+  onResumeQueue?: () => void;
   onCancel: (transferId: string) => void;
   onCopyPath: (path: string) => void;
   onRemove: (transferId: string) => void;
@@ -91,6 +96,14 @@ export function RemoteFileTransferPanel(props: RemoteFileTransferPanelProps) {
       <div className="transfer-drawer">
         <div className="transfer-drawer-head">
           <strong>{t("files.transfer.queue")}</strong>
+          {props.onPauseQueue && props.onResumeQueue ? (
+            <Tooltip label={t("files.transfer.pauseHint")}>
+              <button type="button" onClick={props.queuePaused ? props.onResumeQueue : props.onPauseQueue}>
+                {props.queuePaused ? <Play className="ui-icon" aria-hidden="true" /> : <Pause className="ui-icon" aria-hidden="true" />}
+                {t(props.queuePaused ? "files.transfer.resumeQueue" : "files.transfer.pauseQueue")}
+              </button>
+            </Tooltip>
+          ) : null}
           <button type="button" disabled={finishedCount === 0} onClick={clearFinishedTransfers}>
             {t("files.transfer.clearFinished")}
           </button>

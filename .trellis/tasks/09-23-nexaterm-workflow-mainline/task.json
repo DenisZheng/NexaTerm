@@ -3,7 +3,7 @@
   "name": "nexaterm-workflow-mainline",
   "title": "NexaTerm 工作流主线（WF-00 至 WF-08）",
   "description": "以 MobaXterm 操作流程为主线的交付包父任务：持有 WF-00..WF-08 任务地图、Task 00-09 迁移去向与 A01-A15 验收清单；本身不承载实现",
-  "status": "in_progress",
+  "status": "planning",
   "dev_type": null,
   "scope": null,
   "package": null,
@@ -22,9 +22,6 @@
     "09-23-wf-00a-spec-context-switch",
     "09-23-wf-00b-close-lifecycle",
     "09-23-wf-01-unified-session-entry",
-    "10-01-wf-02a-save-and-connect",
-    "10-01-wf-02b-quick-connect",
-    "10-01-wf-03-files-daily-flow",
     "10-02-wf-04a-session-tree-consistency",
     "10-04-wf04c-multiexec-entry",
     "10-04-wf-08a-release-migration-baseline",
@@ -35,12 +32,12 @@
     "10-06-workstation-ux-polish",
     "10-06-home-after-close-diagnosis",
     "10-06-wf07-files-follow-snapshot",
-    "10-11-npm-source-map-js-advisory",
-    "10-11-vitest-locale-pinning",
-    "10-11-portable-zip-allowlist"
+    "10-12-wf09-01-transfer-scheduler",
+    "10-12-wf09-01-local-pane",
+    "10-13-wf09-01-closeout"
   ],
   "parent": null,
   "relatedFiles": [],
-  "notes": "2026-11-22 对账：main @ 84f2118。WF-02B A04 已由维护者确认 PC 真实 GUI 验收通过；WF-03A/B 与 A05/A06 已合入并验收，WF-07 Files follow snapshot 的 A/B 冷启动已通过；WF-03C 传输生命周期转由 WF-09-01 / PR #58 接续。WF-08E A15 仍 in_progress，不能签署发布。此父任务是 WF-00..WF-08 交付地图，WF-09 扩展栈单独跟踪。",
+  "notes": "2026-10-05: WF-08E final A15 evidence/signoff framework started stacked on WF-08D. A09/A10 and real three-platform release/install/upgrade/rollback/performance evidence remain hard blockers.",
   "meta": {}
 }

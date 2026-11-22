@@ -330,6 +330,19 @@ describe("planClose（WS-E05 连带 / WS-F08 确认）", () => {
     expect(plan.sshTabIds).toEqual(["t1"]);
   });
 
+  it("同配置两实例按 owner 隔离传输，旧无 owner 项保持连接级规则", () => {
+    const context = { ...baseContext, remoteFileTransfers: [
+      { connectionId: "a", id: "owned-t1", ownerInstanceId: "ssh:t1", status: "running" as const },
+      { connectionId: "a", id: "owned-t2", ownerInstanceId: "ssh:t2", status: "queued" as const },
+      { connectionId: "a", id: "legacy", status: "running" as const },
+    ] };
+    const plan = planClose({ instanceIds: ["ssh:t1"], splitGroup: false }, context);
+    expect(plan.confirmation?.activeTransferCount).toBe(1);
+    expect(plan.transferIdsToCancel).toEqual(["owned-t1"]);
+    const all = planClose({ instanceIds: ["ssh:t1", "ssh:t2"], splitGroup: false }, context);
+    expect(all.transferIdsToCancel).toEqual(["owned-t1", "owned-t2", "legacy"]);
+  });
+
   it("不修改输入", () => {
     const request = Object.freeze({ instanceIds: Object.freeze(["ssh:t1", "ssh:t2"]), splitGroup: false });
     const context = Object.freeze({ ...baseContext, remoteFileTabs: Object.freeze([file("a", "x")]) });
